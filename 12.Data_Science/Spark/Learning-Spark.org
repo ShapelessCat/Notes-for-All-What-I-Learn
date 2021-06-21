@@ -1,0 +1,942 @@
+#+TITLE: Learning Spark
+#+SUBTITLE: Lightning-Fast Data Analysis
+#+VERSION: 2015
+#+AUTHOR: Holden Karau, Andy Konwinski, Patrick Wendell, and Matei Zaharia
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Foreword - ix
+* Preface - xi
+* 1. Introduction to Data Analysis with Spark - 1
+** TODO What Is Apache Spark? - 1
+   - Apache Spark :: _fast_ and _general purpose_ cluster computing platform.
+
+** A Unified Stack - 2
+*** Spark Core - 3
+*** Spark SQL - 3
+*** Spark Streaming - 3
+*** MLlib - 4
+*** GraphX - 4
+*** Cluster Managers - 4
+
+** Who Uses Spark, and for What? - 4
+*** Data Science Tasks - 5
+*** Data Processing Applications - 6
+
+** A Brief History of Spark - 6
+** Spark Versions and Releases - 7
+** Storage Layers for Spark - 7
+
+* DONE 2. Downloading Spark and Getting Started - 9
+  CLOSED: [2018-10-09 Tue 01:40]
+** DONE Downloading Spark - 9
+   CLOSED: [2018-10-09 Tue 01:40]
+** DONE Introduction to Spark's Python and Scala Shells - 11 - =TODO= =NOTE=
+   CLOSED: [2018-10-08 Mon 23:58]
+   - In Spark, we express our computation through operations on /distributed
+     collections/ that are *automatically parallelized* *across the cluster*.
+
+     =IMPORTANT= =TODO=
+     These collections are called /resilient distributed datasets (*RDDs*)/.
+     *RDDs* are Spark's fundamental abstraction for distributed data and
+     computation.
+
+   - Example 2-2. Scala line count
+     #+BEGIN_SRC scala
+       // scala>  // Create an RDD called lines
+       val lines = sc.textFile("README.md")
+       //// lines: spark.RDD[String] = MappedRDD[...]
+
+       // scala>  // Count the number of items in this RDD
+       lines.count()
+       //// res0: Long = 127
+
+       // scala>  // First item in this RDD, i.e. first line of README.md
+       lines.first()
+       ////  res1: String = # Apache Spark
+     #+END_SRC
+
+** DONE Introduction to Core Spark Concepts - 14
+   CLOSED: [2018-10-09 Tue 00:45]
+   - At a high level,
+     every Spark application _consists of_ a /driver program/ that launches various
+     parallel operations on a cluster.
+
+     The /driver program/
+     + contains your application's ~main~ function
+       and
+     + defines distributed datasets on the cluster,
+       then
+     + applies operations to them.
+
+   - In the preceding examples (last section),
+     the /driver program/ was the /Spark shell/ ITSELF,
+     and you could just type in the operations you wanted to run.
+
+   - /Driver programs/ access Spark through a ~SparkContext~ object, which *represents
+     a connection to a computing cluster.*
+
+     In the shell, a ~SparkContext~ is *automatically created* for you as the
+     variable called ~sc~.
+
+   - Once you have a ~SparkContext~, you can use it to build /RDDs/.
+
+   - To run these operations, /driver programs/ typically MANAGE a number of nodes
+     called /executors/.
+
+   - Example 2-5. Scala filtering example
+     #+BEGIN_SRC scala
+       // scala>  /// lines: spark.RDD[String] = MappedRDD[...]
+       val lines = sc.textFile("README.md") // Create an RDD called lines
+
+       // scala>  /// pythonLines: spark.RDD[String] = FilteredRDD[...]
+       val pythonLines = lines.filter(line => line.contains("Python"))
+
+       // scala>  /// res0: String = ## Interactive Python Shell
+       pythonLines.first()
+     #+END_SRC
+
+   - *Passing Functions to Spark*
+     =from Jian= this part talks about ~lambda~ in Python and Java.
+
+     Java 8 part:
+     NO explicit call to ~stream()~ is required -- we don't pass anonymous functions
+     to Java standard library collections -- we pass it to /RDDs/:
+     #+BEGIN_SRC java
+       JavaRDD<String> pythonLines = lines.filter(_.contains("Python"));
+     #+END_SRC
+
+     - =TODO= 
+       We discuss passing functions further in “Passing Functions to Spark” on page 30.
+
+     - =TODO=
+       Chapter 3 covers the RDD API in detail.
+
+** DONE Standalone Applications - 17
+   CLOSED: [2018-10-09 Tue 01:40]
+   In a standalone application, the only difference from coding in the shell is
+   to initialize your own ~SparkContext~. *After that, the API is the same.*
+
+   - For Scala and Java, add the dependency ~scala-core~, which can be found in
+     Maven repo.
+
+   - If you use Python API, you need to run your script with ~spark-submit~,
+     which is in your ~${SPARK_HOME}/bin~ directory.
+
+*** DONE Initializing a ~SparkContext~ - 17
+    CLOSED: [2018-10-09 Tue 01:10]
+    - Example 2-8. Initializing Spark in Scala
+      #+BEGIN_SRC scala
+        import org.apache.spark.SparkConf
+        import org.apache.spark.SparkContext
+        import org.apache.spark.SparkContext._
+
+        val conf = new SparkConf().setMaster("local").setAppName("My App")
+        val sc = new SparkContext(conf)
+      #+END_SRC
+
+    - Example 2-9. Initializing Spark in Java
+      #+BEGIN_SRC java
+        import org.apache.spark.SparkConf;
+        import org.apache.spark.api.java.JavaSparkContext;
+
+        SparkConf conf = new SparkConf().setMaster("local").setAppName("My App");
+        SparkContext sc = new JavaSparkContext(conf);
+      #+END_SRC
+
+    - These examples show the minimal way to initialize a ~SparkContext~, where
+      you pass two parameters:
+      + A /cluster URL/, namely ~local~ in these examples, which tells Spark how
+        to connect to a cluster.
+
+        ~local~ is a _special value_ that runs Spark on *one* /thread/ on the
+        _local machine_, WITHOUT connecting to a cluster.
+
+      + An /application name/, namely ~"My App"~ in these examples.
+
+        This will *identify* your application on the /cluster manager's UI/ if
+        you connect to a cluster.
+
+      =TODO=
+      Additonal parameters exist. Cover them later!
+
+    - Shut down Spark
+      + Call the ~stop()~ /method/ on your ~SparkContext~.
+        OR
+      + Call ~System.exit(0)~ or ~sys.exit()~ (=from Jian= I think the second
+        one is for Python).
+
+    - =TODO=
+      More advanced configuration is included in Chapter 7:
+      + how to connect your application to a cluster, including *packaging* your
+        application so that its code is *automatically shipped* to /worker nodes/.
+
+      For now, please refer to the *Quick Start Guide* in the official Spark doc.
+    
+*** DONE Building Standalone Applications - 18
+    CLOSED: [2018-10-09 Tue 01:40]
+    Standalone words count programs:
+
+    - Scala version:
+      + sbt:
+        #+BEGIN_SRC scala
+          name := "learning-spark-mini-example"
+
+          version := "0.0.1"
+
+          scalaVersion := "2.11.12"
+
+          // additional libraries
+          libraryDependencies ++= Seq(
+            "org.apache.spark" %% "spark-core" % "2.3.2" % "provided"
+          )
+        #+END_SRC
+
+      + Code:
+        #+BEGIN_SRC scala
+          val conf = new SparkConf().setAppName("wordCount")
+          val sc = new SparkContext(conf)
+          val input = sc.textFile(inputFile)
+          val words = input.flatMap(_.split(" "))
+          val counts = words.map(word => (word, 1)) reduceByKey { case (x, y) => x + y }
+          counts.saveAsTextFile(outputFile)
+        #+END_SRC
+
+        * =from Jian=
+          You can pass ~SparkConf~ zero of one parameter, thus zero parameter
+          case should be written as ~new SparkConf()~ rather than ~new
+          SparkConf~ (*WRONG*).
+
+          =from Jian=
+          From my point of view, create factory methods for ~SparkConf~ can
+          provide better API:
+          - ~new SparkConf()~ ---> ~SparkConf.default~
+
+          - ~new SparkConf(loadDefaults: Boolean)~ ---> ?????? =TODO=
+
+    - Java version:
+      + Maven: =TODO=
+      + Code: =TODO=
+
+** DONE Conclusion - 21
+   CLOSED: [2018-10-09 Tue 01:10]
+   1. Download Spark and install it.
+
+   2. Use Spark interactively or from a standalone application.
+
+   3. Quick overview of the /core concepts/ in programming with Spark:
+      + Driver program
+      + ~SparkContext~
+      + RDDs
+
+      and run parallel operations on them.
+
+   4. =TODO= NEXT Chapter:
+      More deeply into how /RDDs/ operate.
+      
+* DONE 3. Programming with RDDs - 23
+  CLOSED: [2018-10-09 Tue 14:56]
+** DONE RDD Basics - 23
+   CLOSED: [2018-10-09 Tue 02:01]
+   - An /RDD/ in Spark is simply an *immutable distributed collection of objects*.
+
+     Each /RDD/ is split into multiple partitions, which may be computed on
+     different nodes of the cluster.
+
+     /RDDs/ can contain any type of Python, Java, or Scala objects, including
+     user-defined classes.
+
+   - For example, we create RDD of strings with the ~textFile(fileName)~ /method/.
+
+   - /RDDs/ offer *two* types of operations:
+     + /transformations/ -- lazy
+
+     + /actions/ -- force the thunk
+       /actions/ compute a result based on an /RDD,
+       and either return it to the driver program or save it to an external storage
+       system (e.g., HDFS).
+
+       One /action/ we met is the the ~first()~ method.
+
+   - /action/ is _by default_ NOT /call-by-need/ -- calculate everytime, which
+     is reasonable for big data -- you mostly don't want to save such a big
+     data to waste space.
+
+     + If you want /call-by-need/, call ~RDD.persist()~.
+       We can ask Spark to /persist/ our data in _a number of different places_
+       (=from Jian= NOT everywhere), which will be covered in Table 3-6. =TODO=
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+
+   - =TODO= FOOTNOTE 1
+
+   - In practice, you will often use ~persist()~ to *load* a /subset/ of your data
+     _into memory_ and *query* it repeatedly. For example,
+     #+BEGIN_SRC scala
+       pythonLines.persist()
+       pythonLines.count  // 2
+       pythonLines.first  // '## Interactive Python Shell'
+     #+END_SRC
+
+   - To summarize, every Spark program and shell session will work as follows:
+     1. *Create* some input ~RDDs~ from external data.
+
+     2. *Transform* them to define *new* /RDDs/ using transformations like
+        ~filter()~.
+
+     3. Ask Spark to ~persist()~ any intermediate /RDDs/ that will *need to be
+        reused*.
+
+     4. Launch /actions/ such as ~count()~ and ~first()~ to kick off a parallel
+        computation, which is then _optimized_ and _executed_ by Spark.
+
+   - Tip:
+     ~cache()~ is the same as calling ~persist()~ with the /default storage level/. =???=
+
+** DONE Creating RDDs - 25
+   CLOSED: [2018-10-09 Tue 12:21]
+   - Spark provides two ways to create RDDs:
+     + loading an external dataset
+       One /method/ about this is ~SparkContextObject.textFile()~
+
+       =TODO= COVER More IN CHAPTER 5
+
+       and
+
+     + parallelizing a collection in your driver program.
+
+       * You can use ~SparkContext~'s ~parallelize(coll)~ /method/ to convert an
+         existing collection to an RDD.
+    
+         *CAUTION* You rarely use it when outside of prototyping and testing -- it
+         requires that you have your entire dataset in memory on one machine.
+    
+         - Scala
+           ~val lines = sc.parallelize(List("pandas", "i like pandas"))~
+    
+         - Java
+           ~JavaRDD<String> lines = sc.parallelize(Arrays.asList("pandas", "i like pandas"));~
+    
+         - Python
+           ~lines = sc.parallelize(List("pandas", "i like pandas"))~
+
+** DONE RDD Operations - 26
+   CLOSED: [2018-10-09 Tue 12:42]
+   - Spark treats transformations and actions very differently, so understanding
+     which type of operation you are performing will be important.
+
+   - /Transformations/ return /RDDs/, whereas /actions/ return some _other data type_.
+
+*** DONE Transformations - 27
+    CLOSED: [2018-10-09 Tue 12:31]
+    Example 3-14 (Scala version -- the book gives Python version):
+    #+BEGIN_SRC scala
+      val inputRDD = sc.textFile("log.txt")
+
+      val errorsRDD = inputRDD.filter(_.contains("error"))
+      val warningsRDD = inputRDD.filter(_.contains("warning"))
+
+      val badLinesRDD = errorsRDD union warningsRDD
+    #+END_SRC
+    Spark keeps track of the set of /dependencies/ between different RDDs,
+    called the /lineage graph/.
+
+    It uses this information
+    - to compute each RDD on demand
+      and
+    - to recover lost data if part of a /persistent RDD/ is lost.
+
+    Figure 3-1 shows a /lineage graph/ for Example 3-14.
+
+*** DONE Actions - 28
+    CLOSED: [2018-10-09 Tue 12:39]
+    - /Methods/ like ~count()~ and ~take()~ are /actions/.
+      Example:
+      #+BEGIN_SRC scala
+        println("Input had " + badLinesRDD.count + " concerning lines")
+        println("Here are 10 examples:")
+        badLinesRDD.take(10).foreach(println)
+      #+END_SRC
+
+    - Use the ~collect()~ /method/ to retrieve the entire /RDD/.
+      This is useful when you reduce the dataset to a very small one -- *small*
+      enough for being delt with locally.
+
+    - In most cases you cannot call ~collect()~ on /RDDs/ -- they are too large.
+
+      You usually write data out to a distributed storage system such as /HDFS/
+      or /Amazon S3/. You can use methods like ~saveAsTextFile()~,
+      ~saveAsSequenceFile()~, or any of a number of actions for various built-in
+      formats. =TODO= Cover in Chapter 5.
+
+    - Remember:
+      If you don't want recompute an RDD, make some of its intermediate results
+      /persist/.
+
+*** DONE Lazy Evaluation - 29
+    CLOSED: [2018-10-09 Tue 12:42]
+    - Spark uses /lazy evaluation/ to *reduce the number of passes* it has to take
+      over our data by grouping operations together.
+
+      =from Jian= Usually, one pass will generate one intermediate result --
+      construct this intermediate result can be time consuming, if compare to
+      the time it is used -- usually once, as the input of the next step. 
+
+** TODO Passing Functions to Spark - 30
+*** TODO Python - 30
+*** TODO Scala - 31
+*** TODO Java - 32
+
+** TODO Common Transformations and Actions - 34
+*** DONE Basic RDDs - 34
+    CLOSED: [2018-10-09 Tue 13:55]
+**** DONE Element-wise transformations - 34
+     CLOSED: [2018-10-09 Tue 13:52]
+     ~map~, ~filter~, ~flatMap~
+
+**** DONE Pseudo set operations - 36
+     CLOSED: [2018-10-09 Tue 13:52]
+     - All these pseudo set operations require that the /RDDs/ being operated on
+       are of the same type.
+       ~RDD1.disinct~, ~RDD1.union(RDD2)~, ~RDD1.intersection(RDD2)~,
+       ~RDD1.subtract(RDD2)~
+
+     - *CAUTION*
+       that ~distinct()~ is *expensive*, however, as it requires *shuffling* all
+       the data over the network to ensure that we receive only one copy of each
+       element.
+       =TODO=
+       Shuffling, and *how to avoid it*, is discussed in more detail in Chapter 4.
+
+     - ~union~ result can include _duplicates_.
+
+     - ~intersection~ removes all duplicates, with the same reason as ~distinct~,
+       the performance of ~intersection~ is NOT very good.
+
+     - Like ~distinct~ and ~intersection~, ~subtract~ also need /shuffle/ -- not
+       so good performance.
+
+     - /Cartesian product/ between /RDDs/: ~RDD1.cartesian(other)~.
+       Be warned, however, that the /Cartesian product/ is *very expensive* for
+       large /RDDs/.
+
+     - ~sample(withReplacement, fraction, [seed])~:
+       Sample an RDD, with or without replacement.
+
+**** DONE Actions - 38
+     CLOSED: [2018-10-09 Tue 13:55]
+     - Table 3-4. Basic actions on an RDD containing {1, 2, 3, 3}
+     - =TODO= NOTE
+
+*** TODO Converting Between RDD Types - 42
+    Some functions are available only on certain types of RDDs, such as ~mean()~
+    and ~variance()~ on /numeric RDDs/, or ~join()~ on key/value pair /RDDs/.
+    =TODO= See Chapter 6 and Chapter 4
+    
+    If we want to use these methods, we need correct /specialized class/.
+
+**** DONE Scala - 43
+     CLOSED: [2018-10-09 Tue 13:57]
+     Thourgh /implicit conversions/: ~org.apache.spark.SparkContext._~
+
+**** TODO Java - 43
+**** DONE Python - 44
+     CLOSED: [2018-10-09 Tue 14:01]
+     The Python API is structured _differently_ than Java and Scala.
+
+     In Python all of the functions are implemented on the BASE ~RDD~ /class/
+     but will _fail at runtime_ if the type of data in the /RDD/ is _incorrect_.
+
+** DONE Persistence (Caching) - 44
+   CLOSED: [2018-10-09 Tue 14:55]
+   - When we ask Spark to /persist/ an RDD, the /nodes/ that compute the RDD
+     store their partitions.
+
+     + If a node that has data persisted on it _fails_,
+       Spark will _recompute_ the lost partitions of the data when needed.
+
+     + We can also *replicate* our data on _multiple nodes_
+       if we want to be able to handle node failure *without slowdown*.
+
+   - In Scala and Java,
+     the default ~persist()~ will *store data in the JVM /heap/ as
+     /unserialized/ objects*.
+
+   - In Python,
+     we *always serialize* the data that persist sotres, so the _default_ is
+     instead sotred in the /JVM heap/ as /pickled objects/.
+
+   - When we write data _out to disk_ or _off-heap storage_, the data is also
+     *always serialized*.
+
+   - Example:
+     #+BEGIN_SRC scala
+       val result = input.map(x => x * x)
+       result.persist(StorageLevel.DISK_ONLY)
+       println(result.count())
+       println(result.collect().mkString(", "))
+     #+END_SRC
+
+   - Table 3-6. /Persistence levels/ and add ~_2~ suffix to them to replicate
+     the date on two machines.
+
+     =TODO= TABLE
+
+     ~org.apache.spark.storage.StorageLevel~ and ~pyspark.StorageLevel~
+
+   - *TIP*
+     Off-heap caching is experimental and uses /Tachyon/.
+     =TODO=
+     =from Jian= This book is a 2015 book. Check the newest version status!!!
+
+   - If cache too much in memory, LRU policy will be applied, and recomputation
+     may happend if data is deleted from memory due to LRU.
+
+   - You can call ~unpersist()~ to manually remove them from the cache.
+
+** DONE Conclusion - 46
+   CLOSED: [2018-10-09 Tue 14:56]
+   =TODO= NOTE
+
+* TODO 4. Working with Key/Value Pairs - 47
+  - Key/value /RDDs/ are commonly used, especially when perform aggregations.
+
+  - Often we will do some initial ETL (/extract/, /transform/, and /load/) to get
+    out data into a key/value format.
+
+  - We also discuss an advanced feature that
+    lets users *control the layout of pair RDDs across nodes*: /partitioning/.
+
+    With good dataset partition, applications can sometimes *greatly reduce
+    communication costs* by ensuring that data will be accessed together and
+    will be on the same node. This can provide significant speedups.
+
+    We illustrate /partitioning/ using the /PageRank algorithm/ as an example.
+
+  -
+    Choosing the right partitioning for a distributed dataset is similar to
+    choosing the right data structure for a local one -- in both cases, data
+    layout can greatly affect performance.
+
+** DONE Motivation - 47
+   CLOSED: [2018-10-09 Tue 15:09]
+   - /pair RDDs/
+
+   - /pair RDDs/ support some useful operations like
+     + ~reduceByKey~ /method/
+
+     + ~join~ /method/ -- merge two /RDDs/ together by grouping elements with the
+       same key.
+       =TODO= Example
+
+** DONE Creating Pair RDDs - 48
+   CLOSED: [2018-10-09 Tue 16:56]
+   - Python:
+     ~pairs = lines.map(lambda x: (x.split(" ")[0], x))~
+
+   - Scala:
+     ~val pair = lines.map(x => (x.split(" ")(0), x))~
+
+   - Java:
+     #+BEGIN_SRC java
+       PairFunction<String, String, String> keyData =
+           new PairFunction<String, String, String>() {
+               public scala.Tuple2<String, String> call(String x) {
+                   return new scala.Tuple2(x.split(" ")[0], x);
+               }
+           };
+
+       JavaPairRDD<String, String> pairs = lines.mapToPair(keyData);
+     #+END_SRC
+
+   - From exist in-memory collection:
+     + Scala and Python are similar -- call ~parallelize()~
+     + Java has different API -- call ~parallelizePairs()~
+
+** TODO Transformations on Pair RDDs - 49
+   - Table 4-1. Transformations on one pair RDD (example: {(1, 2), (3, 4), (3, 6)})
+     =TODO=
+
+   - Table 4-2. Transformations on two pair RDDs (rdd = {(1, 2), (3, 4), (3, 6)} other = {(3, 9)})
+     =TODO=
+
+   
+*** TODO Aggregations - 51
+*** DONE Grouping Data - 57
+    CLOSED: [2018-10-09 Tue 17:21]
+    - For /pair RDDs/, ~.groupByKey~ /method/ returns ~RDD[K, Iterable[V]]~
+      For /unpaired RDDs/, ~.gourpBy~ /method/ do the similar things.
+
+    - *TIP*
+      If you find yourself writing code where you ~groupByKey()~ and then use a
+      ~reduce()~ or ~fold()~ on the values,
+      you can probably achieve the same result _more efficiently_ by using one of
+      the per-key aggregation functions.
+      For example,
+      ~rdd.reduceByKey(func)~ produces the same /RDD/ as
+      ~rdd.groupByKey().mapValues(\under{}.reduce(func))~, but _more efficient_ at is
+      *avoid creating a list of values for each key*.
+
+    - The ~.cogroup~ /method/ can do much more than just implementing /joins/:
+      + Use it to implement /intersect by key/.
+
+      + It can work with three or more /RDDs/ at once.
+
+*** TODO Joins - 58
+*** DONE Sorting Data - 59
+    CLOSED: [2018-10-09 Tue 17:38]
+    - Python:
+      #+BEGIN_SRC python
+        rdd.sortByKey(ascending=True,
+                      numPartitions=None,
+                      keyfunc = lambda x: str(x))
+      #+END_SRC
+
+    - Scala:
+      #+BEGIN_SRC scala
+        val input: RDD[(Int, Venue)] = ...
+
+        implicit val sortIntegersByString = new Ordering[Int] {
+          override def compare(a: Int, b: Int) = (a.toString) compare (b.toString)
+        }
+
+        rdd.sortByKey()
+      #+END_SRC
+
+    - Java:
+      #+BEGIN_SRC java
+        class IntegerComparator implements Comparator<Integer> {
+            public int compare(Integer a, Integer b) {
+                return String.valueOf(a).compareTo(String.valueOf(b))
+            }
+        }
+
+        rdd.sortKeyBy(new IntegerComparator());
+
+        // TODO: from Jian - Why not anonymous function
+        rdd.sortKeyBy((a, b) -> String.valueOf(a).compareTo(String.valueOf(b)));
+      #+END_SRC
+
+** DONE Actions Available on Pair RDDs - 60
+   CLOSED: [2018-10-09 Tue 17:41]
+   - Table 4-3. Actions on pair RDDs (exmaple(~{(1, 2), (3, 4), (3, 6)}~))
+     ~countByKey~, ~collectAsMap~, ~lookup(key)~
+
+   - =TODO=
+     There are also multiple other actions on pair RDDs that save the RDD,
+     which we will describe in Chapter 5
+
+** TODO Data Partitioning (Advanced) - 61
+*** TODO Determining an RDD's Partitioner - 64
+*** TODO Operations That Benefit from Partitioning - 65
+*** TODO Operations That Affect Partitioning - 65
+*** TODO Example: PageRank - 66
+*** TODO Custom Partitioners - 68
+
+** TODO Conclusion - 70
+
+* TODO 5. Loading and Saving Your Data - 71
+** DONE Motivation - 71
+   CLOSED: [2018-10-09 Tue 19:55]
+   - =TODO= NOTE
+
+   - In this chapter, =TODO= =CONCEPTS=
+     we will cover *three* common sets of data sources:
+     + /File formats/ and /filesystems/
+       For data stored in a local or distributed filesystem, such as /NFS/,
+       /HDFS/, or /Amazon S3/, Spark can access a variety of file formats
+       including /text/, /JSON/, /SequenceFiles/, and /protocol buffers/.
+
+       We will show how to use several common formats, as well as how to point
+       Spark to different /filesystems and configure compression/.
+
+     + /Structured data sources/ through /Spark SQL/
+       The /Spark SQL/ module, covered in Chapter 9 =TODO=, provides a nicer and
+       often more efficient API for structured data sources, including /JSON/
+       and /Apache Hive/. We will briefly sketch how to use /Spark SQL/, but
+       leave the bulk of the details to Chapter 9.
+
+     + /Databases/ and /key/value stores/
+       We will sketch built-in and third-party libraries for connecting to
+       /Cassandra/, /HBase/, /Elasticsearch/, and /JDBC/ databases.
+   
+** TODO File Formats - 72
+*** DONE Text Files - 73
+    CLOSED: [2018-10-09 Tue 20:13]
+**** DONE Loading text files - 73
+     CLOSED: [2018-10-09 Tue 19:58]
+     - Python
+       ~input = sc.textFile("file:///home/holden/repos/spark/README.md")~
+
+     - Scala
+       ~val input = sc.textFile("file:///home/holden/repos/spark/README.md")~
+
+     - Java
+       ~JavaRDD<String> input = sc.textFile("file:///home/holden/repos/spark/README.md")~
+
+     - You can also use the ~wholeTextFiles~ /method/ to load all files in a folder,
+       and generate a /pair RDD/ with the file names as the key:
+       #+BEGIN_SRC scala
+         val input = sc.wholeTextFiles("file://home/holden/salesFiles")
+         val result = input.mapValues { y =>
+           val nums = y.split(" ").map(_.toDouble)
+           nums.sum / nums.size.toDouble
+         }
+       #+END_SRC
+
+     - *TIP*
+       Spark supports *reading all the files in a given directory* and *doing
+       wildcard expansion on the input (e.g., part-*.txt )*.
+       =TODO=
+
+**** DONE Saving text files - 74
+     CLOSED: [2018-10-09 Tue 20:13]
+     One simple way is use ~saveAsTextFile(path)~ /method/.
+     - The ~path~ is treated as a _directory_
+       and
+       Spark will output _MULTIPLE_ files underneath that directory.
+       This allows Spark to write the output _from multiple nodes_.
+
+     - With this method we do _NOT get to control which files end up with which
+       egments of our data_,
+       =TODO= =TODO= =TODO=
+       but there are other output formats that do allow this.
+
+*** TODO JSON - 74
+*** TODO Comma-Separated Values and Tab-Separated Values - 77
+*** TODO SequenceFiles - 80
+*** TODO Object Files - 83
+*** TODO Hadoop Input and Output Formats - 84
+*** DONE File Compression - 87
+    CLOSED: [2018-10-09 Tue 20:37]
+    - MOTIVATION:
+      When working with Big Data, we often need use _compressed data_ to
+      + save storage
+      + save network overhead
+
+    - With most Hadoop output format,
+      we CAN specify a /compression codec/ that will compress the data.
+
+      + We have seen,
+        /Spark's native input formats/ (~textFile~ and ~sequenceFile~) can
+        *automatically* handle some types of compression for us.
+
+    - When you're *reading in compressed data*, there are some /compression codecs/
+      that can be used to *automatically guess* the /compression type/.
+
+    - These compression options apply *ONLY* to the /Hadoop formats/ _that support
+      compression_, namely *those that are written out to a filesystem.*
+
+      The /database Hadoop formats/ _GENERALLY do NOT implement_ support for
+      /compression/, or if they have /compressed records/ that is configured in
+      the database itself.
+
+    - *Choosing an output compression codec can have a big impact on future users
+      of the data.*:
+      With /distributed systems/ such as Spark, we normally try to read our data
+      in _FROM multiple different machines_. To make this possible, each worker
+      *needs to be able to find the start of a new record*.
+        *Some compression formats make this impossible*, (if start cannot be
+      located, read all) which requires a single node to read in all of the data
+      and thus can *easily lead to a bottleneck*.
+
+    - splittable :: /Formats/ that can be _EASILY READ FROM multiple machines_.
+
+    - Table 5-3. Compression options
+      =TODO= =TODO= With /splittable/ info!!!
+
+    - =TODO= =???=
+      While Spark’s ~textFile()~ /method/ can handle compressed input, it
+      *automatically disables* /splittable/ even if the input is compressed such
+      that it could be read in a splittable way.
+
+      =???=
+      If you find yourself needing to read in a large single-file compressed
+      input, consider skipping Spark's wrapper and instead use either
+      ~newAPIHadoopFile~ or ~hadoopFile~ and specify the correct /compression
+      codec/.
+
+    - Some input formats allow as to compress only the values in key/value data.
+      For example, ~SequenceFiles~.
+
+    - =TODO= Annother example
+
+** TODO Filesystems - 89
+*** TODO Local/"Regular" FS - 89
+*** TODO Amazon S3 - 90
+*** TODO HDFS - 90
+
+** TODO Structured Data with Spark SQL - 91
+*** TODO Apache Hive - 91
+*** TODO JSON - 92
+
+** TODO Databases - 93
+*** TODO Java Database Connectivity - 93
+*** TODO Cassandra - 94
+*** TODO HBase - 96
+*** TODO Elasticsearch - 97
+
+** TODO Conclusion - 98
+
+* TODO 6. Advanced Spark Programming - 99
+** TODO Introduction - 99
+   - We introduce *two* types of /shared variables/:
+     accumulators to aggregate information and broadcast variables to
+     efficiently distribute large values.
+
+   - Building on our existing transformations on RDDs, we introduce /batch
+     operations/ for tasks _with HIGH SETUP COSTS_, like querying a database.
+
+   - To expand the range of tools accessible to us, we cover Spark's methods for
+     interacting with external programs, such as scripts written in R.
+
+   - =TODO= =NOTE=
+
+** TODO Accumulators - 100
+   - Functions like ~map~ and ~filter~ can use variables defined outside.
+     They can get a copy, and the modification won't affect outside!
+
+   - /Spark's shared variables/, /accumulators/ and /broadcast variables/, *relax
+     this restriction* for two common types of /communication patterns/:
+     + aggregation of results
+     + broadcasts
+
+   - 
+
+
+*** Accumulators and Fault Tolerance - 103
+*** Custom Accumulators - 103
+
+** TODO Broadcast Variables - 104
+*** Optimizing Broadcasts - 106
+
+** TODO Working on a Per-Partition Basis - 107
+** TODO Piping to External Programs - 109
+** TODO Numeric RDD Operations - 113
+** TODO Conclusion - 115
+
+* TODO 7. Running on a Cluster - 117
+** TODO Introduction - 117
+** TODO Spark Runtime Architecture - 117
+*** The Driver - 118
+*** Executors - 119
+*** Cluster Manager - 119
+*** Launching a Program - 120
+*** Summary - 120
+
+** TODO Deploying Applications with spark-submit - 121
+** TODO Packaging Your Code and Dependencies - 123
+*** A Java Spark Application Built with Maven - 124
+*** A Scala Spark Application Built with sbt - 126
+*** Dependency Conflicts - 128
+
+** TODO Scheduling Within and Between Spark Applications - 128
+** TODO Cluster Managers - 129
+*** Standalone Cluster Manager - 129
+*** Hadoop YARN - 133
+*** Apache Mesos - 134
+*** Amazon EC2 - 135
+
+** TODO Which Cluster Manager to Use? - 138
+** TODO Conclusion - 139
+
+* TODO 8. Tuning and Debugging Spark - 141
+** Configuring Spark with SparkConf - 141
+** Components of Execution: Jobs, Tasks, and Stages - 145
+** Finding Information - 150
+*** Spark Web UI - 150
+*** Driver and Executor Logs - 154
+
+** Key Performance Considerations - 155
+*** Level of Parallelism - 155
+*** Serialization Format - 156
+*** Memory Management - 157
+*** Hardware Provisioning - 158
+
+** Conclusion - 160
+
+* TODO 9. Spark SQL - 161
+** Linking with Spark SQL - 162
+** Using Spark SQL in Applications - 164
+*** Initializing Spark SQL - 164
+*** Basic Query Example - 165
+*** SchemaRDDs - 166
+*** Caching - 169
+
+** Loading and Saving Data - 170
+*** Apache Hive - 170
+*** Parquet - 171
+*** JSON - 172
+*** From RDDs - 174
+
+** JDBC/ODBC Server - 175
+*** Working with Beeline - 177
+*** Long-Lived Tables and Queries - 178
+
+** User-Defined Functions - 178
+*** Spark SQL UDFs - 178
+*** Hive UDFs - 179
+
+** Spark SQL Performance - 180
+*** Performance Tuning Options - 180
+
+** Conclusion - 182
+
+* TODO 10. Spark Streaming - 183
+** A Simple Example - 184
+** Architecture and Abstraction - 186
+** Transformations - 189
+*** Stateless Transformations - 190
+*** Stateful Transformations - 192
+
+** Output Operations - 197
+** Input Sources - 199
+*** Core Sources - 199
+*** Additional Sources - 200
+*** Multiple Sources and Cluster Sizing - 204
+
+** 24/7 Operation - 205
+*** Checkpointing - 205
+*** Driver Fault Tolerance - 206
+*** Worker Fault Tolerance - 207
+*** Receiver Fault Tolerance - 207
+*** Processing Guarantees - 208
+
+** Streaming UI - 208
+** Performance Considerations - 209
+*** Batch and Window Sizes - 209
+*** Level of Parallelism - 210
+*** Garbage Collection and Memory Usage - 210
+
+** Conclusion - 211
+
+* TODO 11. Machine Learning with MLlib - 213
+** Overview - 213
+** System Requirements - 214
+** Machine Learning Basics - 215
+*** Example: Spam Classification - 216
+
+** Data Types - 218
+*** Working with Vectors - 219
+
+** Algorithms - 220
+*** Feature Extraction - 221
+*** Statistics - 223
+*** Classification and Regression - 224
+*** Clustering - 229
+*** Collaborative Filtering and Recommendation - 230
+*** Dimensionality Reduction - 232
+*** Model Evaluation - 234
+
+** Tips and Performance Considerations - 234
+*** Preparing Features - 234
+*** Configuring Algorithms - 235
+*** Caching RDDs to Reuse - 235
+*** Recognizing Sparsity - 235
+*** Level of Parallelism - 236
+
+** Pipeline API - 236
+** Conclusion - 237
+
+* Index - 239

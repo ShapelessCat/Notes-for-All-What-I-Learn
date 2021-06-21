@@ -1,0 +1,76 @@
+#+TITLE: IMPLICIT CLASSES
+#+AUTHOR: Josh Suereth
+#+CONTRIBUTOR: ddjxie, heathermiller
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Introduction
+  CLOSED: [2019-06-10 Mon 00:50]
+  Scala 2.10 introduced a new feature called /implicit classes/.
+  - An /implicit class/ is a /class/ marked with the ~implicit~ keyword.
+    + This keyword makes the /class/'s /primary constructor/ available for /implicit
+      conversions/ when the /class/ is _in scope_.
+
+  - Implicit classes were proposed in SIP-13.
+    =TODO=
+
+* DONE Usage
+  CLOSED: [2019-06-10 Mon 00:50]
+  #+begin_src scala
+    object Helpers {
+      implicit class IntWithTimes(x: Int) {
+        def times[A](f: => A): Unit = {
+          def loop(current: Int): Unit =
+            if(current > 0) {
+              f
+              loop(current - 1)
+            }
+          loop(x)
+        }
+      }
+    }
+
+    import Helpers._
+
+    5 times println("HI")
+    // HI
+    // HI
+    // HI
+    // HI
+    // HI
+  #+end_src
+
+* DONE Restrictions
+  CLOSED: [2019-06-10 Mon 00:49]
+  /Implicit classes/ have the following *RESTRICTIONS*:
+  1. They *MUST BE* defined *inside* of another ~trait~ / ~class~ / ~object~:
+     #+begin_src scala
+       object Helpers {
+         implicit class RichInt(x: Int)  // OK!
+       }
+
+       implicit class RichDouble(x: Double)  // Illegal!
+     #+end_src
+
+  2. They may only take *ONE* *non-implicit* /argument/ in their /constructor/:
+     #+begin_src scala
+       implicit class RichDate(date: java.util.Date)                       // OK!
+       implicit class Indexer[T](collecton: Seq[T], index: Int)            // Illegal!
+       implicit class Indexer[T](collecton: Seq[T])(implicit index: Index) // OK! But not implicit class!
+     #+end_src
+     While it's possible to create an /implicit class/ with more than one
+     *non-implicit* /argument/, _such /classes/ are *NOT* used during /implicit
+     lookup/._
+
+  3. There may *NOT* be any /method/, /member/ or /object/ *in scope* with the
+     _same name_ as the /implicit class/.
+     Note: This means an /implicit class/ *CANNOT* be a /case class/.
+     #+begin_src scala
+       object Bar
+       implicit class Bar(x: Int)  // Illegal!
+
+       val x = 5
+       implicit class x(y: Int)  // Illegal!
+
+       implicit case class Bza(x: Int)  // Illegal!
+     #+end_src

@@ -1,0 +1,447 @@
+#+TITLE: Macro in Scala 3
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Tutorial
+** TODO Introduction
+** TODO Inline
+   /Inlining/ is a common /compile-time metaprogramming/ technique, typically
+   used _TO ACHIEVE performance optimizations._
+     As we will see, in Scala 3, the concept of /inlining/ provides us with an
+   *entrypoint* to programming with /macros/.
+   1. It introduces ~inline~ as a /soft keyword/.
+
+   2. It _GUARANTEES_ that /inlining/ *actually happens* instead of being
+      best-effort (as ~@inline~).
+
+   3. It introduces operations that are _GUARANTEED_ to *evaluate at compile-time*.
+
+*** DONE Inline Constants
+    CLOSED: [2020-11-25 Wed 02:28]
+    The simplest form of /inlining/ is to /inline constants/ in programs:
+    #+begin_src scala
+      inline val pi = 3.141592653589793
+    #+end_src
+    
+    - The usage of the keyword ~inline~ in the _inline value definitions_ above
+      *guarantees* that all references to ~pi~ are /inlined/:
+      #+begin_src scala
+        val pi2 = pi + pi  // val pi2 = 6.283185307179586
+      #+end_src
+      Here, /constant folding/ is applied by the compiler.
+
+    - *Inline (Scala 3) vs. final (Scala 2)*
+
+    - Here is a piece of invalid code:
+      #+begin_src scala
+        val pi = 3.141592653589793
+        inline val pi2 = pi + pi  // error
+      #+end_src
+      The ways to fix it:
+      * Add ~inline~ to ~pi~
+        OR
+      * Remove ~inline~ from ~pi2~
+
+*** DONE Inline Methods
+    CLOSED: [2020-11-25 Wed 03:48]
+    - Example:
+      * Definition:
+        #+begin_src scala
+          inline def logged[T](level: Int, message: => String)(inline op: T): T =
+            println(s"[$level]Computing $message")
+            val res = op
+            println(s"[$level]Result of $message: $res")
+            res
+        #+end_src
+    
+      * The call-site
+        #+begin_src scala 
+          logged(logLevel, getMessage()) {
+            computeSomthing()
+          }
+        #+end_src
+    
+        will be inlined as
+        
+        #+begin_src scala
+          val level   = logLevel
+          def message = getMessage()
+
+          println(s"[$level]Computing $message")
+          val res = computeSomthing()
+          println(s"[$level]Result of $tag: $res")  // TODO: Need fix docs -- `tag` should be `message`
+          res
+        #+end_src
+    
+**** DONE Semantics of Inline Methods
+     CLOSED: [2020-11-25 Wed 03:47]
+     - Our example /method/ ~logged~ uses _THREE different kinds_ of parameters,
+       illustrating that /inlining/ handles those parameters DIFFERENTLY:
+       1. *By-value parameters*
+          * The compiler generates a ~val~ binding for /by-value parameters/.
+
+          * This way, the /argument expression/ is _evaluated only ONCE_
+            BEFORE the /method body/ is reduced.
+
+          * In some cases,
+            WHEN the /arguments/ are /pure constant values/,
+            the binding is *omitted* and the value is *inlined* directly.
+
+       2. *By-Name parameters*
+          * The compiler generates a ~def~ binding for /by-name parameters/.
+
+          * This way, the /argument expression/ is _evaluated EVERY time_
+            (=from Jian= this is like a /NAIVE by-name parameter/, which doesn't
+            cache values) it is used, but the code is shared.
+            This can be seen in the parameter ~message~ from the example.
+            
+          * =from Jian=
+            Is there any further optimization that can CACHE the value???
+            =TODO= =TODO= =TODO=
+
+       3. *Inline parameters*
+          /Inline parameters/ do *not* create /bindings/ and are SIMPLY /inlined/.
+          This way, their code is duplicated everywhere they are used. This can
+          be seen in the parameter ~op~ from the example.
+     
+*** DONE Inline Parameters
+    CLOSED: [2020-11-26 Thu 02:47]
+    - One important application of /inlining/ is to
+      ENABLE /constant folding optimisation/ *across /method/ boundaries.*
+
+    - /Inline parameters/
+      * do *not* create bindings
+        AND
+      * their code is _duplicated everywhere_ they are used.
+
+    - Example:
+      #+begin_src scala
+        inline def perimeter(inline radius: Double): Double =
+          2.0 * pi * radius
+      #+end_src
+      The application ~perimeter(5.0)~
+      1. will be *rewritten* to ~2.0 * pi * 5.0~,
+
+      2. because of the /inline parameter/ it will be _FURTHER_ *rewritten* to
+         ~2.0 * 3.141592653589793 * 5.0~,
+
+      3. and final ssit is /constant folded/ to ~31.4159265359~
+      
+    - *Inline parameters should be used only once*
+      We need to be _CAREFUL_ when using an /inline parameter/ *more than once*.
+      * Since the piece of code referenced by an /inline parameter/ will be *duplicated*,
+        there can be *TWO pitfalls*:
+        + Duplicate the work of calculation
+        + Duplicate the side effects, which might be expected
+        
+      * =from Jian=
+        Remember /inline parameters/ is not /inline values/, there is *NO /constant
+        expression/ restriction* for /inline parameters/.
+
+      * =from Jian=
+        It seems cache the value inside the /function definition/ is a solution
+        to promise correction, but it also *disable* the _across /method/
+        boundaries. /constant folding optimisation/_ -- *the main purpose we
+        introduce /inline parameters/.*
+        + Conclusion: 
+          Cache the value of a /inline parameter/ is not a good solution.
+          
+    - A useful application of /inline parameters/ is to *avoid the creation* of
+      /closures/, _INCURRED BY the use of /by-name parameters/._
+      #+begin_src scala
+        def assert1(cond: Boolean, msg: => String): Unit =
+          if !cond then
+            throw new Exception(msg)
+
+        assert1(x, "error1")
+
+        // is inlined as
+
+        val cond = x
+        def msg = "error1"
+        if !cond then
+          throw new Exception("error1")
+      #+end_src
+      The use of a /by-name parameter/ leads to a /local definition/ ~msg~,
+      which *allocates* a /closure/ BEFORE _the condition is checked_.
+    
+      This can be improved as
+      #+begin_src scala
+        inline def assert2(cond: Boolean, inline msg: String): Unit =
+          if !cond then
+            throw new Exception(msg)
+
+        assert2(x, "error2")
+
+        // is inlined as
+
+        val cond = x
+        if !cond then
+          throw new Exception("error2")
+      #+end_src
+      This guarantee that _the condition is checked_ BEFORE any of the code that
+      handles the exception is reached. In the case of an assertion, this code
+      should never be reached.
+      
+*** TODO Inline Conditionals
+    - If the condition of an if is a known constant (true or false), possibly after
+      inlining and constant folding, then the conditional is partially evaluated
+      and only one branch will be kept.
+
+    - For example, the following power method contains some if that will potentially
+      unroll the recursion and remove all method calls.
+      #+begin_src scala
+        inline def power(x: Double, inline n: Int): Double =
+          if n == 0 then          1.0
+          else if n % 2 == 1 then x * power(x, n - 1)
+          else                    power(x * x, n / 2)
+      #+end_src
+
+    - Calling power with statically known constants results in the following code:
+      #+begin_src scala
+        power(2, 2)
+
+        // first inlines as
+        val x = 2
+        if 2 == 0          then 1.0 // dead branch
+        else if 2 % 2 == 1 then x * power(x, 2 - 1) // dead branch
+        else                    power(x * x, 2 / 2)
+
+        // partially evaluated to
+        val x = 2
+        power(x * x, 1)
+      #+end_src
+
+    - In contrast, let us imagine we do not know the value of n:
+      ~power(2, unknownNumber)~
+      
+    - Driven by the inline annotation on the parameter, the compiler will try to
+      unroll the recursion. But without any success, since the parameter is not
+      statically known.
+
+    - To guarantee that the branching can indeed be performed at compile-time,
+      we can use the inline if variant of if. Annotating a conditional with
+      inline will guarantee that the conditional can be reduced at compile-time
+      and emits an error if the condition is not a statically known constant.
+      #+begin_src scala
+        inline def power(x: Double, inline n: Int): Double =
+          inline if n == 0          then 1.0
+          else inline if n % 2 == 1 then x * power(x, n - 1)
+          else                           power(x * x, n / 2)
+
+        power(2, 2)  // Ok
+        power(2, unkownNumber)  // error
+      #+end_src
+      
+    - We will come back to this example later and see how we can get more control
+      on how code is generated.
+      
+*** TODO Inline Method Overriding
+*** TODO Transparent Inline Methods
+    /Transparent inlines/ are a simple, yet powerful, *extension* to ~inline def~'s
+    and *unlock many metaprogramming usecases*.
+
+    Calls to /transparents/ allow for an /inline/ piece of code to *REFINE the /return
+    type/* based on the *PRECISE type* of the /inlined expression/. In Scala 2 parlance,
+    /transparents/ capture the essence of /whitebox macros/.
+
+    - Example: =FIX= =NOT COMPILABLE=
+      #+begin_src scala
+        transparent inline def default(inline name: String): Any =
+          inline if name == "Int"         then 0
+          else inline if name == "String" then ""
+          else ...
+
+        val n0: Int = default("Int")
+        val s0: String = default("String")
+      #+end_src
+
+    - Note that even if the return type of default is Any, the first call is typed
+      as an Int and the second as a String. The return type represents the upper
+      bound of the type within the inlined term. We could also have been more
+      precise and have written instead
+      #+begin_src scala
+        transparent inline def default(inline name: String): 0 | "" = ...
+      #+end_src
+
+    - While in this example it seems the return type is not necessary, it is
+      important when the inline method is recursive. There it should be precise
+      enough for the recursion to type but will get more precise after inlining.
+
+    - *Transparents affect binary compatibility*
+      It is important to note that changing the body of a ~transparent inline def~
+      will change how the call site is typed. This implies that the body plays a
+      part in the binary and source compatibility of this interface.
+    
+*** DONE Compiletime Operations
+    CLOSED: [2020-11-26 Thu 03:46]
+    We also provide some operations that evaluate *at compiletime*.
+    
+**** DONE Inline Matches
+     CLOSED: [2020-11-26 Thu 03:42]
+     - Like ~inline if~'s, ~inline matche~'s *guarantee* that the /pattern matching/
+       can be *statically REDUCED* _at compile time_ and only one branch is kept.
+
+     - In the following example, the scrutinee, ~x~, is an /inline parameter/ that
+       we can /pattern match/ on _at compile time_.
+       #+begin_src scala
+         inline def half(x: Any): Any =
+           inline x match
+             case x: Int    => x / 2
+             case x: String => x.substring(0, x.length / 2)
+
+         half(6)
+         // expands to:
+         // val x = 6
+         // x / 2
+
+         half("hello world")
+         // expands to:
+         // val x = "hello world"
+         // x.substring(0, x.length / 2)
+       #+end_src
+       This illustrates that ~inline matche~'s provide a way to match on the static
+       type of some expression.
+
+       * As we match on the /static type/ of an expression, the following code would
+         _FAIL to compile_.
+         #+begin_src scala
+           val n: Any = 3
+           half(n)  // error: n is not statically known to be an Int or a Double
+         #+end_src
+         Notably, the value ~n~
+         1. is *not marked as* ~inline~
+            and
+         2. in consequence
+            _at compile time_ there is *not enough information* about the
+            scrutinee to decide which branch to take.
+            + =from Jian=
+              Since ~inline val~'s must have /literal constant types/,
+              if we want to correct the code example above,
+              we need ~inline val n = 3~, instead of ~inline val n: Any = 3~,
+              which is *ILLEGAL* code.
+
+**** DONE ~scala.compiletime~
+     CLOSED: [2020-11-26 Thu 03:45]
+     The package ~scala.compiletime~ provides useful metaprogramming abstractions
+     that can be used within /inline methods/ to provide *CUSTOM semantics*.
+     =from Jian=
+     Many of these operations are used to operate constant values that have
+     /literal constant types/, and guarantee /literal constant types/ as /return
+     types/, *NO* /type widening/.
+     
+*** DONE Macros
+    CLOSED: [2020-11-26 Thu 03:27]
+    /Inlining/ is also the core mechanism used to write /macros/.
+    /Macros/ provide a way to control the _code generation and analysis_ after the
+    call is /inlined/.
+    #+begin_src scala
+      inline def power(x: Double, inline n: Int) =
+        ${ powerCode('x, 'n) }
+
+      def powerCode(x: Expr[Double], n: Expr[Int])(using Quotes): Expr[Double] = ...
+    #+end_src
+
+** TODO Scala Compile-time Operations
+*** TODO Reporting
+*** TODO Summoning
+*** TODO Values
+    - ~constValue~, ~constValueOpt~, and ~constValueTuple~ 
+    - ~S~ Comming soon
+      
+*** TODO Testing
+    - ~testing.typeChecks~ and ~testing.typeCheckErrors~
+      
+*** TODO Assertions
+    Comming soon
+    - ~byName~
+      
+*** TODO Inline Matching
+    Comming soon
+    - ~erasedValue~
+    
+*** TODO Ops (~scala.compiletime.ops~)
+    Comming soon
+    
+** TODO Scala 3 Macros
+*** TODO Macros Treat Programs as Values
+**** TODO Macros and Type Parameters
+**** TODO Defining and Using Macros
+**** TODO Example: Statically Evaluating ~power~ with Macros
+     
+*** TODO Simple Expressions
+**** TODO Creating Expression From Values
+**** TODO Extracting Values from Expressions
+**** TODO Showing Expressions
+**** TODO Working with Varargs
+     
+*** TODO Complex Expressions
+**** TODO Collections
+**** TODO Simple Blocks
+**** TODO Simple Matching
+**** TODO Arbitrary Expressions
+
+** TODO Quoted Code
+*** TODO Code blocks
+*** TODO Level consistency
+*** TODO Generics
+*** TODO Liftables
+*** TODO Quoted patterns
+**** TODO Matching exact expression
+**** TODO Matching partial expression
+**** TODO Matching types of expression
+**** TODO Matching reciver of methods
+**** TODO Matching function expressions
+**** TODO Matching types
+     
+*** TODO Unliftables
+*** TODO The ~Quotes~
+*** TODO β-reduction
+*** TODO Summon values
+
+** TODO Reflection
+*** TODO How to use the API
+*** TODO Relation with expressions
+    - Coming soon
+      
+*** TODO Examples
+    - Coming soon
+
+* TODO FAQ
+  - Q :: Which should I use ~Expr(...)~ or ~'{...}~?
+  - Q :: Which is better between ~Expr(true) or ~'{true}~?
+  - Q :: How do I get a value out of an ~Expr~?
+  - Q :: How can I get the precise type of an ~Expr~?
+     
+* TODO Best Practices
+** TODO Inline
+*** Be careful when inlining for performance
+    
+** TODO Macros
+*** TODO Comming soon
+    
+** TODO Quoted code
+*** Keep quotes readable
+*** Avoid nested contexts
+    
+** TODO TASTy reflection
+*** TODO Comming soon
+   
+* TODO Other Recources
+** TODO Scala 2 migration
+*** Scala 2 migration and cross-compilation
+*** Migration status
+    
+** TODO Dotty documentation
+*** Dotty Documentation
+*** Macros: The Plan For Scala 3
+*** Examples - a repository with small, self-contained examples of various tasks done with Dotty macros.
+    
+** TODO Talks
+*** Scala Days - Metaprogramming in Dotty
+    
+** TODO Projects and examples
+*** dotty-macro-examples
+*** XML Interpolator
+*** Shapeless 3
+*** More Coming soon

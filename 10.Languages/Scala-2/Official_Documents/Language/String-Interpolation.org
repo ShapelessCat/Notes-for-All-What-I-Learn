@@ -1,0 +1,152 @@
+#+TITLE: String Interpolation
+#+AUTHOR: Josh Suereth
+#+CONTRIBUTORS: xingyif, heathermiller
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Introduction
+  CLOSED: [2019-06-09 Sun 23:26]
+  _Starting in Scala 2.10.0_,
+  Scala offers a new mechanism to create strings from your data:
+  /String Interpolation/. /String Interpolation/ allows users to _embed_
+  /variable references/ directly in processed /string literals/. Here's an
+  example:
+  #+begin_src scala
+    val name = "James"
+    println(s"Hello, $name")  // Hello, James
+  #+end_src
+
+  - /String interpolation/ was introduced by *SIP-11*, which contains all details
+    of the implementation.
+    TODO TODO TODO
+
+* DONE Usage
+  CLOSED: [2019-06-09 Sun 23:24]
+  Scala provides three string interpolation methods out of the box:
+  ~s~, ~f~ and ~raw~.
+
+** DONE The ~s~ String Interpolator
+   CLOSED: [2019-06-09 Sun 23:14]
+   Prepending ~s~ to any /string literal/ allows the usage of variables DIRECTLY
+   in the string. You've already seen an example here:
+   #+begin_src scala
+     val name = "James"
+     println(s"Hello, $name")  // Hello, James
+     println(s"1 + 1 = ${1 + 1}")
+   #+end_src
+
+** DONE The ~f~ Interpolator - TODO Java ~Formatter~
+   CLOSED: [2019-06-09 Sun 23:24]
+   When using /the ~f~ interpolator/, ALL /variable references/ *should be
+   followed by a ~printf~-style format string*, like ~%d~.
+   - Let's look at an example:
+     #+begin_src scala
+       val height = 1.9d
+       val name = "James"
+       println(f"$name%s is $height%2.2f meters tall")  // James is 1.90 meters tall
+     #+end_src
+
+   - /The ~f~ interpolator/ is *typesafe*.
+     For example:
+     #+begin_src scala
+       val height: Double = 1.9d
+       f"$height%4d"
+       // <console>:9: error: type mismatch;
+       //  found   : Double
+       //  required: Int
+       //            f"$height%4d"
+       //               ^
+     #+end_src
+
+   - /The ~f~ interpolator/ makes use of the _string format utilities_ available
+     *from Java*. The formats allowed after the ~%~ character are outlined in
+     the ~Formatter~ javadoc =TODO=.
+
+   - If there is NO ~%~ character after a variable definition a formatter of ~%s~
+     (String) is assumed -- the DEFAULT!
+
+** DONE The ~raw~ Interpolator
+   CLOSED: [2019-06-09 Sun 23:20]
+   /The ~raw~ interpolator/ is _SIMILAR_ to /the ~s~ interpolator/ except that
+   it performs *no escaping* of literals within the string.
+   - Compare
+     #+begin_src scala
+       /** the s Interpolator */
+       s"a\nb"
+       // res0: String =
+       // a
+       // b
+
+
+       /** the raw Interpolator */
+       raw"a\nb"
+       // res1: String = a\nb
+     #+end_src
+
+   - In addition to the THREE default string interpolators,
+     *users can define their own.*
+
+* DONE Advanced Usage
+  CLOSED: [2019-06-10 Mon 00:16]
+  In Scala, ALL /processed string literals/ are simple *code transformations*.
+  Anytime the compiler encounters a /string literal/ of the form:
+  ~id"string content"~
+
+  - it transforms it into a /method call/ (~id~) on an /instance/ of ~StringContext~.
+    This /method/ can also be available on /implicit scope/.
+
+  - To _define our own /string interpolation/,_
+    we simply need to create an /implicit class/ that adds a new /method/ to
+    ~StringContext~. Here’s an example:
+    #+begin_src scala
+      // Note: We extends AnyVal to prevent runtime instantiation.  See
+      // value class guide for more info.
+      implicit class JsonHelper(val sc: StringContext) extends AnyVal {
+        def json(args: Any*): JSONObject = sys.error("TODO - IMPLEMENT")
+      }
+
+      def giveMeSomeJson(x: JSONObject): Unit = // ...
+
+      giveMeSomeJson(json"{ name: $name, id: $id }")
+    #+end_src
+    + In this example, we're attempting to create a /JSON literal syntax/ using
+      /string interpolation/.
+
+    + However, the result of such a /formatted string literal/ would not be a
+      string, but a ~JSONObject~.
+
+  - When the compiler encounters the literal ~json"{ name: $name, id: $id }"~ it
+    rewrites it to the following expression:
+    #+begin_src scala
+      new StringContext("{ anem: ", ", id: ", " }").json(name, id)
+    #+end_src
+    and then, by /implicit class/,
+    #+begin_src scala
+      new JsonHelper(new StringContext("{ name: ", ", id: ", " }")).json(name, id)
+    #+end_src
+
+  - So, the ~json~ method has access to the raw pieces of strings and each expression
+    as a value. A _simple (buggy)_ implementation of this /method/ could be:
+    #+begin_src scala
+      implicit class JsonHelper(val sc: StringContext) extends AnyVal {
+        def json(args: Any*): JSONObject = {
+          val strings = sc.parts.iterator
+          val expressions = args.iterator
+          var buf = new StringBuilder(strings.next())
+
+          while(strings.hasNext) {
+            buf append expressions.next()
+            buf append strings.next()
+          }
+          parseJson(buf)
+        }
+      }
+    #+end_src
+
+  - Each of the string portions of the _processed string_ are exposed in the
+    ~StringContext~'s parts member. Each of the expression values is passed into
+    the ~json~ /method/'s ~args~ parameter. The ~json~ /method/ takes this and
+    generates a big string which it then parses into JSON.
+    + A more sophisticated implementation could avoid having to generate this
+      string and simply construct the JSON directly from the _raw strings_ and
+      expression values.

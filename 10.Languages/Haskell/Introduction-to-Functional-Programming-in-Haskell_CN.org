@@ -1,0 +1,1615 @@
+#+TITLE: Introduction to Functional Programming in Haskell
+#+VERSION: 2014
+#+AUTHOR: Song Zhang
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* I 基础篇 - 33
+* 1 Haskell 简介 - 35
+** TODO 1.1 Haskell 的由来 - 35
+   =TODO=
+   如果读者想要了解更多关于 Haskell 的历史,可以阅读 [22] 还有 [26] 的 1.4 节与
+   [73] 中的前言部分。还可以浏览一下 [65] 的简介部分。
+
+** TODO 1.2 Haskell 编译器的安装以及编写环境 - 35
+*** 1.2.1 GHCi 的使用 - 37
+
+** DONE 1.3 =.hs= 和 =.lhs= 文件、注释与库函数 - 40
+   CLOSED: [2018-09-10 Mon 03:03]
+   - =.lhs= means /Literate Haskell Script/.
+     It is designed to convert Haskell code file to fancy PDF documents.
+
+     For example,
+     #+BEGIN_SRC haskell
+       .lhs file
+       > add :: Int -> Int -> Int
+       > add x y = x + y
+     #+END_SRC
+
+     Requirements:
+     * code Use ~>~ start
+
+     * Not ~>~ start or space(s) start line will be considered as comments.
+       There must *at least one blank line* between comments and code.
+
+     * Some =.lhs= file code starts with ~\begin{code}~ and ends with ~\end{code}~.
+
+     * If the =.lhs= follow some required format, you can use *lhs2tex* to get a
+       LaTeX version. Read http://www.andres-loeh.de/lhs2tex/.
+
+     * The ~>~ rule comes from Donald Knuth's Literate Programming definition.
+
+     * =No sure - from book=
+       It seems /literate programming/ is an applicable way to write Haskell code,
+       which is full of novel ideas and fancy concepts that sometimes need lines
+       of clear comments, but the code is often NOT very long.
+
+   - =.hs=
+     If our code is not in the /literate programming/ style, or no need to
+     generate PDF, use =.hs= format:
+     + A ~--~ start line is a single line comment.
+     + The ~{-~ and ~-}~ pair enclosed lines are a block comment.
+
+     + Use ~{-#~ and ~-#}~ to specify compiler extensions.
+
+       =from Jian= =TODO=
+       This seems not complete! I don't know how to use it to add compiler
+       options or arguments, which is mentioned in the words below (without
+       concrete examples): =TODO=
+       有时需要对 GHC 与 GHCi 声明一些语言扩展与编译器选项或参数,
+       此时需要在文件首处给出声明,并且以“{-#”开头,用“#-}”结尾。编译器的扩展是 GHC
+       在 Haskell 标准之外定义的特性 2 ,在后面的章节中,我们会具体学习使用语言扩展还有编译
+       器参数。
+
+** DONE 1.4 第一个 Haskell 程序 —— HelloWorld  - 40
+   CLOSED: [2018-09-10 Mon 02:46]
+   #+BEGIN_SRC haskell
+     -- Helloword.hs
+     main = putStrLn "Hello, World!"
+   #+END_SRC
+
+   - You can
+     + use /ghc/ to compile it, get an executable, and run it.
+       OR
+     + just directly run it with the shell command =runghc Helloworld.hs=.
+
+* TODO 2 类型系统和函数 - 43
+** TODO 2.1 Haskell 的类型与数据 - 43
+*** DONE 2.1.1 Haskell 常用数据类型 - 43
+    CLOSED: [2018-09-11 Tue 16:26]
+    - strong type -:: xxx =TODO=
+
+    - ~Bool~
+
+    - ~Char~
+      + You can also use backslash + number form.
+        For example,
+        #+BEGIN_SRC haskell
+          '\100'  -- 'd'
+          '你'    -- '\20320', which is Unicode codepoint
+        #+END_SRC
+
+      + Haskell does NOT support the octal escape form. =TODO= =EN=
+
+      + Table 2.1 Common escaped character
+        | \b | =TODO= |
+        | \n | =TODO= |
+        | \t | =TODO= |
+        | \& | =TODO= |
+        | \\ | =TODO= |
+        | \" | =TODO= |
+        | \' | =TODO= |
+
+    - Singed Integer: ~Int~
+      32 bits -- [-2^{31}, 2^{31} - 1]
+
+      The default integer type is ~Integer~, NOT ~Int~.
+        If you want to use ~Int~, you need to explicitly write the type annotation
+      out.
+
+    - Unsinged Integer: ~Word~
+      Its range is _system dependent_!
+
+      + In GHCi, use ~:m +Data.Word~ to import the ~Data.Word~ /moudle/, and use
+        ~:m Data.Word~ to remove it! =IMPORTANT=
+
+    - Any precision Integer: ~Integer~
+      + The ONLY limitation to it the the memory of the computer you are using.
+
+      + Use it carefully if your code is performance critical.
+
+    - ~Int8~, ~Int16~, ~Int32~, and ~Int64~ from ~Data.Int~
+
+    - ~Word8~, ~Word16~, ~Word32~, and ~Word64~ from ~Data.Word~
+
+    - Haskell also supports multiple representations of integers:
+      + Octal : ~0o~ prefixed
+
+      + Hex   : ~0x~ prefixed
+
+      + Binary: ~0b~ prefixed 
+        ~GHC 7.10+~ and the ~BinaryLiterals~ /language extension/ is required --
+        Haskell2010 standard does *NOT* have definitions and rules to the
+        /binary literals/.
+
+    - Fraction numbers: ~Float~, ~Double~, ~Rational~
+      The ~Float~ and ~Double~ are the same as their counterparts in most other
+      languages.
+
+      Example (~%~ here in the output is just the ~/~ in the handwriting form):
+      #+BEGIN_SRC haskell
+        4.1332 :: Rational
+        -- 10333 % 2500
+      #+END_SRC
+
+    - ~String~
+      Haskell ~String~ is the alias of ~[Char]~
+
+    - Tuple
+      Haskell support N-Tuple (Comment 2.1.1. The maximum N is *62*).
+
+      Two import functions to 2-Tuple (pair): ~fst~ and ~snd~
+
+*** TODO 2.1.2 函数类型 - 48
+    - Polymorphism Functions
+    - Overloaded Functions
+
+*** DONE 2.1.3 类型的别名 - 53
+    CLOSED: [2018-09-11 Tue 16:34]
+    type synonym
+
+    Example:
+    #+BEGIN_SRC haskell
+      -- `Word8` is more proper for this case.
+      -- However, this tripl-Int example can give a better illustration.
+      type RGB = (Int, Int, Int)
+
+      type ID        = Int
+      type BookName  = String
+      type Author    = String
+      type ISBN      =
+      type Publisher = String
+
+      type Book = (ID, BookName, Author, ISBN, Publisher)  -- A record syntax is better, but we haven't learn it.
+    #+END_SRC
+
+*** DONE 2.1.4 类型的重要性 - 54 - =Re-READ=
+    CLOSED: [2018-09-11 Tue 16:36]
+
+** TODO 2.2 Haskell 中的类型类 - 55
+*** 2.2.1 相等类型类: ~Eq~ - 56
+*** 2.2.2 有序类型类: ~Ord~ - 57
+*** 2.2.3 枚举类型类: ~Enum~ - 57
+*** 2.2.4 有界类型类: ~Bounded~ - 58
+*** TODO 2.2.5 数类型类: ~Num~ - 58
+    =IMPORTANT= =TODO=
+
+** DONE 2.3 Haskell 中的函数 - 68
+   CLOSED: [2018-09-12 Wed 04:26]
+*** DONE 2.3.1 Haskell 中的值 - 68
+    CLOSED: [2018-09-12 Wed 03:55]
+*** TODO 2.3.2 函数思想入门 - 69
+*** DONE 2.3.3 函数的基本定义格式 - 71 - =TODO=
+    CLOSED: [2018-09-12 Wed 04:26]
+    - =TODO= =TRY IT=
+      The syntax like ~function :: Show a => Ord a => a -> a -> a~ is equivalent
+      to the one we use everyday: ~function :: (Show a, Ord a) => a -> a -> a~.
+
+      The former is not part of the standard of Haskell 98!
+      =from Jian= How about Haskell 2010?????? =TODO=
+
+    - Module top-level functions must start from the beginning of a line!
+
+    - Don't use Tab. Use space!
+
+    - /Types/ and /typeclasss/ must be capitalized!
+
+    - The ~curry~ funciton is NOT correspond the currying concept in general!
+      Let't check its type:
+      #+BEGIN_SRC haskell
+        curry :: ((a, b) -> c) -> a -> b
+      #+END_SRC
+
+** DONE 2.4 λ 表达式 - 73
+   CLOSED: [2018-09-12 Wed 04:55]
+   - After compilation, all functions will be converted to /lambda expressions/.
+
+   - Forms like ~\x y -> x + y~ is just a syntactic sugar of the fundamental forms
+     like ~\x -> \y -> x + y~.
+
+   - ~\alpha~-conversion:
+     If no name confliction, rename parameter names won't change a function.
+
+     + ~\alpha~-equivalence:
+       ~\x -> \y -> x + y~ ===_a ~\a -> \y -> a + y~
+
+       When doing ~\alpha~-conversion, we should confirm ~\alpha~-equivalence before and
+       after the conversion.
+
+       We should NOT do something like (~\alpha~-equivalence is NOT satisfied): 
+       ~\x -> \y -> x + y~ ===_a ~\y -> \y -> y + y~
+
+   - ~\beta~-reduction:
+     (\x -> M) N ->_{b} [N/x]M 
+
+     If do the reduction directly will introduce name confliction, do the ~\alpha{}~-conversion
+     first, and then the ~\beta~-reduction.
+
+     For example,
+     #+BEGIN_SRC haskell
+       (\x -> \y -> x y) (abs) (-5)
+
+        beta-reduction
+       ----------------> (\y -> abs y) (-5)
+
+        beta-reduction
+       ----------------> abs (-5)
+
+ 
+       ----------------> 5
+     #+END_SRC
+
+   - ~\eta~-reduction:
+     Example:
+     #+BEGIN_SRC haskell
+       g :: Int -> Int -> Int
+       g = \y -> \x -> (+) x y
+     #+END_SRC
+     After two steps of eta-reductions:
+     ~g = (+)~
+
+     + =TODO=
+       Footnote 7:
+       有类型类限定的函数做eta化简会引起/单一同态限定/的问题，现在这个问题不重要，我们会在16.7中讨论。
+       =TODO= =TODO=
+
+*** DONE 2.4.1 λ 表达式的应用 - 75
+    CLOSED: [2018-09-12 Wed 04:49]
+    - Two main usages:
+      + Construct an /anonymous function/.
+
+      + With the help of /lambda expressions/, you do NOT need to pass values to
+        them in the order of the arguments in the definition.
+
+        =from Jian= ~flip~ can help to do the samething in some cases.
+
+*** DONE 2.4.2 参数的绑定 - 76
+    CLOSED: [2018-09-12 Wed 04:55]
+    ~let ... in ...~ and ~where~
+
+    - /name capture/
+      For example, the ~x~ in
+      #+BEGIN_SRC haskell
+        let x = 6
+        in x * let x = 2
+               in x * x
+      #+END_SRC
+      does NOT have the same meaning.
+
+    - _NESTED_ ~where~ can also have /name capture/.
+      However, we rarelly use nested ~where~'s.
+
+      We often use _NESTED_ ~let ... in ...~, and we need to pay attention to it.
+
+** TODO 2.5 Haskell 中的表达式 - 77
+*** 2.5.1 条件表达式 - 77
+*** 2.5.2 情形分析表达式 - 78
+*** 2.5.3 守卫表达式 - 78
+*** 2.5.4 模式匹配 - 79
+*** 2.5.5 运算符与函数 - 80
+*** 2.5.6 运算符与自定义运算符 - 80
+
+** DONE 2.6 在 GHCi 中定义函数 - 83
+   CLOSED: [2018-09-12 Wed 05:03]
+   - *Before* GHCi 8.0:
+     + ~let f x y = 4 * x + y^2~
+
+     + Multiple line definition =from Jian= Try this in OLD GHCi.
+       #+BEGIN_SRC haskell
+
+         :{
+           let { foo :: Int -> Int
+               ; foo 1 = 2
+               ; foo 2 = 1
+               ; foo n = 0 }
+         :}
+       #+END_SRC
+
+   - *From* GHCi 8.0 *on*:
+     + ~f x y = 4 * x + y^2~ also works
+
+     + Multiple line definition need a block starts from ~:{~
+       and ends with ~:}~ like:
+       #+BEGIN_SRC haskell
+         :{
+           foo :: Int -> Int
+           foo 1 = 2
+           foo 2 = 1
+           foo n = 0
+         :}
+       #+END_SRC
+
+* TODO 3 基于布尔值的函数 - 85
+** DONE 3.1 关键字 ~module~ 与 ~import~ 简介 - 85 - =TODO= =READING=
+   CLOSED: [2018-09-11 Tue 11:06]
+   - The first line in a Haskell source code file you can write some _compiler
+     options_.
+
+     After this optional line, it should be a ~module~ line in the pattern of
+     ~module ModuleName where~. Here ~ModuleName~ *must* be an /CAPITALIZED
+     identifier/.
+
+   - ~import Test (f1)~
+
+   - ~import Prelude hiding (catch)~
+
+   - ~import qualified Test as T~
+
+   - Use full path instead of the ~import~ keyword is also OK!
+     For example, ~Data.List.permutations~.
+
+   - =TODO=
+     Reading -
+     关于 ~module~ 与 ~import~ 关键字的更多细节，读者可以参阅[61] 5.3 Import Declarations。
+
+** DONE 3.2 简易布尔值的函数 - 86
+   CLOSED: [2018-09-11 Tue 11:06]
+   - The halfadder fulladder examples
+     =TOOD= Note
+
+** TODO 3.3 与非门和或非门 - 89
+
+* 4 库函数及其应用 - 93
+** DONE 4.1 预加载库函数 - 93 - =Re-Read=
+   CLOSED: [2018-09-11 Tue 11:22]
+*** 4.1.1 常用函数 - 93
+*** 4.1.2 基于列表的函数 - 96
+    - 当然，有的时候要用到将三个列表的中元素合成有三个元件的元组，这时可以用到预
+      加载库中的zip3、unzip3。此外，Prelude 中还提供zipWith3 等函数，读者可以
+      自己查阅一下API，然后试用一下。
+
+** TODO 4.2 定义历法公式 - 103
+** TODO 4.3 字符串处理的函数 - 104
+** TODO 4.4 常用模块简介 - 106
+*** 4.4.1 ~Data.Char~ - 106
+*** 4.4.2 ~Data.List~ - 106
+*** 4.4.3 ~Data.Bits~ - 106
+
+* II 初级篇 - 111
+* 5 递归函数 - 113
+** 5.1 递归函数的概念 - 113
+** 5.2 简单递归函数 - 115
+** 5.3 扩展递归与尾递归 - 117
+** 5.4 互调递归 - 120
+** 5.5 麦卡锡的 91 函数 - 120
+** 5.6 斐波那契数列 - 121
+** 5.7 十进制数字转成罗马数字 - 124
+** 5.8 二分搜索 - 126
+** 5.9 汉诺塔 - 127
+** 5.10 排序算法 - 130
+*** 5.10.1 插入排序 - 130
+*** 5.10.2 冒泡排序 - 132
+*** 5.10.3 选择排序 - 135
+*** 5.10.4 快速排序 - 136
+*** 5.10.5 归并排序 - 138
+
+** 5.11 递归基本条件与程序终止 - 144
+** 5.12 递归与不动点 - 144
+*** 5.12.1 牛顿法开方 - 146
+
+** 5.13 无基本条件递归和惰性求值 - 147
+*** 5.13.1 变得懒惰 - 148
+
+* 6 列表内包 - 151
+** 6.1 列表生成器 - 151
+*** 6.1.1 并列的列表内包与一般化的列表内包 - 153
+
+** 6.2 素数相关趣题 - 154
+*** 6.2.1 埃拉托斯特尼筛法 - 156
+
+** 6.3 凯撒加密 - 156
+*** 6.3.1 解密 - 158
+
+** 6.4 排列与组合问题 - 159
+*** 6.4.1 排列问题 - 160
+*** 6.4.2 错位排列问题 - 161
+*** 6.4.3 组合问题 - 162
+
+** 6.5 八皇后问题 - 163
+** 6.6 计算矩阵乘法 - 167
+*** 6.6.1 斐波那契数列与矩阵乘法 - 168
+
+** 6.7 最短路径与矩阵乘法 - 168
+
+* TODO 7 高阶函数 - 175
+** 7.1 简单高阶函数 - 175
+** 7.2 折叠函数 ~foldr~ 与 ~foldl~ - 177
+*** 7.2.1 右折叠函数 ~foldr~ - 177
+*** 7.2.2 左折叠函数 ~foldl~ - 181
+
+** 7.3 ~mapAccumL~ 与 ~mapAccumR~ 函数 - 184
+** 7.4 复合函数 - 185
+
+* TODO 8 定义数据类型 - 189
+** 8.1 数据类型的定义 - 189
+*** 8.1.1 枚举类型 - 189
+*** 8.1.2 构造类型 - 192
+*** 8.1.3 参数化类型 - 195
+*** 8.1.4 递归类型 - 199
+*** 8.1.5 杂合定义类型 - 201
+
+** 8.2 类型的同构 - 204
+** 8.3 多分支条件、模式匹配守卫、观察模式表达式与模式的别名 - 210
+*** 8.3.1 多分支条件表达式 - 211
+*** 8.3.2 模式匹配守卫表达式 - 211
+*** 8.3.3 观察模式表达式 - 212
+*** 8.3.4 模式的的别名 - 213
+
+** 8.4 使用 ~newtype~ 定义类型 - 214
+** 8.5 数学归纳法的有效性 - 216
+** 8.6 树 - 218
+** 8.7 卡塔兰数问题 - 220
+** 8.8 霍夫曼编码 - 221
+** 8.9 解 24 点 - 224
+** 8.10 Zipper - 226
+*** 8.10.1 Zipper 的应用 * - 229
+
+** 8.11 一般化的代数数据类型 - 232
+*** 8.11.1 简易谓词逻辑计算器 - 235
+
+** 8.12 类型的 kind - 237
+*** 8.12.1 类型的 kind - 237
+
+** 8.13 空类型的声明 - 239
+
+* TODO 9 类型类简介 - 243
+** 9.1 定义类型类 - 243
+   - /typeclass/ definition Syntax:
+     #+BEGIN_SRC haskell
+       class C a b c ... where
+         fun1 = ...
+         fun2 = ...
+     #+END_SRC
+     + The name of a /typeclass/ must be capitalized!
+
+     + If you want to define a /typeclass/ with *multiple* /type parameters/,
+       you need ~{-# language MultiParamtypeClasses #-}~ /language extension/.
+
+     + Sometimes we need to write the /kind/ of a /type parameter/. 
+       =TODO= Later!
+
+     + Example:
+       #+BEGIN_SRC haskell
+         class Eq a where
+           (==) :: a -> a -> Bool
+           (/=) :: a -> a -> Bool
+           x == y = not $ x /= y
+           x /= y = not $ x == y
+           {-# MINIMAL (==) | (/=) #-}
+       #+END_SRC
+       * The ~MINIMAL~ part is introduced in GHC 7.8.
+         Here ~|~ means "or".
+           If the ~MINIMAL~ is to implement multiple functions together, you need
+         to use ~,~ to separate them.
+
+       * Example:
+         #+BEGIN_SRC haskell
+           data MyNum = O | Zero | One
+
+           instance Eq MyNum where
+             O    == Zero = True
+             O    == O    = True
+             Zero == Zero = True
+             One  == One  = True
+             _    == _    = False
+         #+END_SRC
+         - *Empty instance* is also allowed in Haskell.
+           This is reasonable, sometimes ALL /typeclass functions/ has
+           implementations.
+
+           However, this is NOT the case of ~Eq~:
+           ~(\equal{}\equal{})~ and ~(/=)~ mutually call each other.
+           If you don't implement one of them, the invocations to them will
+           NEVER stop, and GHC will a warning like:
+           #+BEGIN_SRC haskell
+             -- No explicit implementation for
+             --   either '==' or '/= '
+             -- In the instance declaration for 'Eq MyNum'
+           #+END_SRC
+
+   - You may need /bound(s)/ to /type parameter(s)/ when you make some /instance/.
+     For example,
+     #+BEGIN_SRC haskell
+       instance (Eq m) => Eq (Maybe m) where
+         Just x  == Just y  = x == y  -- If no bound `(Eq m)`, you cannot do this!!!
+         Nothing == Nothing = True
+         _       == _       = False
+     #+END_SRC
+
+   - =IMPORTANT=
+     Define instance of function equality: =TODO= =TODO=
+     There is no available way for this! -- Discussion in *Page 245*
+
+   - You need to pay attention to the dependency of /typeclasses/.
+     + For example, since the ~Ord~ definition has the header of
+       ~class (Eq a) => Ord a where~:
+
+       * Wrong
+         ~data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving Ord~
+
+       * Right
+         ~data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Eq, Ord)~
+
+         _OR_ you can implement an ~Eq~ instance for ~Day~ manually.
+
+     + The dependency relations for /typeclasses/ *cannot* be cyclic!
+
+       * =TODO= =TODO=
+         评论 9.1.2.
+         在 GHC 7.10.1 之前,有环依赖的类型类是无法实现类型类实例的,但是在 GHC 8.0
+         中引入了 UndecidableSuperclasses 语言扩展来做到这一点,这样 GHC 判定父类
+         型类 时会环境沿着这路径走,直到一个不动点。当然我们这里不会得到一个不动
+         点,因为 A、B 与 C 是类型类的定义而非类型上的计算,所以是不会得到不动点的。
+         更多内容可以在对 Haskell类型系统有深入了解后参阅 [43]。
+
+** 9.2 Haskell 中常见类型类 - 246
+*** DONE 9.2.1 有序类型类 ~Ord~ - 246
+    CLOSED: [2018-09-11 Tue 02:25]
+    #+BEGIN_SRC haskell
+      class (Eq a) => Ord a where
+        compare :: a -> a -> Ordering
+        (<), (<=), (>), (>=) :: a -> a -> Bool
+        max, min             :: a -> a -> a
+
+        compare x y = if x == y then EQ
+                      else if x <= y then LT
+                      else GT
+
+        x <  y = case compare x y of { LT -> True;  _ -> False }
+        x <= y = case compare x y of { GT -> False; _ -> True  }
+        x >  y = case compare x y of { GT -> True;  _ -> False }
+        x >= y = case compare x y of { LT -> False; _ -> True  }
+
+        max x y = if x <= y then y else x
+        min x y = if x <= y then x else y
+        {-# MINIMAL compare | (<=) #-}
+    #+END_SRC
+
+*** DONE 9.2.2 有界类型类 ~Bounded~ - 247
+    CLOSED: [2018-09-11 Tue 02:27]
+    #+BEGIN_SRC haskell
+      class Bound a where
+        minBound :: a
+        maxBound :: a
+    #+END_SRC
+
+    - For example,
+      #+BEGIN_SRC haskell
+        > minBound :: Bool
+        -- False
+
+        > maxBound :: Bool
+        -- True
+
+        > minBound :: Int
+        -9223372036854775808
+
+        > maxBound :: Int
+        9223372036854775807
+      #+END_SRC
+
+*** DONE 9.2.3 枚举类型类 ~Enum~ - 248
+    CLOSED: [2018-09-11 Tue 02:43]
+    #+BEGIN_SRC haskell
+      class Enum a where
+        toEnum         :: Int -> a
+        fromEnum       :: a -> Int
+        succ, pred     :: a -> a
+        enumFrom       :: a -> [a]           -- [n..]
+        enumFromThen   :: a -> a -> [a]      -- [n,n'..]
+        enumFromTo     :: a -> a -> [a]      -- [n..m]
+        enumFromThenTo :: a -> a -> a -> [a] -- [n,n'..m]
+    #+END_SRC
+
+    - In Haskell, if all /constructors/ of a type are /no parameter constructors/,
+      you can use ~deriving~ to instantiate ~Enum~.
+
+    - =TODO=
+      上一章中定义了 Nat 自然数类型,并且还定义了在 Nat 与 Int 类型间转换的函数,所
+      以可以很容易地将 Nat 实现为 Enum 的类型类。但是到这里,有些读者可能会有这样一个疑
+      问:Enum 类型类的 toEnum 和 fromEnum,两个函数用的 Int 类型是有界的,而有限的 Int
+      值是不能对应无限多个 Nat 或者 Integer 值的。比如在 64 位的 GHC 上是可以给出正解结
+      果的:
+      > [9223372036854775807..9223372036854775807+10]
+      ...
+      那么,它们应该如何更准确地实现 Enum 类型类呢?GHC 中的任意精度整数 Integer 在
+      遍历时可以超过 Int 的最大值,是因为它的定义与读者熟悉的定义类型的方法不同。它用到
+      了原始类型、ByteArray 还有外部函数接口等。关于这几部分的内容,以及如何精确地定义
+      Nat 与 Integer 类型为 Enum 类型类的实例将不在本书中讨论。
+
+*** DONE 9.2.4 索引类型类 ~Ix~ - 248
+    CLOSED: [2018-09-11 Tue 02:43]
+    #+BEGIN_SRC haskell
+      class (Ord a) => Ix a where
+        {-# MINIMAL range, (index | unsafeIndex), inRange #-}
+        range                   :: (a, a) -> [a]
+        index                   :: (a, a) -> a -> Int
+        GHC.Arr.unsafeIndex     :: (a, a) -> a -> Int
+        inRange                 :: (a, a) -> a -> Bool
+        rangeSize               :: (a, a) -> Int
+        GHC.Arr.unsafeRangeSize :: (a, a) -> Int
+    #+END_SRC
+
+    - Use it:
+      #+BEGIN_SRC haskell
+        import Data.Ix
+
+        range (LT,GT)
+        -- [LT,EQ,GT]
+
+        data Weekday = Mon | Tue | Wed | Thu | Fri | Sat |Sun deriving (Eq,Ord,Ix,Show)
+        range (Mon, Sun)
+        -- [Mon,Tue,Wed,Thu,Fri,Sat,Sun]
+
+        index (Mon, Thu) Fri
+        -- *** Exception: Error in array index
+
+        index (Mon, Thu) Wed
+        -- 2
+      #+END_SRC
+
+*** TODO 9.2.5 可显示类型类 ~Show~ - 249
+    #+BEGIN_SRC haskell
+      class  Show a  where
+          {-# MINIMAL showsPrec | show #-}
+
+          -- | Convert a value to a readable 'String'.
+          --
+          -- 'showsPrec' should satisfy the law
+          --
+          -- > showsPrec d x r ++ s  ==  showsPrec d x (r ++ s)
+          --
+          -- Derived instances of 'Text.Read.Read' and 'Show' satisfy the following:
+          --
+          -- * @(x,\"\")@ is an element of
+          --   @('Text.Read.readsPrec' d ('showsPrec' d x \"\"))@.
+          --
+          -- That is, 'Text.Read.readsPrec' parses the string produced by
+          -- 'showsPrec', and delivers the value that 'showsPrec' started with.
+
+          showsPrec :: Int    -- ^ the operator precedence of the enclosing
+                              -- context (a number from @0@ to @11@).
+                              -- Function application has precedence @10@.
+                    -> a      -- ^ the value to be converted to a 'String'
+                    -> ShowS
+
+          -- | A specialised variant of 'showsPrec', using precedence context
+          -- zero, and returning an ordinary 'String'.
+          show      :: a   -> String
+
+          -- | The method 'showList' is provided to allow the programmer to
+          -- give a specialised way of showing lists of values.
+          -- For example, this is used by the predefined 'Show' instance of
+          -- the 'Char' type, where values of type 'String' should be shown
+          -- in double quotes, rather than between square brackets.
+          showList  :: [a] -> ShowS
+
+          showsPrec _ x s = show x ++ s
+          show x          = shows x ""
+          showList ls   s = showList__ shows ls s
+    #+END_SRC
+
+    - Use it:
+      #+BEGIN_SRC haskell
+        data MyNum = One | Two | Three
+  
+        instance Show MyNum where
+          show One = "1"
+          show Two = "2"
+          show Three = "3"
+
+        One
+        -- 1
+      #+END_SRC
+
+    - xxx
+
+    - =TODO=
+
+    - =TODO=
+
+*** DONE 9.2.6 函子类型类 ~Functor~ - 250 - =TODO=
+    CLOSED: [2018-09-11 Tue 04:00]
+    #+BEGIN_SRC haskell
+      class Functor f where
+        fmap :: (a -> b) -> f a -> f b
+    #+END_SRC
+    - The /kind/ of ~f~ must be ~* -> *~.
+
+    - For convenience, the standard library also defined the infix version of
+      ~fmap~:
+      #+BEGIN_SRC haskell
+        (<$>) :: Functor f => (a -> b) -> f a -> f b
+        (<$>) = fmap
+      #+END_SRC
+
+    - Example:
+      #+BEGIN_SRC haskell
+        -- Containter Functor (this form works for all newtypes)
+        newtype Containter a = Containter a
+
+        instance Functor Containter where
+          fmap f (Containter a) = Containter (f a)
+
+        -- List Functor
+        instance Functor [] where
+          fmap = map
+
+        -- Maybe Functor
+        instance Functor Maybe where
+          fmap f Nothing = Nothing
+          fmap f (Just x) = Just (f x)
+      #+END_SRC
+
+    - ~(->) r~ functor:
+      #+BEGIN_SRC haskell
+        instance Functor ((->) r) where
+          fmap f g = (\x -> f (g x))  -- 或用η化简写作fmap f g = f $ g
+      #+END_SRC
+      A more concise form is ~fmap = (.)~
+
+      + More details in Chapter 25  =TODO=
+
+    - Haskell can automatically derive ~Functor~:
+      #+BEGIN_SRC haskell
+        -- Functor.hs
+        {-# LANGUAGE DeriveFunctor #-}
+        data Tree a = Leaf | Node a (Tree a) (Tree a) derving (Show, Eq, Functor)
+      #+END_SRC
+
+    - Functor laws:
+      + Law 9.2.1.
+        ~fmap id = id~
+
+        * The ~Data.Set~ is _unordered_, and it *cannot* implement ~Functor~ --
+          violate this law 9.2.1:
+          #+BEGIN_SRC haskell
+            import qualified Data.Set as S
+
+            S.fromList [1..10]
+            -- fromList [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+            S.map (`mod` 3) (S.fromList [1..10])
+            -- fromList [0, 1, 2]
+          #+END_SRC
+
+        * ~Data.Set.mapMonotonic~
+          =??????= =TODO=
+
+      + Law 9.2.2.
+        ~fmap (f . g) = fmap f . fmap g~
+
+    - One thing that if you do, it will violate the /functor laws/:
+      map a function and do other things at the same time.
+
+    - Exercise 9.2.3
+      #+BEGIN_SRC haskell
+        data Tree a = Leaf a
+                    | Branch (Tree (a, a))
+                    deriving Show
+
+        instance Functor Tree where
+          fmap f (Leaf a) = Leaf (f a)
+          fmap f (Branch (Tree (l, r))) = Branch (Tree (f l, f r))
+      #+END_SRC
+
+      It's easy to verify the /functor laws/ for this implementation.
+
+*** TODO 9.2.7 可应用函子 ~Applicative~ - 253
+*** TODO 9.2.8 选择可应用函子 ~Alternative~ - 260
+*** TODO 9.2.9 简易字符解析器 - 262
+*** TODO 9.2.10 可读类型类 ~Read~ - 266
+*** TODO 9.2.11 字符串类型类 ~IsString~ - 266
+
+** 9.3 类型类实例的实现 - 268
+*** 9.3.1 使用 ~deriving~ 关键字 - 268
+*** 9.3.2 使用 ~instance~ 关键字 - 268
+*** 9.3.3 空 ~instance~ 与 ~DeriveAnyClasses~ 语言扩展 - 270
+*** 9.3.4 ~newtype~ 定义类型的类型类实例导出 - 271
+*** 9.3.5 为类型的别名实现类型类的实例 - 272
+*** 9.3.6 独立的类型类实例导出 - 272
+*** 9.3.7 ~deriving~ 的导出策略 - 273
+*** 9.3.8 ~derive~ 库 * - 274
+*** 9.3.9 DriFT 工具 - 277
+
+** 9.4 Haskell 中其他常见的类型类 - 277
+*** 9.4.1 单位半群类型类 ~Monoid~ - 277
+*** 9.4.2 半群类型类 ~Semigroup~ - 281
+*** 9.4.3 默认值类型类 ~Default~ - 282
+*** 9.4.4 可折叠类型类 ~Foldable~ - 283
+*** 9.4.5 可游历类型类 ~Traversable~ - 288
+*** 9.4.6 二函子类型类 ~Bifunctor~ * - 292
+*** 9.4.7 数类型类 ~Num~ - 293
+
+** 9.5 类型类中的类型依赖 - 296
+** 9.6 零参数类型类 - 301
+** 9.7 类型类中的关联类型 - 302
+*** 9.7.1 重载的列表 - 303
+
+** 9.8 运行时重载 - 305
+** 9.9 Existential 类型 - 307
+
+* III 中级篇 - 311
+* 10 Monad 初步 - 313
+** TODO 10.1 Monad 简介 - 313
+** TODO 10.2 从 ~Identity~ monad 开始 - 316
+** TODO 10.3 ~Maybe~ monad - 318
+** DONE 10.4 Monad 定律 - 322
+   CLOSED: [2018-09-11 Tue 00:03]
+   - Law 10.4.1 - Left identity :: ~return x >>= f~ === ~f x~
+
+   - Law 10.4.2 - Right identity :: ~m >>= return~ === ~m~
+
+   - Law 10.4.3 - Associativity :: ~(m >>= f) >>= g~ === ~m >>= (λx -> f x >>= g)~
+
+** DONE 10.5 列表 monad - 323 - =QUESTION=
+   CLOSED: [2018-09-10 Mon 02:34]
+   #+BEGIN_SRC haskell
+     instance Monad [] where
+       return x = [x]
+       xs >>= f = concatMap f xs
+       fail _   = []
+   #+END_SRC
+
+   - /List monad/ can be considered a _more general_ form of /Maybe monad/:
+     + It can fail and return ~[]~
+
+     + It can success with (nondeterministic) multiple results (NOT ONLY one like
+       /Maybe monad/).
+
+   - Example (the ~[x + y | x <- xs, y <- ys]~ equivalent form with /do notation/):
+     =from Jian= Typo in the book page 323 -- the original one is =y < -ys=.
+     #+BEGIN_SRC haskell
+       plus :: Num b => [b] -> [b] -> [b]
+       plus xs ys = do
+         x <- xs
+         y <- ys
+         return (x + y)
+
+       plus [1, 2, 3] [4, 5, 6]
+       -- [5, 6, 7, 6, 7, 8, 7, 8, 9]
+     #+END_SRC
+
+   - =TODO= =???=
+     至于用这种方式实现对应的 map 与 filter 等其他基于列表的相关函数,读者可以自
+     己试着实现一下。还需要比较一下 Applicative 与 Monad 的不同。
+
+** TODO 10.6 ~Monad~ 相关函数与运算符 - 324
+*** 10.6.1 ~MonadPlus~ - 324
+*** 10.6.2 ~Monad~ 相关函数 - 326
+
+** TODO 10.7 ~Functor~ 、 ~Applicative~ 与 ~Monad~ 的关系 - 328
+*** 10.7.1 ~Monad~ 的定义 - 329
+*** 10.7.2 ~Applicative~ 与 ~Monad~ 的差异 - 331
+*** DONE 10.7.3 GHC 中 ~Applicative~ 与 ~Monad~ 的历史问题 - 332
+    CLOSED: [2018-09-10 Mon 02:24]
+    ~Functor~ was introduced in 1990, ~Monad~ was introduced by the end of the
+    90's, while ~Applicative~ was introduced in 2006 in the GHC 6.6.
+
+    We know a ~Monad~ must be an ~Applicative~, and an ~Applicative~ must be a
+    ~Functor~. However, they are not introduced together or in the order of
+    ~Functor~ -> ~Applicative~ -> ~Monad~ as mentioned above.
+      This leads to a proposal *Functor-Applicative-Monad Proposal*. This proposal
+    is often called *AMP* because of the *Haskell 2014: Applicative => Monad
+    proposal* -- they describe same core problem.
+
+*** DONE 10.7.4 AMP 问题的未来 - 336
+    CLOSED: [2018-09-10 Mon 02:15]
+    Essentially, a clearer definition set should be like (ONLY core operations,
+    we don't list operations that have default implementations):
+    #+BEGIN_SRC haskell
+      class Pointed f where
+        point :: a -> f a  -- replace `pure` and `return`
+
+      class Functor f where
+        fmap :: (a -> b) -> f a -> f b
+
+      class (Pointed f, Functor f) => Applicative f where
+        (<*>) :: f (a -> b) -> f a -> f b
+
+      class Applicative m => Monad m where
+        (>>=) :: m a -> (a -> m b) -> m b
+    #+END_SRC
+
+    - This is an aggresive change.
+      If there is no automatic migration, a lot of libraries will stop working.
+
+* 11 系统编程及输入/输出 - 339
+** 11.1 不纯函数与副作用 - 339
+   - inpure function :: xxx =TODO=
+
+   - side effect :: xxx =TODO=
+
+   - 可是在实践编程中,程序不可能不与操作系统交流,同时也不可能完全不去改变计算机存
+     储器的状态,也就是说,副作用和不纯函数在一定程度上是不可以避免的。
+
+     为了解决这 些问题, Haskell 引入了 monad ,这样,处理前面提到的有关输入/输出、
+     并发与异常处理的函 数时,不会破坏 Haskell 的纯洁性,也不需要再对 Haskell 的语
+     法或者语义做任何的改动。
+     =HOW= =TODO=
+
+** 11.2 ~IO~ monad - 341
+   - main 函数为 Haskell 程序的入口,它的类型必须为 IO ()。
+   - 
+** 11.3 输入/输出处理 - 345
+*** 11.3.1 ~Control.Monad~ 中的函数 - 345
+*** 11.3.2 系统环境变量与命令行参数 - 348
+*** 11.3.3 数据的读写 - 349
+
+** 11.4 格式化输出 ~printf~ 函数 - 352
+*** 11.4.1 ~printf~ 函数的简易实现 - 353
+
+** 11.5 星际译王词典 - 356
+** 11.6 系统编程 - 360
+*** 11.6.1 目录与文件操作的 API - 360
+*** 11.6.2 系统进程的相关 API - 361
+
+** 11.7 不安全的 ~IO~ - 364
+** 11.8 Haskell 中的时间 - 366
+
+* 12 记录器 monad、读取器 monad、状态 monad - 369
+** 12.1 记录器 monad - 369
+*** 12.1.1 ~MonadWriter~ - 371
+*** 12.1.2 记录归并排序过程 - 373
+
+** 12.2 读取器 monad - 374
+*** 12.2.1 ~MonadReader~ - 375
+*** 12.2.2 变量环境的引用 - 376
+
+** 12.3 状态 monad -  377
+*** 12.3.1 状态 monad 标签器 - 379
+*** 12.3.2 用状态 monad 实现栈结构 - 380
+*** 12.3.3 状态 monad, FunApp 单位半群和读取器 monad 的关系 - 382
+*** 12.3.4 ~MonadState~ - 383
+*** 12.3.5 基于栈的计算器 - 384
+
+** 12.4 随机数的生成 - 396
+*** 12.4.1 mwc-random 库 - 398
+
+* 13 Monad 转换器 - 401
+** 13.1 从 ~IdentityT~ monad 转换器开始 - 401
+** 13.2 Monad 转换器组合与复合 Monad 的区别 - 405
+*** 13.2.1 Monad 转换器的组合顺序 - 407
+
+** 13.3 ~lift~ 、 ~liftIO~ 与 ~liftBase~ - 410
+*** 13.3.1 ~MonadTrans~ 类型类与 ~lift~ - 410
+*** 13.3.2 ~MonadIO~ 类型类与 ~liftIO~ - 411
+*** 13.3.3 ~MonadBase~ 与 ~liftBase~ - 413
+
+** 13.4 简易 monad 编译器 - 414
+** 13.5 语法分析 monad - 418
+** 13.6 本章小结 - 421
+
+* 14 更多 Monad - 423
+** 14.1 语法分析器 Monad 组合子 - 423
+*** 14.1.1 简易语法分析器的实现 - 423
+
+** 14.2 Parsec 库简介 - 427
+** 14.3 上下文无关文法 - 433
+** 14.4 基于语法分析器的计算器 - 437
+** 14.5 Stream monad - 442
+** 14.6 Free monad - 443
+** 14.7 续延 monad - 450
+*** 14.7.1 续延 - 450
+*** 14.7.2 定义续延 monad - 452
+*** 14.7.3 调用当前续延的函数 callCC - 454
+
+** 14.8 数据流处理 Monad - 458
+** 14.9 pipes 与 conduit 库简介 - 469
+*** 14.9.1 conduit - 469
+*** 14.9.2 pipes - 471
+
+* IV 进阶篇 - 477
+* 15 惰性求值简介 - 479
+** 15.1 λ 演算简介 - 479
+** 15.2 ⊥ Bottom - 481
+** 15.3 表达式形态和 thunk - 482
+*** 15.3.1 弱首范式与范式 - 482
+
+** 15.4 thunk 与严格求值 - 483
+** 15.5 求值策略 - 488
+*** 15.5.1 传值调用 - 488
+*** 15.5.2 传名调用 - 489 
+*** 15.5.3 常序求值 - 489 
+
+** 15.6 惰性求值 - 490
+** 15.7 严格模式匹配与惰性模式匹配 - 491
+** 15.8 默认严格求值的扩展 * - 493
+
+* 16 深入 Haskell 的类型系统 - 495
+** 16.1 值、类型、类型类、Kind - 495
+** 16.2 Haskell 的类型推断 - 498
+** 16.3 高秩类型 - 502
+*** 16.3.1 函数的元与阶 - 502
+*** 16.3.2 类型的秩 - 503
+*** 16.3.3 ST monad - 507
+
+** 16.4 Kind 多态 - 508
+** 16.5 可类型化 - 510
+*** 16.5.1 Typeable 的大致实现 - 511
+*** 16.5.2 代理类型 - 513
+*** 16.5.3 GHC 中可类型化类型类的实现 - 516
+*** 16.5.4 动态类型 - 516
+*** 16.5.5 不安全的强制类型转换 - 518
+
+** 16.6 一阶多态类型的可类型化 * - 519
+*** 16.6.1 无重载类型的可类型化 - 520
+*** 16.6.2 GHC 中类型类的大致实现 - 522
+*** 16.6.3 重载类型的可类型化 * - 524
+
+** 16.7 单一同态限定 - 525
+** 16.8 类型家族 - 529
+*** 16.8.1 类型的函数依赖与关联类型 - 529
+*** 16.8.2 类型上的自然数计算 - 531
+*** 16.8.3 简易的依赖类型 - 533
+*** 16.8.4 GHC 访问器函数重载的大致实现 - 534
+*** 16.8.5 GHC 中的访问器函数的重载 - 537
+*** 16.8.6 单射的类型家族 - 537
+
+** 16.9 有重叠的类型类实例的实现 - 539
+*** 16.9.1 Haskell 的 Show 类型类 - 539
+*** 16.9.2 多参数类型类的实例的重合 - 542
+*** 16.9.3 类型的等价类划分 - 546
+
+** 16.10 安全的类型转换 - 549
+*** 16.10.1 安全的类型转换与类型角色 - 549
+*** 16.10.2 coerce 的使用 - 554
+
+** 16.11 GHC 的原始类型与函数 * - 555
+*** 16.11.1 ghc-prim 库 - 555
+*** 16.11.2 运行时类型表示的多态 * - 558
+
+
+* 17 通用编程 - 561
+** 17.1 代数数据类型通用编程 - 561
+*** 17.1.1 类型类自动导出的简易实现 - 562
+*** 17.1.2 GHC 中代数数据类型通用编程的实现 - 569
+*** 17.1.3 实现通用的 Show 类 - 578
+*** 17.1.4 NFData 的实现 - 581
+*** 17.1.5 通用编程的应用 - 582
+*** 17.1.6 生成 Generic 类型类实例可能遇到的问题 - 588
+
+** 17.2 摒弃样板代码 - 591
+*** 17.2.1 纯函数变换 - 594
+*** 17.2.2 信息查询 - 596
+*** 17.2.3 Monad 变换 - 598
+*** 17.2.4 复合多种类型的变换与查询 - 601
+*** 17.2.5 gfold* - 604
+*** 17.2.6 反射 - 608
+
+* 18 模板元编程 - 615
+** 18.1 元编程的用途 - 616
+*** 18.1.1 Haskell 中元编程基本用法 - 618
+*** 18.1.2 使用元编程 - 623
+*** 18.1.3 类型构造器参数数量类型类实例的实现 - 623
+*** 18.1.4 zipN 函数 - 626
+*** 18.1.5 元编程代码展开的限定 - 631
+*** 18.1.6 自上而下的类型类实例导出 - 634
+*** 18.1.7 aeson 库中的元编程 - 637
+
+** 18.2 准引用的应用 - 639
+*** 18.2.1 字面原生字符串 - 639
+*** 18.2.2 可应用函子的 ~do~ 表达式 - 640
+*** 18.2.3 定义引用子 - 641
+*** 18.2.4 值提供器 - 644
+*** 18.2.5 类型提供器 - 646
+
+* 19 宏 - 651
+** 19.1 简单的文本替换 - 651
+** 19.2 GHC 为条件编译提供的宏 - 654
+** 19.3 Cabal 提供的宏 - 656
+
+* V 工程篇 - 657
+* 20 测试与类型驱动开发 - 659
+** 20.1 正确性测试 - 659
+*** 20.1.1 单元测试 - 659
+*** 20.1.2 快速随机测试 - 661
+*** 20.1.3 穷举测试 - 669
+*** 20.1.4 断言 - 672
+*** 20.1.5 完全性模式匹配检查 - 673
+
+** 20.2 错误分析 - 673
+*** 20.2.1 Debug.Trace 模块简介 - 673
+*** 20.2.2 Haskell 的函数调用栈 - 674
+
+** 20.3 性能分析 - 676
+** 20.4 类型驱动编程 - 678
+*** 20.4.1 类型签名丢失报警 - 678
+*** 20.4.2 有类型的空白 - 678
+*** 20.4.3 部分类型推断 - 681
+
+* 21 并行、并发、异步以及分布式计算 - 685
+** 21.1 确定性的并发 - 686
+** 21.2 软件事务内存 - 693
+*** 21.2.1 软件事务内存简介 - 693
+*** 21.2.2 软件事务内存的使用 - 696
+*** 21.2.3 哲学家就餐问题 - 700
+*** 21.2.4 圣诞老人问题 - 702
+
+** 21.3 异步并发库简介 - 707
+** 21.4 Cloud Haskell 分布式编程 - 709
+*** 21.4.1 体系结构 - 709
+*** 21.4.2 并发模型 - 710
+*** 21.4.3 案列开发:Ping-Pong - 714
+*** 21.4.4 进程层接口 - 716
+*** 21.4.5 上层组件 - 733
+
+* 22 Haskell 开发工具简介 - 749
+** 22.1 Cabal - 749
+*** 22.1.1 什么是 Cabal? - 749
+*** 22.1.2 Stackage 与 stack - 754
+
+** 22.2 ghc-pkg - 754
+** 22.3 hlint 与 hoogle - 756
+** 22.4 .ghci 的配置 - 757
+** 22.5 提高 Haskell 程序性能的一些建议 - 758
+*** 22.5.1 用专有的库来完成工作 - 758
+*** 22.5.2 编译器注示(pragma) - 759
+*** 22.5.3 SPECIALIZE - 760
+*** 22.5.4 RULE - 760
+
+* VI 理论篇 - 763
+* 23 Arrow 简介 - 765
+** 23.1 ~Arrow~ 类型类的定义 - 765
+** 23.2 ~(->)~ 与信号函数实现 ~Arrow~ 类型类 - 769
+*** 23.2.1 ~(->)~ 实现 Arrow - 769
+*** 23.2.2 信号函数实现 Arrow 类型类 - 769
+
+** 23.3 ~ArrowApply~ 类型类 - 771
+** 23.4 ~ArrowChoice~ 类型类 - 772
+** 23.5 ~ArrowLoop~ 与 ~ArrowCircuit~ 类型类 - 776
+** 23.6 处理时序电路信号 - 778
+** 23.7 ~ArrowZero~ 与 ~ArrowPlus~ 类型类 - 781
+
+* 24 函数反应式编程简介 - 783
+** 24.1 传统的函数反应式编程 - 784
+** 24.2 一元函数反应式编程 - 786
+** 24.3 Yampa - 791
+
+* 25 Haskell与范畴论 - 795
+** 25.1 范畴论基本概念 - 795
+*** 25.1.1 范畴的定义 - 796
+*** 25.1.2 范畴的举例 - 797
+*** 25.1.3 Haskell 中的范畴 - 798
+*** 25.1.4 态射的性质 - 799
+*** 25.1.5 初始对象与终极对象 - 800
+
+** 25.2 函子与自然变换 - 801
+*** 25.2.1 函子 - 801
+*** 25.2.2 自然变换 - 807
+*** 25.2.3 类型类限定范畴 - 817
+*** 25.2.4 类型相等范畴 - 820
+*** 25.2.5 Hom 函子间的自然变换与米田引理 - 821
+*** 25.2.6 自函子与自函子范畴  - 825
+
+** 25.3 单子 - 826
+*** 25.3.1 单位半群和单子 - 827
+*** 25.3.2 Kleisli 范畴与单子 - 828
+
+** 25.4 Arrow 跟 Applicative 和 Monad 的关系 - 831
+*** 25.4.1 Arrow 与 Applicative 的关系 - 831
+*** 25.4.2 Arrow 与 Monad 的关系 - 833
+
+** 25.5 单子间的态射 - 834
+*** 25.5.1 初始对象与终极对象 - 835
+*** 25.5.2 单子范畴的态射 - 836
+
+** 25.6 范畴的代数结构 - 840
+*** 25.6.1 范畴上的积与和 - 840
+*** 25.6.2 范畴上的极限和余极限 - 844
+
+** 25.7 伴随函子 - 851
+*** 25.7.1 伴随函子 - 851
+*** 25.7.2 柯里化和反柯里化的伴随 - 853
+*** 25.7.3 积与和的伴随 - 855
+*** 25.7.4 极限和余极限的伴随 - 856
+*** 25.7.5 从伴随函子中得到单子 - 857
+
+** 25.8 F-代数和 F-余代数 - 858
+*** 25.8.1 F-代数 - 858
+*** 25.8.2 F-余代数 - 862
+
+** 25.9 自由结构 - 865
+*** 25.9.1 自由结构的定义 - 865
+*** 25.9.2 自由幺半群 - 866
+*** 25.9.3 自由单子 - 867
+*** 25.9.4 自由可应用函子 - 867
+*** 25.9.5 自由的意义 - 868
+
+** 25.10 范畴上的幺半群 - 869
+*** 25.10.1 幺半范畴 - 869
+*** 25.10.2 幺半范畴上的幺半群 - 871
+*** 25.10.3 单子是自函子范畴上的幺半群 - 872
+*** 25.10.4 可应用函子是自函子范畴上的幺半群 - 873
+*** 25.10.5 幺半函子(Monoidal Functor) - 874
+*** 25.10.6 闭函子(Closed Functor) - 876
+*** 25.10.7 Arrow 是 Profunctor 范畴上的幺半群 - 878
+
+* OLD CONTENTS
+*** TODO 1 Introduction to Haskell
+**** 1.1 The Origin of Haskell
+**** 1.2 The Installation of Haskell Compiler and The Setups of Coding
+**** 1.3 The Usage of GHCi
+***** 1.3.1 The Commands in GHCi
+***** 1.3.2 Invoke Functions in GHCi
+**** 1.4 =.hs= and =.lhs= files, Comments, and Library Functions
+*** TODO 2 Type System and Functions
+**** TODO 2.1 Types and Data in Haskell
+***** 2.1.1 Common Data Types in Haskell
+******    - ~(^) \colon{}\colon] (Num a, Integral b) => a -> b -> a~
+      ~infixr 8 ^~
+
+    - ~(*) \colon{}\colon{} Num a => a -> a -> a~
+      ~infixl 7 *~
+
+    - ~(+) \colon{}\colon{} Num a => a -> a -> a~
+      ~infixl 6 +~
+
+    - ~(-) \colon{}\colon{} Num a => a -> a -> a~
+      ~infixl 6 -~
+
+    - ~($) \colon\colon{} (a -> b) -> a -> b~
+      ~infixr 0 $~
+
+    - Since ~(*30) \colon\colon{} Num a => a -> a~,
+      ~3 (*30)~ doesn't work and ~(*30) 3)~ works.
+
+      You can't the pass the prefixed ~3~ in pattern 1 pass to the ~(*30)~
+      operator after it.
+
+*** 2.1.2 Function Types
+*** 2.1.3 Type Alias
+*** 2.1.4 The Importance of Types
+** TODO 2.2 Typeclasses in Haskell
+*** 2.2.1 xxx: ~Eq~
+*** 2.2.2 XXX: ~Ord~
+*** 2.2.3 XXX: ~Enum~
+*** 2.2.4 XXX: ~Bounded~
+*** 2.2.5 XXX: ~Num~
+*** 2.2.6 XXX: ~Show~
+*** 2.2.7 Section Summary
+
+** TODO 2.3 Functions in Haskell
+*** 2.2.1 Values in Haskell
+*** 2.2.2 Intro to FP Thoughts
+*** 2.2.3 The basics of how to define a function
+*** 2.2.4 \lambda{} Expressions
+*** 2.2.5 Bind Arguments 
+** TODO 2.4 Expressions in Haskell
+*** 2.4.1 Condition Expressions
+*** 2.4.2 ???
+*** 2.4.3 Guard Expressions
+*** 2.4.4 Pattern Matching
+*** 2.4.5 Operators and Functions
+*** 2.4.6 Operators and User-defined Operators
+** Chapter Summary
+*** TODO 3 ~Bool~ Values Based Functions
+** 3.1 Intro to The Keywords ~module~ and ~import~
+** 3.2 xxx ~Bool~ Value Functions
+** 3.3 NAND Gates and NOR Gates
+** 3.4 Chapter Summary
+
+*** TODO 4 Library Functions and Their Applications
+** 4.1 The Pre-loaded Library Functions
+*** 4.1.1 Common Functions
+*** 4.1.2 /List/ Fased Functions
+*** 4.1.3 Define A Calendar Formula
+*** 4.1.4 Functions to String Processing
+** 4.2 Introduction to The Functions of Character or Bit
+*** 4.2.1 ~Data.Char~
+*** 4.2.2 ~Data.Bits~
+** Chapter Summary
+*** TODO 5 Recursion Functions
+** 5.1 Concepts to Recursion Functions
+** 5.2 Simple Recursion Functions
+** 5.3 Expansion Recursion and Tail Recursion
+** 5.4 Mutual Recursion
+** 5.5 xxx 91 Function
+** 5.6 Fibxxx Series
+** 5.7 Decimal to Roman xx
+** 5.8 Binary Search
+** 5.9 Tower of Hanoi
+** 5.10 Sort
+*** 5.10.1 Insertion Sort
+*** 5.10.2 Bubble Sort
+*** 5.10.3 Selection Sort
+*** 5.10.4 Quick Sort
+*** 5.10.5 Merge Sort
+*** Section Summary
+** 5.11 Recursion xxx and the base case (termination case)
+** 5.12 Recursions and Fixed Points
+** 5.13 xxx and Lazy Evaluation
+** Chapter Summary
+*** TODO 6 List =???? TOWO: how to translate=
+** 6.1 List Generator
+** 6.2 Primes Puzzles
+** 6.3 Ceaser Crypoxxxx
+*** 6.3.1 Encoding
+*** 6.3.2 Decoding
+
+** 6.4 Arrange and Combination Problems
+*** 6.4.1 Arrange Problems
+*** 6.4.2 xxxx Arrange Problems
+*** 6.4.3 Combination Problems
+** 6.5 The Eight Queens Problem
+** 6.6 Calculate Matrix Multiplication
+** 6.7 The Shortest Path Algorithm and Matrix Multiplication
+** Chapter Summary
+
+*** TODO 7 Higher Order Functions and Compound Functions
+** 7.1 Simple Higher Order Functions
+** 7.2 Folding Functions ~foldr~ and ~foldl~
+** 7.3 Functions ~mapAccumL~ and ~mapAccumR~
+** 7.4 Compound Functions
+** Chapter Summary
+*** TODO 8 Define Data Types
+** 8.1 The Definition of Data Type
+*** 8.1.1 Enumerative Type
+*** 8.1.2 Constructive Type
+*** 8.1.3 Parameterized Type
+*** 8.1.4 Recursive Type
+*** 8.1.5 Mix ....
+** 8.2 Type Isomorphism
+** 8.3 Define Type with ~newtype~
+** 8.4 The Effectiveness of Mathematical Induction
+** 8.5 Tree
+** 8.6 Catalan Number Problem
+** 8.7 Huffman Coding
+** 8.8 Sovle 24 xxxxxx????
+** 8.9 zipper
+** 8.10 General Algebraic Data Types
+** 8.11 The /kinds/ of Types
+*** 8.11.1 The /kinds/ of Types
+*** 8.11.2 The Declaration of An Empty Type
+** Chapter Summary
+*** TODO 9 Define Typeclasses
+** 9.1 Define Typeclass
+** 9.2 The Common Typeclasses in Haskell
+*** 9.2.1 Common Typeclasses
+*** 9.2.2 ~Functor~
+*** 9.2.3 ~Applicative~
+*** 9.2.4 ~Alternative~
+*** 9.2.5 Simple Character Identification Machine
+*** 9.2.6 The ~Read~ Typeclass
+*** 9.2.7 ~Monoid~
+*** 9.2.8 ~Foldable~ and ~Monoid~ Typeclasses
+*** 9.2.9 Section Summary
+** 9.3 The Types Dependencies in Typeclasses
+** 9.4 The XXX??? Types in Typeclasses
+** 9.5 Fixed Length List
+** 9.6 Runtime Overloading
+** 9.7 ~Existential~ Type
+** Chapter Summary
+*** TODO 10 The First Step of ~Monad~
+** 10.1 Introduction to ~Monad~
+** 10.2 Start from The ~Identity Monad~
+   #+BEGIN_SRC haskell
+     -- class Applicative m => Monad m where
+       (>>=) :: m a -> (a -> m b) -> m b
+       (>>) :: m a -> m b -> m b
+       return :: a -> m a
+   #+END_SRC
+*** TODO Applicative m
+*** TODO Core operations
+*** TODO The novel part of Monad
+    - *The answer is the exercise*
+*** TODO What Monad is not
+*** TODO Monad also lifts!
+** 10.3 ~Maybe~ ~Monad~
+** 10.4 The ~Monad~ Laws
+** 10.5 List ~Monad~
+** 10.6 ~Monad~ Operators
+** 10.7 ~MonadPlus~
+** 10.8 The Relations Between ~Functor~, ~Applicative~, and ~Monad~
+** Chapter Summary
+*** TODO 11 System Programming and I/O
+*** TODO 12 Record Monad, Reader Monad, and State Monad
+** 12.1 Record Monad
+*** 12.1.1 ~MonadWriter~
+*** 12.1.2 The Processes of Record Merge Sort
+** 12.2 Reader Monad
+*** 12.2.1 ~MonadReader~
+*** 12.2.2 The Reference to The Variables Environment
+** 12.3 State Monad
+*** 12.3.1 State Monad tag machine XXX ??
+*** 12.3.2 Implement Stack with State Monad
+*** 12.3.3 The Relations State Monad, ~FunApp~ Unit semigroup, and Reader Monad.
+*** 12.3.4 ~MonadState~
+*** 12.3.5 Stack Based Calculator
+** 12.3.7 The generation of a 
+** 12.3.7 State Monad
+*** TODO 13 ~Monad~ transformers
+** TODO 13.1 Start from The ~IdentityT Monad~ Transformer
+** TODO 13.2 The Difference Between ~Monad~ Transformer Combination and Compound ~Monad~
+** TODO 13.3 The Combination Order of The ~Monad~ Transformer
+** TODO 13.4 ~lift~ and ~liftIO~
+** TODO 13.5 Simple ~Monad~ Compiler
+** TODO 13.6 Syntax Parser ~Monad~ Combinator
+*** TODO 13.6.1 The Implementation of Simple Syntax Analyzer
+*** TODO 13.6.2 The Introduction to ~Parsec~ Library
+*** TODO 13.6.3 Context Free Syntax
+*** TODO 13.6.4 Syntax Analyzer Based Calculator
+** Chapter Summary
+*** TODO 14 Intro to ~QuickCheck~
+** 14.1 Test The Properties of Functions
+   - We will
+     be covering _TWO_ testing libraries for Haskell (_there are others_)
+     and
+     _HOW_ and _WHEN_ to use them
+
+   - Well-specified types can enable programmers to avoid many obvious and
+     tedious tests that might otherwise be necessary to maintain in untyped
+     programming languages,
+
+     =TODO= =???=
+     BUT there's still a lot of value to be obtained in executable
+     specifications.
+
+   - This chapter will cover:
+     + the whats and whys of testing;
+     + using the testing libraries _Hspec_ and _QuickCheck_;
+     + a bit of fun with Morse code.
+
+** 14.2 Test Data Generators
+   - For the sake of simplicity, we'll say there are _TWO_ broad categories of
+     testing:
+     + unit testing
+     + property testing =???=
+
+   - /unit testing/: test the smallest atomic units of software independently of
+     one another.
+     =FROM JIAN= It seems this kind of tests require /referential transparency/.
+
+   - /spec testing/: a somewhat =???= newer version of /unit testing/.
+     =TODO= =???=
+     + Like /unit testing/, it tests specific functions independently
+
+     + Ask you to assert when given the declared input, the result of the
+       operation will be equal to the desired result.
+
+   - Some people prefer /spec testing/ to /unit testing/
+
+     because /spec testing/ is more often written in terms of assertions that
+     are in human-readable language.
+
+   - _Hspec_ for /spec testing/
+     _HUnit_ for /unit testing/
+
+   - One Limitation of both /spec testing/ and /unit testing/:
+     They do NOT verify all the pieces work _TOGETHER_ properly.
+
+   - /property testing/: test the formal properties of programs
+     without requiring formal proofs
+     by allowing you to express a truth-valued, universally qualified (that is,
+     will apply to all cases) function -- usually equality -- which will then
+     be checked _against RANDOMLY generated input_.
+
+   - /property testing/ was pioneered in Haskell
+
+     because
+     + the type system
+       and 
+     + straightforward logic
+
+     of the language lend themselves to property test,
+
+     but it has since been adopted by other languages (=???=) as well.
+
+   - _QuickCheck_ (for Haskell /property testing/)
+
+   - The inputs of /property testing/ of Haskell are generated randomly by the
+     standard functions inside the _QuickCheck_ library -- this relies on the
+     type system to know what kinds of ata to generate.
+
+     + The default setting is for 100 inputs.
+
+     + _QuickCheck_ is cleverly written to be
+       as thorough as possile and will usually check the most common edge cases,
+       for example,
+       * empty lists
+       * maxBound and minBound of the types in question.
+
+   - /Property testing/ is fantastic for ensuring that you’ve met the minimum
+     requirements to satisfy laws,
+     such as
+     + the laws of monads;  =TODO= =Concrete Exmples?=
+     + basic associativity. =TODO= =Concrete Exmples?=
+
+** Chapter Summary
+*** TODO 15 Intro to Lazyness Evaluation
+** 15.1 Intro to Lambda Calculus
+*** 1.1 All You Need is Lambda
+    - /calculus/: a method of calculation or reasoning;
+
+    - /lambda calculus/: one process for formalizing a method.
+
+*** 1.2 What is functional programming?
+    - When we say the /purity/ of a functional programming language, we acutally
+      say in which level its /referential transparency/ is.
+        If we say a language is pure, we mean it has PERFECT
+      /referential transparency/.
+
+*** 1.3 What is a function?
+    - /domain/
+    - /codomain/
+    - /range/
+*** 1.4 The structure of lambda terms
+    - /lambda calculus/ has three basic components (/lambda terms/):
+      + expressions :: refer to a superset of all those things:
+        * a variable name
+        * an abstraction
+        * a combination of those things
+
+      + variables :: here variables means those have no meaning or value;
+                   they are just names for potential inputs to functions
+
+      + abstractions :: functions
+        * /head/
+        * /body/
+
+    - The variable named in the head is the /parameter/ and /binds/ all instances
+      of that same variable in the body of the function.
+
+**** Alpha equivalence
+     - /alpha equivalence/: a form of equivalence between lambda terms
+
+*** 1.5 Beta reduction
+    - /beta reduction/: apply a function to an argument.
+      =COMMENT= This reduction eliminates the head of the abstraction, since its
+                only purpose was to bind a variable.
+
+    - The process of /beta reduction/ _stops when_ there are either no more heads,
+      or lambdas, left to apply or no more arguments to apply functions to.
+
+**** Free varibales 
+     - /free variables/: variables that are not named in the head.
+
+     - /alpha equivalence/ does not apply to /free variables/.
+       For example, ~\lambda{}x.xy~ and ~\lambda{}x.xz~ are not equivalent because ~z~ and ~y~
+       might be different.
+
+*** 1.6 Multiple arguments
+    - Each lambda can only bind one parameter and can only accept one argument.
+
+    - Functions that require multiple arguments have multiple, nested heads.
+
+    - /Curry/: discovered by Moses Schönfinkel in the 1920s. Re-discovered by
+      Haskell Curry.
+
+*** Intermission: Equivalence Exercises
+** 15.2 ⊥ Bottom
+** 15.3 Expression xingtai and ~thunk~
+*** 15.3.1 WHNF, HNF, AND NF
+*** 15.3.2 ~thunk~ and Strict Evaluation
+** 15.4 The Evaluation Strategy
+*** 15.4.1 Call by Value
+*** 15.4.2 Call by Name
+*** 15.4.3 Normal Order Evaluation
+** 15.5 Lazy Evaluation
+** 15.6 Strict Pattern Matching and Lazy Pattern Matching
+*** TODO 16 Parallilism and concurrency Programming
+** 16.1 XXXX
+** 16.2 Light Weight Threads
+*** 16.2.1 The Uncertainty of XXXX
+*** 16.2.2 The Communication Between Basic Threads
+*** 16.2.3 The Communication Channels
+*** 16.2.4 A Simple Chat Server
+** 16.3 Software XXX??? Memory
+*** 16.3.1 Introduction to Software XXX Memory
+*** 16.3.2 The Usage of Software XXX Memory
+*** 16.3.3 The Dining Philosophers Problem
+*** 16.3.4 The Santa Claus Problem
+** 16.4 The Introduction to The Asynchronous Concurrent Library
+** Chapter Summary
+
+* Tips

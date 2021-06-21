@@ -1,0 +1,2720 @@
+#+TITLE: The Go Programming Language
+#+YEAR: 2016
+#+AUTHOR: Alan A. A. Donovan, Brian W. Kernighan
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Preface - xi
+  - *Go* was _CONCEIVED in September 2007_ by
+    _Robert Griesemer_,
+    _Rob Pike_, and
+    _Ken Thompson_,
+    all at Google, and was _ANNOUNCED in November 2009_.
+
+  - The goals of the language and its accompanying tools were to be
+    + *efficient* in both _compilation_ and _execution_, and
+    + *expressive* and *effective* in writing _reliable_ and _robust_ programs.
+
+  - Go is especially well suited for building infrastructure like
+    + networked servers, =!!!=
+    + tools, and
+    + systems for programmers,
+
+    but it is truly a *general-purpose language* and finds use in domains as
+    diverse as
+    + graphics
+    + mobile applications, and
+    + machine learning.
+
+  - Go is an open-source project.
+
+  - Go works on Unix-li ke systems, Plan 9, and MS Windows.
+
+** DONE The Origins of Go - xii =IMPORTANT= =INTERESTING= =RE-READ=
+   CLOSED: [2018-05-07 Mon 18:13]
+** TODO The Go Project - xiii
+** TODO Organization of the Book - xv
+** TODO Where to Find More Information - xvi
+** DONE Acknowledgments - xvii
+   CLOSED: [2018-05-07 Mon 18:14]
+* TODO 1. Tutorial - 1
+  - This chapter is a tour of the basic components of Go.
+
+** DONE 1.1. Hello, World - 1
+   CLOSED: [2018-05-07 Mon 18:57]
+   #+BEGIN_SRC go
+     // gop1.io/ch1/helloworld
+     package main
+
+     import "fmt"
+
+     func main() {
+       fmt.Println("Hello, 世界")
+     }
+   #+END_SRC
+   
+   - You can see it works well with /Unicode/.
+
+   - Use ~go run helloworld.go~ to
+     1. compile the source code from _one or more_ source files whoes names end
+        in =.go=
+
+     2. link it with libaries
+
+     3. run the resulting executable file
+
+   - For one-shot experiment, you can use commands like ~go build helloworld.go~
+     to compile it, and run it later with commands like ~./helloworld~.
+
+   - =TODO= There's more about this topic in Sec tion 2.6 and Sec tion 10.7.
+     ~go get popl.io/ch1/helloworld~
+
+   - The program itself:
+     + Go code is organize d into /packages/,
+
+     + A /package/ consists of one or more =.go= source files in a single
+       directory that define what the /package/ does.
+
+     + Each source file _begins with_ a /package declaration/, here /package/
+       ~main~.
+
+       THEN, the _imported_ /packages/
+
+       THEN, the declarations (code) of the program that are stored in that file.
+
+     + /Package/ ~main~ is special. It defines a *standalone* executable program,
+       NOT a library.
+
+       Within /package/ ~main~ the function ~main~ is also special -- it's where
+       execution of the program begins (like ~main~ in The C Language).
+
+     + BOOK CONVENTION:
+       *To save space*, we will sometimes NOT show the /package/ and /import/
+       declarations when presenting examples.
+
+     + ~func~
+
+   - Go takes a strong stance on code *formatting*.
+
+     The *gofmt* tool rewrites code into the _standard format_,
+
+     and the ~go~ tool's ~fmt~ _subcommand_ applies ~gofmt~ to
+     + all the files in the _specified package_
+       or
+     + the ones in the current directory by default.
+
+   - The tool ~goimports~ manages the insertion and removal of import
+     declarations as needed.
+
+     It is *NOT* part of the standard distribution but you can obtain it with
+     this command: ~go get golang.org/x/tools/cmd/goimports~
+
+     =TODO=
+     For most users, the usual way to download and build /packages/,
+     run their tests,
+     show their documentation, and so on, is with the ~go~ tool,
+     which we'll look at in Sec tion 10.7.
+
+** DONE 1.2. Command-Line Arguments - 4
+   CLOSED: [2018-05-07 Mon 19:51]
+   - The ~os~ /package/ provides functions and other values for dealing with the
+     OS in a platform-independent fashion.
+
+     Command-line arguments are available to a program in a variable ~os.Args~.
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "os"
+       )
+
+       func main () {
+         var s string
+         var sep string
+
+         for i := 1; i < len(os.Args); i++ {
+           s += sep + os.Args[i]
+           sep = " "
+         }
+
+         fmt.Println(s)
+       }
+     #+END_SRC
+
+     + The variable ~os.Args~ is a /slice/ of strings.
+
+       =TODO=
+       Slices are a fundamental notion in Go, and
+       we'll talk a lot more about them soon.
+         For now, think of a /slice/ as a dynamically sized sequence ~s~ of
+       array elements.
+       * access individual elements with the syntax ~s[i]~.
+
+       * access a contiguous subsequence as ~s[m:n]~, which is a half-open
+         interval. ~os.Args[1:len(os.Args)]~ can be written as ~os.Args[1:]~.
+
+       * the number of elements is given by ~len(s)~.
+
+     + Actually, all indexing in Go uses half-open intervals.
+
+     + ~os.Args[0]~ is the name of the command (executable) itself.
+
+     + The ~gofmt~ tool sorts the /package/ names into alphabetical order.
+
+     + ~+~ can be used as the /string concatenation/ operation.
+
+     + The ~:=~ symbol is part of a /short variable declaration/.
+
+     + Go *ONLY* have /postfix increment statements/: ~i++~ and ~i\minus\minus{}~.
+       They have different meanings from C:
+       * they are the shorthands for ~i += 1~, and ~i -= 1~, respectively.
+
+       * they are statements, not expressions, and ~j = i++~ is *Illegal*.
+
+     + The ~for~ loop is the *ONLY* loop in Go.
+       * As the ~for~ in C:    ~for initialization; condition; post { ... }~
+
+       * As the ~while~ in C:  ~for condition { ... }~
+
+       * As the infinite loop: ~for { ... }~
+
+       * Over a range:
+         #+BEGIN_SRC go
+           func main() {
+             s, sep := "", ""
+
+             for _, arg := range os.Args[1:] {
+               s += sep + arg
+               sep = " "
+             }
+
+             fmt.Println(s)
+           }
+         #+END_SRC
+         - Here ~_~ is called the blank identifier.
+
+           In Go, unused identifier is illegal, which will result in a
+           compilation error. You must use ~_~ for unused values.
+
+         - Equivalent declaration:
+           #+BEGIN_SRC go
+             s := ""
+             var s string
+             var s = ""
+             var s string = ""
+           #+END_SRC
+           + Q: Why should you prefer one form to another?
+
+           + A:
+             * The first form
+               - it is the most compact
+               - it CANNOT be used in package-level
+
+             * The second form
+               it relies on default initialization
+
+             * The third form
+               it is RARELY used EXCEPT when declaring multiple variables
+
+             * The fourth form
+               it is redundant
+
+           + *In practice, you should generally use one of the first two forms*.
+
+         - Everytime, you use ~+=~, the old value is no longer used, and it can
+           be garbage-collected in due course. However, this can be costly, if
+           the involved data is large. A better way:
+           ~fmt.Println(strings.Join(strings.Join(os.Args[1:], " "))~
+
+   - Exercise 1.3 =TODO=
+
+** DONE 1.3. Finding Duplicate Lines - 8
+   CLOSED: [2018-05-07 Mon 22:16]
+   The program we will explain here is ~dup~, which is inspired by the Unix
+   ~uniq~ command.
+
+   - This program introduces:
+     + the ~if~ statement
+
+     + the ~map~ data type
+
+     + the ~bufio~ package.
+
+   - =gop1.io/ch1/dup1=
+     #+BEGIN_SRC go
+       // Dup1 prints the text of each line that appears more than
+       // once in the standard input, preceded by its count.
+       package main
+
+       import (
+         "bufio"
+         "fmt"
+         "os"
+       )
+
+       func main() {
+         counts := make(map[string]int)
+         input := bufio.NewScanner(os.Stdin)
+         for input.Scan() {
+           counts[input.Text()]++
+         }
+
+         // NOTE: ignoring potential errors from input.Err()
+         for line, n := range counts {
+           if n > 1 {
+             fmt.Printf("%d\t%s\n", n, line)
+           }
+         }
+       }
+     #+END_SRC
+
+   - The curly braces for ~if~ are required!!!
+
+   - ~map~ :: a data structure that holds a set of key/value pairs, and it
+              provides constant-time operations to
+     + store
+
+     + retrieve
+
+     + existence text
+
+   - For ~map~
+     + the /key/ may be of any type whose values can compared with ~==~, strings
+       being the most common example;
+
+     + the /value/ may be of any type at all.
+
+   - In this example, the /keys/ are ~string~'s and the /values/ are ~int~'s.
+
+     The built-in function make creates a _new_ *EMPTY* ~map~;
+     =TODO=
+     it has other uses too. Maps are discussed at lengt h in Sec tion 4.3.
+
+   - =gopl.io/ch1/dup2=
+     #+BEGIN_SRC go
+       // Dup2 prints the count and text of lines that appear more than once
+       // in the input. It reads from stdin or from a list of named files.
+       package main
+
+       import (
+         "bufio"
+         "fmt"
+         "os"
+       )
+
+
+       func main() {
+         counts := make(map[string]int)
+         files := os.Args[1:]
+
+         if len(files) == 0 {
+           countLines(os.Stdin, counts)
+         } else {
+           for _, arg := range files {
+             f, err := os.Open(arg)
+             if err != nil {
+               fmt.Fprintf(os.Stderr, "dup2: %v\n", err)
+               continue
+             }
+             countLines(f, counts)
+             f.Close()
+           }
+         }
+
+         for line, n := range counts {
+           if n > 1 {
+             fmt.Printf("%d\t%s\n", n, line)
+           }
+         }
+       }
+
+
+       func countLines(f *os.File, counts map[string]int) {
+         input := bufio.NewScanner(f)
+
+         for input.Scan() {
+           counts[input.Text()]++
+         }
+         // NOTE: ignoring potential errors from input.Err()
+       }
+     #+END_SRC
+
+   - =gopl.io/ch1/dup3=
+     The example code above operate in a streaming mode.
+     This one try to read all into memory first.
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "io/ioutil"
+         "os"
+         "strings"
+       )
+
+
+       func main() {
+         counts := make(map[string]int)
+
+         for _, filename := range os.Args[1:] {
+           data, err := ioutil.ReadFile(filename)
+
+           if err != nil {
+             fmt.Fprintf(os.Stderr, "dup3: %v\n", err)
+             continue
+           }
+
+           for _, line := range strings.Split(string(data), "\n") {
+             counts[line]++
+           }
+         }
+
+         for line, n := range counts {
+           if n > 1 {
+             fmt.Printf("%d\t%s\n", n, line)
+           }
+         }
+       }
+     #+END_SRC
+
+** TODO 1.4. Animated GIFs - 13
+   - The next program demonstrates basic usage of Go's _standard image packages_,
+     which we'll use to
+     1. create a sequence of bit-mapped images
+     2. encode the sequence as a GIF animation.
+
+   - The images, called *Lissajous figures*.
+     2D Harmonic oscillation.
+
+   - There are several new constructs in this code, including:
+     + ~const~ declarations
+     + ~struct~ types
+     + /composite literals/
+
+   - *UNLIKE* most of our examples, we will discuss floating-point computations
+     in this example, and pushing most details off to later chapters. =TODO=
+
+   - =gop1.io/ch1/lissajous=
+     #+BEGIN_SRC go
+       // Lissajous generates GIF animations of random Lissajous figures.
+       package main
+
+       import (
+         "image"
+         "image/color"
+         "image/gif"
+         "io"
+         "math"
+         "math/rand"
+         "os"
+       )
+
+
+       var palette = []color.Color{color.White, color.Black}
+
+       const (
+         whiteIndex = 0 // first color in palette
+         blackIndex = 1 // next color in palette
+       )
+
+       func main() {
+         lissajous(os.Stdout)
+       }
+
+       func lissajous(out io.Writer) {
+         const (
+           cycles  = 5     // number of complete x oscillator revolutions
+           res     = 0.001 // angular resolution
+           size    = 100   // image canvas covers [-size..+ size]
+           nframes = 64    // number of animation frames
+           delay   = 8     // delay between frames in 10ms units
+         )
+
+         freq := rand.Float64() * 3.0 // relative frequency of y oscillator
+         anim := gif.GIF{LoopCount: nframes}
+         phase := 0.0 // phase difference
+
+         for i := 0; i < nframes; i++ {
+           rect := image.Rect(0, 0, 2*size+1, 2*size+1)
+           img := image.NewPaletted(rect, palette)
+
+           for t := 0.0; t < cycles*2*math.Pi; t += res {
+             x := math.Sin(t)
+             y := math.Sin(t*freq + phase)
+             img.SetColorIndex(size+int(x*size + 0.5), size+int(y*size + 0.5),
+               blackIndex)
+           }
+           phase += 0.1
+           anim.Delay = append(anim.Delay, delay)
+           anim.Image = append(anim.Image, img)
+         }
+         gif.EncodeAll(out, &anim) // NOTE: ignoring encoding errors
+       }
+     #+END_SRC
+     + The value of a constant *MUST be* a _number_, _string_, or _boolean_.
+
+     + The expressions ~[]color.Color{...}~ and ~gif.GIF{...}~ are
+       /composite literals/ (§4.2, §4.4.1) =TODO=,
+
+       =TODO= =???=
+       * composite literals :: a compact notation for instantiating *any* of Go's
+            composite types from a sequence of element values. 
+
+       * Here, the first one is a /slice/ and the second one is a ~struct~.
+
+** DONE 1.5. Fetching a URL - 15
+   CLOSED: [2018-05-07 Mon 22:48]
+   =gopl.io/ch1/fetch=
+   #+BEGIN_SRC go
+     // Fetch prints the content found at a URL.
+     package main
+
+     import (
+       "fmt"
+       "io/ioutil"
+       "net/http"
+       "os"
+     )
+
+     func main() {
+       for _, url := range os.Args[1:] {
+         resp, err := http.Get(url)
+
+         if err != nil {
+           fmt.Fprintf(os.Stderr, "fetch: %v\n", err)
+           os.Exit(1)
+         }
+
+         b, err := ioutil.ReadAll(resp.Body)
+         resp.Body.Close()
+
+         if err != nil {
+           fmt.Fprintf(os.Stderr, "fetch: reading %s: %v\n", url, err)
+           os.Exit(1)
+         }
+
+         fmt.Printf("%s", b)
+       }
+     }
+   #+END_SRC
+   + Success:
+     #+BEGIN_SRC bash
+       #$
+       ./fetch http://gopl.io
+       ### <html>
+       ### <head>
+       ### <title>The Go Programming Language</title>
+       ### ...
+     #+END_SRC
+
+   + Fail:
+     #+BEGIN_SRC bash
+       #$
+       ./fetch http://bad.gopl.io
+       ### fetch: Get http://bad.gopl.io: dial tcp: lookup bad.gopl.io: no such host
+     #+END_SRC
+
+** TODO 1.6. Fetching URLs Concurrently - 17
+** TODO 1.7. A Web Server - 19
+** DONE 1.8. Loose Ends - 23
+   CLOSED: [2018-05-07 Mon 22:48]
+   There is a lot more to Go than we've covered in this quick introduction.
+
+   - *Control flow*:
+     + ~switch~
+       #+BEGIN_SRC go
+         switch coinflip() {
+         case "heads":
+           heads++
+         case "tails":
+           tails++
+         default:
+           fmt.Println("landed on edge!")
+         }
+       #+END_SRC
+       * NO *fall through* by default
+
+       * Use ~fallthrough~ statement to override the behavior and switch on *fall
+         through*.
+
+       * tagless ~switch~: just ~switch true~
+         #+BEGIN_SRC go
+           func Signum(x int) int {
+             switch {
+             case x > 0:
+               return +1
+             default:
+               return 0
+             case x < 0:
+               return 1
+             }
+           }
+         #+END_SRC
+
+       * Like the ~for~ and ~if~ statements, =IMPORTANT=
+         a ~switch~ may include an optional simple statement.
+
+     + ~break~ and ~continue~
+       ~break~ and ~continue~ can have target label.
+
+     + ~goto~ is intended for machine-generated code, NOT regular use by
+       programmers.
+
+   - *Named types*:
+     A ~type~ declaration makes it possible to give a name to an existing type.
+     #+BEGIN_SRC go
+       type Point struct {
+         X, Y int
+       }
+
+       var p Point
+     #+END_SRC
+
+   - *Pointers*:
+     + More constraints than in C -- NO pointer arithmetic.
+
+     + More flexible than the pointers in some other languages.
+       =TODO= *NO given example*
+
+   - *Methods and interfaces*:
+     + method :: a function associated with a /named type/; Go is unusual in that
+                 methods may be attached to almost any /named type/.
+                 =TODO= /Methods/ are covered in Chapter 6.
+
+     + Interfaces :: abstract types that let us treat different concrete types in
+                     the same way based on what methods they have.
+                     =TODO= /Interfaces/ are the subjec t of Chapter 7.
+
+   - *Packages*:
+     + You can find an index of the standard library packages at
+       https://golang.org/pkg
+
+     + You can find the packages contributed by the community at
+       https://godoc.org
+
+     + The ~go doc~ tool makes these documents easily accessible from the command
+       line, for example: ~go doc http.ListenAndServe~
+
+   - *Comments*:
+     + It's also good style to write a comment before the declaration of each
+       function to specify its behavior.
+         These conventions are important, because they are used by tools like
+       ~go doc~ and ~godoc~ to locate and display documentation (§10.7.4).
+
+     + Multiple line comment ~/* */~ are available.
+
+     + Within a comment, ~//~ and ~/*~ have no special meaning, so *comments do
+       NOT nest*.
+
+* DONE 2. Program Structure - 27
+  CLOSED: [2018-05-09 Wed 13:02]
+** DONE 2.1. Names - 27
+   CLOSED: [2018-05-07 Mon 23:38]
+   - Here *names* means /identifiers/.
+
+     The /identifiers/ in Go follow the rule of how to create an identifier in
+     C.
+
+   - Go has *25 keywords*, and they CANNOT be used as /names/:
+     1. ~break~
+     2. ~default~
+     3. ~func~
+     4. ~interface~
+     5. ~select~ =???=
+     6. ~case~
+     7. ~defer~ =???=
+     8. ~go~ =???=
+     9. ~map~
+     10. ~struct~
+     11. ~chan~ =???=
+     12. ~else~
+     13. ~goto~
+     14. ~package~
+     15. ~switch~
+     16. ~const~
+     17. ~fallthrough~
+     18. ~if~
+     19. ~range~ =???=
+     20. ~type~
+     21. ~continue~
+     22. ~for~
+     23. ~import~
+     24. ~return~
+     25. ~var~
+
+   - In addition, there are about three dozen /predeclared names/ like ~int~ and
+     ~true~ for /built-in constants, types, and functions/ (these /names/ are
+     *NOT reserved*):
+
+     + Constants:
+       ~true~, ~false~
+       ~iota~ =TODO=
+       ~nil~
+
+     + Types:
+       ~int~, ~int8~, ~int16~, ~int32~, ~int64~
+       ~uint~, ~uint8~, ~uint16~, ~uint32~, ~uint64~, ~uintptr~
+       ~float32~, ~float64~
+       ~complex128~, ~complex64~
+       ~bool~
+       ~byte~
+       ~rune~
+       ~string~
+       ~error~
+
+     + Functions:
+       ~make~ =TODO=
+       ~len~
+       ~cap~ =TODO=
+       ~new~ =TODO=
+       ~append~ =TODO=
+       ~copy~
+       ~close~
+       ~delete~ =TODO=
+       ~complex~ =TODO=
+       ~real~ =TODO=
+       ~imag~ =TODO=
+       ~panic~ =TODO=
+       ~recover~ =TODO=
+
+   - If a /variable/ declared *outside* of a /function/, it is _visible_ in *ALL*
+     files of the /package/ to which it belongs.
+       _The case of the first letter_ of a name DETERMINES its _visibility across
+       package boundaries_.
+
+   - /Package names/ themselves are *always in lower case*.
+
+   - There is *NO limit* on /name/ lengh!!!
+     Convention, _the larger the scope_ of a /name/, _the longer and more
+     meaningful_ it should be.
+
+   - Go programmers prefer *Camel Case* /names/.
+
+     The letters of acronyms and initialisms like ASCII and HTML are
+     *always rendered in the SAME case* -- All small or All capital!!!
+       This means you shouldn't create a /name/ inlcude sequence like ~Html~ to
+     represent ~HTML~. Only ~html~ and ~HTML~ are good names.
+
+** DONE 2.2. Declarations - 28
+   CLOSED: [2018-05-07 Mon 23:44]
+   - There are *four* major kinds of /declarations/:
+     1. ~var~
+     2. ~const~
+     3. ~type~
+     4. ~func~
+
+     =PLAN=
+     We'll talk about /variables/ and /types/ in this chapter,
+     /constants/ in Chapter 3, and /functions/ in Chapter 5.
+
+   - For /function/, the /result list/ is *omitted*
+     IF the /function/ does NOT return anything.
+
+** DONE 2.3. Variables - 30
+   CLOSED: [2018-05-08 Tue 18:22]
+   - SYNTAX:
+     ~var name type = expression~
+     Either the _type_ or the _= expression_ part may be *omitted*, _BUT NOT
+     BOTH_.
+     + If the _type_ is omitted, the type is set the type of the initializer
+       expression.
+
+     + If the _= expression_ is omitted, the initial value is the /zero value/
+       for the _type_ -- NOT 0, the zero in the meaning of algebra. For example,
+       * ~0~ for numbers
+
+       * ~false~ for booleans
+
+       * ~""~ for strings
+
+       * ~nil~ for interfaces and reference types (/slice/, /pointer/, /map/,
+         /channel/, /function/).
+
+       The /zero value/ of an aggregate type like an /array/ or a /struct/ has
+       the /zero value/ of *ALL* of its /elements/ or /fields/.
+
+     + The /zero value/ mechanism ensures that a variable ALWAYS holds a
+       *well-defined* value of its type.
+
+       _In Go, there is *NO* /uninitialized variable/._
+
+     + Go programmers often go to some effort to
+       *make the zero value of a more complicated type meaningful*,
+       so that _variables can begin life in a useful state_.
+       =TODO= HOW? EXAMPLES? =???=
+
+     + /Package-level variables/ are initialized *before* ~main~ begins (§2.6.2),
+       and
+       /local variables/ are initialized as their declarations are encountered
+       during function execution.
+
+*** DONE 2.3.1. Short Variable Declarations - 30
+    CLOSED: [2018-05-08 Tue 02:18]
+    - Within a function, an ALTERNATIVE, to the syntax of ~var name type =
+      expression~, of declaring an variable is th /short variable declarations/
+      SYNTAX: ~name := expression~.
+
+    - KEEP IN MIND:
+      + ~:=~ is a /declaration/
+      + ~=~ is an /assignment/
+
+    - =IMPORTANT=
+      One subtle but important point:
+      a /short variable declaration/ does NOT necessarily declare all the
+      variables on its left-hand side -- if some of them were already declared
+      in the same /lexical block/ (§2.7), then the /short variable declaration/
+      *acts like an assignment* _to those variables_.
+
+      A /short variable declaration/ _MUST_ *declare at least one new variable*.
+
+      Combine the two points above:
+      + *Compilable* (include an assignment)
+        #+BEGIN_SRC go
+          in, err := os.Open(inFile)
+          // ...
+          out, err := os.Open(outFile)
+        #+END_SRC
+
+      + *NOT compilable*
+        #+BEGIN_SRC go
+          in, err := os.Open(inFile)
+          // ...
+          in, err := os.Open(outFile)   // compile error: no new variables !!!
+        #+END_SRC
+
+*** DONE 2.3.2. Pointers - 32
+    CLOSED: [2018-05-08 Tue 18:22]
+    - The /zero value/ for a /pointer/ of any type is ~nil~.
+
+    - Two /pointers/ are equal
+      iff they
+      + point to the *same* variable
+
+      + BOTH are ~nil~.
+
+    - If ~f~ is a function that returns a non-~nill~ /pointer value/,
+      ~f() == f()~ should always be ~false~.
+
+      =From Jian= functions that return /pointer value/ are
+      *NOT* /reference transparency/.
+
+    - Example:
+      ~echo~ that can accept command line options:
+      #+BEGIN_SRC go
+        // Echo4 prints its command-line arguments.
+        package main
+
+        import (
+          "flag"
+          "fmt"
+          "strings"
+        )
+
+
+        var n = flag.Bool("n", false, "omit trailing newline")
+        var sep = flag.String("s", " ", "separator")
+
+        func main() {
+          flag.Parse()
+          fmt.Print(strings.Join(flag.Args(), *sep))
+
+          if !*n {
+            fmt.Println()
+          }
+        }
+      #+END_SRC
+      + If ~flag.Parse()~ encounters an error, it
+        * *prints* a usage message
+        * *calls* ~os.Exit(2)~ to terminate the program.
+
+      + Output:
+        #+BEGIN_SRC bash
+          #$
+          go build gopl.io/ch2/echo4
+
+
+          #$
+          ./echo4 a bc def
+          ## a bc def
+
+
+          #$
+          ./echo4 -s / a bc def
+          ## a/bc/def
+
+
+          #$
+          ./echo4 -n a bc def
+          ## a bc def$
+
+
+          #$
+          ./echo4 -help
+          ## Usage of ./echo4:
+          ##   -n    omit trailing newline
+          ##   -s string
+          ##         separator (default " ")
+        #+END_SRC
+       
+
+*** DONE 2.3.3. The ~new~ Function - 34
+    CLOSED: [2018-05-07 Mon 23:55]
+    - Usage: ~new(Type)~
+
+    - Return Value: a value of ~*Type~
+
+    - Example:
+      #+BEGIN_SRC go
+        p := new(int)   // p, of type *int, points to an unnamed int variable
+        fmt.Println(*p) // "0"
+        ,*p = 2         // sets the unnamed int to 2
+        fmt.Println(*p) // "2"
+      #+END_SRC
+
+    - With the help of ~new~, you don't need to create a dummy name to save a
+      vlaue!
+      + Functions that have identical behaviors -- the ~new~ version is conciser:
+        #+BEGIN_SRC go
+          func newInt() *int {
+            return new(int)
+          }
+  
+  
+          func newInt() *int {
+            var dummy int
+            return &dummy
+          }
+        #+END_SRC
+
+    - _MOSTLY_, every ~new~ operation returns a *different* address.
+
+      + _EXCEPTIONS_:
+        two variables whose type carries NO information and is therefore of
+        _size zero_, such as ~struct{}~ or ~[0]int~, may, _depending on the
+        implementation_, have _the *SAME* address_.
+
+    - The ~new~ function is relatively _RARELY_ used
+      because the most common unnamed variables are of /struct/ types, for which
+      the /struct literal/ syntax (§4.4.1) is more flexible. =TODO=
+
+    - Since ~new~ is not a keyword, the word =new= is not reserved.
+      For example, ~func delta(old int, new int) int { return new - old }~ is
+      _LEGAL_, however, you CANNOT use the ~new~ function inside this ~delta~
+      function.
+    
+*** DONE 2.3.4. Lifetime of Variables - 35
+    CLOSED: [2018-05-08 Tue 16:49]
+
+** DONE 2.4. Assignments - 36
+   CLOSED: [2018-05-08 Tue 18:50]
+   - We know the normal assignment SYNTAX ~variable = value~,
+     but don't forget the special ones:
+     + ~v += 1~
+
+     + ~v++~ 
+
+     + With ~:=~ in some conditions:
+       #+BEGIN_SRC go
+         a, b := f()
+         a, c := f()
+       #+END_SRC
+       + The first line,
+         for both ~a~ and ~b~, it is a declaration which includes initialization.
+
+       + The second line,
+         for ~a~ is an /assignment/, rather than /declaration/.
+  
+*** DONE 2.4.1. Tuple Assignment - 37
+    CLOSED: [2018-05-08 Tue 18:41]
+    - This SYNTAX can be used to do *values swap*.
+
+    - For Go, =TODO= =???=
+      a _map lookup (§4.3)_, _type assertion (§7.10)_, or _channel receive
+      (§8.4.2)_ appears in an assignment in _which *two* results are expected_,
+      each produces an additional /boolean/ result:
+      #+BEGIN_SRC go
+        v, ok = m[key] // map lookup
+        v, ok = x.(T)  // type assertion
+        v, ok = <-ch   // channel receive
+      #+END_SRC
+
+    - Use /blank identifier/ ~_~ to skip unwanted variable(s) creation in /tuple
+      assignment/.
+
+*** DONE 2.4.2. Assignability - 38
+    CLOSED: [2018-05-08 Tue 18:50]
+    - The rule for /assignability/ has cases for various types, so we'll explain
+      the relevant case as we introduce each new type.
+
+      + For the types we've discussed so far, the rules are simple:
+        the types must exactly match, and ~nil~ may be assigned to any variable
+        of interface or reference type. Constants (§3.6) have more flexible rules
+        for /assignability/ that avoid the need for most explicit conversions.
+        =TODO= =IMPORTANT=
+
+    - Whether two values may be compared with ~==~ and ~!=~ is related to
+      /assignability/:
+      in any *comparison*, one operand MUST be assignable to the other one,
+      either lhs to rhs, or rhs to lhs.
+
+      As with /assignability/, we'll explain the relevant cases for
+      /comparability/ when we present each new type.
+
+    - =From Jian=
+      =???=
+      I don't understand why there is a section called *Assignability*.
+      In other static typed languages, one phase /compatible types/ can explain
+      all!
+
+** DONE 2.5. Type Declarations - 39
+   CLOSED: [2018-05-08 Tue 19:25]
+   - A ~type~ declaration defines a new /named type/ that has the _SAME_
+     underlying type as an existing type.
+
+   - /Type declarations/ _MOST OFTEN_ appear at _package level_.
+
+   - Example: =gopl.io/ch2/tempconv0=
+     #+BEGIN_SRC go
+       // Package tempconv performs Celsius and Fahrenheit temperature computations.
+       package tempconv
+
+       import "fmt"
+
+
+       type Celsius float64
+       type Fahrenheit float64
+
+       const (
+         AbsoluteZeroC Celsius = 273.15
+         FreezingC Celsius = 0
+         BoilingC Celsius = 100
+       )
+
+       func CToF(c Celsius) Fahrenheit { return Fahrenheit(c*9/5 + 32) }
+       func FToC(f Fahrenheit) Celsius { return Celsius((f - 32) * 5 / 9) }
+     #+END_SRC
+
+     + =From Jian=
+       ~type~ here does *NOT* alias a existing type!
+
+       Here role of ~Celsius~ and ~Fahrenheit~ are like the /type constructors/
+       in Haskell ~newtype~ -- though the underlying data are the same, they are
+       annotated different types.
+
+       You use SYNTAX like ~Fahrenheit(3.1)~ or ~Celsius(4.5)~ to create a value
+       of corresponding types.
+
+     + /Cast/
+       For every type ~T~, there is a corresponding conversion operation ~T(x)~
+       that converts the value ~x~ to type ~T~.
+
+     + You can add a /method/ to a /named type/ like:
+       ~func (c Celsius) String() string { return fmt.Sprintf("%g°C", c) }~
+
+       This function add a ~String()~ /method/ to ~Celcius~.
+       You can say, it add a ~Celcius~ type parameter ~c~ *before* the function
+       name.
+       #+BEGIN_SRC go
+         c := FToC(212.0)
+         fmt.Println(c.String())  // "100°C"
+       #+END_SRC
+
+** DONE 2.6. Packages and Files - 41
+   CLOSED: [2018-05-09 Wed 13:01]
+   /Packages/ in Go serve the same purposes as libraries or modules in other
+   languages, _supporting_ /modularity/, /encapsulation/, /separate compilation/,
+   and /reuse/.
+
+   - The source code for a /package/ resides in one or more =.go= files, usually
+     in a directory whose name ends with the import path; _for instance_,
+     the files of the ~gopl.io/ch1/helloworld~ /package/ are stored in directory
+     =$GOPATH/src/gopl.io/ch1/helloworld=.
+
+   - Each package serves as a separate /name space/ for its declarations.
+
+   - Exported identifiers _START WITH an upper-case letter_.
+
+   - The /doc comment (§10.7.4)/ =TODO= immediately preceding the /package
+     declaration/ documents the /package/ as a whole.
+       Conventionally, it should start with a summary sentence in the style
+     illustrated.
+       *Only one* file in each /package/ should have a /package doc comment/.
+     _Extensive_ /doc comments/ are often placed in a file of their own,
+     conventionally called =doc.go=.
+
+*** DONE 2.6.1. Imports - 43
+    CLOSED: [2018-05-09 Wed 12:03]
+    It is an *error* to import a /package/ and then _NOT_ refer to it.
+
+      It can be a nuisance during debugging. Try to use the
+    =golang.org/x/tools/cmd/goimports= tool, which automatically inserts and
+    removes /packages/ from the import declaration as necessary. Like the
+    =gofmt= tool, it also *pretty-prints* Go source files in the canonical
+    format.
+
+*** DONE 2.6.2. Package Initialization - 44 =RE-READ=
+    CLOSED: [2018-05-09 Wed 13:01]
+    - /Package initialization/ begins by initializing package-level variables in
+      the order in which they are declared, except that dependencies are
+      resolved first:
+      #+BEGIN_SRC go
+        var a = b + c // a initialized third, to 3
+        var b = f()   // b initialized second, to 2, by calling f
+        var c = 1     // c initialized first, to 1
+        func f() int { return c + 1 }
+      #+END_SRC
+
+      =From Jian= This example is a good illustration to the /package-level
+      variables initialization during/ the /package initialization/, but the
+      order it define variables is insane, real world code shouldn't do this. 
+
+    - If the package has multiple =.go= files, they are initialized in the order
+      in which the files are given to the compiler;
+
+      the ~go~ tool sorts =.go= files by name before invoking the compiler.
+
+    - Any file may contain any number of functions whose declaration is just
+      ~func init() { /* ... */ }~
+      Such ~init~ functions can't be called or referenced, but other wise they
+      are normal functions.
+        Within each file, ~init~ functions are *automatically executed when the
+        program starts*, in the order in which they are declared.
+
+    - The ~main~ /package/ is the *last* to be initialized.
+
+    - Initialization proceeds from the _bottom up_;
+      the ~main~ package is the *last* to be initialized.
+        In this manner, all packages are fully initialized before the
+      application's ~main~ function begins.
+
+    - Example: =gopl.io/ch2/popcount=
+      #+BEGIN_SRC go
+        package popcount
+
+        // pc[i] is the population count of i.
+        var pc [256]byte
+
+        func init() {
+          for i := range pc {  // a short hand for `i, _ := range pc`
+            pc[i] = pc[i/2] + byte(i&1)
+          }
+        }
+
+        // PopCount returns the population count (number of set bits) of x.
+        func PopCount(x uint64) int {
+          return int(pc[byte(x>>(0*8))] +
+            pc[byte(x>>(1*8))] +
+            pc[byte(x>>(2*8))] +
+            pc[byte(x>>(3*8))] +
+            pc[byte(x>>(4*8))] +
+            pc[byte(x>>(5*8))] +
+            pc[byte(x>>(6*8))] +
+            pc[byte(x>>(7*8))])
+        }
+      #+END_SRC
+
+** DONE 2.7. Scope - 45
+   CLOSED: [2018-05-08 Tue 20:18]
+   - Don't confuse /scope/ with /lifetime/.
+     + The /scope/ of a declaration is a region of the program text;
+       it is a *compile-time property*.
+
+     + The /lifetime/ of a variable is the range of time during execution when
+       the variable can be referred to by other parts of the program;
+       it is a *run-time property*.
+
+   - syntactic block :: a sequence of statements enclosed in *braces* like those
+        that surround the body of a function or loop.
+
+   - A name declared inside a /syntactic block/ is *not visible* outside that
+     block.
+
+   - lexical block :: a block that is NOT explicitly surrounded by braces.
+
+   - /lexical block/ examples:
+     + universe block :: the entire source code;
+
+     + for each /package/
+
+     + for each /file/
+
+     + for each ~for~
+
+     + for each ~if~
+
+     + for each ~switch~ statement
+
+     + for each ~case~ in a ~switch~ or ~select~ statement
+
+     + and, of course, for each *explicit* /syntactic block/.
+
+   - The /scope/ of a /control-flow label/, as used by ~break~, ~continue~, and
+     ~goto~ statements, is *the entire enclosing function*.
+
+   - xx
+     #+BEGIN_SRC go
+       if x := f(); x == 0 {
+         fmt.Println(x)
+       } else if y := g(x); x == y {
+         fmt.Println(x, y)
+       } else {
+         fmt.Println(x, y)
+       }
+
+       fmt.Println(x, y) // compile error: x and y are not visible here
+     #+END_SRC
+
+     + Remember, the second ~if~ after ~else~ is nested within the first, and so
+       does the latter ~if~'s.
+         This meanstThe ~if ... {} else if ... {} else if ... {} ...~ seems
+       flat, but they are acutally nested. The flat view is just a syntactic
+       sugar.
+
+   - Pay attention to the /short variable declaration/:
+     You should remember is a *declaration*, though it can be used to update
+     exist variable value, but _this to-be-updated variable *MUST* be declared
+     in the current scope, *NOT* the outter scope._
+     #+BEGIN_SRC go
+       var cwd string
+
+       func init() {
+         cwd, err := os.Getwd() // compile error: unused: cwd
+
+         if err != nil {
+           log.Fatalf("os.Getwd failed: %v", err)
+         }
+       }
+     #+END_SRC
+     The inner ~cwd~ is a new local variable declared by using ~:=~, and it
+     shades the outter one, rather than update it.
+
+     + If you really want to *update*, rather than a variable either new or old,
+       try this way:
+       #+BEGIN_SRC go
+         var cwd string
+
+         func init() {
+           var err error
+           cwd, err = os.Getwd()
+
+           if err != nil {
+             log.Fatalf("os.Getwd failed: %v", err)
+           }
+         }
+       #+END_SRC
+
+* DONE 3. Basic Data Types - 51
+  CLOSED: [2018-05-17 Thu 23:08]
+** DONE 3.1. Integers - 51
+   CLOSED: [2018-05-09 Wed 15:09]
+   - Each /numeric type/ determines the *size* and *signedness* of its values.
+
+   - ~int8~, ~int16~, ~int32~, and ~int64~, and corresponding unsigned versions
+     ~uint8~, ~uint16~, ~uint32~, and ~uint64~.
+
+   - Usually we should use ~int~ and ~uint~, which can be 32 or 64 bits.
+
+     The exact number of bits is determined by the compiler -- different
+     compilers may make different choices even on identical hardware, and you
+     should make no assumption when you use them.
+
+   - All these /integer types/ are *NOT* alias to each other!!!
+     Even if the ~int~ is 32 bits, it is NOT an alias of ~int32~ or ~uint32~.
+
+   - Signed numbers are represented in 2's-complement form.
+     One signed number type value range [-2^{n-1}, 2^{n-1}-1].
+
+   - Unsigned numbers use all bits to represent positive numbers in range
+     [0, 2^{n}-1]
+
+   - Go's binary operators for *arithmetic*, *logic*, and *comparison* are
+     listed here in order of _decreasing precedence_:
+     ~*~    ~/~    ~%~    ~<\lt{}~    ~>>~     ~&~    ~&^~
+     ~+~    ~-~    ~|~    ~^~
+     ~==~   ~!=~   ~<~    ~<=~    ~>~      ~>=~
+     ~&&~
+     ~||~
+
+     + Each of the first two lines operators has a corresponding abbreviation
+       assignment.
+
+     + ~%~ applies ONLY to integers.
+
+     + The behavior of ~%~ for negative numbers varies across programming
+       languages.
+
+       In Go, the sign of the remainder is _always the same as the sign of the
+       dividend_, so ~-5%3~ and ~5%-3~ are both -2.
+
+     + The behavior of ~/~ depends on whether its operands are integers.
+
+     + All values of /basic type/ -- /booleans/, /numbers/, and /strings/ -- are
+       comparable -- use ~==~ and ~!=~.
+
+       Furthermore, /integers/, /floating-point numbers/, and /strings/ are
+       *ordered* by the comparison operators -- ~<~, ~<=~, ~>~, ~>=~.
+
+       =TODO= =???=
+       The values of many other types are *NOT* comparable,
+       and no other types are ordered.
+
+       As we encounter each type, we'll present the rules *governing* the
+       /comparability/ of its values. =TODO= =???= =HOW=
+
+     + ~^~ can be binary operation as XOR;
+       ~^~ can be unary operation as bitwise negation or complement.
+
+     + ~&^~ :: bit clear (AND NOT).
+
+               For example, in the expression ~z = x &^ y~, each bit of ~z~ is
+               ~0~ if the corresponding bit of ~y~ is ~1~; otherwise it equals
+               the corresponding bit of ~x~.
+
+     + Illustration to bitwise operations on ~unit8~
+       #+BEGIN_SRC go
+         var x uint8 = 1<<1 | 1<<5
+         var y uint8 = 1<<1 | 1<<2
+
+         fmt.Printf("%08b\n", x) // "00100010", the set {1, 5}
+         fmt.Printf("%08b\n", y) // "00000110", the set {1, 2}
+
+         fmt.Printf("%08b\n", x&y) // "00000010", the intersection {1}
+         fmt.Printf("%08b\n", x|y) // "00100110", the union {1, 2, 5}
+         fmt.Printf("%08b\n", x^y) // "00100100", the symmetric difference {2, 5}
+         fmt.Printf("%08b\n", x&^y) // "00100000", the difference {5}
+
+         for i := uint(0); i < 8; i++ {
+           if x&(1<<i) != 0 { // membership test
+             fmt.Println(i) // "1", "5"
+           }
+         }
+
+         fmt.Printf("%08b\n", x<<1) // "01000100", the set {2, 6}
+         fmt.Printf("%08b\n", x>>1) // "00010001", the set {0, 4}
+       #+END_SRC
+
+       =TODO=
+       (Section 6.5 shows an implementation of /integer sets/ that can be much
+       _bigger than a byte_.)
+
+     + Arithmetically,
+       a left shift ~x << n~ is equivalent to multiplication by 2^{n
+       a right shift ~x >> n~ is equivalent to _the *floor* of division by_ 2^{n}.
+
+     + Left shifts fill the vacated bits with _zeros_, as do right shifts of
+       unsigned numbers,
+
+       =IMPORTANT=
+       but _right shifts of SIGNED numbers_ fill the vacated bits with copies of
+       the /sign bit/.
+
+     + The usage of /unsigned numbers/:
+       * Go chooses to avoid using /unsigned numbers/ in usual arithmetic, even for
+         the quantities that can't be negative, such as the length of an array.
+         Even ~len~ returns ~int~, rather than ~uint~.
+
+         =From Jian= This is unreasonable!!! Use unsigned number when you want to
+         non-negative integers, and find other mechanism to eliminate errors!!!
+         However, this is Go's choice, and I should follow it when I write Go.
+
+         I don't follow this when I write C!!!
+
+       * For this reason, /unsigned numbers/ tend to be used only when their
+         bitwise operators or peculiar arithmetic operators are required, as when
+         - implementing bit sets
+         - parsing binary file formats
+         - hashing
+         - cryptography
+
+         They are typically *not* used for merely non-negative quantities.
+
+       * The book use an example to illustrate why avoid /unsigned numbers/,
+         #+BEGIN_SRC go
+           medals := []string{"gold", "silver", "bronze"}
+
+           for i := len(medals) - 1; i >= 0; i-- {
+             fmt.Println(medals[i]) // "bronze", "silver", "gold"
+           }
+         #+END_SRC
+
+         =Jian= does NOT think the books logic! If you use /unsigned numbers/,
+         you should write code as:
+         #+BEGIN_SRC go
+           medals := []string{"gold", "silver", "bronze"}
+
+           for i := len(medals) - 1; ; i-- {
+             fmt.Println(medals[i]) // "bronze", "silver", "gold"
+             if i == 0 {
+               break
+             }
+           }
+         #+END_SRC
+
+     + Go is a /strongly typed language/:
+       #+BEGIN_SRC go
+         var apples int32 = 1
+         var oranges int16 = 2
+         var compote int = apples + oranges  // compiler error
+         var compote = int(apples) + int(oranges)
+       #+END_SRC
+
+     + When you do cast, you should *avoid* conversions in which the operand is
+       _out of range_ for the target type, because the behavior depends on the
+       implementation:
+       #+BEGIN_SRC go
+         f := 1e100  // a float64
+         i := int(f) // result is implementation-dependent 
+       #+END_SRC
+
+     + Go has octal literals (e.g. 0666) and hexadecimal literals (e.g.
+       0Xdeadbeef or 0xdeadbeef)
+       * Nowadays octal numbers seem to be used for exactly one purpose:
+         file permissions on POSIX systems—
+
+       * hexadecimal numbers are widely used to emphasize the bit pattern of a
+         number over its numeric value.
+
+     + Control the redix with the /verbs/ ~%d~, ~%o~, and ~%x~.
+       #+BEGIN_SRC go
+         o := 0666
+         fmt.Printf("%d %[1]o %#[1]o\n", o) // "438 666 0666"
+         x := int64(0xdeadbeef)
+         fmt.Printf("%d %[1]x %#[1]x %#[1]X\n", x)
+         // Output:
+         // 3735928559 deadbeef 0xdeadbeef 0XDEADBEEF
+       #+END_SRC
+
+       * Use ~[n]~ just after ~%~ in a /verb/ to reference a specifc variable.
+
+       * ~%x~ (0xdeadbeef) and ~%X~ (0Xdeadbeef)
+
+** TODO 3.2. Floating-Point Numbers - 56
+   - Go provides *two* sizes of floating-point numbers, ~float32~ and ~float64~.
+     Their arithmetic properties are governed by the _IEEE 754 standard
+     implemented by all moder n CPUs_.
+
+   - ~math.MaxFloat32~ is about =3.4e38=
+     ~math.MaxFloat64~ is about =1.8e308=
+
+   - The smallest positive values are near =1.4e-45= and =4.9e-324=,
+     respectively.
+
+   - ~float64~ is prefered, the ~float32~ accumulate error rapidly unless one is quite careful.
+     + Example:
+       #+BEGIN_SRC go
+         var f float32 = 16777216  // 1 << 24
+         fmt.Println(f == f+1)     // "true"!
+       #+END_SRC
+
+     + precision 
+       * ~float32~ provides approximately *6* decimal digits
+       * ~float64~ provides approximately *15* decimal digits
+
+   - Like most other languages, you can write floating-point numbers in the way:
+     + ~.707~
+     + ~1.~
+
+   - /Verbs/ for print floating-point numbers with ~Printf~:
+     + ~%g~: the most compact way
+     + ~%e~: exponent (scientific)
+     + ~%f~: no exponent
+
+   - There are ~+Inf~ and ~-Inf~ in Go.
+     Divide by zero is /infinity/.
+
+   - The ~math.NaN~ function can generate NaN values, and they cannot be used in
+     comparison.
+
+     The result is always ~false~!!!
+     Logically, two NaN can be differnt things, but they are both non-number.
+
+   - The ~math.IsNaN~ function.
+
+   - A suggestion from this book:
+     If a function that returns a floating-point result might fail, it's better
+     to report the failure separately, like this (=From Jian= The book just want
+     to say don't return things like /NaN/, and just tell the user directly if
+     there is an available result):
+     #+BEGIN_SRC go
+       func compute() (value float64, ok bool) {
+         // ...
+         if failed {
+           return 0, false
+         }
+
+         return result, true
+       }
+     #+END_SRC
+
+   - =TODO= - =TODO= - =TODO=
+     =gopl.io/ch3/surface=
+     Figure 3.1. A surface plot of the function sin(r)/r.
+     #+BEGIN_SRC go
+       // Surface computes an SVG rendering of a 3-D surface function.
+       package main
+
+       import (
+         "fmt"
+         "math"
+       )
+
+       const (
+         width, height = 600, 320       // canvas size in pixels
+         cells = 100                    // number of grid cells
+         xyrange = 30.0                 // axis ranges (-xyrange..+xyrange)
+         xyscale = width / 2 / xyrange  // pixels per x or y unit
+         zscale = height * 0.4          // pixels per z unit
+         angle = math.Pi / 6            // angle of x, y axes (=30°)
+       )
+
+       var sin30, cos30 = math.Sin(angle), math.Cos(angle) // sin(30°), cos(30°)
+
+       func main() {
+         fmt.Printf("<svg xmlns='http://www.w3.org/2000/svg' " +
+           "style='stroke: grey; fill: white; stroke-width: 0.7' " +
+           "width='%d' height='%d'>", width, height)
+
+         for i := 0; i < cells; i++ {
+           for j := 0; j < cells; j++ {
+             ax, ay := corner(i+1, j)
+             bx, by := corner(i, j)
+             cx, cy := corner(i, j+1)
+             dx, dy := corner(i+1, j+1)
+             fmt.Printf("<polygon points='%g,%g %g,%g %g,%g %g,%g'/>\n",
+               ax, ay, bx, by, cx, cy, dx, dy)
+           }
+         }
+
+         fmt.Println("</svg>")
+       }
+
+
+       func corner(i, j int) (float64, float64) {
+         // Find point (x,y) at corner of cell (i,j).
+         x := xyrange * (float64(i)/cells - 0.5)
+         y := xyrange * (float64(j)/cells - 0.5)
+
+         // Compute surface height z.
+         z := f(x, y)
+
+         // Project (x,y,z) isometrically onto 2-D SVG canvas (sx,sy).
+         sx := width/2 + (x-y)* cos30*xyscale
+         sy := height/2 + (x+y)*sin30*xyscale - z*zscale
+         return sx, sy
+       }
+
+
+       func f(x, y float64) float64 {
+         r := math.Hypot(x, y) // distance from (0,0)
+         return math.Sin(r) / r
+       }
+     #+END_SRC
+
+     + =NOTE= =TODO= =!!!=
+
+** TODO 3.3. Complex Numbers - 61
+** DONE 3.4. Booleans - 63
+   CLOSED: [2018-05-11 Fri 21:29]
+   =From Jian= You can use Go ~bool~ values as your are in Java.
+
+   - Reminder: ~&&~ has higher precedence than ~||~
+     (mnemonic: ~&&~ is boolean multiplication, ~||~ is boolean addition),
+
+   - Use functions:
+     + boolean to integer 1 or 0:
+       #+BEGIN_SRC go
+         func btoi(b bool) int {
+           if b { return 1 }
+           else { return 0 }
+         }
+       #+END_SRC
+
+     + integer 1 or 0 to boolean values:
+       #+BEGIN_SRC go
+         func itob(i int) bool {
+           return i ! = 0
+         }
+       #+END_SRC
+
+       =From Jian= I think this is a wrong implementation!
+       The book think it provides this for symmetry, and I think the book doesn't
+       know what is symmetry! It should be:
+       #+BEGIN_SRC go
+         func itob(i int) (v bool, ok bool) {
+
+           if (i != 0 && i != 1) {
+             return false, false
+           }
+
+           return i != 0, true
+         }
+       #+END_SRC
+
+** DONE 3.5. Strings - 64
+   CLOSED: [2018-05-17 Thu 20:49]
+   - Text strings are conventionally interpreted as UTF-8-encoded sequences of
+     Unicode code points (~rune~'s).
+
+   - ~len~ returns the number of bytes (*NOT* ~rune~'s).
+
+   - Out of boundary access results in a /panic/!
+
+   - For text info save in a string, it is NOT convinient to use the indeices.
+     which index byte(s), not characters.
+     =TODO= Discuss access character soon! =TODO=
+
+   - The substring operation ~aString[i:j]~ returns a new string.
+     Either ~i~ or ~j~ can be omitted.
+
+   - String concatenation operation: ~+~
+
+   - The comparison between strings a done byte by byte, and the result is the
+     natural /lexicographic ordering/.
+
+     ~==~ and ~<~ can be use.
+
+   - /string values/ are *immutable*!
+
+*** DONE 3.5.1. String Literals - 65
+    CLOSED: [2018-05-17 Thu 20:49]
+    - Since Go text strings are conventionally interpreted as UTF-8,
+      we can include Unicode code points in /string literals/.
+
+    - Escape sequences:
+      + ~\a~:
+        "alert" or bell
+
+      + ~\b~:
+        backspace
+
+      + ~\f~:
+        form feed
+
+      + ~\n~:
+        newline
+
+      + ~\r~:
+        carriage return
+
+      + ~\t~:
+        tab
+
+      + ~\v~:
+        vertical tab
+
+      + ~\'~:
+        single quote (only in the rune literal '\'' )
+
+      + ~\"~:
+        double quote (only within "..." literals)
+
+      + ~\\~:
+        backslash
+
+    - Use
+      + hexadecimal (~\xhh~ - hh at most can be ~ff~)
+      + octal escapes (\ooo - cannot exceed \377)
+
+    - The /raw string literal/ is written as string but quoted with *backquotes*!
+      Usage: =TODO=
+      + Be convenient way to write /regular expressions/!
+
+      + HTML templates
+
+      + JSON literals
+
+      + Command usage messages, and the like, which often extend over multiple
+        lines.
+        #+BEGIN_SRC go
+          const GoUsage = `Go is a tool for managing Go source code.
+
+          Usage:
+              go command [arguments]
+          ...`
+        #+END_SRC
+
+*** DONE 3.5.2. Unicode - 67
+    CLOSED: [2018-05-17 Thu 20:49]
+    The encoding/decoding system of use ~int32~ to represent Unicode code points
+    is called UTF-32 or UCS-4
+
+*** DONE 3.5.3. UTF-8 - 67
+    CLOSED: [2018-05-16 Wed 13:24]
+    #+BEGIN_SRC text
+      0xxxxxxx                             runes 0−127     (ASCII)
+      110xxxxx 10xxxxxx                    128−2047        (values <128 unused)
+      1110xxxx 10xxxxxx 10xxxxxx           2048−65535      (values <2048 unused)
+      11110xxx 10xxxxxx 10xxxxxx 10xxxxxx  65536−0x10ffff  (other values unused)
+    #+END_SRC
+
+    - UTF-8 was invented by Ken Thompson and Rob Pike.
+
+    - The high-order bits of the first byte of the encoding for a ~rune~ indicate
+      how many bytes follow. The details are listed in the table above.
+
+    - A variable-length encoding precludes direct indexing to access the n-th
+      character of a string, but UTF-8 has many desirable properties to
+      compensate! The encoding is 
+      + compact (compared with UTF-32)
+
+      + compatible with ASCII
+
+      + self-synchronizing:
+        it's possible to find the beginning of a character by backing up _no
+        more than_ three bytes.
+
+      + It's also a /prefix code/, so it can be decoded from left to right
+        without any ambiguity or lookahead.
+
+      + *NO* ~rune~'s encoding is a substring of any other, or even of a
+        sequence of others, so you can search for a ~rune~ by just searching
+        for its bytes, without worrying about the preceding context.
+
+      + The /lexicographic byte order/ _equals_ the /Unicode code point order/,
+        so sorting UTF-8 works naturally.
+
+      + There are no embedded NUL (zero) bytes, which is convenient for
+        programming languages that use NUL to terminate strings -- like C/C++.
+
+    - Go source files are *ALWAYS* encoded in /UTF-8/, and /UTF-8/ is the
+      _preferred_ encoding for text strings manipulated by Go programs.
+
+      + The ~unicode~ /package/ provides functions for working with individual
+        ~rune~'s (such as distinguishing letters from numbers, or converting an
+        upper-case letter to a lower-case one).
+
+      + The ~unicode/utf8~ /package/ provides functions for encoding and decoding
+        ~rune~'s as bytes using UTF-8.
+
+    - Some Unicode characters are hard to type, to distinguish, or even to see.
+      Unicode escapes in Go /string literals/ allow us to specify them by their
+      /numeric code point value/. There are *TWO* forms:
+      + ~\uhhhh~ for a 16-bit value
+
+      + ~\Uhhhhhhhh~ for a 32-bit value, which is used infrequently.
+
+      #+BEGIN_SRC go
+        "世界"
+        "\xe4\xb8\x96\xe7\x95\x8c"
+        "\u4e16\u754c"
+        "\U00004e16\U0000754c"
+      #+END_SRC
+
+    - =IMPORTANT=
+      Thanks to the nice properties of UTF-8, many string operations do NOT
+      require decoding.
+        The functions given below is NOT always true for other encodings.
+      #+BEGIN_SRC go
+        func HasPrefix(s, prefix string) bool {
+          return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+        }
+
+        func HasSuffix(s, suffix string) bool {
+          return len(s) >= len(suffix) && s[len(s)-len(prefix):] == suffix
+        }
+
+        func Contains(s, substr string) bool {
+          for i := 0; i < len(s); i++ {
+            if HasPrefix(s[i:], substr) {
+              return true
+            }
+          }
+        }
+      #+END_SRC
+
+    - If we really care about the individual /Unicode characters/, we have to
+      use other mechanisms.
+      + You can use ~utf8.RuneCountInString~ to count the number of ~rune~'s.
+        With its help, you can iterate over a string.
+        #+BEGIN_SRC go
+          import "unicode/utf8"
+
+          s := "Hello, 世界"
+          fmt.Println(len(s))                     // "13"
+          fmt.Println(utf8.RuneCountInString(s))  // "9"
+
+          for i := 0; i < len(s); {
+            r, size := utf8.DecodeRuneInString(s[i:])
+            fmt.Printf("%d\t%c\n", i, r)
+            i += size
+          }
+        #+END_SRC
+
+      + *If you are sure the string you'll process is encoded with UTF-8*,
+        you can simply use ~range~ to iterate it!
+        #+BEGIN_SRC go
+          for i, r := range "Hello, 世界" {
+            fmt.Printf("%d\t%q\t%d\n", i, r, r)
+          }
+
+          // Count:
+          n := 0
+          for _, _ = range s {
+            n++
+          }
+
+          n := 0
+          for range s {
+            n++
+          }
+        #+END_SRC
+
+    - For unexpected input byte, /UTF-8 decoder in Go/ (you call it _explicitly_
+      when calling functions like ~utf8.DecodeRuneInString~ or _implicitly_)
+      replace them with ='\uFFFD'=, which is printed as �.
+
+    - UTF-8 is exceptionally convenient as an interchange format
+
+      *BUT* within a program ~rune~'s may be more convenient because they are of
+      _uniform size_ and are thus *easily indexed* in /arrays/ and /slices/.
+      For example,
+      #+BEGIN_SRC go
+        // "program" in Japanese katakana
+        s := "プログラム"
+        fmt.Printf("% x\n", s) // "e3 83 97 e3 83 ad e3 82 b0 e3 83 a9 e3 83 a0"
+        r := []rune(s)
+        fmt.Printf("%x\n", r) // "[30d7 30ed 30b0 30e9 30e0]"
+      #+END_SRC
+
+    - The cast ~string(x)~:
+      #+BEGIN_SRC go
+        fmt.Println(string(65))      // "A" not "65"
+        fmt.Println(string(0x4eac))  // "京"
+      #+END_SRC
+
+*** DONE 3.5.4. Strings and Byte Slices - 71
+    CLOSED: [2018-05-17 Thu 20:49]
+    - Four standard packages are particularly important for manipulating strings:
+      + ~strings~:
+        provide many functions for searching, replacing, comparing, trimming,
+        splitting, and joining strings.
+
+      + ~bytes~:
+        Provide similar operations in ~strings~ to manipulating /slices/ of
+        /bytes/ ~[]byte~.
+
+        /Strings/ are immutable. Incrementally build a /string/ can involve a lot
+        of allocation and copying. We use ~bytes.Buffer~ to do build /strings/.
+
+      + ~strconv~:
+        ...
+
+      + ~unicode~:
+        + provide ~IsDigit~, ~IsLetter~, ~IsUpper~, and ~IsLower~ for
+          *classifying* ~rune~'s.
+
+        + provide ~ToUpper~ and ~ToLower~ for one ~rune~.
+
+    - Example:
+      The ~basename(s)~ function, which is like the ~basename~ in Unix shell
+      utility.
+      + =gop1.io/ch3/basename1= - without any libraries
+        #+BEGIN_SRC go
+          // basename removes directory components and a .suffix.
+          // e.g., a => a, a.go => a, a/b/c.go => c, a/b.c.go => b.c
+          func basename(s string) string {
+            // Discard last '/' and everything before.
+            for i := len(s) - 1; i >= 0; i-- {
+              if s[i] == '/' {
+                s = s[i+1:]
+              }
+            }
+            // Preserve everything before last '.'.
+            for i := len(s) - 1; i >= 0; i-- {
+              if s[i] == '.' {
+                s = s[:i]
+                break
+              }
+            }
+
+            return s
+          }
+        #+END_SRC
+
+      + =gop1.io/ch3/basename2= - with the help of ~strings.LastIndex~ library
+        function:
+        #+BEGIN_SRC go
+          func basename(s string) string {
+            slash := strings.LastIndex(s, "/")  // -1 if "/" not found
+            s = s[slash+1:]
+            if dot := strings.LastIndex(s, "."); dot >= 0 {
+              s = s[:dot]
+            }
+
+            return s
+          }
+        #+END_SRC
+
+    - To do the ~basename~ work in real world, use the ~path~ and ~path/filepath~
+      /packages/, which provide a more general set of functions for manipulating
+      hierarchical names.
+
+    - Example: =gop1.io/ch3/comma=
+      Add commas to numbers to group digits for clearity to reads!
+      #+BEGIN_SRC go
+        // comma inserts commas in a non-negative decimal integer string.
+        func commas(s string) string {
+          n := len(s)
+          if n <= 3 {
+            return s
+          }
+          return comma(s[:n-3]) + "," + s[n-3:]
+        }
+      #+END_SRC
+
+    - /Strings/ can be converted to /byte slices/ and back again:
+      #+BEGIN_SRC go
+        s := "abc"
+        b := []byte(s)
+        s2 := []string(b)
+      #+END_SRC
+      + =TODO= note
+      + =TODO= note
+      + =TODO= note
+      + =TODO= note
+
+    - ~bytes.Buffer~'s ~WriteRune~ /method/ can be used.
+      ~WriteByte~ is fine for ASCII.
+
+    - =TODO=
+      The ~bytes.Buffer~ type is extremely versatile, and when we discuss
+      interfaces in Chapter 7.
+
+      =TODO=
+      We'll see how it may be used as a _replacement_ for a file whenever an I/O
+      function requires a sink for bytes ( ~io.Writer~ ) as ~Fprintf~ do es
+      above, or a source of bytes (~io.Reader~).
+
+    - Exercise 3.10
+      DONE
+
+    - Exercise 3.11
+      DONE
+
+    - Exercise 3.12
+      DONE
+
+*** DONE 3.5.5. Conversions between Strings and Numbers - 75
+    CLOSED: [2018-05-16 Wed 10:47]
+    - Use the functions in the ~strconv~ /package/.
+
+    - Convert an integer to a string:
+      + Use ~fmt.Sprintf~
+      + Use ~strconv.Itoa~ (integer to ASCII)
+
+    - ~FormatInt~ and ~FormatUnit~ can be used to format numbers in a different
+      /base/: ~fmt.Println(strconv.FormatInt(int64(x), 2))  // "1111011"~
+
+    - Convert a string to an integer:
+      + Use ~strconv.Atoi~
+      + Use ~strconv.ParseInt~
+      + Use ~strconv.ParseUint~ (for unsigned integers)
+
+    - For example,
+      #+BEGIN_SRC go
+        x, err := strconv.Atoi("123")              // x is an int
+        y, err := strconv.ParseInt("123", 10, 64)  // base 10, up to 64 bits
+      #+END_SRC
+      + The _third argument_ of ~ParseInt~ gives the *size* of the integer type
+        that the result must fit into; for example, 16 implies ~int16~, and the
+        special value of 0 implies ~int~.
+
+    - Sometimes ~fmt.Scanf~ is useful for parsing input that consits of orderly
+      _mixtures_ of strings and numbers all on a single line,
+      =TODO= =???=
+      but it can be inflexible, especially when handling imcomplete or irregular
+      input.
+
+** TODO 3.6 Constants - 75
+   - Constants ::
+     + Boolean, string, or number
+
+     + They are guaranteed to be evaluated at /compile time/, not at /run time/.
+       Their values are known by the compiler.
+
+   - Some errors can be detected at compile time if the related values are
+     /constants/. The errors can be division by zero, string indexing out of
+     bound, and so on.
+
+   - The results of all arithmetic, logical, and comparison operations *applied
+     to constant operands* are themselves constants, as are the results of
+     conversions and calls to certain built-in functions such as ~len~, ~cap~,
+     ~real~, ~imag~ , ~complex~ , and ~unsafe.Sizeof~ (§13.1).
+
+   - Since their values are known to the compiler, /constant expressions/ may
+     appear in /types/, specifically as the length of an array type:
+     #+BEGIN_SRC go
+       const IPv4Len = 4
+
+       // parseIPv4 parses an IPv4 address (d.d.d.d).
+       func parseIPv4(s string) IP {
+         var p [IPv4Len]byte
+         // ...
+       }
+     #+END_SRC
+
+   - =From Jian= 
+     Wh en a sequence of con stants is declare d as a gro up, the rig ht-hand side expression may be
+     omit ted for all but the firs t of the gro up, imp l ying that the pre vious expression and its typ e
+     should be used again. For example:
+
+     #+BEGIN_SRC go
+       const (
+         a = 1
+         b
+         c = 2
+         d
+       )
+       fmt.Println(a, b, c, d) // "1 1 2 2"
+     #+END_SRC
+
+*** TODO 3.6.1. The Constant Generator ~iota~ - 77
+    Generate _a sequence of constants_:
+    - Example 1:
+      #+BEGIN_SRC go
+        type Weekday int
+
+        const {
+          Sunday Weekday = iota
+          Monday
+          Tuesday
+          Wednesday
+          Thursday
+          Friday
+          Saturday
+        }
+      #+END_SRC
+
+    - Example 2:
+      #+BEGIN_SRC go
+        type Flags uint
+
+        const (
+          FlagUp Flags = 1 << iota  // is up
+          FlagBroadcast             // supports broadcast access capability
+          FlagLoopback              // is a loopback interface
+          FlagPointToPoint          // belongs to a point-to-point link
+          FlagMulticast             // supports multicast access capability
+        )
+      #+END_SRC
+
+      They can be used as:
+      #+BEGIN_SRC go
+        // gopl.io/ch3/netflag
+        func IsUp(v Flags) bool     { return v&FlagUp == FlagUp }
+        func TurnDown(v *Flags)     { *v &^= FlagUp }
+        func SetBroadcast(v *Flags) { *v |= FlagBroadcast }
+        func IsCast(v Flags) bool   { return v&(FlagBroadcast|FlagMulticast) != 0 }
+
+        func main() {
+          var v Flags = FlagMulticast | FlagUp
+          fmt.Printf("%b %t\n", v, IsUp(v)) // "10001 true"
+          TurnDown(&v)
+          fmt.Printf("%b %t\n", v, IsUp(v)) // "10000 false"
+          SetBroadcast(&v)
+          fmt.Printf("%b %t\n", v, IsUp(v)) // "10010 false"
+          fmt.Printf("%b %t\n", v, IsCast(v)) // "10010 true"
+        }
+      #+END_SRC
+
+    - Example 3:
+      #+BEGIN_SRC go
+        const (
+          _ = 1 << (10 * iota)
+          KiB // 2^10
+          MiB // 2^100
+          GiB // 2^1000
+          TiB // 2^10000       (exceeds 1 << 32)
+          PiB // 2^100000
+          EiB // 2^1000000
+          ZiB // 2^10000000    (exceeds 1 << 64)
+          YiB // 2^100000000
+        )
+      #+END_SRC
+
+      + The ~iota~ mechanism has its _limits_.
+        For example, it's not possible to generate the more familiar powers of
+        1000 (KB, MB, and so on) because there is no exponentiation operator.
+
+    - Exercise 3.13
+      =From Jian=
+      I don't think this question should be here.
+
+      If someone want to test the results and print them, they will see some
+      overflow errors -- the constants can be defined. However, since the ~ZB~
+      and ~YB~ require more than 64 bits, the ~fmt.Println~ (or other print
+      functions) CANNOT print them directly! To understand this, the knowledge
+      of the next section is IMPORTANT!!!
+
+*** TODO 3.6.2. Untyped Constants - 78 =IMPORTANT= =re-read=
+
+* TODO 4. Composite Types - 81
+  - /Arrays/ and /structs/ are /aggregate types/ -- their values are concatena-
+    tions of other values in memory.
+    + /arrays/ are /homogeneous/
+
+    + /structs/ are /heterogeneous/
+
+    + Both /arrays/ and /structs/ are _fixed size_.
+
+    + Both /slices/ and /maps/ are /dynamic data structures/ that grow as values
+      are added.
+
+** DONE 4.1. Arrays - 81
+   CLOSED: [2018-05-08 Tue 20:45]
+   In Go, /slices/ is much more versatile than /arrays/, and it is used more.
+   However, you need to understand /arrays/ first!
+
+   - Initialization (with infered length) and Use:
+     #+BEGIN_SRC go
+       var a [...]int = [3]int{1, 2, 3}
+
+       for i, v := range a {
+         fmt.Printf("%d %d\n", i, v)
+       }
+     #+END_SRC
+
+   - Since /arrays/ are fixed size,
+     ~[3]int~ and ~[4]int~ are considered *different* types.
+     #+BEGIN_SRC go
+       q := [3]int{1, 2, 3}
+       q = [4]int{1, 2, 3, 4} // COMPILE ERROR: cannot assign [4]int to [3]int
+     #+END_SRC
+
+   - As we'll see, the literal syntax is *similar* for /arrays/, /slices/,
+     /maps/, and /structs/.
+
+   - The specific form above is a list of values in order,
+     BUT it is also possible to specify a list of index and value pairs, like this:
+     #+BEGIN_SRC go
+       type Currency int
+
+       const (
+         USD Currency = iota
+         EUR
+         GBP
+         RMB
+       )
+
+       symbol := [...]string{USD: "$", EUR: "9", GBP: "!", RMB: """}
+
+       fmt.Println(RMB, symbol[RMB]) // "3 ""
+     #+END_SRC
+     + In this form, indices can appear _in any order_ and some _may be omitted_.
+       =TODO= =???=
+
+   - Specify the default values:
+     ~r := [...]int{99: -1}~
+     All elements of ~r~ is of value ~-1~.
+
+   - /Arrays/ can be compared if their elements are comparable.
+     #+BEGIN_SRC go
+       a := [2]int{1, 2}
+       b := [...]int{1, 2}
+       c := [2]int{1, 3}
+       fmt.Println(a == b, a == c, b == c) // "true false false"
+       d := [3]int{1, 2}
+       fmt.Println(a == d) // compile error: cannot compare [2]int == [3]int
+     #+END_SRC
+     + The ~d := [3]int{1, 2}~ is legal.
+
+     + =From Jian= even for /reference types/, ~==~ are used to compare values,
+       NOT addresses.
+
+   - ~%t~ inside ~fmt.Printf~ is used to print /booleans/.
+
+   - By default, /arrays/ are like the other values, when they used as a
+     parameter of a function call, the function get a copy of this /array/.
+
+     If you want an efficient implementation and you want to modify the original
+     /array/ with this function, you can pass a /pointer/ to this /array/.
+
+** TODO 4.2. Slices - 84
+  - SYNTAX: ~[]T~
+
+  - 
+
+*** TODO 4.2.1. The append Function - 88
+*** TODO 4.2.2. In-Place Slice Techniques - 91
+
+** TODO 4.3. Maps - 93
+** TODO 4.4. Structs - 99
+*** TODO 4.4.1. Struct Literals - 102
+*** TODO 4.4.2. Comparing Structs - 104
+*** TODO 4.4.3. Struct Embedding and Anonymous Fields - 104
+    
+** TODO 4.5. JSON - 107
+** TODO 4.6. Text and HTML Templates - 113
+
+* TODO 5. Functions - 119
+** DONE 5.1. Function Declarations - 119
+   CLOSED: [2018-05-08 Tue 21:43]
+   - SYNTAX:
+     #+BEGIN_SRC go
+       func name(parameterlist) (result-list) {
+         body
+       }
+     #+END_SRC
+     + The parentheses for _result-list_ are optional and usually omitted, if the
+       function
+       * returns one unnamed result
+         OR
+       * no results at all
+
+     + A function that has a /result list/ *MUST* _end with a ~return~ statement_
+       *UNLESS* execution _clearly CANNOT reach the end of the function_, perhaps
+       because
+       * the function ends with a call to ~panic~
+         OR
+       * an _infinite for loop_ with NO ~break~.
+
+     + Legal function declaration examples:
+       #+BEGIN_SRC go
+         func add(x int, y int) int { return x + y }
+
+         func sub(x, y int) (z int) { z = x - y; return }
+
+         func first(x int, _ int) int { return x }
+
+         func zero(int, int) int { return 0 }
+
+         fmt.Printf("%T\n", add)   // "func(int, int) int"
+         fmt.Printf("%T\n", sub)   // "func(int, int) int"
+         fmt.Printf("%T\n", first) // "func(int, int) int"
+         fmt.Printf("%T\n", zero)  // "func(int, int) int"
+       #+END_SRC
+
+     + The /type/ of a function is sometimes called its /signature/.
+       It can be printed with the ~%T~ format specifier.
+
+     + Go has _NO concept of_
+       * default parameter values
+       * specifying arguments by name
+
+       so the names of parameters and results don't matter to the caller except
+       as documentation.
+
+     + _/Parameters/ are /local variables/ *within* the body of the function,_
+       with their initial values set to the arguments supplied by the caller.
+
+       /Function parameters/ and /named results/ are variables in the SAME
+       /lexical block/ as the function's *outermost* /local variables/.
+
+     + Arguments are _passed by value_, and modifications to the copy do NOT
+       affect the caller.
+
+       However, if the argument contains some kind of /reference/, like a
+       * /pointer/
+       * /slice/
+       * /map/
+       * /function/
+       * /channel/
+
+       then the caller may be affected by any modifications the function makes
+       to variables indirectly referred to by the argument.
+       =TODO= Examples =???=  
+       =From Jian= pass a collection means pass its pointer? OR value???
+       =TODO= =???= =???=
+
+     + You may see a function *without* a body,
+       it means this function is written in a language other than Go.
+       For example,
+       #+BEGIN_SRC go
+         package math
+
+         func Sin(x float64) float64  // implemented in assembly language
+       #+END_SRC
+
+** DONE 5.2. Recursion - 121
+   CLOSED: [2018-05-08 Tue 21:58]
+   - The example program below uses a non-standard package,
+     ~golang.org/x/net/html~, which provides an HTML _parser_.
+
+   - The ~golang.org/x/...~ repositories hold /packages/ designed and maintained
+     by the Go team for applications such as networking, internationalized text
+     processing, mobile platforms, image manipulation, cryptography, and
+     developer tools. These /packages/ are *NOT* in the /standard library/
+     because
+     + they're still under development
+
+       OR
+
+     + they're rarely needed by the majority of Go programmers.
+
+   - =TODO= CODE EXAMPLES IN THE BOOK
+
+   - Typical Go implementations use *variable-size* /call stacks/ that start
+     small and grow as needed _up to a limit on the order of a gigabyte_. This
+     lets us use recursion safely and without worrying about overflow.
+
+   - =From Jian=
+     NOT mention the optimization of tail recursions or tail calls.
+
+** DONE 5.3. Multiple Return Values - 124
+   CLOSED: [2018-05-08 Tue 22:09]
+   - =TODO= noteS
+
+** DONE 5.4. Errors - 127
+   CLOSED: [2018-05-09 Wed 11:05]
+   - In Go,
+     A function for which failure is a kind of expected behavior returns an
+     additional result, _conventionally the LAST ONE_.
+
+   - If the failure has ONLY ONE POSSIBLE CAUSE, the result is a /boolean/,
+     _usually called ~ok~,_ as in this example of a cache lookup that always
+     succeeds unless there was no entry for that key :
+     #+BEGIN_SRC go
+       value, ok := cache.Lookup(key)
+
+       if !ok {
+         // ...cache[key] does not exist...
+       }
+     #+END_SRC
+
+     In the gneral cases, use the variable name ~err~ to represent errors
+     (~error~ is a built-in type, don't use it as identifier to make confusion
+     =TODO= Chapter 7).
+
+   - ~nil~ error value means success.
+     Even if the /error/ is non-~nil~, you may need to process the other return
+     values, they can be legal partial data.
+
+   - The reason for this design: =???= =Is this Right???=
+     exceptions tend to entangle the description of an error with the control
+     flow required to handle it, often leading to an undesirable outcome:
+     routine errors are reported to the end user in the form of an
+     incomprehensible stack trace, full of informat ion about the structure of
+     the program but lacking intellig ible context about what went wrong.
+
+     By contrast, Go programs use ordinary control-flow mechanisms like ~if~ and
+     ~return~ to respond to /errors/. This style undeniably demands that more
+     attention be paid to error-handling logic, but =???= that is precisely the
+     point.
+
+*** DONE 5.4.1. Error-Handling Strategies - 129 =TODO: RE-WRITE NOTES=
+    CLOSED: [2018-05-09 Wed 11:05]
+    - Here we will talk about *5* *strategies* for handling errors:
+      1. The most common case: propagate the error.
+
+         The ~findLinks~ function is an example:
+         #+BEGIN_SRC go
+           resp, err := http.Get(url)
+
+           if err != nil {
+             return nil, err
+           }
+         #+END_SRC
+
+         + Construct a new error based on current error. =RE-NOTE= =TODO=
+
+            The ~findLinks~ function is an example.
+            The call to ~html.Parse~ fails, ~findLinks~ does *NOT* return the HTML
+            parser's error directly because it _lacks two crucial pieces of
+            information_:
+           - the error occurred in the parser
+
+           - the URL of the document that was being parsed.
+
+           In this case, ~findLinks~ constructs a NEW error message that _includes
+           both pieces of information as well as the underlying parse error_:
+           #+BEGIN_SRC go
+             doc, err := html.Parse(resp.Body)
+             resp.Body.Close()
+
+             if err != nil {
+               return nil, fmt.Errorf("parsing %s as HTML: %v", url, err)
+             }
+           #+END_SRC
+           The ~fmt.Errorf~ function formats an error message using ~fmt.Sprintf~ and
+           returns a new error value.
+
+           We use it to build DESCRIPTIVE errors by successively prefixing
+           additional context information to the original error message.
+
+           When the error is ultimately handled by the program's main function, it
+           should provide _a clear causal chain from the root problem to the overall
+           failure_, reminiscent of a NASA accident investigat ion:
+           =genesis: crashed: no parachute: G-switch failed: bad relay orientation=
+
+         + Trick: =IMPORTANT=
+           * Because error messages are frequently chained together,
+             - message strings should *not be capitalized*
+
+             - newlines should be *avoided*.
+
+             The resulting errors may be long, but they will be self-contained when
+             found by tools like ~grep~.
+
+           * Errors returned by the same function or by a group of functions in the
+             same package should be similar in message pattern and can be dealt with
+             in the same way.
+               For example, the file operation functions from the ~os~ always return
+             error with messages that include its file name.
+
+           * In general, =IMPORTANT=
+             - The callee ~f(x)~'s _responsibility_ is to report:
+               + the attempted operation ~f~
+               + the argument value ~x~ as they relate to the context of the error.
+
+             - The caller's _responsibility_ is to add further information that it
+               has but the call ~f(x)~ does NOT, such as the URL in the call to
+               ~html.Parse~ above.
+
+      2. For errors that represent transient or unpredictable problems,
+         *retry* the failed operation, possibly with some limitations:
+         + a delay between tries
+         + a limit on the number of attemps
+         + the time spent trying before giving up entirely
+
+         =gopl.io/ch5/wait=
+         #+BEGIN_SRC go
+           // WaitForServer attempts to contact the server of a URL.
+           // It tries for one minute using exponential backoff.
+           // It reports an error if all attempts fail.
+           func WaitForServer(url string) error {
+             const timeout = 1 * time.Minute
+             deadline := time.Now().Add(timeout)
+
+             for tries := 0; time.Now().Before(deadline); tries++ {
+               _, err := http.Head(url)
+               if err == nil {
+                 return nil // success
+               }
+               log.Printf("server not responding (%s); retrying...", err)
+               time.Sleep(time.Second << uint(tries)) // exponential backoff
+             }
+
+             return fmt.Errorf("server %s failed to respond after %s", url, timeout)
+           }
+         #+END_SRC
+
+      3. If progress is impossible,
+         the caller can print the error and stop the program gracefully,
+         BUT this course of action should generally be res erved for the main
+         package of a program.
+           Library functions should usually propagate errors to the caller,
+         *unless* _the error is a sign of an internal inconsistency_ -- that is,
+         a bug .
+         #+BEGIN_SRC go
+           // (In function main.)
+           if err := WaitForServer(url); err != nil {
+             fmt.Fprintf(os.Stderr, "Site is down: %v\n", err)
+             os.Exit(1)
+           }
+         #+END_SRC
+
+         + A more convenient way to achieve the same effect is to call
+           ~log.Fatalf~. As with all the log functions, by default it prefixes the
+           time and date to the error message.
+           #+BEGIN_SRC go
+             if err := WaitForServer(url); err != nil {
+               log.Fatalf("Site is down: %v\n", err)
+             }
+           #+END_SRC
+
+           The default format is helpful in a long-rvnning server, but less so for
+           an interactive tool:
+           =2006/01/02 15:04:05 Site is down: no such domain: bad.gopl.io=
+
+         + For a more attractive output, we can _set the prefix_ used by the ~log~
+           /package/ to the name of the command, and *suppress* the display of the
+           date and time:
+           #+BEGIN_SRC go
+             log.SetPrefix("wait: ")
+             log.SetFlags(0)
+           #+END_SRC
+
+      4. In some cases, it's sufficient just to _log the error_ and
+         then _continue_, perhaps with reduced functionality.
+         #+BEGIN_SRC go
+           if err := Ping(); err != nil {
+             log.Printf("ping failed: %v; networking disabled", err)
+           }
+         #+END_SRC
+
+         and printing direc tly to the standard error stream:
+         #+BEGIN_SRC go
+           if err := Ping(); err != nil {
+             fmt.Fprintf(os.Stderr, "ping failed: %v; networking disabled\n", err)
+           }
+         #+END_SRC
+         (All ~log~ functions append a newline if one is not already present.)
+
+      5. In rare cas es we can safely *ignore* an error entirely:
+         #+BEGIN_SRC go
+           dir, err := ioutil.TempDir("", "scratch")
+
+           if err != nil {
+             return fmt.Errorf("failed to create temp dir: %v", err)
+           }
+           // ...use temp dir...
+
+           os.RemoveAll(dir) // ignore errors; $TMPDIR is cleaned periodically
+         #+END_SRC
+
+    - _Error handling_ in Go has a particular rhythm:
+      After checking an error, failure is usually dealt with before success.
+
+      In Go, deal with failures is considered some prerequisites of run the
+      success operations. Therefore, we don't put the success case in an ~else~
+      branch of the _error checking_. This can also help minimalize indentations.
+
+*** DONE 5.4.2. End of File (EOF) - 131
+    CLOSED: [2018-05-08 Tue 23:13]
+    - The ~io~ /package/ guarantees that any read failure caused by an
+      end-of-file condition is always reported by a DISTINGUISHED /error/,
+      ~io.EOF~, which is defined as follows:
+      #+BEGIN_SRC go
+        package io
+
+        import "errors"
+
+
+        // EOF is the error returned by Read when no more input is available
+        var EOF = error.New("EOF")
+      #+END_SRC
+
+    - =TODO= The ~charcount~ program in Section 4.3 provides a more complete
+      example.
+      #+BEGIN_SRC go
+        in := bufio.NewReader(os.Stdin)
+
+        for {
+          r, _, err := in.ReadRune()
+
+          if err == io.EOF {
+            break  // finished reading
+          }
+
+          if err != nil {
+            return fmt.Errorf("read failed: %v", err)
+          }
+
+          // ... use r...
+        }
+      #+END_SRC
+
+    - =TODO=
+      In Sec tion 7.11,
+      we'll present a more systematic way to *distinguish* certain error values
+      from others.
+
+** TODO 5.5. Function Values - 132
+** TODO 5.6. Anonymous Functions - 135
+*** 5.6.1. Caveat: Capturing Iteration Variables - 140
+
+** TODO 5.7. Variadic Functions - 142
+** TODO 5.8. Deferred Function Calls - 143
+** TODO 5.9. Panic - 148
+** TODO 5.10. Recover - 151
+
+* TODO 6. Methods - 155
+** 6.1. Method Declarations - 155
+** 6.2. Methods with a Pointer Receiver - 158
+*** 6.2.1. Nil Is a Valid Receiver Value - 160
+
+** 6.3. Composing Types by Struct Embedding - 161
+** 6.4. Method Values and Expressions - 164
+** 6.5. Example: Bit Vector Type - 165
+** 6.6. Encapsulation - 168
+
+* TODO 7. Interfaces - 171
+** 7.1. Interfaces as Contracts - 171
+** DONE 7.2. Interface Types - 174
+   CLOSED: [2018-05-11 Fri 17:43]
+   SYNTAX:
+   - Basic:
+     #+BEGIN_SRC go
+       package io
+
+       type Reader interface {
+         Read(p []byte) (n int, err error)
+       }
+
+       type Closer interface {
+         Close() error
+       }
+     #+END_SRC
+
+   - Composed based on the other /interfaces/ (the three kinds of syntax below
+     are equivalent):
+     + Conciser:
+       #+BEGIN_SRC go
+         type ReadWriter interface {
+           Reader
+           Writer
+         }
+       #+END_SRC
+
+     + Explicit:
+       #+BEGIN_SRC go
+         type ReadWriter interface {
+           Read(p []byte) (n int, err error)
+           Write(p []byte) (n int, err error)
+         }
+
+       #+END_SRC
+
+     + Mixed:
+       #+BEGIN_SRC go
+         type ReadWriter interface {
+           Read(p []byte) (n int, err error)
+           Writer
+         }
+       #+END_SRC
+
+** DONE 7.3. Interface Satisfaction - 175
+   CLOSED: [2018-05-11 Fri 19:46]
+   - As a shorthand, Go programmers often say that a /concrete type/ *is a*
+     particular /interface type/, meaning that it _satisfies_ the /interface/.
+
+   - /The assignability rule (§2.4.2)/ for /interfaces/ is very simple, like
+     Java.
+
+   - A value of type ~T~ does *not* possess all the /methods/ that a ~*T~ does,
+     and as a result it might satisfy _fewer_ interfaces.
+
+     + Example 1: 
+       #+BEGIN_SRC go
+         var _ fmt.Stringer = &s  // OK
+         var _ fmt.Stringer = s   // compile error: IntSet lacks String method
+       #+END_SRC
+
+     + Example 2:
+       #+BEGIN_SRC go
+         type IntSet struct { /* ... */ }
+         func (*IntSet) String() string
+         var _ = IntSet{}.String() // compile error: String requires *IntSet receiver
+       #+END_SRC
+       The last line, the ~IntSet{}~ part isn't saved and thus it doesn't have an
+       address. This is why it cannot call ~*IntSet~'s /method/.
+
+       In contrast,
+       #+BEGIN_SRC go
+         var s IntSet
+         // ...
+         var _ = s.String()  // OK: s is a variable and &s has a String method
+       #+END_SRC
+
+   - =TODO=
+     Section 12.8 includes a program that prints the methods of an arbitrary
+     value,
+     and
+     the ~godoc analysis=type~ tool (§10.7.4) displays the methods of each type
+     and the relationship between /interfaces/ and /concrete types/.
+
+   - empty interface :: ~interface{}~
+
+   - The empty is very useful!
+     However, it is useful ONLY when we can get the a proper type back when we
+     need to process them. We need /type assertion/ =TODO=.
+
+   - Each grouping of concrete types based on their shared behaviors can be
+     expressed as an interface type. For example, if we find we need to handle
+     ~Audio~ and ~Video~ items in the same way, we can define a ~Streamer~
+     /interface/ to represent their common aspects _without changing any
+     existing_ type declarations.
+
+** TODO 7.4. Parsing Flags with ~flag.Value~ - 179
+   - xxx
+
+   - xxx
+
+** TODO 7.5. Interface Values - 181
+*** 7.5.1. Caveat: An Int erface Containing a Nil Pointer Is NonNil - 185
+
+** TODO 7.6. Sorting with ~sort.Interface~ - 186
+** TODO 7.7. The ~http.Handler~ Interface - 191
+** TODO 7.8. The ~error~ Interface - 196
+** TODO 7.9. Example: Expression Evaluator - 197
+** TODO 7.10. Type Assertions - 205
+** TODO 7.11. Discriminating Errors with Type Assertions - 206
+** TODO 7.12. Querying Behaviors with Interface Type Assertions - 208
+** TODO 7.13. Type Switches - 210
+** TODO 7.14. Example: Token-Based XML Decoding - 213
+** TODO 7.15. A Few Words of Advice - 216
+
+* TODO 8. Goroutines and Channels - 217
+** 8.1. Goroutines - 217
+** 8.2. Example: Concurrent Clock Server - 219
+** 8.3. Example: Concurrent Echo Server - 222
+** 8.4. Channels - 225
+*** 8.4.1. Unbuffered Channels - 226
+*** 8.4.2. Pipelines - 228
+*** 8.4.3. Unidirectional Channel Types - 230
+*** 8.4.4. Buffered Channels - 231
+
+** 8.5. Looping in Parallel - 234
+** 8.6. Example: Concurrent Web Crawler - 239
+** 8.7. Multiplexing with select - 244
+** 8.8. Example: Concurrent Directory Traversal - 247
+** 8.9. Cancellation - 251
+** 8.10. Example: Chat Server - 253
+
+* TODO 9. Concurrency with Shared Variables - 257
+** 9.1. Race Conditions - 257
+** 9.2. Mutual Exclusion: ~sync.Mutex~ - 262
+** 9.3. Read/Write Mutexes: ~sync.RWMutex~ - 266
+** 9.4. Memory Synchronization - 267
+** 9.5. Lazy Initialization: ~sync.Once~ - 268
+** 9.6. The Race Detector - 271
+** 9.7. Example: Concurrent Non-Blocking Cache - 272
+** 9.8. Goroutines and Threads - 280
+*** 9.8.1. Gro wable Stacks - 280
+*** 9.8.2. Goroutine Scheduling - 280
+*** 9.8.3. GOMAXPROCS - 281
+*** 9.8.4. Goroutines Have No Identity - 282
+
+* TODO 10. Packages and the Go Tool - 283
+** 10.1. Introduction - 283
+** 10.2. Import Paths - 284
+** 10.3. The Package Declaration - 285
+** 10.4. Import Declarations - 285
+** 10.5. Blank Imports - 286
+** 10.6. Packages and Naming - 289
+** 10.7. The Go Tool - 290
+*** 10.7.1. Workspace Organization - 291
+*** 10.7.2. Downloading Packages - 292
+*** 10.7.3. Building Packages - 293
+*** 10.7.4. Documenting Packages - 296
+*** 10.7.5. Int ernal Packages - 298
+*** 10.7.6. Querying Packages - 299
+
+* TODO 11. Testing - 301
+** 11.1. The go test Tool - 302
+** 11.2. Test Functions - 302
+*** 11.2.1. Randomized Testing - 397
+*** 11.2.2. Testing a Command - 308
+*** 11.2.3. White-Box Testing - 310
+*** 11.2.4. External Test Packages - 314
+*** 11.2.5. Write Effective Tests - 316
+*** 11.2.6. Avoiding Brittle Tests - 317
+
+** 11.3. Coverage - 318
+** 11.4. Benchmark Functions - 321
+** 11.5. Profiling - 323
+** 11.6. Example Functions - 326
+
+* TODO 12. Reflection - 329
+** 12.1. Why Reflection? - 329
+** 12.2. ~reflect.Type~ and ~reflect.Value~ - 330
+** 12.3. ~Display~, a Recursive Value Printer - 333
+** 12.4. Example: Encoding S-Expressions - 338
+** 12.5. Setting Variables with ~reflect.Value~ - 341
+** 12.6. Example: Decoding S-Expressions - 344
+** 12.7. Accessing Struct Field Tags - 348
+** 12.8. Displaying the Methods of a Type - 351
+** 12.9. A Word of Caution - 352
+
+* TODO 13. Low-Level Programming - 353
+** 13.1. ~unsafe.Sizeof~, ~Alignof~, and ~Offsetof~ - 354
+** 13.2. ~unsafe.Pointer~ - 356
+** 13.3. Example: Deep Equivalence - 358
+** 13.4. Calling C Code with ~cgo~ - 361
+** 13.5. Another Word of Caution - 366
+
+* Index - 367
+- 

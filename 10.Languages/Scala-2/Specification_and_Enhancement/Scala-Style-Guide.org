@@ -1,0 +1,1118 @@
+#+TITLE: Scala Style Guide
+#+EDITOR: Daniel Spiewak and David Copeland
+#+VERSION: 2017
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Indentation
+  CLOSED: [2017-12-29 Fri 16:25]
+  - "2-space convention"
+    =From Jian= I prefer "4-space convention"
+
+** Line Wrapping
+   - Prefered: use intermediate expressions
+
+   - If in cases when intermediate expressions is NOT a practical solution
+     #+BEGIN_SRC scala
+       val result = 1 + 2 + 3 + 4 + 5 + 6 +
+         7 + 8 + 9 + 10 + 11 + 12 + 13 + 14 +
+         15 + 16 + 17 + 18 + 19 + 20
+     #+END_SRC
+
+** Methods with Numerous Arguments
+   #+BEGIN_SRC scala
+     foo(
+       someVeryLongFieldName,
+       andAnotherVeryLongFieldName,
+       "this is a string",
+       3.1415)
+
+     // When line is SHORT, this is OK:
+     val rc = foo(someVeryLongFieldName,
+                  andAnotherVeryLongFieldName,
+                  "this is a string",
+                  3.1415)
+
+     // When line is NOT SHORT:
+     val myLongFieldNameWithNoRealPoint =
+       foo(
+         someVeryLongFieldName,
+         andAnotherVeryLongFieldName,
+         "this is a string",
+         3.1415)
+
+
+     // WRONG WAY!!!
+     val myLongFieldNameWithNoRealPoint = foo(someVeryLongFieldName,
+                                              andAnotherVeryLongFieldName,
+                                              "this is a string",
+                                              3.1415)
+   #+END_SRC
+
+   More preferred way:
+   *AVOID* any method which takes _MORE THAN two or three parameters_!
+
+* DONE Naming Conventions
+  CLOSED: [2017-12-30 Sat 08:14]
+  Camel case in general.
+  
+** DONE Classes/Traits
+   CLOSED: [2017-12-29 Fri 16:32]
+   ~class MyClass~
+
+** DONE Objects
+   CLOSED: [2017-12-29 Fri 16:33]
+   - ~class MyObject~
+
+   - /Objects/ that *MIMICKING* a /package/ or /function/:
+     #+BEGIN_SRC scala
+       // mimic package
+       object ast {
+         sealed trait Expr
+
+         case class Plus(e1: Expr, e2: Expr) extends Expr
+         //...
+       }
+
+       // mimic function
+       object inc {
+         def apply(x: Int): Int = x + 1
+       }
+     #+END_SRC
+
+** TODO Packages
+   Scala packages should follow the /Java package naming conventions/:
+   #+BEGIN_SRC scala
+     // WRONG!!!!
+     package coolness
+
+     // right! puts only coolness._ in scope
+     package com.novell.coolness
+
+     // right! puts both novell._ and coolness._ in scope
+     package com.novell
+     package coolness
+
+     // right, for package object com.novell.coolness
+     package com.novell
+     /**
+       ,* Provides classes related to coolness
+       ,*/
+     // TODO: Jian forgets this!! Review the book!!!
+     package object coolness {
+     }
+   #+END_SRC
+
+*** TODO root
+    It is occasionally necessary to fully-qualify imports using ~_root_~.
+    For example if another ~net~ is in scope, then to access ~net.liftweb~ we
+    must write e.g.: ~import _root_.net.liftweb._~
+
+    Do not overuse ~_root_~. In general, nested package resolves are a good
+    thing and very helpful in reducing import clutter. Using ~_root_~ not only
+    negates their benefit, but also introduces extra clutter in and of itself.
+
+** TODO Methods
+   ~def myMethod = ...~
+   - =TODO=
+     This section is not a comprehensive guide to idiomatic method naming in
+     Scala. Further information may be found in the method invocation section.
+
+*** TODO Accessors/Mutators
+*** DONE Parentheses
+    CLOSED: [2017-12-29 Fri 16:44]
+    - =TODO=
+      The "Methods which act as accessors ..." paragraph.
+      Ruby and Lift rules?????
+
+    - For arity-0 methods:
+      + Define with ~()~ only for the ones with _side-effect_.
+
+    - The callsite should follow the declaration.
+
+
+    - In a DSL, /syntax/ should be _paramount over_ /convention/.
+
+*** TODO Symbolic Method Names =RE-READ=
+    - x
+
+    - As a general rule, symbolic method names have two valid use-cases:
+      + DSL's (e.g. ~actor1 ! Msg~)
+      + Logically mathematical operations (e.g. ~a + b~ or ~c \colon{}\colon{} d~)
+
+** DONE Constants, Values, Variable and Methods
+   CLOSED: [2017-12-29 Fri 18:50]
+   - Constant:
+     Upper camel case like a class name.
+
+   - Values, Variable and Methods:
+     Lower camel case
+
+** DONE Type Parameters (generics)
+   CLOSED: [2017-12-29 Fri 19:01]
+   - For simple type parameters,
+     a _single upper-case letter_ (from the English alphabet) should be used,
+     *starting with* ~A~, which is different from Java (use ~T~).
+
+   - If the type parameter has a more specific meaning, a descriptive name should
+     be used, _following the class naming conventions_.
+     #+BEGIN_SRC scala
+       class Map[Key, Value] {
+         def get(key: Key): Value
+         def put(key: Key, value: Value): Unit
+       }
+     #+END_SRC
+
+   - If the /scope of the type parameter/ is _SMALL_ enough, a mnemonic can be
+     used in place of a longer, descriptive name:
+     #+BEGIN_SRC scala
+       class Map[K, V] {
+         def get(key: K): V
+         def put(key: K, value: V): Unit
+       }
+     #+END_SRC
+
+*** DONE Higher-Kinds and Parameterized Type parameters =RE-READ=
+    CLOSED: [2017-12-29 Fri 19:00]
+    - It is preferred to use a descriptive name rather than a single letter.
+      #+BEGIN_SRC scala
+        class HigherOrderMap[Key[_], Value[_]] {... }
+      #+END_SRC
+
+    - The single letter form is (sometimes) acceptable for fundamental concepts
+      used throughout a codebase, such as ~F[_]~ for /Functor/ and ~M[_]~ for
+      /Monad/.
+      #+BEGIN_SRC scala
+        def doSomething[M[_]: Monad](m: M[Int]) =...
+      #+END_SRC
+
+** TODO Annotations
+   *Lower camel case*, which is NOT consistent with Java annotation naming.
+
+   - =TODO= =TODO= =???=
+     Note: This convention applied even when using /type aliases/ on
+     /annotations/. For example, when using JDBC:
+     #+BEGIN_SRC scala
+       type id = javax.persistence.Id @annotation.target.field
+
+       @id
+       var id: Int = 0
+     #+END_SRC
+
+** DONE Special Note on Brevity
+   CLOSED: [2017-12-30 Sat 08:14]
+   - Because of Scala’s roots in the functional languages, it is quite normal for
+     _local names to be very short_: ~def add(a: Int, b: Int) = a + b~
+
+   - This convention _ONLY_ applies to parameters of _very simple methods_ and
+     _local fields for very simply classes_; *everything in the public interface
+     should be descriptive*.
+
+     + Also note that the _names of arguments_ are now part of the public API of
+       a class, since users can use named parameters in method calls.
+
+       =From Jian=
+       About the "the _names of arguments_ are now part of the public API", Jian
+       has some words to say:
+         This means, if a method will never be called with /named arguments/, you
+       can use short parameter names. In another words, you can intentionally
+       define a method with short parameter names to tell the user NOT call it
+       with /named arguments/.
+         However, this is just a convention. Think before making decision!!!
+
+* DONE Types
+  CLOSED: [2017-12-30 Sat 09:36]
+** DONE Inference
+   CLOSED: [2017-12-30 Sat 09:36]
+  Use type inference where possible, BUT
+  put clarity first, AND
+  favour explicitness in public APIs.
+
+  - You should _almost NEVER_ annotate the type of
+    + a /private field/
+      or
+    + a /local variable/,
+    as their type will usually be immediately evident in their value.
+    ~private val name = "Daniel"~
+
+    *EXCEPTION*: When the assigned value has a complex or non-obvious form.
+
+  - All public methods should have explicit type annotations.
+    Type inference may break encapsulation in these cases, because it depends on
+    internal method and class details. Without an explicit type, a change to the
+    internals of a method or val could alter the public API of the class without
+    warning, potentially breaking client code.
+
+  - Explicit type annotations can also help to improve compile times.
+    =NOT THE MAIN CONSIDERATION=
+
+*** TODO Function Values =???=
+
+** DONE Annotations
+   CLOSED: [2017-12-30 Sat 09:25]
+   In the pattern of ~value: Type~
+
+   - _WHY NOT ~value :Type~?_
+     To avoid confusion in cases such as: ~value :::~, which is valid Scala,
+     declaring a value to be of type ~::~ -- the ~:::~ form muddles things
+     greatly.
+
+** DONE Ascription
+   CLOSED: [2017-12-30 Sat 09:25]
+   /Ascription/ follows the /type annotation conventions/.
+
+   - /Type ascription/ is often confused with /type annotation/, as the syntax in
+     Scala is IDENTICAL. The following are examples of /ascription/:
+     #+BEGIN_SRC scala
+       Nil: List[String]
+
+       Set(values: _*)
+
+       "Daniel": AnyRef
+     #+END_SRC
+
+** DONE Functions
+   CLOSED: [2017-12-30 Sat 09:30]
+   #+BEGIN_SRC scala
+     def foo(f: Int => String) = ...
+
+     def bar(f: (Boolean, Double) => List[String]) = ...
+   #+END_SRC
+
+*** Arity-1
+    Use ~def foo(f: Int => String) = ...~,
+    rather than
+    ~def foo(f: (Int) => String) = ...~,
+    ~def foo(f: (Int) => (String)) = ...~, or ...
+
+    OR more extremely,
+    #+BEGIN_SRC scala
+      // wrong!
+      def foo(f: (Int) => (String) => (Boolean) => Double) = ...
+
+      // right!
+      def foo(f: Int => String => Boolean => Double) = ...
+    #+END_SRC
+
+** DONE Structural Types
+   CLOSED: [2017-12-30 Sat 09:36]
+   - /Structural types/ should be
+     + declared on a single line if they are less than 50 characters in length;
+       ~def foo(a: { val bar: String }) = ...~
+     + split across multiple lines and (usually) assigned to their own type alias.
+       #+BEGIN_SRC scala
+         // wrong!
+         def foo(a: { def bar(a: Int, b: Int): String; val baz: List[String => String] }) = ...
+
+
+         // right!
+         private type FooParam = {
+           val baz: List[String => String]
+           def bar(a: Int, b: Int): String
+         }
+
+         def foo(a: FooParam) = ...
+       #+END_SRC
+
+   - /Structural types/ are implemented with reflection at runtime, and are
+     inherently _less performant_ than /nominal types/. Developers should prefer
+     the use of /nominal types/, unless /structural types/ provide a clear
+     benefit.
+     =TODO= =From Jian=
+     *Learn more about the "reflection" and its affect to performance*
+
+* DONE Nested Blocks
+  CLOSED: [2017-12-30 Sat 09:46]
+*** DONE Curly Braces
+    CLOSED: [2017-12-30 Sat 09:46]
+    #+BEGIN_SRC scala
+      def foo = {
+        // ...
+      }
+    #+END_SRC
+
+    Technically, other styles (like GNU-style) are OK.
+    =TODO= =Learn More=
+    =From Jian= *It is a _SHAME_ to put these words in a language style guide!!!*
+    HOWEVER, the parser is not terribly predictable when dealing with this
+    style due to the way in which semi-colon inference is implemented. Many
+    headaches will be saved by simply following the curly brace convention
+    demonstrated above.
+
+*** DONE Parentheses
+    CLOSED: [2017-12-30 Sat 09:46]
+    - Parenthetical blocks wrap across lines.
+      + Prefered:
+        #+BEGIN_SRC scala
+          (this + is a very ++ long *
+             expression)
+        #+END_SRC
+
+      + Also OK (you cannot write in this way but without parentheses because of
+        /semicolon inference/):
+        #+BEGIN_SRC scala
+          (  someCondition
+          || someOtherCondition
+          || thirdCondition
+          )
+        #+END_SRC
+
+* DONE Files
+  CLOSED: [2017-12-30 Sat 10:20]
+  _The Java file naming and positioning conventions should be preferred_,
+  DESPITE the fact that Scala allows for greater flexibility in this regard.
+  #+BEGIN_SRC scala
+    package com.novell.coolness
+
+    class Inbox { ... }
+
+    // companion object (if exist)
+    object Inbox { ... }
+  #+END_SRC
+
+  - *Naming strategy*
+    For example, the file that contains the code above should be =Inbox.scala=.
+
+** Multi-Unit Files
+   - Emulate the ADT language feature available in funcitonal languages,
+     especially when there are /sealed superclasses/:
+     #+BEGIN_SRC scala
+       sealed abstract class Option[+A]
+
+       case class Some[A](a: A) extends Option[A]
+
+       case object None extends Option[Nothing]
+     #+END_SRC
+
+   - *All multi-unit files should be given camelCase names with a lower-case first letter*
+     If people follow this convention, it is easy to differentiate multi- from
+     single-unit files, greatly easing the process of finding declarations.
+
+     *Naming strategy*:
+     These filenames
+     + may be based upon a significant type which they contain (e.g.
+       =option.scala= for the example above),
+       OR
+     + may be descriptive of the logical property shared by all units within
+       (e.g. =ast.scala=).
+
+* DONE Control Structures
+  CLOSED: [2017-12-30 Sat 12:27]
+  All control structures should be written with a space following the defining
+  /keyword/.
+  #+BEGIN_SRC scala
+    // right!
+    if (foo) bar else baz
+    for (i <- 0 to 10) { ... }
+    while (true) { println("Hello, World!") }
+
+    // wrong!
+    if(foo) bar else baz
+    for(i <- 0 to 10) { ... }
+    while(true) { println("Hello, World!") }
+  #+END_SRC
+
+** DONE Curly-Braces
+   CLOSED: [2017-12-30 Sat 12:18]
+   - Curly-braces should be omitted in cases where the control structure
+     + represents a pure-functional operation
+       and
+     + all branches of the control structure (relevant to ~if/else~) are
+       single-line expressions.
+
+   - Remember the following guidelines (one pre-requisite for ommiting braces:
+     single expression):
+     + ~if~
+       * Have ~else~ clause: *OMIT* braces
+       * otherwise: *NEVER OMIT* curly braces (this is always
+         non-pure-functional)
+
+     + ~while~
+       *NEVER OMIT* braces (~while~ CANNOT be used in a pure-functional manner).
+
+     + ~for~
+       + A comprehension (with ~yield~): *OMIT* braces
+
+       + *NEVER OMIT* curly braces (this is always non-pure-functional)
+
+     + ~case~ - Always *OMIT* braces in ~case~ clauses.
+
+     #+BEGIN_SRC scala
+       // #1
+       val news = if (foo)
+         goodNews
+       else
+         badNews
+
+       // #2
+       if (foo) {
+         println("foo was true")
+       }
+
+       // #3
+       news match {
+         case "good" => println("Good news!")
+         case "bad" => println("Bad news!")
+       }
+     #+END_SRC
+   
+** DONE ~for~ =RE-READ=
+   CLOSED: [2017-12-30 Sat 12:26]
+   This guide prefer ~for~, rather than chained calls to higher order functions
+   like ~map~, ~flatMap~, and ~filter~. =From Jian= *I will NEVER follow
+   this!!!!*
+
+   - =From Jian= I do NOT understand some of the rationale of this section.
+
+*** DONE ~for~ Comprehensions
+    CLOSED: [2017-12-30 Sat 12:26]
+    #+BEGIN_SRC scala
+      // right!
+      for (i <- 0 to 10) yield i
+
+      // =========================
+      // wrong!
+      for (x <- board.rows; y <- board.files)
+      yield (x, y)
+
+      // =========================
+      // right!
+      for {
+        x <- board.rows
+        y <- board.files
+      } yield (x, y)
+    #+END_SRC
+
+*** DONE ~for~ Loop
+    CLOSED: [2017-12-30 Sat 12:26]
+    #+BEGIN_SRC scala
+      // wrong!
+      for {
+        x <- board.rows
+        y <- board.files
+      } {
+        printf("(%d, %d)", x, y)
+      }
+
+      // =========================
+      // right!
+      for (x <- board.rows; y <- board.files) {
+        printf("(%d, %d)", x, y)
+      }
+    #+END_SRC
+
+
+** DONE Trivial Conditionals
+   CLOSED: [2017-12-30 Sat 10:28]
+   - For extremely brief ~if ... else~ expression, you can write it in a single
+     line.
+
+   - Never write a ~if ... else~ that has side-effect in a single line.
+
+   - Summary =From Jian=:
+     + De facto ~if ... else~ _expression_ can be in a single line -- when this
+       won't affect its clarity.
+
+     + De facto ~if ... else~ _statement_ (also an _expression_ in scala, but
+       always return a /unit value/) should NEVER be written in one line.
+
+* DONE Method Invocation
+  CLOSED: [2017-12-30 Sat 12:46]
+  - Follow Java conventions:
+    + NO space between the invocation target and the dot (~.~);
+    + NO space between the dot and the method name;
+    + NO space between the method name and the argument-delimiters (parentheses);
+    + Each argument should be separated by a single space following the comma.
+
+    For example,
+    #+BEGIN_SRC scala
+      
+      foo(42, bar)
+      target.foo(42, bar)
+      target.foo()
+    #+END_SRC
+
+  - (From ver 2.8 on)
+    #+BEGIN_SRC scala
+      // Different from the named argument convention of Python.
+      foo(x = 6, y = 7)
+    #+END_SRC
+
+  - =TODO= =???=
+    While this style does create visual ambiguity with named parameters and
+    variable assignment, the alternative (no spacing around the equals sign)
+    results in code which can be very difficult to read, particularly for
+    non-trivial expressions for the actuals.
+
+** DONE Arity-0
+   CLOSED: [2017-12-30 Sat 12:34]
+   - Call methods with side-effect with the empty ~()~.
+
+   - Call purely-functional methods without the empty ~()~.
+
+** DONE Infix Notation
+   CLOSED: [2017-12-30 Sat 12:41]
+   - Example (for symbolic-named methods):
+     #+BEGIN_SRC scala
+       // recommended
+       a + b
+
+       // legal, but less readable
+       a+b
+
+       // legal, but definitely strange
+       a.+(b)
+     #+END_SRC
+
+   - *AVOID* it for almost all _alphabetic-named methods_:
+     #+BEGIN_SRC scala
+       // recommended
+       names.mkString(",")
+
+       // also sometimes seen; controversial
+       names mkString ","
+     #+END_SRC
+
+   - A gray area is _short, operator-like methods_ like ~max~, especially if
+     /commutative/: ~a max b~
+
+   - /Symbolic methods/ which _take MORE THAN ONE parameter_ (they do exist!) may
+     still be invoked using infix notation, delimited by spaces:
+     ~foo ** (bar, baz)~
+     Such methods are fairly rare, however, and should normally be *AVOIDED*
+     during API design. For example, the use of the ~/:~ and ~:\~ methods should
+     be avoided in preference to their better-known names, ~foldLeft~ and
+     ~foldRight~.
+     =TODO= =SIMPLIFY=
+
+** DONE Postfix Notation
+   CLOSED: [2017-12-30 Sat 12:45]
+   This style is unsafe, and should not be used.
+   Since semicolons are optional, the compiler will _attempt to treat it as an
+   infix method if it can_, potentially taking a term from the next line.
+
+   For example, the code below will *NOT* compile!
+   #+BEGIN_SRC scala
+     names toList
+     val answer = 42
+   #+END_SRC
+
+   + This may result in unexpected compile errors at best, and happily compiled
+     faulty code at worst.
+
+     Although the syntax is used by some DSLs,
+     _it should be considered deprecated, and avoided_.
+
+   *Since Scala 2.10, using postfix operator notation will result in a compiler
+   warning.*
+
+* TODO Declarations
+** TODO Classes
+   - SHORT Class/Object/Trait constructors should be declared all on _one line_
+     #+BEGIN_SRC scala
+       class Person(name: String, age: Int) {
+       }
+     #+END_SRC
+
+   - LONG Class/Object/Trait constructors (about 100 chars) put each
+     constructor argument _on its own line_, *indented four spaces*:
+     #+BEGIN_SRC scala
+       class Person(
+           name: String,
+           age: Int,
+           birthdate: Date,
+           astrologicalSign: String,
+           shoeSize: Int,
+           favoriteColor: java.awt.Color) {
+         def firstMethod: Foo = ...
+       }
+     #+END_SRC
+
+   - Long ... with ~extends~
+     #+BEGIN_SRC scala
+       class Person(
+           name: String,
+           age: Int,
+           birthdate: Date,
+           astrologicalSign: String,
+           shoeSize: Int,
+           favoriteColor: java.awt.Color)
+         extends Entity
+         with Logging
+         with Identifiable
+         with Serializable {
+       }
+     #+END_SRC
+
+*** DONE Ordering Of Class Elements
+    CLOSED: [2017-12-30 Sat 13:02]
+    =TODO= There can be a more comprehensive example code!!!
+    #+BEGIN_SRC scala
+      class Foo {
+        val bar = 42
+        val baz = "Daniel"
+
+        def doSomething(): Unit = { ... }
+
+        def add(x: Int, y: Int): Int = x + y
+      }
+    #+END_SRC
+    + All class/object/trait members should be declared interleaved with newlines.
+      * ONLY Exception: NO Scaladoc and simple ~var~ and ~val~ definitions.
+
+    + /Fields/ should *precede* /methods/ in a scope. 
+      * ONLY Exception: mathod-like ~val~ can be declared at a later point
+      * This rule ONLY applies to ~val~ and ~lazy val~! 
+        NOTHING about ~var~ declarations.
+
+*** TODO Methods
+    - PATTERN:
+      ~def foo(buz: Int = 6, bar: Baz): Bin = expr~
+
+    - You should specify a return type for all public members.
+      + Consider it documentation checked by the compiler.
+        =IMPORTANT=
+
+      + It also helps in _preserving binary compatibility_ in the face of
+        _changing type inference_ (changes to the method implementation may
+        propagate to the return type if it is inferred).
+        =MORE IMPORTANT=
+
+    - /Local methods/ or /private methods/ may *OMIT* their return type.
+
+**** DONE Procedure Syntax
+     CLOSED: [2017-12-30 Sat 13:16]
+     Prefer
+     #+BEGIN_SRC scala
+       def printBar(bar: Bar): Unit = {
+         println(bar)
+       }
+     #+END_SRC
+
+     to
+     #+BEGIN_SRC scala
+       // don't do this
+       def printBar(bar: Baz) {
+         println(bar)
+       }
+     #+END_SRC
+
+**** DONE Modifiers =RE-READ=
+     CLOSED: [2017-12-30 Sat 13:16]
+     /Method modifiers/ should be given in the following order (when each is
+     applicable):
+     1. Annotations, _each on their own line_
+     2. Override modifier (~override~)
+     3. Access modifier (~protected~, ~private~)
+     4. Final modifier (~final~) =TODO=
+     Then ~def~
+
+     #+BEGIN_SRC scala
+       @Transaction
+       @throws(classOf[IOException])
+       override protected final def foo(): Unit = {
+         // ...
+       }
+     #+END_SRC
+
+**** DONE Body
+     CLOSED: [2017-12-30 Sat 13:23]
+     - Body length < 30:
+       ~def add(a: Int, b: Int): Int = a + b~
+
+       One *Exception*: When the header is very long, put the body, even if it
+       is < 30 chars, in the second line is reasonable.
+
+     - Body length >= 30:
+       #+BEGIN_SRC scala
+         def sum(ls: List[String]): Int =
+           ls.map(_.toInt).foldLeft(0)(_ + _)
+       #+END_SRC
+
+     - When the body of a method
+       + CANNOT be concisely expressed in a single line
+         or
+       + is of a non-functional nature (some mutable state, local or
+       otherwise), the body *MUST be enclosed in braces*:
+       #+BEGIN_SRC scala
+         def sum(ls: List[String]): Int = {
+           val ints = ls map (_.toInt)
+           ints.foldLeft(0)(_ + _)
+         }
+       #+END_SRC
+
+     - Methods which contain a _single_ ~match~ expression should be declared in the
+       following way:
+       #+BEGIN_SRC scala
+         // right!
+         def sum(ls: List[Int]): Int = ls match {
+           case hd :: tail => hd + sum(tail)
+           case Nil => 0
+         }
+       #+END_SRC
+
+**** TODO Multiple Parameter Lists (=From Jian= currying)
+     1. For a fluent API
+     2. Implicit Parameters
+     3. For type inference
+
+**** DONE Higher-Order Functions
+     CLOSED: [2017-12-31 Sun 00:24]
+     _Always put the function parameter(s) at the end!!!_
+     This is different from languages like SML:
+     ~fun foldl (f: ('b * 'a) -> 'b) (init: 'b) (ls: 'a list) = ...~
+
+     Scala *ONLY* allows a somewhat nicer syntax for such functions at call-site
+     when the funciton parameter is _curried as the last argument_.
+
+     In Scala, the preferred style is the exact inverse (compare to SML):
+     ~def foldLeft[A, B](ls: List[A])(init: B)(f: (B, A) => B): B = ...~
+     Then we can call this function like ~foldLeft(List(1, 2, 3, 4))(0)(_ + _)~
+
+     If NOT, for example, use this definition
+     ~def foldLeft[A, B](ls: List[A])(f: (B, A) => B)(init: B): B = ...~
+     You CANNOT call it like ~foldLeft(List(1, 2, 3, 4))(_ + _)(0)~
+     _Type inference does NOT know what to do!_
+     =TODO= Learn more!!!
+
+*** DONE Fields
+    CLOSED: [2017-12-30 Sat 13:28]
+    Follow the declaration rules for methods. 
+
+    Put ~lazy~ directly before the ~val~ (NOT metioned in the "Modifiers"
+    sub-section of the "Methods" section).
+
+** DONE Function Values
+   CLOSED: [2017-12-31 Sun 00:43]
+   - Prefer the 1 and 4:
+     1. ~val f1 = ((a: Int, b: Int) => a + b)~
+     2. ~val f2 = (a: Int, b: Int) => a + b~
+     3. ~val f3 = (\under{}: Int) + (\under{}: Int)~
+     4. ~val f4: (Int, Int) => Int = (_ + _)~
+
+   - WHY NOT 2?
+     It is NOT good for function value spans multiple lines, while, for 1, just
+     replace the outmost parentheses with /curly braces/ and it can support
+     multiple lines function value very well.
+
+     =From Jian=
+     *My rationale*:
+     Compare 2 with 1, the outmost parentheses help the reader to identify where
+     is the left hand side -- ~=~ and ~=>~ look similar, and there should be a
+     way to helper the reader to distinguish them.
+
+   - WHY NOT 3?
+     3 is concise, but only clear to _well trained_ Scala programmer.
+     With a first glance, it is hard for _NOT well trained_ Scala programmer to
+     notice the fact that this is a /function value/.
+
+   - =From Jian=
+     I prefer 4.
+
+*** DONE Spacing
+    CLOSED: [2017-12-31 Sun 00:38]
+    - There should be *NO* space between /parentheses/ and the code they contain.
+
+    - /Curly braces/ should _be separated from_ the code within them by a
+      one-space gap, to give the visually busy braces “breathing room”.
+   
+*** DONE Multi-Expression Functions
+    CLOSED: [2017-12-31 Sun 00:43]
+    - Template:
+      #+BEGIN_SRC scala
+        val f1 = { (a: Int, b: Int) =>
+          val sum = a + b
+          sum
+        }
+      #+END_SRC
+
+    - As noted earlier, /function values/ should leverage /type inference/
+      *whenever possible*.
+
+* DONE Scaladoc
+  CLOSED: [2018-02-01 Thu 10:10]
+  - It is important to provide documentation for ALL /packages/, /classes/,
+    /traits/, /methods/, and other /members/.
+
+  - /Scaladoc/ generally *FOLLOWS* the conventions of /Javadoc/,
+
+    BUT provides _many additional features_ (=From Jian= Study /Javadoc/ and try
+    to get to know what features are _addtional_ in /Scaladoc/ =TODO=) that
+    simplify writing documentation for Scala code.
+    =TODO=
+
+  - The /Scaladoc/ tool does *NOT mandate* a /documentation comment style/.
+
+  - The following examples demonstrate a single line summary followed by
+    detailed documentation, in the three common styles of indentation.
+
+    + *Javadoc style*:
+      #+BEGIN_SRC java
+        /**
+         * Provides a service as described.
+         *
+         * This is further documentation of what we're documenting.
+         * Here are more details about how it works and what it does.
+         */
+        def member: Unit = ()
+      #+END_SRC
+
+    + *Scaladoc style*:
+      with gutter asterisks aligned in *column two*:
+      #+BEGIN_SRC scala
+        /** Provides a service as described.
+         *
+         *  This is further documentation of what we're documenting.
+         *  Here are more details about how it works and what it does.
+         */
+        def member: Unit = ()
+      #+END_SRC
+
+    + *Scaladoc style*:
+      with gutter asterisks aligned in *column three*:
+      #+BEGIN_SRC scala
+        /** Provides a service as described.
+          *
+          * This is further documentation of what we're documenting.
+          * Here are more details about how it works and what it does.
+          */
+        def member: Unit = ()
+      #+END_SRC
+
+  - When only a simple, short description is needed, a _one-line format_ can be
+    used:
+    #+BEGIN_SRC scala
+      /** Does something very simple */
+      def simple: Unit = ()
+    #+END_SRC
+
+  - Compare to the recommended style of /Javadoc/, the style of /Scaladoc/ above
+    is _MORE compact_.
+
+  - Because the comment markup is *sensitive* to whitespace, the tool *must* be
+    able to _infer the *LEFT* margin_.
+
+    =From Jian=
+    This is also a reason why people design the document style above.
+
+  - The comment text are aligned on *column five*.
+    The comment text indentation width should follow you Scala code indentation
+    width.
+
+  - [[https://docs.scala-lang.org/overviews/scaladoc/for-library-authors.html][Scaladoc for Library Authors]]
+    More details!!! =TODO=
+
+** DONE General Style =TODO=
+   CLOSED: [2018-01-31 Wed 21:24]
+   - Get to the point as quickly as possible.
+     For example, PREFER =returns true if some condition= to =if some condition
+     return true=.
+
+     =Comment from Jian=
+     In the pattern of _<RESULT> if <Condition>_
+
+   - Try to format the first sentence of a method as “Returns XXX”, as in
+     “Returns the first element of the List”, as opposed to “this method
+     returns” or “get the first” etc. Methods typically return things.
+
+     =Comment from Jian=
+     Omit the subjects (_this method_) in the first sentence of a /method/.
+
+   - This same goes for classes; omit “This class does XXX”; just say “Does XXX”
+
+   - Create links to referenced Scala Library classes using the square-bracket
+     syntax, e.g.
+     #+BEGIN_SRC scala
+       /** [[Scala.Option]] ... */
+     #+END_SRC
+
+   - Summarize a method's return value in the ~@return~ annotation, leaving a
+     longer description for the main /Scaladoc/.
+
+   - If the documentation of a method is a _one line description_ of what that
+     method returns,
+     _do NOT repeat it with an @return annotation_.
+
+   - Document what the method does do
+     not what the method should do.
+
+     In other words,
+     say _returns_ the result of applying f to x
+     rather than _return_ the result of applying f to x.
+     Subtle, but important.
+
+   - When referring to the /instance/ of the /class/, use “this XXX”, or “this”
+     and NOT “the XXX”. For objects, say “this object”.
+
+   - Make code examples consistent with this guide.
+
+   - Use the wiki-style syntax instead of HTML wherever possible.
+     =TODO= =???=
+
+   - Examples should use either full code listings or the REPL, depending on
+     what is needed (the simplest way to include REPL code is to develop the
+     examples in the REPL and paste it into the /Scaladoc/).
+
+   - Make liberal use of ~@macro~ to refer to commonly-repeated values that
+     require special formatting. =TODO= =???=
+
+** DONE Packages
+   CLOSED: [2018-02-01 Thu 10:10]
+   - Example (/package object/):
+     + /package object/ is in a file called =package.scala=, under the package
+       directory.
+
+   - How to document a /package/:
+     + A /package/'s documentation should first document what sorts of /classes/
+       are part of the /package/.
+
+     + Secondly, document the general sorts of things the /package object/
+       itself provides
+
+   - While /package documentation/ does *NOT* need to be a full-blown tutorial on
+     using the ~classes~ in the /package/, it should provide an overview of the
+     major classes, with some basic examples of how to use the classes in that
+     package.
+
+   - Example: =TODO= =Re-READ= =Re-READ=
+     #+BEGIN_SRC scala
+       package my.package
+         /** Provides classes for dealing with complex numbers.  Also provides
+           ,*  implicits for converting to and from `Int`.
+           ,*
+           ,*  ==Overview==
+           ,*  The main class to use is [[my.package.complex.Complex]], as so
+           ,*  {{{
+           ,*  scala> val complex = Complex(4,3)
+           ,*  complex: my.package.complex.Complex = 4 + 3i
+           ,*  }}}
+           ,*
+           ,*  If you include [[my.package.complex.ComplexConversions]], you can
+           ,*  convert numbers more directly
+           ,*  {{{
+           ,*  scala> import my.package.complex.ComplexConversions._
+           ,*  scala> val complex = 4 + 3.i
+           ,*  complex: my.package.complex.Complex = 4 + 3i
+           ,*  }}}
+           ,*/
+
+       package complex {}
+     #+END_SRC
+
+** DONE Classes, Objects, and Traits
+   CLOSED: [2018-02-01 Thu 10:10]
+   - Document *ALL* /classes/, /objects/, and /traits/.
+
+   - The first sentence of the /Scaladoc/ should provide a summary of what the
+     /class/ or /trait/ does.
+
+   - Document *ALL* /type parameters/ with ~@tparam~.
+
+*** DONE Classes
+    CLOSED: [2018-02-01 Thu 10:10]
+    - If a class should be created using it's /companion object/, indicate as such
+      after the description of the class (though leave the details of
+      construction to the companion object).
+      =???= =TODO= =A class should be created using it's companion object???=
+                   =From Jian= Create a class????
+
+    - Unfortunately,
+      + there is currently *no way* to create a link to the /companion object/
+        _inline_,
+
+      + however the generated /Scaladoc/ will create a link for you in the
+        /class/ documentation output.
+        =This can be found in the standard library doc=
+
+    - If the class should be created using a /constructor/, document it using the
+      ~@constructor~ syntax:
+      #+BEGIN_SRC scala
+        /** A person who uses our application.
+         *
+         *  @constructor create a new person with a name and age.
+         *  @param name the person's name
+         *  @param age the person's age in years
+         */
+        class Person(name: String, age: Int) {
+        }
+      #+END_SRC
+
+    - Depending on the complexity of your /class/,
+      provide an example of common usage.
+
+*** DONE Objects
+    CLOSED: [2018-02-01 Thu 10:10]
+    - Since /objects/ can be used for a _variety of purposes_,
+      it is important to document *how to use* the /object/.
+
+    - If this ~object~ is a /factory/ for other /objects/, indicate as such here,
+      *deferring* the specifics to the /Scaladoc/ for the ~apply~ method(s).
+
+      If your ~object~ does _NOT_ use ~apply~ as a /factory method/, be sure to
+      indicate the actual /method/ names:
+      #+BEGIN_SRC scala
+        /** Factory for [[mypackage.Person]] instances. */
+        object Person {
+          /** Creates a person with a given name and age.
+           *
+           *  @param name their name
+           *  @param age the age of the person to create
+           */
+          def apply(name: String, age: Int) = { ??? }
+
+          /** Creates a person with a given name and birthdate
+           *
+           *  @param name their name
+           *  @param birthDate the person's birthdate
+           *  @return a new Person instance with the age determined by the
+           *          birthdate and current date.
+           */
+          def apply(name: String, birthDate: java.util.Date) = { ??? }
+        }
+      #+END_SRC
+
+    - If your ~object~ holds /implicit conversions/, provide an *example* in the
+      /Scaladoc/:
+      #+BEGIN_SRC scala
+        /** Implicit conversions and helpers for [[mypackage.Complex]] instances.
+          ,*
+          ,*  {{{
+          ,*  import ComplexImplicits._
+          ,*  val c: Complex = 4 + 3.i
+          ,*  }}}
+          ,*/
+        object ComplexImplicits {}
+      #+END_SRC
+
+*** DONE Traits
+    CLOSED: [2018-02-01 Thu 10:10]
+    =From Jian= =TODO=
+    Example required -- it will be better if there is an example from the standard library.
+    ===========================
+
+    1. An overview of what the /trait/ does;
+
+    2. An overview of the /methods/ and /types/ that must be specified in
+       /classes/ that mix in the /trait/;
+
+    3. If there are known /classes/ using the /trait/, reference them.
+
+** DONE Methods and Other Members
+   CLOSED: [2018-02-01 Thu 10:10]
+   Document ALL /methods/.
+
+   1. The first sentence should be a summary of what the method does.
+
+   2. Subsequent sentences explain in further detail.
+
+   3. Document each /parameter/ as well as each /type parameter/ (with
+      ~@tparam~).
+
+   4. For *curried functions*, =Example=
+      consider providing *more detailed EXAMPLES* regarding the expected or
+      idiomatic usage.
+
+   5. For *implicit parameters*, =Example=
+      take special care to explain where these /parameters/ will come from and
+      if the user needs to do any extra work to make sure the /parameters/ will
+      be available.

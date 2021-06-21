@@ -1,0 +1,693 @@
+#+TITLE: Java Reflection in Action
+#+Authors: Ira R. Forman and Nate Forman
+#+Version: 2005 - Java 1.4
+#+MISSION: Include Java 5+ change of relfection
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* preface - xiii
+* acknowledgments - xv
+* about this book - xvii
+* about the title - xx
+* about the cover illustration - xxi
+* 1 A few basics - 1
+  - Steps of modifying code:
+    1. Examine the program for its structure or data.
+    2. Make decisions using the results of the examination.
+    3. Change the behavior, structure, or data of the program based upon the decisions.
+
+  - As programmer, you must be familiar with steps, which are the things you do
+    in your everyday work.
+      Learning /reflection/ allows you your program do this adaptation for you.
+
+  - Example:
+    #+begin_src java
+      public class HelloWorld {
+          public void printName() {
+              System.out.println(this.getClass().getName());
+          }
+      }
+    #+end_src
+    You can see the 3 steps in this example. The ~printName~ method
+    1. _examines_ the object for its class (~this.getClass()~).
+    2. In doing so, the _decision_ of what to print is made by delegating to the object's class.
+    3. The method _acts on this decision_ BY printing the returned name.
+
+  - Without /reflection/, to do the work in the above example, we need hardcode as
+    ~System.out.println("HelloWord")~, and override the ~printName~ in every subclass
+    of ~HelloWord~.
+
+** DONE 1.1 Reflection's value proposition - 3
+   CLOSED: [2019-05-15 Wed 13:16]
+   - reflection :: the ability of a running program to examine itself and its software
+                   environment, and to change what it does depending on what it finds.
+
+   - metadata :: the information _represent something itself_.
+
+   - metaobjects :: in an object-oriented world, the objects of the organized
+                    /metadata/.
+
+   - introspection :: the runtime self-examination of the /metaobjects/
+
+   - The /introspection/ step is FOLLOWED BY _behavior change_.
+
+   - In general, there are _THREE techniques_ that a reflection API can use to
+     facilitate behavior change:
+     + DIRECT /metaobject/ *modification*
+
+     + *operations* for using /metadata/ (such as /dynamic method invocation/)
+
+     + /intercession/, in which code is permitted to intercede in various phases
+       of program execution.
+
+   - Summary:
+     + Java *supplies*
+       * _a RICH set_ of operations for using /metadata/
+       * _JUST a FEW_ important /intercession/ capabilities
+
+     + Java *avoids*
+       many complications by *NOT allowing* /direct metaobject modification/.
+
+   - /Reflection/ make your software _flexible_:
+     + Applications programmed with /reflection/ adapt _more easily to CHANGING_
+       requirements.
+
+     + Reflective components are more likely to be _reused_ flawlessly in other
+       applications.
+
+   - You must master the subject in order to make your software flexible.
+     1. It's not enough to just learn the concepts and the use of the API.
+     2. You must also be able to distinguish between situations
+        + when reflection is absolutely required from those
+        + when it may be used advantageously from those
+        + when it should be shunned.
+
+   - The examples in this book will help you acquire this skill (=from Jian=
+     metioned in the last entry).
+
+   - In addition, by the time you reach the end, you will understand the three
+     issues that have thus far impeded the broad use of /reflection/:
+     =IMPORTANT=
+     + /security/
+     + /code complexity/
+     + /runtime performance/
+
+   - You will learn that the concern over security was misguided. Java is so well
+     crafted and its reflection API so carefully constrained that security is
+     controlled simply.
+
+     + By learning when to use reflection and when not to,
+       you will avoid unnecessarily complex code that can often be the result of
+       amateurish use of reflection.
+
+     + In addition, you will learn to evaluate the performance of your designs,
+       thereby ensuring the resulting code satisfies its performance requirements.
+
+   - This introduction describes /reflection/, but scarcely *reveals its value*.
+
+   - /Reflection/ — introspection followed by behavior change - is the path to
+     flexible software.
+
+** DONE 1.2 Enter George the programmer - 4 - =RE-READ=
+   CLOSED: [2020-09-11 Fri 04:29]
+   - Q :: How to invoke ~setColor~ no matter what the EXACT /class/ is?
+     + Then scenario:
+       George's team wants to integrate some components, all of which have ~setColor~
+       /methods/ and accept ~java.awt.Color~ parameter (same signature).
+         However, since those componets comes from different sources, they don't
+       have a common /base class/ who has the ~setColor~ /method/ we expect. Their
+       only /base class/ is ~Object~, which can't tells the compiler all the
+       componets have the ~setColor~ /method/, even though the team knows all the
+       componets they will integrate will always have ~setColor~.
+
+*** DONE 1.2.1 Choosing reflection - 5
+    CLOSED: [2020-09-11 Fri 04:30]
+    - Given a component, the team's code must accomplish _TWO_ steps:
+      1. Discover a ~setColor~ /method/ supported by the component.
+      2. Call that ~setColor~ /method/ with the desired color.
+
+    - There are many alternatives for accomplishing these steps manually.
+      Let's examine the results of each of these.
+      + _George's team controlled all of the source code_:
+        the components could be refactored to implement a common interface that
+        declares ~setColor~.
+          Then, each component could be referenced by that /interface type/ and
+        ~setColor~ could be invoked without knowing the /concrete type/.
+        * =from Jian= It is rarely happen that all source code are under control.
+
+      + _The team does NOT control the standard Java components or third-party
+        components_:
+        Even if they changed the open source components, the open source project
+        might not accept the change, leaving the team with additional maintenance.
+
+        * The team could implement an _ADAPTER_ for each component.
+          Each such adapter could implement a /COMMON interface/ and *delegate* the
+          ~setColor~ call to the concrete component.
+          - Usually people will see the *LIMITATIONS* when a large number of component
+            classes need to be supported -- the problem that George's team need
+            to handle.
+            1. because of the _large number_ of _component CLASSES_ that the team is
+               using, the solution would cause an EXPLOSION in the number of classes
+               to _maintain_.
+
+            2. because of the _large number_ of _component INSTANCES_, this solution
+               would cause an EXPLOSION of the number of objects in the system _at
+               runtime_.
+
+          - Conclusion:
+            These trade-offs make implementing an adapter an *undesirable* option.
+            + =from Jian=
+               *undesirable* means those limitations actually eliminate this solution
+               in the large number of components situations.
+
+      + Using ~instanceof~ and *casting* to discover /concrete types/ _at runtime_
+        is another alternative,
+        * BUT it leaves several maintenance problems for George's team.
+          1. The code would become bloated with conditionals and casts, making it
+             difficult to read and understand.
+
+          2. The code would become *coupled* with each /concrete type/.
+             This *coupling* would make it more difficult for the team to add,
+             remove, or change components.
+
+        * These problems make ~instanceof~ and *casting* an _unfavorable_ alternative.
+          - =from Jian=
+            *unfavorable* here means even with those limitations this solution is
+            applicable. However, it's not good, and it will lead to a workable, but
+            _hard to maintain_ situation. *Hard to maintain* can also effectively
+            eliminate this solution -- the time spent on it can be to much if compare
+            with the gained benefits.
+
+      + Conclusion:
+        =from Jian=
+        The solutions above all have obvious limitations. HOWEVER, the can
+        provide some insights on solving this problem.
+
+        1. EACH of these alternatives involves program changes that *adjust or
+           discover the type of a component*.
+
+        2. George understands that it is ONLY necessary to find a ~setColor~ /method/
+           and call it.
+
+        3. Having studied a little /reflection/, he understands how to query an object's
+           class for a method at runtime.
+
+        4. Once it is found, he knows that a method can also be invoked using /reflection/.
+
+        5. /Reflection/ is uniquely suited to solving this problem because it does
+           not over-constrain the solution with type information.
+
+*** TODO 1.2.2 Programming a reflective solution - 6
+    - Listing 1.1 George's ~setObjectColor~ code:
+      #+begin_src java
+        public static void setObjectColor(Object obj, Color color) {
+            // 1. Query object for its class
+            Class cls = obj.getClass();
+
+            try {
+                // 2. Query class object for `setColor` method
+                Method method = cls.getMethod("setColor", new Class[] {Color.class});
+                // 3. Call resulting method on target `obj`
+                method.invoke(obj, new Object[] {color});
+            } catch (NoSuchMethodException ex) {  // 4. Call resulting method on target `obj`
+                throw new IllegalArgumentException(cls.getName() +
+                                                   " does not support method setColor(Color)" );
+            } catch (IllegalAccessException ex) {  // 5. Invoker cannot call `setColor` method
+                throw new IllegalArgumentException("Insufficient access permissions to call" +
+                                                   "setColor(:Color) in class " +
+                                                   cls.getName());
+            } catch (InvocationTargetException ex) {  // 5. `setColor` method throws an exception
+                throw new RuntimeException(ex);
+            }
+        }
+      #+end_src
+
+    - TODO
+    - TODO
+    - TODO
+    - TODO
+
+** TODO 1.3 Examining running programs - 8
+   - /Reflection/ is a program's ability to _examine_ and _change_ its BEHAVIOR
+     and STRUCTURE _at runtime_.
+
+   - Let's take a closer look at what _reflective abilities_ mean for the *structure*
+     of Java.
+
+   - exaggerated =EN=
+
+   - metaobjects :: program's self-representation
+
+   - /Meta/ is a prefix that usually _about_ or _beyond_.
+     In this case, /metaobjects/ are objects that hold info ABOUT the program.
+
+   - The ~Class~ and ~Method~ we mentioned are /classes/ whose /instances/ _represent
+     the program_.
+       We refer to these as /classes of metaobjects/ or /metaobject classes/.
+     /Metaobject classes/ are most of what make up Java's reflection API.
+
+   - /base-level objects/ =TODO=
+
+   - base program :: nonreflective parts of a program
+
+   - UML =TODO=
+
+   - Figure 1.1 =TODO=
+
+   - _Reflective abilities_ that make changes include:
+     + *dynamic invocation* to call a /method/ that find through introspection
+     + reflective *construction*
+     + *dynamic loading*
+     + *intercepting* method calls
+
+     This book shows how to use these mechanisms and others to solve common but
+     difficult software problems.
+
+** DONE 1.4 Finding a method at runtime - 10
+   CLOSED: [2019-05-20 Mon 18:53]
+   - No introspection about a value/type can be used _until_ it knows the /class/
+     of the parameter.
+
+     Query for the parameter's class is always the first step:
+     ~Class cls = obj.getClass();~
+
+   - The ~getClass~ /method/ is used to access an object's /class/ _at runtime_.
+
+   - The ~getClass~ /method/ is often used to *begin* /reflective programming/
+     because MANY (=from Jian= NOT ALL???) /reflective/ tasks REQUIRE _objects
+     representing classes_.
+
+   - The ~getClass~ /method/ is introduced by ~java.lang.Object~, so _any_ /object/
+     in Java can be queried for its ~class~.
+
+   - The ~getClass~ /method/ is ~final~.
+
+   - The ~getClass~ /method/ returns an instance of ~java.lang.Class~.
+     Instances of ~Class~ are the /metaobjects/ that Java uses _to *represent*
+     the classes that make up a program_.
+
+   - class object (throughout this book) :: an /instance/ of ~java.lang.Class~.
+
+   - /Class objects/ are the most important kind of /metaobject/
+     because all Java programs consist solely of /classes/.
+
+   - /Class objects/ provide programming _metadata_ about a /class/'s /fields/,
+     /methods/, /constructors/, and /nested classes/.
+
+   - /Class objects/ also provide information about the /inheritance hierarchy/
+     and provide _ACCESS to reflective facilities_.
+
+   - For this chapter,
+     _we will *CONCENTRATE ON* the use of ~Class~ in listing 1.1 and related
+     fundamentals._
+     + Table 1.1 The /methods/ defined by ~Class~ for /method/ query
+       * Returns a ~Method~ /object/ that represents a /public method/ (either
+         _declared or inherited_)
+         #+begin_src java
+           Method getMethod(String name, Class[] parameterTypes)
+         #+end_src
+         + ~name~: method name
+         + ~parameterTypes~: signature
+
+       * Returns an array of ~Method~ /objects/ that represent all of the
+         /public methods/ (either _declared or inherited_)
+         #+begin_src java
+           Method[] getMethods()
+         #+end_src
+
+       * Returns a ~Method~ /object/ that represents a *declared method*
+         #+begin_src java
+           Method getDeclaredMethod(String name, Class[] parameterTypes )
+         #+end_src
+         + ~name~: method name
+         + ~parameterTypes~: signature
+
+       * Returns an array of ~Method~ /objects/ that represent ALL of the /methods/
+         *declared*
+         #+begin_src java
+           Method[] getDeclaredMethods()
+         #+end_src
+
+   - In querying for a *parameterless* /method/, it is LEGAL to supply ~null~,
+     which is treated *the same as* a _zero-length array_.
+
+   - The set of /declared methods/ does *NOT include* /methods/ that the /class/
+     /inherits/.
+       However, these two queries do return /methods/ of *all visibilities*:
+     /public/, /protected/, /package/, and /private/.
+
+   - ~getMethod~ and ~getMethods~ return /method objects/ for a /class/'s
+     /public methods/.
+       The set of /methods/ covered by these two includes BOTH /methods/
+     *declared* by the /class/ and those it *inherits from* /superclasses/.
+     However, these queries return *only* a /class/'s /public methods/.
+
+   - When one /method/ can't be found, the query fails with a ~NoSuchMethodException~.
+     This often happens when a /method/ is there, but you use a wrong way to
+     query, like
+     + for ~getDeclaredMethod~, try to find the /method/ not declared by it.
+     + for ~getMethod~, try to find out non-public methods.
+
+   - Once the ~setObjectColor~ /method/ has discovered the /class/ of its parameter,
+     it queries that /class/ for the /method/ it wants to call:
+     #+begin_src java
+       Method method = cls.getMethod("setColor", new Class[] {Color.class});
+     #+end_src
+     + The first parameter is the name of the being invoked /method/.
+
+     + The second parameter is an _array_ of /class objects/ that identify the
+       types of the method's parameters.
+         In this case, we want a /method/ that accepts _ONE parameter_ of /type/
+       ~Color~, so we pass ~getMethod~ an _array_ of one element containing the
+       /class object/ for ~Color~.
+
+   - Notice that the assignment does *NOT* use ~getClass~ to provide the /class
+     object/ for ~Color~.
+     + Get the /class/ from an /object reference/: ~instance.getClass()~;
+     + Get the /class/ from the /class/ we know: ~ClassName.class~ (static).
+
+   - Class literals :: Any _class_ followed by ~.class~ evaluates to a /class
+                       object/.
+
+   - Class has other methods for introspecting about methods. The signatures and
+     return types for these methods are shown in table 1.1. As in the previous
+     example, the queries use an array of Class to indicate the types of the
+     parameters. In querying for a parameterless method, it is legal to supply
+     null, which is treated the same as a zero-length array.
+
+   - =TODO=
+     We discuss /method objects/ _in detail_ later in THIS chapter, but first
+     let's take a closer look at how /class objects/ are used with the /methods/
+     _from_ table 1.1.
+
+** TODO 1.5 Representing types with class objects - 12
+*** 1.5.1 Representing primitive types - 13
+*** 1.5.2 Representing interfaces - 13
+*** 1.5.3 Representing array types - 14
+
+** TODO 1.6 Understanding method objects - 14
+*** 1.6.1 Using dynamic invocation - 15
+*** 1.6.2 Using primitives with dynamic invocation - 16
+*** 1.6.3 Avoiding invocation pitfalls - 17
+
+** TODO 1.7 Diagramming for reflection - 19
+** TODO 1.8 Navigating the inheritance hierarchy - 20
+   - The current ~setObjectColor~ from listing 1.1 can't work with the ~setColor~
+     when it is marked as ~protected~ -- the line below will fail:
+     #+begin_src java
+       Method method = cls.getMethod("setColor", new class[] {Color.class});
+     #+end_src
+
+   - We need a /method/ that _introspects_ over /methods/ of *all visibilities,
+     declared or inherited*.
+     + Listing 1.3 Code for ~Mopex.getSupportedMethod~
+       #+begin_src java
+         public static Method getSupportedMethod(Class cls, String name, Class[] paramTypes) throws NoSuchMethodException {
+             if (cls == null) {
+                 throw new NoSuchMethodException();
+             }
+
+             try {
+                 return cls.getDeclareMethod(name, paramTypes);
+             }
+             catch (NoSuchMethodException ex) {
+                 return getSupportedMethod(cls.getSuperclass(), name, paramTypes);
+             }
+         }
+       #+end_src
+
+     + Listing 1.4 ~setObjectColor~ updated to use ~getSupportedMethod~
+       #+begin_src java
+         public static void setObjectColor( Object obj, Color color ) {
+             Class cls = obj.getClass();
+             try {
+                 Method method = Mopex.getSupportedMethod(cls, "setColor", new Class[]{Color.class});
+                 method.invoke( obj, new Object[] {color} );
+             }
+             catch (NoSuchMethodException ex) {
+                 throw new IllegalArgumentException(cls.getName() + " does not support" + "method setColor(:Color)");
+             }
+             catch (IllegalAccessException ex) {
+                 throw new IllegalArgumentException("Insufficient access permissions to call" +
+                                                    "setColor(:Color) in class " +
+                                                    cls.getName());
+             }
+             catch (InvocationTargetException ex) {
+                 throw new RuntimeException(ex);
+             }
+         }
+       #+end_src
+
+   - The above update allows ~setObjectColor~ to retrieve /metaobjects/ for
+     /private/, /package/, and /protected/ /methods/ that are not retrieved by
+     ~getMethod~.
+       However, _this update does NOT GUARANTEE *permission to invoke* the /method/._
+     If ~setObjectColor~ does not have access to Martha's _inherited method_, an
+     ~IllegalAccessException~ is thrown instead of a ~NoSuchMethodException~.
+
+   - =TODO=
+     In chapter 2, we discuss bypassing visibility checks using reflection.
+     =TODO=
+     For now, let's continue to discuss the tools that make George and Martha's
+     enhancement possible.
+
+*** DONE 1.8.1 Introspecting the inheritance hierarchy - 22
+    CLOSED: [2019-05-21 Tue 11:47]
+    - Table 1.4 Methods of Class that deal with inheritance
+      + ~Class[] getInterfaces()~
+        Returns
+        an array of ~Class~ objects that represent the /direct superinterfaces/
+        of the target ~Class~ object
+
+        * ~ClassClassObj.getInterfaces()~ returns /class objects/ specified in the
+          ~implements~ clause of that /class's declaration/.
+
+        * ~interfaceClassObj.getInterfaces()~ returns /class objects/ specified
+          in the ~extends~ clause of that /interface's declaration/.
+
+      + ~Class getSuperclass()~
+        Returns
+        * the ~Class~ object representing the /direct superclass/ of the target
+          ~Class~ object
+          or
+        * ~null~ if the target represents ~Object~, an /interface/, a /primitive
+          type/, or ~void~
+
+      + ~boolean isAssignableFrom(Class cls)~
+        Returns
+        _true_ iff the /class/ or /interface/ represented by the target ~Class~
+        object is either the same as or a /superclass/ of or a /superinterface/
+        of the specified ~Class~ parameter
+        * To get ALL of the /methods/ of a /class/, a program must walk the /inheritance
+          hierarchy/.
+            _Luckily_, this walk is not necessary to query whether a /class object/
+          represents a /subtype/ of another /class object/. This query can be
+          accomplished using the ~isAssignableFrom~ /method/. =TODO=
+
+      + ~boolean isInstance(Object obj)~
+        Returns
+        _true_ iff the specified ~Object~ is /assignment-compatible/ with the
+        object represented by the target ~Class~ object
+
+        * ~isInstance~ /method/ is _Java reflection's dynamic version of ~instanceof~._
+          - ~classClassObj.isInstance~ returns _true_
+            if its argument is an /instance/ of _that class or ANY subclass of that
+            class._
+
+          - ~interfaceClassObj.isInstance~ returns _true_
+            if its argument's class implements _that interface or ANY subinterface
+            of that interface._
+
+    - Note the method names getInterfaces and getSuperclass are slightly inconsistent
+      with terminology defined by the Java Language Specification. A direct superclass
+      is the one named in the extends clause of a class declaration. A class X is a
+      superclass of a class Y if there is a sequence of one or more direct superclass links
+      from Y to X. There is a corresponding pair of definitions for direct superinterface
+      and superinterface. Consequently, getSuperclass returns the direct superclass
+      and getInterfaces returns the direct superinterfaces.
+      =TODO=
+
+*** TODO 1.8.2 Exposing some surprises - 23
+*** TODO 1.8.3 Another reflective circularity - 24
+
+** TODO 1.9 Summary - 26
+
+* 2 Accessing fields reflectively - 27
+  - In this chapter
+    + _Exploring_ the /fields/ of a /class/
+    + _Getting_ and _setting_ /field values/
+    + _Accessing_ /nonpublic members/
+
+  - TODO
+    + Memory leaks TODO
+    + Serialization TODO
+    + Property sheets TODO
+
+** 2.1 Serializing objects - 28
+*** 2.1.1 Serializing to XML - 29
+*** 2.1.2 Choosing reflection - 30
+*** 2.1.3 Designing serialization with reflection - 30
+
+** 2.2 Finding fields at runtime - 31
+** 2.3 Understanding field objects - 33
+** 2.4 Getting and setting field values - 34
+** 2.5 Examining modifiers - 35
+*** Introducing Member - 36
+*** Interface introspection pitfall - 37
+*** Introspecting for instance variables - 37
+
+** 2.6 Accessing nonpublic members - 38
+** 2.7 Working with arrays - 40
+** 2.8 Serialization: putting it all together - 41
+*** Serializing each component - 43
+*** Serializing instance variables - 43
+
+** 2.9 Using reflective serialization - 45
+** 2.10 Summary - 48
+
+* 3 Dynamic loading and reflective construction - 49
+** 3.1 George's deployment problem - 50
+*** 3.1.1 Designing with patterns - 51
+*** 3.1.2 Programming a reflective solution - 52
+*** 3.1.3 Enhancing the factory method with reflection - 54
+*** 3.1.4 Combining benefits of delegation and reflection - 54
+
+** 3.2 Loading classes dynamically - 55
+*** 3.2.1 Basics of forName - 55
+*** 3.2.2 Getting array classes - 56
+*** 3.2.3 Primitives and forName - 56
+
+** 3.3 Constructing objects reflectively - 57
+*** 3.3.1 Reflective construction basics - 57
+*** 3.3.2 Using constructor objects - 57
+*** 3.3.3 Constructing arrays reflectively - 59
+
+** 3.4 Designing for dynamic loading - 60
+*** 3.4.1 Disadvantages of reflective construction with arguments - 61
+*** 3.4.2 Initializing through an interface - 62
+
+** 3.5 Implementing deserialization - 63
+*** 3.5.1 Initiating deserialization - 64
+*** 3.5.2 Constructing the instances - 65
+*** 3.5.3 Restoring the object structure - 66
+
+** 3.6 George's serialization: limitations - 69
+*** 3.6.1 No interaction with readObject or writeObject - 69
+*** 3.6.2 No handling of final instance variables - 70
+*** 3.6.3 Only no-argument constructors - 70
+*** 3.6.4 No handling of illegal XML characters - 70
+*** 3.6.5 Performance - 71
+
+** 3.7 Summary - 71
+
+* 4 Using Java's dynamic proxy - 73
+** 4.1 Working with proxies - 74
+** 4.2 George’s tracing problem - 76
+** 4.3 Exploring Proxy - 77
+*** 4.3.1 Understanding invocation handlers - 79
+*** 4.3.2 Handling the methods of Object - 80
+
+** 4.4 Implementing a tracing proxy - 81
+** 4.5 A note on factories - 84
+** 4.6 Chaining proxies - 86
+*** 4.6.1 Structuring invocation handlers for chaining - 86
+*** 4.6.2 Implementing a synchronized proxy - 88
+*** 4.6.3 Chaining the two proxies - 89
+
+** 4.7 Stubbing interfaces for unit testing - 90
+*** 4.7.1 Examining stubs - 90
+*** 4.7.2 Design for stubbing with Proxy - 91
+*** 4.7.3 Implementation of stubbing with Proxy - 93
+
+** 4.8 Generating SOAP remote proxies - 99
+** 4.9 Pitfalls of using Proxy - 103
+** 4.10 Summary - 105
+
+* 5 Call stack introspection - 107
+** 5.1 George's logging problem - 108
+** 5.2 Performing call stack introspection - 111
+** 5.3 Logging with call stack introspection - 112
+** 5.4 Pitfalls - 114
+** 5.5 Class invariant checking - 115
+** 5.6 Summary - 120
+
+* 6 Using the class loader - 121
+** 6.1 George’s test problem - 122
+** 6.2 Essentials of ClassLoader - 123
+*** 6.2.1 Understanding the delegation model - 123
+*** 6.2.2 Programming a simple class loader - 127
+*** 6.2.3 Reinitializing static fields: a solution - 128
+
+** 6.3 Multiple namespaces - 130
+** 6.4 Dynamic class replacement - 132
+*** 6.4.1 Designing for replacement - 132
+*** 6.4.2 Implementing replacement - 134
+*** 6.4.3 Simplifying assumptions - 137
+
+** 6.5 Additional considerations - 138
+*** 6.5.1 Security - 139
+*** 6.5.2 Don't reinvent the wheel - 139
+*** 6.5.3 Modifying bytecode in a class loader - 140
+*** 6.5.4 When not to invent a specialized class loader - 140
+*** 6.5.5 Additional examples - 141
+*** 6.5.6 Endorsed Standards Override - 142
+
+** 6.6 Summary - 142
+
+* 7 Reflective code generation - 143
+** 7.1 Reflective code generation - 143
+** 7.2 Generating HelloWorld.java - 145
+** 7.3 Class-to-class transformation framework - 147
+*** 7.3.1 C2C - 148
+*** 7.3.2 Args - 152
+*** 7.3.3 C2CConstructor - 154
+*** 7.3.4 C2CTransformation - 157
+
+** 7.4 Example: extent management - 159
+** 7.5 C2IdentitySubclassOfC and its subclasses - 168
+** 7.6 UQueue - 170
+** 7.7 Using the framework - 173
+** 7.8 Relation to Aspect-Oriented Programming - 175
+** 7.9 Summary - 176
+
+* 8 Design patterns - 179
+** 8.1 Singleton - 181
+** 8.2 Decorator class-to-class transformations - 187
+** 8.3 Proxy (again) - 197
+** 8.4 Another composition feature - 201
+** 8.5 Problematic issues in writing class-to-class transformations - 201
+** 8.6 Summary - 204
+
+* 9 Evaluating performance - 207
+** 9.1 Evaluating performance - 207
+** 9.2 Categorizing performance impact - 209
+** 9.3 Using microbenchmarks - 210
+** 9.4 Benchmarking two ways to use Proxy - 214
+** 9.5 Understanding Amdahl’s Law - 218
+** 9.6 Applying Amdahl’s Law - 221
+** 9.7 Summary - 223
+
+* 10 Reflecting on the future - 225
+** 10.1 Looking forward: Java 1.5 - 226
+*** 10.1.1 JSR 14—Generics - 227
+*** 10.1.2 JSR 175—Annotation Facility - 229
+*** 10.1.3 JSR 201—Language extensions - 234
+*** 10.1.4 Impact of Java 1.5 on reflective code - 235
+
+** 10.2 Looking forward: competition for Java reflection - 236
+*** 10.2.1 C# - 236
+*** 10.2.2 Python - 236
+*** 10.2.3 Smalltalk - 236
+*** 10.2.4 CLOS - 237
+*** 10.2.5 Ruby 237
+*** 10.2.6 Perl - 237
+
+** 10.3 Looking forward: Aspect-Oriented Programming - 237
+** 10.4 Looking forward: your career - 238
+
+* appendix A Reflection and metaobject protocols - 241
+* appendix B Handling compilation errors in the "Hello world!" program - 253
+* appendix C UML - 256
+* glossary - 258
+* references - 260
+* index - 267

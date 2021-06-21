@@ -1,0 +1,1188 @@
+#+TITLE: Java\trade{} Puzzlers: Traps, Pitfalls, and Corner Cases
+#+VERSION: 2005
+#+AUTHOR: Joshua Bloch, Neal Gafter
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Copyright
+* Preface
+* Acknowledgments
+* Chapter 1. Introduction
+  - Use JDK 5.0, and talk about versions before this one.
+
+  - Most of the puzzles exploit counterintuitive or obscure behaviors that can
+    lead to bugs.
+
+  - Source code: http:://www.javapuzzlers.com
+
+  - Try to solve these puzzles with NO computer.
+
+  - Most solutions contain references to relevant sections of *The Java™ Language
+    Specification, Third Edition [JLS]*. These references aren't essential to
+    understanding the puzzles, but they are useful if you want to delve deeper
+    into the language rules underlying the puzzles.
+
+    Similarly, many solutions contain references to relevant items in *Effective
+    Java™ Programming Language Guide [EJ]*. These references are useful if you
+    want to delve deeper into best practices.
+
+* DONE Chapter 2. Expressive Puzzlers
+  CLOSED: [2017-09-24 Sun 00:24]
+** DONE Puzzle 1: Oddity
+   Q: What does the following program print?
+   CLOSED: [2017-09-23 Sat 21:49]
+   #+BEGIN_SRC java
+     class Oddity {
+         public static boolean isOdd(int i) {
+             return i % 2 == 1;
+         }
+     }
+   #+END_SRC
+   - It is _WRONG_ when ~i~ is negative.
+     Then it is ~-1~.
+
+   - ~(a / b) * b + (a % b) == a~ from [JLS 15.17.3]
+     When the remainder operation returns a nonzero result, it has the same sign as
+     its left operand.
+
+   - Normal solution:
+     Replace the ~==~ with ~!=~
+     #+BEGIN_SRC java
+       class Oddity {
+           public static boolean isOdd(int i) {
+               return i % 2 != 1;
+           }
+       }
+     #+END_SRC
+
+   - Efficient solution:
+     #+BEGIN_SRC java
+       class Oddity {
+           public static boolean isOdd(int i) {
+               return (i & 1) != 1;
+           }
+       }
+     #+END_SRC
+
+** DONE Puzzle 2: Time for a Change
+   Q: What does the following program print?
+   CLOSED: [2017-09-23 Sat 22:28]
+   #+BEGIN_SRC java
+     public class Change {
+         public static void main(String args[]) {
+             System.out.println(2.00 - 1.10);
+         }
+     }
+   #+END_SRC
+
+   - Poor solution:
+     Replace the ~pirntln~ line with
+     ~System.out.printf("%.2f%n", 2.00 - 1.10);~
+
+   - Binary floating-point is particularly _ill-suited_ to monetary calculations.
+     + Use integral types.
+       ~System.out.println((200 - 100) + " cents");~
+       This is not good: the input is actually 2.00 and 1.10.
+
+     + Use ~BigDecimal~:
+       When you want an exact result, always use constructor ~BigDecimal(String)~,
+       rahter than ~BigDecimal(double)~. The latter one won't generate the exact
+       number you want due to the inexact nature of the input type ~double~.
+       #+BEGIN_SRC java
+         import java.match.BigDecimal;
+
+         public class Change {
+             public static void main(String args[]) {
+                 System.out.println(new BigDecimal("2.00")
+                                        .subtract(new BigDecimal("1.10")));
+             }
+         }
+       #+END_SRC
+       
+       This solution
+       * slower
+
+       * NO pretty look
+
+         Since Java has no liguistic support for ~BigDecimal~, we have to use
+         library API to solve such a simple in nature problem through a
+         non-straitforward way. Then it is resonable to get such code with a
+         non-pretty look.
+
+** DONE Puzzle 3: Long Division
+   CLOSED: [2017-09-23 Sat 22:56]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class LongDivision {
+         public static void main(String[] args) {
+             final long MICTROS_PER_DAY = 24 * 60 * 60 * 1000 * 1000;
+             final long MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
+             System.out.println(MICTROS_PER_DAY / MILLIS_PER_DAY);
+         }
+     }
+   #+END_SRC
+
+   - The result ~5~ is _WRONG_.
+
+   - Java's unitl Java SE 9 (even Scala, for this kind of cases) have no /target
+     typing/.
+     + target typing :: (a language feature) the type of the variable in which a
+                        result is to be stored influences the type of the
+                        computation.
+
+     This means the RHS of ~=~ calculation will be calculated with using the
+     default ~int~ type, even though the result will be stored into ~long~'s --
+     the promotion will happen _after_ the calculation and _before_ assignment,
+     which is LATE already, and then overflow happen.
+
+   - Note:
+     When working with large numbers, watch out for overflow.
+
+     A variable is large enough to hold a result does NOT mean that the
+     computation leading to the result is of the correct type (when NO
+     /target typing/ feature).
+
+     This could be done by providing support for arithmetic that does not
+     overflow silently. Programs could
+     + _throw an exception_ instead of overflowing, as does /Ada/.
+     + _switch to a larger internal representation_ automatically as required to
+       avoid overflow, as does /Lisp/.
+     + use _infinite long integer_, as does /Python 3/.
+
+     Both of these approaches may have performance penalties associated with
+     them.
+
+     =TODO=
+     + Another way to reduce the likelihood of silent overflow is to support
+       /target typing/, but this adds significant complexity to the type system
+       [Modula-3 1.4.8].
+
+       =From Jian= I guess this is the method /Haskell/ and /OCaml/ used.
+
+** DONE Puzzle 4: It's Elementary
+   CLOSED: [2017-09-23 Sat 23:12]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Elementary {
+         public static void main(String[] args) {
+             System.out.println(12345 + 5432l);
+         }
+     }
+   #+END_SRC
+
+   + Note that the second operand is a ~long~ literal ~5423~.
+
+   + Never use ~l~ as suffix. It is definitely a BAD design of Java.
+
+     Use ~L~ suffix!!!!!!!!
+
+** DONE Puzzle 5: The Joy of Hex
+   CLOSED: [2017-09-23 Sat 23:38]
+   Q: What does this program print?
+   #+BEGIN_SRC java
+     public class JoyOfHex {
+         public static void main(String[] args) {
+             System.out.println(
+                                Long.toHexString(0x100000000L + 0xcafebabe));
+         }
+     }
+   #+END_SRC
+
+   A: It prints ~cafebabe~ rather than ~1cafebabe~
+
+   - Solution:
+     add a ~L~ suffix to ~0xcafebabe~.
+   
+   - Decimal literals have a nice property that is _NOT shared by hexadecimal or
+     octal literals_: Decimal literals are ALL positive [JLS 3.10.1].
+
+     _Hex and octal literals are negative if their high-order bit is set_.
+
+   - In this program, ~0xcafebabe~ is ~-889275714~ and Java will promote this
+     ~int~ literal to perform computation with the ~long~ operand ~0x100000000L~
+     with /widening primitive conversion/ [JLS 5.1.2].
+
+   - sign extension :: =TODO=
+
+   - The calculation:
+     #+BEGIN_SRC text
+         0xffff_ffff_cafe_babeL
+       + 0x0000_0001_0000_0000L
+       -------------------------
+         0x0000_0000_cafe_babeL
+     #+END_SRC
+     ~0x0000_0000_cafe_babeL~ is a result after truncation.
+     If there is NO truncation, the result should be ~0x10000_0000_cafe_babeL~.
+
+   - _Lesson_ of this puzzle:
+     + mixed-type computations can be confusing,
+
+       MORE so given that hex and octal literals can take on negative values
+       without an explicit minus sign.
+
+     + To avoid this sort of difficulty,
+       it is generally best to _AVOID_ mixed-type computations.
+
+   - For language designers,
+
+     it is worth considering support for /unsigned integral types/, which
+     eliminate the possibility of sign extension. One might argue that negative
+     hex and octal literals should be prohibited, but this would likely
+     frustrate programmers, who often use hex literals to represent values whose
+     sign is of no significance.
+
+** DONE Puzzle 6: Multicast
+   CLOSED: [2017-09-23 Sat 23:54]
+   Q: What does this print?
+   #+BEGIN_SRC java
+     public class Multicase {
+         public static void main(String[] args) {
+             System.out.println((int) (char) (byte) - 1);
+         }
+     }
+   #+END_SRC
+
+   A: 65535
+
+   - /narrowing primitive conversion/ [JLS 5.1.3],
+
+   - /Sign extension/ is performed
+     if the type of the original value is signed;
+     zero extension if it is a ~char~,
+     regardless of the type to which it is being converted.
+
+   - Because ~byte~ is a _signed type_, /sign extension/ occurs when converting
+     the ~byte~ value –1 to a ~char~.
+
+   - Although there is a simple rule describing the sign extension behavior of
+     widening primitive conversions between signed and unsigned integral types,
+     _it is best not to write programs that depend on it_.
+
+   - Some sanarios:
+     + If you are converting from a ~char~ value ~c~ to a /wider type/ and you do
+       _NOT_ want /sign extension/,
+       * consider using a bit mask for clarity, even though it isn't required:
+         ~int i = c & 0xffff~;
+
+       * alternatively, write a comment describing the behavior of the conversion:
+         ~int i = c; // Sign extension is not performed~
+
+     + If you are converting from a ~char~ value ~c~ to a /wider integral type/
+       and you want /sign extension/:
+       cast the ~char~ to a ~short~, which is the same width as a ~char~
+       _but signed_.
+
+       Given the subtlety of this code, you should also write a comment:
+       ~int i = (short) c; // Cast causes sign extension~
+
+     + If you are converting from a ~byte~ value ~b~ to a ~char~ and you do _NOT_
+       want /sign extension/, you must use a bit mask to suppress it. This is a
+       common idiom, so no comment is necessary:
+       ~char c = (char) (b & 0xff);~
+
+     + If you are converting from a ~byte~ to a ~char~ and you want /sign
+       extension/, write a comment:
+       ~char c = (char) b; // Sign extension is performed~
+
+   - The LESSON for this puzzle:
+     If you can't tell what a programdoes by looking at it, it probably doesn't
+     do what you want.
+
+     _Strive for clarity_.
+     Although a simple rule describes the /sign extension/ behavior of /widening
+     conversions/ involving signed and unsigned integral types, most programmers
+     don't know it. If your program depends on it, make your intentions clear.
+
+     To simplify,
+     your program should NEVER depends on (for most programmers) confusing
+     features without comments.
+
+** TODO Puzzle 7: Swap Meat
+   Q: What does the following program print?
+
+** TODO Puzzle 8: Dos Equis
+   Q: What does the following program print?
+
+** TODO Puzzle 9: Tweedledum
+   Q: What does the following program print?
+
+** TODO Puzzle 10: Tweedledee
+   Q: What does the following program print?
+
+* TODO Chapter 3. Puzzlers with Character
+  This chapter contains puzzles that concern
+  - strings
+  - characters
+  - other textual data.
+
+** DONE Puzzle 11: The Last Laugh
+   CLOSED: [2017-09-24 Sun 01:11]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class LastLaugh {
+         public static void main(String args[]) {
+             System.out.print("H" + "a");
+             System.out.print('H' + 'a');
+         }
+     }
+   #+END_SRC
+
+   A: ~Ha169~ will be printed out.
+      ~'H' + 'a'~ is calculated as ~72 + 97~.
+
+   - ~+~ is overloaded as /concatenation/ for ~String~'s.
+
+     ~+~ is normal integral numbers /plus/ for ~char~'s (/widening primitive
+     conversion/ [JLS 5.1.2, 5.6.2] will be applied automatically, the ~char~ is
+     promoted to ~int~).
+
+   - Solutions:
+     #+BEGIN_SRC java
+       // #1
+       StringBuffer sb = new StringBuffer();
+       sb.append('H');
+       sb.append('a');
+       System.out.println(sb);
+
+
+       // #2
+       System.out.print("" + 'H' + 'a');
+
+
+       // #3 - new to Java 5.0
+       System.out.printf("%c%c", 'H', 'a');
+
+
+       // #4
+       System.out.print(new String(new char[]{'H', 'a'}));
+
+
+       // #5
+       System.out.print(System.out.format("%c%c", 'H', 'a'));
+
+
+       // #6
+       System.out.print(new StringBuilder().append('H').append('a'));
+
+
+       // #7
+       System.out.print(String.valueOf('H') + 'a');
+     #+END_SRC
+
+   - The ~+~ operator performs string concatenation iff _at least one_ of its
+     operands is of type ~String~; otherwise, it performs addition.
+
+   - A lesson for language designers:
+     /Operator overloading/, even to the limited extent that it is supported in
+     Java, can be confusing.
+
+     _It may have been a mistake to overload the ~+~ operator for ~String~'s
+     concatenation_.
+
+** DONE Puzzle 12: ABC
+   CLOSED: [2017-09-24 Sun 23:05]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Abc {
+         public static void main(String[] args) {
+             String letters = "ABC";
+             char[] numbers = {'1', '2', '3'};
+             System.out.println(letters + " easy as " + numbers);
+         }
+     }
+   #+END_SRC
+   
+   A: =ABC easy as [C@16f0472= (the hash code part changes everytime)
+
+   - Although ~char~ is an /integral type/, many libraries treat it specially,
+     because ~char~ values usually represent characters rather than integers.
+
+     For example, passing a ~char~ value to ~println~ prints a Unicode character
+     rather than its numerical code.
+
+     + Character arrays get similar special treatment:
+       The ~char[]~ overloading of ~println~ prints all of the characters
+       contained in the array, and the ~char[]~ overloadings of ~String.valueOf~
+       and ~StringBuffer.append~ behave analogously.
+
+       This is why ~System.out.println(numbers)~ will do the right thing, and
+       print =123= out.
+
+     + The string concatenation operator, however, is not defined in terms of
+       these methods. It performs /string conversion/ on its operands and then
+       concatenate the result strings. Since ~char[]~ class only inherits the
+       ~toString~ method from ~Object~ [JLS 10.7].
+
+   - The =[C= part can be get through ~letters.getClass().getName()~.
+
+   - Solutions:
+     #+BEGIN_SRC java
+       // #1
+       System.out.println(letters + " easy as " +
+                          String.valueOf(numbers));
+
+
+       // #2
+       System.out.print(letters + " easy as ");
+       System.out.println(numbers);
+     #+END_SRC
+     + The reason that ~String.valueOf~ and ~System.out.println~ can work as we
+       want is we have a right type ~char[]~.
+
+     + Invokes the wrong overloading due to an improper type.
+       For example, replce the original ~numbers~ declaration line with
+       ~Object numbers = new char[] { '1', '2', '3' };~
+
+   - To summarize,
+     + ~char~ arrays is NOT strings.
+
+     + _To convert a ~char~ array to a string, invoke ~String.valueOf(char[])~._
+
+      Some library methods do provide stringlike support for ~char~ arrays,
+      typically having one overloading for ~Object~ and another for ~char[]~; only
+      the latter has the desired behavior.
+
+   - The lesson for language designers:
+     the ~char[]~ type should probably have overridden ~toString~ to return the
+     characters contained in the array.
+
+     More generally, the array types should probably have overridden ~toString~
+     to return a string representation of the contents of the array.
+
+** DONE Puzzle 13: Animal Farm
+   CLOSED: [2017-09-24 Sun 23:43]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class AnimalFarm {
+         public static void main(String[] args) {
+             final String pig = "length: 10";
+             final String dog = "length: " + pig.length();
+             System.out.println("Animals are equal: "
+                                + pig == dog);
+         }
+     }
+   #+END_SRC
+
+   A: =false=
+
+   - In Java, ~==~ is used to compare identity.
+     When compare identity, we need to consider /interned/ [JLS 15.28].
+
+     Two constant expressions of type ~String~ represent identical object
+     references. However, in the example above, ~dog~ is not initialized with a
+     constant expression.
+
+     Thus, ~pig == dog~ should be ~false~. However, this is not the real problem
+     for this puzzle.
+
+   - The actual problem of this puzzle is:
+     The precedences of ~+~ (plus) and ~+~ (concatenation) are different.
+     The argument of ~System.out.println~ is actually
+     ~("Animal are equal: " + pig) == dog~
+
+   - NOTE:
+     + When using the string concatenation operator, always parenthesize
+       nontrivial operands.
+
+     + Never write code that depends on /interning/ of string constants.
+
+       /interning/ is a tool used in design to reduce the memory footprint of the
+       virtual machine, _NOT as a tool for programmers_.
+
+       If you made a mistake due to /interning/, the compiler cannot help you --
+       /string literal/ is also of type ~String~.
+
+     + Use ~equals~ method.
+       ~System.out.println("Animals are equal: " + pig.equals(dog));~
+
+   - TWO lessons for language designers:
+     + this implies that it is problematic to overload the ~+~ operator to
+       perform string concatenation,
+
+     + /reference equality/ is more confusing than /value equality/ for immutable
+       types,
+
+       Perhaps the ~==~ operator SHOULD perform /value comparisons/ when applied
+       to immutable reference types.
+         One way to achieve this would be to make the ~==~ operator a shorthand
+       for the ~equals~ method, and to provide a _separate_ method to perform
+       reference identity comparison, akin to ~System.identityHashCode~.
+
+** DONE Puzzle 14: Escape Rout
+   CLOSED: [2017-09-25 Mon 03:01]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class EscapeRout {
+         public static void main(String[] args) {
+             // \u0022 is the Unicode escape for double quote (")
+             System.out.println("a\u0022.length() + \u0022b".length());
+         }
+     }
+   #+END_SRC
+
+   A: =2=
+
+   - _Java provides no special treatment for Unicode escapes within string
+     literals._
+
+     The compiler translates Unicode escapes into the characters they represent
+     before it parses the program into tokens, such as string literals [JLS 3.2].
+
+     This means the ~println~ line above can be written, and is also usually
+     written as ~System.out.println("a".length() + "b".length());~
+
+   - escape sequences ::
+        For example,
+     + ~\'~
+     + ~\"~
+     + ~\n~
+     + ~\t~
+     + ~\[~
+     + ~\\~
+
+   - octal escape :: =TODO=
+                     NO explanation.
+
+   - In summary,
+     + prefer /escape sequences/ to /Unicode escapes/ in string and character
+       literals.
+
+     + /Unicode escapes/ can be confusing because they are processed so _EARLY_
+       in the compilation sequence.
+
+     + Do not use (or NEVER use) /Unicode escapes/ to represent ASCII characters.
+       Inside of /string/ and /character literals/, use /escape sequences/;
+       outside of these literals, insert ASCII characters directly into the source file.
+
+** TODO Puzzle 15: Hello Whirled
+** TODO Puzzle 16: Line Printer
+** TODO Puzzle 17: Huh?
+** TODO Puzzle 18: String Cheese
+** TODO Puzzle 19: Classy Fire
+** TODO Puzzle 20: What's My Class?
+** TODO Puzzle 21: What's My Class, Take 2
+** TODO Puzzle 22: Dupe of URL
+** TODO Puzzle 23: No Pain, No Gain
+
+* TODO Chapter 4. Loopy Puzzlers
+  All the puzzles in this chapter concern loops.
+** TODO Puzzle 24: A Big Delight in Every Byte
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class BigDelight {
+         public static void main(String[] args) {
+             for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+                 if (b == 0x90)
+                     System.out.print("Joy!");
+             }
+         }
+     }
+   #+END_SRC
+
+   A: Nothing 
+
+   - ~0x90~ (+144) is out of the range (-128 ~ 127).
+
+   - mixed-type comparison ::
+        For example, in the above example code, compare ~byte~ value with ~int~
+        value.
+
+        Note: ~0x90~ is no doubt a ~int~ value. Want to change its type? Try to
+        cast it.
+
+   - 
+
+** DONE Puzzle 25: Inclement Increment
+   CLOSED: [2017-09-27 Wed 19:42]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Increment {
+         public static void main(String[] args) {
+             int j = 0;
+             for (int i = 0; i < 100; i++)
+                 j = j++;
+
+             System.out.println(j);
+         }
+     }
+   #+END_SRC
+
+   A: 0, which is just the value of ~j~ before this loop.
+
+   - The origin of this problem is the ~j = j++~ line.
+     This line is equivalent to:
+     #+BEGIN_SRC java
+       int tmp = j;
+       j = j + 1;
+       j = tmp;
+     #+END_SRC
+
+   - The lesson here is the same as the one we learn from Puzzle 7:
+     Do NOT assign to the same variable more than once in a single expression.
+
+     An expression containing multiple assignments to the same variable is
+     confusing and seldom does what you want.
+
+** DONE Puzzle 26: In the Loop
+   CLOSED: [2017-09-27 Wed 20:05]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class InTheLoop {
+         public static final int END = Integer.MAX_VALUE;
+         public static final int START = END - 100;
+
+         public static void main(String[] args) {
+             int count = 0;
+             for (int i = START; i <= END; i++)
+                 count++;
+             System.out.println(count);
+         }
+     }
+   #+END_SRC
+
+   A: infinite loop, and nothing will be printed out.
+
+   - When ~i~ equals ~END~ (~Integer.MAX_VALUE~), ~i++~ should still be
+     perfromed, and the result is the new ~i~ has the value of
+     ~Integer.MIN_VALUE~.
+
+   - Solutions:
+     + ~for (long i = START; i <= END; i++)~
+
+     + A solution of not pretty but doesn't resort to ~long~ type:
+       #+BEGIN_SRC java
+         int i = START;
+
+         do {
+             count++;
+         } while (i++ != END);
+       #+END_SRC
+
+   - =IMPORTANT= =TODO=
+     Given the paramount importance of clarity and simplicity, it is almost
+     always better to use a long index under these circumstances,
+
+     with perhaps _one exception_: If you are iterating over all (or nearly all)
+     the int values, it's about twice as fast to stick with an int.
+     #+BEGIN_SRC java
+       // Apply the function `f` to all four billion `int` values
+       int i = Integer.MIN_VALUE;
+
+       do {
+           f(i);
+       } while (i++ != Integer.MAX_VALUE);
+     #+END_SRC
+
+   - The lesson for language designers is the same as that of Puzzle 3:
+     + It may be worth considering support for arithmetic that does not overflow
+       silently.
+
+     + Also, it may be worth providing support for loops designed specifically to
+       iterate over ranges of integral values, as many languages do =TODO=
+       (=From Jian= I know a lot, but most of them use /map/ or /foreach/ form).
+
+** TODO Puzzle 27: Shifty i's
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Shifty {
+         public static void main(String[] args) {
+             int i = 0;
+             while (-1 << i ! = 0)
+                 i++;
+             System.out.println(i);
+         }
+     }
+   #+END_SRC
+   A: =TODO= 
+
+** TODO Puzzle 28: Looper
+   Q: What does the following program print?
+   A: 
+
+** TODO Puzzle 29: Bride of Looper
+   Q: What does the following program print?
+   A: 
+
+** TODO Puzzle 30: Son of Looper
+   Q: What does the following program print?
+   A: 
+
+** DONE Puzzle 31: Ghost of Looper
+   CLOSED: [2017-09-27 Wed 21:52]
+   =IMPORTANT=
+   Q: Provide a declaration for ~i~ that turns this loop into an infinite loop:
+   #+BEGIN_SRC java
+     while (i != 0)
+         i >>>= 1;
+   #+END_SRC
+
+   A: Any negative number of type ~byte~ or ~short~.
+
+   - compound assignment operator ::
+     + ~*=~
+     + ~/=~
+     + ~%=~
+     + ~+=~
+     + ~-=~
+     + ~<<=~
+     + ~>>=~
+     + ~>>>=~
+     + ~&=~
+     + ~^=~
+     + ~|=~
+
+   - Since ~>>>~ is an /unsigned right-shift operator/,
+     if there is NO
+     1. *widening* with (nigative) sign extension
+     2. THEN *narrowing* 
+     No infinite loop can be constructed.
+
+     Only /unsigned right-shift operator/ cannot ever satisfy this requirement.
+
+   - However, there is NOT ONLY /unsigned right-shift operator/.
+     We have /compound assignment operator/!!!
+
+     An _UNFORTUNATE fact_ about the /compound assignment operators/:
+     they can _SILENTLY_ perform /narrowing primitive conversions/ [JLS 15.26.2],
+     which are conversions from one numeric type to a less expressive numeric
+     type. /Narrowing primitive conversions/ can lose information about the
+     magnitude or precision of numeric values [JLS 5.1.3].
+
+     + To make this concrete, suppose we have ~short i = -1~;
+       1. Promotion
+          the value of ~i~ is promoted to an ~int~.
+            All arithmetic operations do this to operands of type ~short~,
+          ~byte~, or ~char~. This promotion is a /widening primitive conversion/
+          (with /sign extension/), so NO info is lost.
+
+           ~(short)0xffff~  --> ~0xffffffff~
+
+       2. Shift
+          ~0xffffffff~  --> ~0x7fffffff~
+
+       3. Finally, /narrowing primitive conversion/
+          To save a ~int~ value to a ~short~ variable, do the /narrowing primitive
+          conversion/.
+          ~0x7fffffff~ --> ~(short)0xffff~
+
+          _Back to where we start_
+
+     + The above steps can be applied to and any signed narrow integral (~short~
+       or ~byte~, but NOT ~char~) values, and construct a infinite loop.
+
+   - In summary,
+     _Do NOT use compound assignment operators on ~short~, ~byte~, or ~char~
+     variables._
+     (=From Jian= this is a general principle, though in this specific puzzle, we
+      cannot use ~char~ to construct a infinite loop -- here we need /signed narrow
+      primitive integral types/ and ~char~ is _unsigned_.
+
+   - The lesson for language designers:
+     languages _SHOULD NOT_ perform /narrowing conversions/ _SILENTLY_.
+
+     One could well argue that Java should have disallowed the use of /compound
+     assignment operators/ on ~short~, ~byte~, and ~char~ variables.
+
+** DONE Puzzle 32: Curse of Looper
+   CLOSED: [2017-09-28 Thu 20:19]
+   Q: Provide declarations for ~i~ and ~j~ that turn this loop into an infinite
+   loop:
+   #+BEGIN_SRC java
+     while (i <= j && j <= i && i != j) {
+     }
+   #+END_SRC
+
+   A: Use boxed type.
+
+   - The relation on the real numbers is said to be /antisymmetric/. Java's ~<=~
+     operator used to be /antisymmetric/ _BEFORE_ release 5.0, _but no longer_.
+
+   - UNTIL release 5.0, Java's /numerical comparison operators/ (~<~, ~<=~, ~>~,
+     and ~>=~) required both of their operands to be of a primitive numeric type
+     (~byte~, ~char~, ~short~, ~int~, ~long~, ~float~, or ~doulbe~) [JLS215.20.1]
+
+   - In release 5.0, the specification was _CHANGED_ to say that the type of each
+     operand must be _convertible_ to a primitive numeric type [JLS 15.20.1,
+     5.1.8].
+
+   - The ~<=~ operator is NOT antisymmetric on operands of these types, because
+     Java's /equality operators/ (~==~ and ~!=~) perform reference indentity
+     comparison rather than value comparison when applied to object references.
+
+   - Here is one solution to the given question:
+     #+BEGIN_SRC java
+       Integer i = new Integer(0);
+       Integer j = new Integer(0);
+     #+END_SRC
+
+     The first two subexpressions (~i <= j~ and ~j <= i~) perform /unboxing
+     conversions/ [JLS 5.1.8] on ~i~ and ~j~ and compare the resulting ~int~
+     values numerically.
+
+     The third subexpression (~i != j~) performss an /identity comparison/ on the
+     object references ~i~ and ~j~.
+
+   - The reason that we have this wierd and error-prone feature is that we have
+     to maintain the backward compaitability -- use ~==~ and ~!=~ to compare the
+     /identity comparison/ is NOT a good design, but we cannot just change it.
+
+   - In summary, there is a _fundamental difference_ in the way numerical
+     comparison operators and equality operators behave when both operands are
+     of boxed numeric types: Numerical comparison operators perform value
+     comparisons, while equality operators performreference identity
+     comparisons.
+
+   - For the language designers, designers should think about how the language
+     might evolve and should attempt to minimize constraints on evolution.
+
+** TODO Puzzle 33: Looper Meets the Wolfman
+   Q: What does the following program print?
+   A: 
+
+** TODO Puzzle 34: Down for the Count
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Count {
+         public static void main(String[] args) {
+             final int START = 2000000000;
+             int count = 0;
+             for (float f = START; f < START + 50; f++)
+                 count++;
+             System.out.println(count);
+         }
+     }
+   #+END_SRC
+
+   A: =0=
+
+   - =TODO=
+
+** DONE Puzzle 35: Minute by Minute
+   CLOSED: [2017-09-28 Thu 21:10]
+   Q: What does the following program print?
+   #+BEGIN_SRC java
+     public class Clock {
+         public static void main(String[] args) {
+             int minutes = 0;
+             for (int ms = 0; ms < 60 * 60 * 1000; ms++)
+                 fir (ms % 60*1000 == 0)
+                     minutes++;
+             system.out.println(minutes);
+         }
+     }
+   #+END_SRC
+
+   A: =6000=
+
+   - ~ms % 60*1000~ is actually ~(ms % 60) * 1000~ rather than ~ms % (60*1000)~.
+
+   - It seems the solution is learn the precedence of operators and add
+     parentheses.
+
+     However, this solution is NOT good.
+
+   - A better way to fix the program - _repalce all magic numbers with approriate-
+     ly_ named constants:
+     #+BEGIN_SRC java
+       public class Clock {
+           private static final int MS_PER_HOUR = 60 * 60 * 1000;
+           private static final int MS_PER_MINUTE = 60 * 1000;
+
+           public static void main(String[] args) {
+               int minutes = 0;
+               for (int ms = 0; ms < MS_PER_HOUR; ms++)
+                   if (ms % MS_PER_MINUTE == 0)
+                       minutes++;
+               System.out.println(minutes);
+           }
+       }
+     #+END_SRC
+
+   - The lesson we learned here:
+     _NEVER use spacing to express grouping; use paretheses._
+     Spacing can be deceptive, but parentheses never lie.
+
+     =From Jian= When the programmer is 100% sure about what he/she is doing, use
+     space to express grouping is NOT a bad idea.
+
+* TODO Chapter 5. Exceptional Puzzlers
+  - The puzzles in this chapter concern exceptions and the closely related
+    ~try-finally~ statement.
+
+  - A word of caution: _Puzzle 44_ is exceptionally difficult.
+
+** DONE Puzzle 36: Indecision
+   CLOSED: [2017-10-03 Tue 18:54]
+   Q: Is the code below legal? If it is, what will it print.
+   #+BEGIN_SRC java
+     public class Indecisive {
+         public static void main(String[] args) {
+             System.out.println(decision());
+         }
+
+         static boolean decision() {
+             try {
+                 return true;
+             } finally {
+                 return false;
+             }
+         }
+     }
+   #+END_SRC
+
+   A: It is compiled without any error.
+      It will print =false=.
+
+   - [JLS 14.20.2]
+     #+BEGIN_QUOTE
+     In a ~try-finally~ statement, the ~finally~ block is always executed when
+     control leaves the ~try~ block.
+     #+END_QUOTE
+
+     This is true whether the ~try~ block completes normally or _abruptly_.
+
+     _abrupt completion_ of a statement or block occurs when:
+     + it throws an exception
+     + it executes a ~break~ or ~continue~ to an enclosing statement
+     + it executes a ~return~ from the method (as in THIS program)
+
+   - Discarding the reason for abrupt completion is almost never what you want,
+     because the original reason for abrupt completion might be important to the
+     behavior of a program.
+
+   - In summary,
+     every ~finally~ block should complete normally, barring an unchecked
+     exception.
+
+     Never exit a ~finally~ block with a ~return~, ~break~, ~continue~, or
+     ~throw~, and Never allow a checked exception to propagate out of a ~finally~
+     block.
+
+   - For language designers,
+     =TODO= =???= =Re-read=
+     ~finally~ blocks should perhaps be required to complete normally in the
+     absence of unchecked exceptions. Toward this end, a ~try-finally~ construct
+     would require that the ~finally~ block can complete normally [JLS 14.21]. A
+     return, break, or ~continue~ statement that transfers control out of a
+     ~finally~ block would be disallowed, as would any statement that could cause
+     a checked exception to propagate out of the ~finally~ block.
+
+** DONE Puzzle 37: Exceptionally Arcane
+   CLOSED: [2017-10-03 Tue 19:25]
+   Q: What does each of the following three programs do?
+      Do NOT assume that all of them compile:
+      #+BEGIN_SRC java
+        import java.io.IOException;
+
+        // #1
+        public class Arcane1 {
+            public static void main(String[] args) {
+                try {
+                    System.out.println("Hello world");
+                } catch (IOException e) {
+                    System.out.println("I've never seen println fail!");
+                }
+            }
+        }
+
+
+        // #2
+        public class Arcane2 {
+            public static void main(String[] args) {
+                try {
+                    // If you have nothing nice to say, say nothing
+                } catch (Exception e) {
+                    System.out.println("This can't happen");
+                }
+            }
+        }
+
+
+        // #3
+        interface Type1 {
+            void f() throws CloneNotSupportedException;
+        }
+
+        interface Type2 {
+            void f() throws InterruptedException;
+        }
+
+        interface Type3 extends Type1, Type2 {
+        }
+
+        public class Arcane3 implements Type3 {
+            public void f() {
+                System.out.println("Hello world");
+            }
+
+            public static void main(String[] args) {
+                Type3 t3 = new Arcane3();
+                t3.f();
+            }
+        }
+      #+END_SRC
+
+      A:
+         =#1= can't be compiled
+
+         [JLS 11.2.3]
+         It is a compile-time error for a ~catch~ clause to catch a checked
+         exception type ~E~ if the corresponding ~try~ clause can't ~throw~ an
+         exception of some SUBTYPE of ~E~.
+
+
+         =#2= can be compiled
+
+         It seems that #2 is similar to #1. You many think it cannot be compiled.
+         However, this is a _corner case_:
+         The JLS is not terribly clear on this point,
+         ~catch~ clauses that catch ~Exception~ or ~Throwable~ are legal
+         regardless of the contents of the corresponding ~try~ clause.
+
+         However, this ~try-catch~ is meaningless
+
+
+         =#3= can be compiled
+         The set of /checked exceptions/ that a method can throw is the
+         _INTERSECTION of the sets_ of checked exceptions that it is declared to
+         throw in all applicable types, NOT the UNION.
+
+         As a result, the ~f~ method on an object whose static type is ~Type3~
+         can't throw any /checked exceptions/ at all. Therefore
+
+      - In summary,
+        there is NO subtle bugs in this puzzle, but they can be a bit surprising
+        the first time you see them.
+
+** TODO Puzzle 38: The Unwelcome Guest
+   Q: xxx
+   #+BEGIN_SRC java
+     public class UnwelcomeGuest {
+         public static final long GUEST_USER_ID = -1;
+
+         private static final long USER_ID;
+
+         static {
+             try {
+                 USER_ID = getUserIdFromEnvironment();
+             } catch (IdUnavailableException e) {
+                 USER_ID = GUEST_USER_ID;
+                 System.out.println("Logging in as guest");
+             }
+         }
+
+         private static long getUserIdFromEnvironment()
+             throws IdUnavailableException {
+             throw new IdUnavailableException();  // Simulate an error
+         }
+
+         public static void main(String[] args) {
+             System.out.println("User ID: " + USER_ID);
+         }
+     }
+
+     class IdUnavailableException extends Exception {
+         IdUnavailableException() { }
+     }
+   #+END_SRC
+
+   A: xxx
+
+** TODO Puzzle 39: Hello, Goodbye
+** TODO Puzzle 40: The Reluctant Constructor
+** TODO Puzzle 41: Field and Stream
+** TODO Puzzle 42: Thrown for a Loop
+** TODO Puzzle 43: Exceptionally Unsafe
+** TODO Puzzle 44: Cutting Class
+** TODO Puzzle 45: Exhausting Workout
+
+* TODO Chapter 6. Classy Puzzlers
+** Puzzle 46: The Case of the Confusing Constructor
+** Puzzle 47: Well, Dog My Cats!
+** Puzzle 48: All I Get Is Static
+** Puzzle 49: Larger Than Life
+** Puzzle 50: Not Your Type
+** Puzzle 51: What's the Point?
+** Puzzle 52: Sum Fun
+** Puzzle 53: Do Your Thing
+** Puzzle 54: Null and Void
+** Puzzle 55: Creationism
+
+* TODO Chapter 7. Library Puzzlers
+** Puzzle 56: Big Problem
+** Puzzle 57: What's in a Name?
+** Puzzle 58: Making a Hash of It
+** Puzzle 59: What's the Difference?
+** Puzzle 60: One-Liners
+** Puzzle 61: The Dating Game
+** Puzzle 62: The Name Game
+** Puzzle 63: More of the Same
+** Puzzle 64: The Mod Squad
+** Puzzle 65: A Strange Saga of a Suspicious Sort
+
+* TODO Chapter 8. Classier Puzzlers
+** Puzzle 66: A Private Matter
+** Puzzle 67: All Strung Out
+** Puzzle 68: Shades of Gray
+** Puzzle 69: Fade to Black
+** Puzzle 70: Package Deal
+** Puzzle 71: Import Duty
+** Puzzle 72: Final Jeopardy
+** Puzzle 73: Your Privates Are Showing
+** Puzzle 74: Identity Crisis
+** Puzzle 75: Heads or Tails?
+** A Glossary of Name Reuse
+
+* TODO Chapter 9. More Library Puzzlers
+** Puzzle 76: Ping Pong
+** Puzzle 77: The Lock Mess Monster
+** Puzzle 78: Reflection Infection
+** Puzzle 79: It's a Dog's Life
+** Puzzle 80: Further Reflection
+** Puzzle 81: Charred Beyond Recognition
+** Puzzle 82: Beer Blast
+** Puzzle 83: Dyslexic Monotheism
+** Puzzle 84: Rudely Interrupted
+** Puzzle 85: Lazy Initialization
+
+* TODO Chapter 10. Advanced Puzzlers
+** Puzzle 86: Poison-Paren Litter
+** Puzzle 87: Strained Relations
+** Puzzle 88: Raw Deal
+** Puzzle 89: Generic Drugs
+** Puzzle 90: It's Absurd, It's a Pain, It's Superclass!
+** Puzzle 91: Serial Killer
+** Puzzle 92: Twisted Pair
+** Puzzle 93: Class Warfare
+** Puzzle 94: Lost in the Shuffle
+** Puzzle 95: Just Desserts
+
+* TODO Appendix A. Catalog of Traps and Pitfalls
+** Section 1. Lexical Issues
+** Section 2. Integer Arithmetic
+** Section 3. Floating-Point Arithmetic
+** Section 4. Expression Evaluation
+** Section 5. Flow of Control
+** Section 6. Class Initialization
+** Section 7. Instance Creation and Destruction
+** Section 8. Other Class- and Instance-Related Topics
+** Section 9. Name Reuse
+** Section 10. Strings
+** Section 11. I/O
+** Section 12. Threads
+** Section 13. Reflection
+** Section 14. Serialization
+** Section 15. Other Libraries
+
+* TODO Appendix B. Notes on the Illusions
+** Ambiguous Figures
+** Impossible Figures
+** Geometrical Illusions: Size
+** Geometrical Illusions: Direction
+** Subjective Contours
+** Anomalous Motion Illusions
+** Illusions of Lightness
+** Compound Illusions
+
+* TODO References
+* Index

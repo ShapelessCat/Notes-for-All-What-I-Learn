@@ -1,0 +1,649 @@
+#+TITLE: Modern Compiler Implementation in ML
+#+VERSION: 1999 (corrected)
+#+AUTHOR: Andrew W. Appel
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Preface - ix
+  CLOSED: [2019-05-11 Sat 20:05]
+* Part I Fundamentals of Compilation
+* TODO 1 Introduction - 3
+  - This book describes
+    + techniques
+    + data structures
+    + algorithms
+    for translating _programming languages_ into _executable code_.
+
+  - A modern compiler is often organized into MANY _phases_,
+    EACH operating on a DIFFERENT _abstract "language."_
+      _These chapters of this book follow the organization of a compiler_,
+    *each covering a successive phase.*
+
+  - =TODO= NOTE
+
+  - FIGURE 1.1.  Phases of a compiler, and interfaces between them.
+
+  - =TODO= NOTE
+
+** DONE 1.1 Modules and interfaces - 4 
+   CLOSED: [2017-12-17 Sun 18:43]
+
+*** Description of The Phases - 5
+    - Each chapter of Part I of this book describes one compiler phase, as shown
+      in Table 1.2
+
+    - =TODO=
+      =RE-READ LATER=
+      This modularization is typical of many real compilers. But
+      + some compilers combine the below phases in this compiler into one phase
+        1. /Parse/
+        2. /Semantic Analysis/
+        3. /Translate/
+        4. /Canonicalize/
+
+      + others put /Instruction Selection/ _much later_ than I have done, and
+        combine it with /Code Emission/.
+
+      + Simple compilers _omit_ the phases below
+        1. /Control Row Analysis/
+        2. /Data Row Analysis/
+        3. /Register Allocation/
+
+    - The compiler in this book is as simple as possible, but no simpler.
+
+** TODO 1.2 Tools and software - 5 
+   - _TWO_ of the MOST USEFUL _abstractions_ used in modern compilers are
+     + /context-free grammars/, for /parsing/
+     + /regular expressions/, for /lexical analysis/
+
+   - To make best use of these abstractions it is helpful to have special tools,
+     such as
+     + /Yacc/,
+       which converts a /grammar/ into a /parsing program/
+
+     + /Lex/,
+       which converts a /declarative specification/ into a /lexical analysis
+       program/
+
+   - Fortunately, good versions of these tools are available for ML.
+       The programming project described in this book makes use of them:
+     /ML-Yacc/, /ML-Lex/, and /Standard ML of New Jersey Software Library/.
+
+     + =from Jian=
+       * In smlnj, /ML-Yacc/ is ~ml-yacc~, and /ML-Lex/ is ~ml-lex~;
+
+       * In mlton (not use in this book), /ML-Yacc/ is ~mlyacc~, and /ML-Lex/ is
+         ~mllex~.
+
+   - All the info for these tools can be found in
+     http://www.cs.princeton.edu/~appel/modern/ml
+
+   - The base directory in this book is refered as ~$TIGER/~
+
+** TODO 1.3 Data structures for tree languages - 7 
+   - Many of the important /data structures/ used in a compiler are /intermediate
+     representations/ of the program being compiled.
+
+   - Often these _representations_ take th form of /trees/,
+     =TODO= =???=
+     with several note types, each of which has different attributes.
+
+   - Such /trees/ can occur at many of the phase-interfaces shown in Figure 1.1.
+
+   - *Modularity principles for ML programs*
+     1. Each phase or module of the compiler belongs in its own structure.
+
+     2. ~open~ declarations will not be used.
+        + Don't ~open A.F; open A.G; open B; open C;~. With this statements, you
+          cannot know which file contains ~X~.
+
+        + Use structure abbreviations:
+          ~structure W=A.F.W and X=A.G.X and Y=B.Y and Z=C.Z~
+
+   - *Modularity principles for ML programs*
+     A compiler can be a big program; *careful attention to /modules/ and /interfaces/
+     prevents chaos*. We will use these principles in writer a compiler in ML:
+     1. EACH /phase/ or /module/ of the compiler belongs in its own structure.
+
+     2. ~open~ declarations will *NOT be used*.
+        + If an ML file begins with ~open A.F; open A.G; open B; open C;~
+          then you (the human reader) will have to look outside this file to tell
+          which structure defines the ~X~ that is used in the expression ~X.put()~;
+
+        + *Structure abbreviations are a better solution*.
+          ~Structure W=A.F.W and X=A.G.X and Y=B.Y and Z=C.Z~
+          then you can _tell without looking outside this file_ that ~X~ comes
+          from ~A.G.~
+
+** |PROGRAM| STRAIGHT-LINE PROGRAM INTERPRETER
+** |EXERCISES|
+   - Exercise 1.1
+     #+begin_src sml
+       (* 1.1 *)
+       type key = string
+
+       datatype tree =
+                LEAF
+              | TREE of tree * key * tre
+
+       val empty = LEAF
+
+       fun insert (key, LEAF) = TREE(LEAF, key, LEAF)
+         | insert (key, TREE(l, k, r)) =
+           if key < k then
+               TREE(insert(key, l), k, r)
+           else if key > k then
+               TREE(l, k, insert(key, r))
+           else
+               TREE(l, key, r)
+     #+end_src
+     + a:
+       #+begin_src sml
+         fun member (key, LEAF) = false
+           | member (key, TREE(l, k, r)) =
+             if k = key then true
+             else member (key, l) orelse member (key, r)
+       #+end_src
+
+     + b:
+       #+begin_src sml
+         type key = string
+
+         datatype 'a tree =
+                    LEAF
+                  | TREE of 'a tree * (key, 'a) * 'a tree
+
+         fun insert (LEAF, key, value) = TREE(LEAF, (key, value), LEAF)
+           | insert (TREE(l, kv as (k, _), r), key, value) =
+             if key < k then
+                 TREE(insert(l, key, value), kv, r)
+             else if key > k then
+                 TREE(l, kv, insert(r, key, value))
+             else
+                 TREE(l, (k, value), r)
+
+         fun member (key, LEAF) = false
+           | member (key, TREE(l, (k, _), r)) =
+             if key = k then true
+             else member (key, l) orelse member (key, r)
+
+         fun lookup (LEAF, key) = raise Empty
+           | lookup (TREE(l, (k, v), r), key) =
+             if key = k then
+                 v
+             else if key > k then
+                 lookup(r, key)
+             else
+                 lookup(l, key)
+       #+end_src
+
+* TODO 2 Lexical Analysis - 14
+  - To _translate a program from one language into another_, a compiler must first
+    pull it apart and understand its structure and meaning, then put it together in
+    a different way.
+    + The /front end of the compiler/ performs *analysis*;
+    + The /back end/ does *synthesis*.
+
+  - The /analysis/ is usually broken up into
+    + /Lexical analysis/:
+      breaking the input into individual words or "tokens";
+
+    + /Syntax analysis/:
+      parsing the phrase structure of the program; and
+
+    + /Semantic analysis/:
+      calculating the program's meaning.
+
+  - =TODO=
+
+** 2.1 Lexical tokens - 15
+   - =TODO= NOTE
+
+   - Any reasonable programming language serves to implement an ad hoc lexer.
+
+     _BUT_ we will:
+     1. *specify* lexical tokens using the /formal language of regular expressions/,
+
+     2. *implement* lexers using /deterministic finite automata/, and
+
+     3. use _mathematics_ to *connect* the two.
+
+     This will lead to simpler and more readable /lexical analyzers/.
+
+** 2.2 Regular expressions - 16
+** 2.3 Finite automata - 19
+*** Recognizing the longest match - 21
+
+** 2.4 Nondeterministic finite automata - 22
+*** Converting a Regular Expression to an NFA - 23
+*** Converting an NFA to a DFA - 25
+
+** 2.5 ML-Lex: a lexical analyzer generator - 28
+*** Start States - 30
+
+** |PROGRAM| Lexical Analysis - 31
+** |FURTHER READING| - 33
+** |EXERCISES| - 34
+
+* TODO 3 Parsing - 38
+** 3.1 Context-free grammers - 40
+*** Derivations - 41
+*** Parse Trees - 42
+*** Ambiguous Grammars - 42
+*** End-of-file Marker - 45
+
+** 3.2 Predictive parsing - 45
+*** First and follow sets - 47
+*** Constructing a Predictive Parser - 50
+*** Eliminating left recursion - 51
+*** Left factoring - 52
+*** Error recovery - 53
+
+** 3.3 LR parsing - 55
+*** LR parsing engine - 55
+*** LR(0) parser generation - 58
+*** SLR parser generation - 61
+*** LR(1) items; LR(1) parser table - 63
+*** LALR(1) parsing tables - 64
+*** Hierarchy of grammar classes - 66
+*** LR Parsing of ambiguous grammars - 66
+
+** 3.4 Using parser generators - 68
+*** Conflicts - 69
+*** Precedence directives - 71
+*** Syntax versus semantics - 74
+
+** 3.5 Error recovery - 75
+*** Recovery using the error symbol - 76
+*** Global error repair - 78
+
+** |PROGRAM| Parsing - 78
+** |FURTHER READING| - 82
+** |EXERCISES| - 83
+
+* TODO 4 Abstract Syntax - 87
+** 4.1 Semantic actions - 87
+*** Recursive descent - 87
+*** ML-yacc-generated Parsers - 89
+*** A mini-interpreter in semantic actions - 91
+*** An imperative interpreter in semantic actions - 92
+
+** 4.2 Abstract parse trees - 92 
+*** Positions - 95
+*** Abstract syntax for Tiger - 97
+
+** |PROGRAM| Abstract syntax - 100
+** |FURTHER READING| - 101
+** |EXERCISES| - 102
+
+* TODO 5 Semantic Analysis - 103
+** 5.1 Symbol tables - 103
+*** Multiple symbol tables - 105
+*** Efficient imperative symbol tables - 105
+*** Efficient functional symbol tables - 107
+*** Symbols in the Tiger Compiler - 108
+*** Imperative-style symbol tables - 111
+
+** 5.2 Bindings for the Tiger compiler - 111
+*** Environments - 113
+
+** 5.3 Type-checking expressions - 114
+*** Type-checking variables, subscripts, and fields - 116
+
+** 5.4 Type-checking declarations - 117
+*** Variable declarations - 117
+*** Type declarations - 118
+*** Function declarations - 118
+*** Recursive declarations - 119
+
+** |PROGRAM| Type-checking - 121
+** |EXERCISES| - 122
+
+* TODO 6 Activation Records - 124
+*** Higher-order functions - 125
+
+** 6.1 Stack frames - 126
+*** The frame pointer - 128
+*** Registers - 128
+*** Parameter passing - 129
+*** Return addresses - 131
+*** Frame-resident variables - 131
+*** Static links - 132
+
+** 6.2 Frames in the Tiger compiler - 134
+*** Representation of frame descriptions - 136
+*** Local variables - 137
+*** Calculating escapes - 138
+*** Temporaries and labels - 139
+*** Two layers of abstraction - 140
+*** Managing static links - 142
+*** Keeping track of levels - 143
+
+** |PROGRAM| Frames - 143
+** |FURTHER READING| - 144
+** |EXERCISES| - 144
+
+* TODO 7 Translation to Intermediate Code - 148
+** 7.1 Intermediate representation trees - 149
+** 7.2 Translation into trees - 152
+*** Kinds of expressions - 152
+*** Simple variables - 154
+*** Following static links - 156
+*** Structured L-values - 158
+*** Subscripting and field selection - 159
+*** A Sermon on safety - 160
+*** Arithmetic - 161
+*** Conditionals - 161
+*** Strings - 163
+*** Record and array creation - 163
+*** While loops - 165
+*** For loops - 166
+*** Function call - 166
+
+** 7.3 Declarations - 167
+*** Variable definition - 167
+*** Function definition - 167
+*** Fragments - 169
+
+** |PROGRAM| Translation to trees - 170
+** |EXERCISES| - 170
+
+* TODO 8 Basic Blocks and Traces - 173
+** 8.1 Canonical trees - 174
+*** Transformations on ESEQ - 174
+*** General rewriting rules - 175
+*** Moving calls to top level - 178
+*** A linear list of statements - 179
+
+** 8.2 Taming conditional branches - 179
+*** Basic blocks - 180
+*** Traces - 181
+*** Finishing up - 182
+*** Optiimal traces - 183
+
+** |FURTHER READING| - 183
+** |EXERCISES| - 184
+
+* TODO 9 Instruction Selection - 186
+*** Tree patterns - 186
+*** Optimal and optimum tilings - 189
+
+** 9.1 Algorithms for instruction selection - 189
+*** Maximal munch - 190
+*** Dynamic programming - 191
+*** Tree grammars - 193
+*** Fast matching - 196
+*** Efficiency of tiling algorithms - 196
+
+** 9.2 CISC machines - 197
+** 9.3 Instruction selection for the Tiger compiler - 200
+*** Abstract assembly-language instructions - 201
+*** Producing assembly instructions - 203
+*** Procedure calls - 203
+*** If there's no frame pointer - 206
+
+** |PROGRAM| Instruction selection - 207
+*** Register lists - 208
+
+** |FURTHER READING| - 209
+** |EXERCISES| - 210
+
+* TODO 10 Liveness Analysis - 211
+** 10.1 Solution of dataflow equations - 213
+*** Calculation of liveness - 213
+*** Representation of sets - 216
+*** Time complexity - 216
+*** Least fixed points - 217
+*** Static vs. dynamic liveness - 218
+*** Interference graphs - 220
+
+** 10.2 Liveness in the Tiger compiler - 222
+*** Graphs - 222
+*** Control-flow graphs - 223
+*** Liveness analysis - 224
+
+** |PROGRAM| Constructing flow graphs - 226
+** |PROGRAM| Liveness - 226
+** |EXERCISES| - 226
+
+* TODO 11 Register Allocation - 228
+** 11.1 Coloring by simplification - 229
+*** Example - 230
+
+** 11.2 Coalescing - 232
+*** Spilling - 235
+
+** 11.3 Precolored nodes - 236
+*** Temporary copies of machine registers - 236
+*** Caller-save and callee-save registers - 237
+*** Example with precolored nodes - 237
+
+** 11.4 Graph coloring implementation - 241
+*** Move-work-list management - 242
+*** Data structures - 242
+
+** 11.5 Register allocation for trees - 250
+** |PROGRAM| Graph coloring - 253
+*** Advanced project: Spilling - 254
+*** Advanced project: Coalescing - 254
+
+** |FURTHER READING| - 254
+** |EXERCISES| - 255
+
+* TODO 12 Putting It All Together - 258
+** |PROGRAM| Procedure entry/exit - 260
+** |PROGRAM| Making it work - 262
+** 
+* Part II Advanced Topics
+* TODO 13 Garbage Collection - 267
+** 13.1 Mark-and-sweep collection - 267
+** 13.2 Reference counts - 272
+** 13.3 Copying collection - 274
+** 13.4 Generational collection - 279
+** 13.5 Incremental collection - 281
+** 13.6 Baker's algorithm - 284
+** 13.7 Interface to the compiler - 285
+*** Fast allocation - 285
+*** Describing data layouts - 286
+*** Derived pointers - 287
+
+** |PROGRAM| Descriptors - 288
+** |PROGRAM| Garbage collection - 289
+** |FURTHER READING| - 289
+** |EXERCISES| - 291
+
+* TODO 14 Object-Oriented Languages - 293
+** 14.1 Classes - 293
+** 14.2 Single inheritance of data fields - 296
+*** Methods - 297
+
+** 14.3 Multiple inheritance - 298
+** 14.4 Testing class membership - 300
+** 14.5 Private fields and methods - 304
+** 14.6 Classless languages - 304
+** 14.7 Optimizing object-oriented programs - 305
+** |PROGRAM| Object-Tiger - 306
+** |FURTHER READING| - 306
+** |EXERCISES| - 307
+
+* TODO 15 Functional Programming Languages - 309
+** 15.1 A simple functional language - 310
+** 15.2 Closures - 312
+*** Heap-allocated activation records - 312
+
+** 15.3 Immutable variables - 313
+*** Continuation-based I/O - 316
+*** Optimization of pure functional languages - 318
+
+** 15.4 Inline expansion - 320
+** 15.5 Closure conversion - 326
+** 15.6 Efficient tail recursion - 329
+** 15.7 Lazy evaluation - 331
+*** Call-by-name evaluation - 332
+*** Call-by-need - 333
+*** Evaluation of a lazy program - 334
+*** Optimization of lazy functional programs - 335
+*** Strictness analysis - 338
+
+** |FURTHER READING| - 341
+** |PROGRAM| Compiling functional languages - 342
+** |EXERCISES| - 343
+
+* TODO 16 Polymorphic Types - 344
+** 16.1 Parametric polymorphism - 345
+*** An explicitly typed polymorphic language - 346
+*** Polymorphic type-checking - 348
+
+** 16.2 Type inference - 353
+*** An implicitly typed polymorhpic language - 356
+*** Algorithm for type inference - 356
+*** The power of hindley-milner types - 362
+
+** 16.3 Representation of polymorphic variables - 363
+*** Expansion of polymorphic functions - 356
+*** Fully boxed translations - 366
+*** Coercion-based representation analysis - 367
+*** Passing types as run-time arguments - 371
+
+** 16.4 Resolution of static overloading - 372
+** |FURTHER READING| - 373
+** |EXERCISES| - 374
+
+* TODO 17 Dataflow Analysis - 377
+*** No magic bullet - 377
+
+** 17.1 Intermediate representation for flow analysis - 378
+*** Quadruples - 379
+
+** 17.2 Various dataflow analyses - 381
+*** Reaching definitions - 381
+*** Available expressions - 383
+*** Reaching expression - 385
+*** Liveness analysis - 385
+
+** 17.3 Transformations using dataflow analysis - 386
+*** Common-subexpression elimination - 386
+*** Constant propagation - 386
+*** Copy propagation - 386
+*** Dead-code elimination - 387
+
+** 17.4 Speeding up dataflow analysis - 387
+*** Bit vectors - 388
+*** Basic blocks - 388
+*** Ordering the nodes - 389
+*** Use-def and def-use chains - 390
+*** Work-list algorithms - 390
+*** Incremental dataflow analysis - 391
+
+** 17.5 Alias analysis - 396
+*** Alias analysis based on types - 397
+*** Alias analysis based on flow - 397
+*** Using may-alias information - 400
+*** Alias analysis in strict pure-functional languages - 401
+
+** |FURTHER READING| - 401
+** |EXERCISES| - 402
+
+* TODO 18 Loop Optimizations - 404
+*** Reducible flow graphs - 404
+
+** 18.1 Dominators - 407
+*** Algorithm for finding dominators - 407
+*** Immediate dominators - 408
+*** Loops - 409
+*** Loop preheader - 410
+
+** 18.2 Loop-invariant computations - 412
+*** Hoisting - 412
+
+** 18.3 Induction variables - 413
+*** Hoisting - 412
+*** Detection of induction variables - 416
+*** Strength reduction - 416
+*** Elimination - 418
+*** Rewriting comparisons - 418
+
+** 18.4 Array-bounds checks - 419
+** 18.5 Loop unrolling - 423
+** |FURTHER READING| - 424
+** |EXERCISES| - 425
+
+* TODO 19 Static Single-Assignment Form - 427
+** 19.1 Converting to SSA form - 430
+*** Criteria for inserting \phi{}-functions - 430
+*** The dominance frontier - 432
+*** Inserting \phi{}-functions - 434
+*** Renaming the variables - 436
+*** Edge splitting - 436
+
+** 19.2 Efficient computation of the dominator tree - 438
+*** Depth-first spanning trees - 438
+*** Semidominators - 440
+*** The lengauer-tarjan algorithm - 441
+
+** 19.3 Optimization algorithms using SSA - 445
+*** Dead-code elimination - 445
+*** Simple constant propagation - 446
+*** Conditional constant propagation - 447
+*** Preserving the dominance property - 450
+
+** 19.4 Arrays, pointers, and memory - 451
+*** Memory dependence - 452
+
+** 19.5 The control-dependence graph - 453
+*** Aggressive dead-code elimination - 455
+
+** 19.6 Converting back from SSA form - 456
+*** Liveness analysis for SSA - 457
+
+** 19.7 A functional intermediate form - 458
+** |FURTHER READING| - 462
+** |EXERCISES| - 464
+
+* TODO 20 Pipelining and Scheduling - 468
+** 20.1 Loop scheduling without resource bounds - 472
+** 20.2 Resource-bounded loop pipelining - 476
+*** Modulo scheduling - 476
+*** Finding the minimum initiation interval - 479
+*** Other control flow - 482
+*** Should the compiler schedule instructions? - 483
+
+** 20.3 Branch prediction - 484
+*** Static branch prediction - 485
+*** Should the compiler predict branches? - 486
+
+** |FURTHER READING| - 487
+** |EXERCISES| - 488
+
+* TODO 21 The Memory Hierarchy - 492
+** 21.1 Cache organization - 493
+** 21.2 Cache-block alignment - 496
+*** Alignment in the instruction cache - 497
+
+** 21.3 Prefetching - 498
+** 21.4 Loop interchange - 504
+** 21.5 Blocking - 505
+** 21.6 Garbage collection and the memory hierarchy - 508
+** |FURTHER READING| - 509
+** |EXERCISES| - 510
+
+* TODO Appendix: Tiger Language Reference Manual - 512
+** A.1 Lexical issues - 512
+** A.2 Declarations - 512
+*** Data types - 513
+*** Variables - 514
+*** Functions - 514
+*** Scope rules - 514
+
+** A.3 Variables and expressions - 515
+*** L-values - 515
+*** Expressions - 516
+*** Programs - 519
+
+** A.4 Standard library - 519
+** A.5 Sample Tiger programs - 520
+*** QUEENS.TIG - 520
+*** MERGE.TIG - 521
+
+* Bibliography - 522
+* Index - 531

@@ -1,0 +1,408 @@
+#+TITLE: The tidyverse Style Guide
+#+AUTHOR: Hadley Wickham
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+TODO _RE-READ required_ - _Count of reading times: 1_
+* DONE Welcome
+  CLOSED: [2020-02-23 Sun 14:12]
+  Two R packages support this style guide:
+  - *styler*
+    allows you to interactively restyle selected text, files, or entire
+    projects. It includes an RStudio add-in, the easiest way to re-style
+    existing code.
+
+  - *lintr*
+    performs automated checks to confirm that you conform to the style guide.
+
+* DONE I Analyses
+  CLOSED: [2020-02-23 Sun 14:11]
+** DONE 1 Files
+   CLOSED: [2020-02-23 Sun 00:12]
+*** 1.1 Names
+    - Extension: .R
+
+    - Stick with:
+      + numbers
+      + letters
+      + -
+      + _
+
+    - If use prefixed number as a particular order,
+      remember to pad 0's to make the number prefixes equal width.
+      + Later realized missing steps should be in the pattern like ~02a~, ~02b~.
+
+    - _Keep the file names lowercase._
+      This can help us avoid the case-insensitive issue in some operating system
+      like Windows or OS X.
+
+*** 1.2 Organisation
+    Give a file a concise name that still evokes its contents.
+    No other detailed rules.
+
+*** 1.3 Internal structure
+    - Use commented lines of ~-~ and ~=~ to break up your file into easily
+      readable chunks.
+      #+begin_src python
+        # Load data ---------------------------
+
+        # Plot data ---------------------------
+      #+end_src
+
+    - If your script uses add-on packages, _load them *all at once at the very
+      beginning* of the file._
+
+      + This is more transparent than
+        * _sprinkling_ ~library()~ calls throughout your code
+          =from Jian=
+          I'm not agree with this. It's better to import and use in local scope
+          as narrow as we can.
+
+          _OR_
+
+        * having _hidden dependencies_ that are loaded in a startup file, such as
+          =.Rprofile=. TODO ??? TODO
+
+** DONE 2 Syntax
+   CLOSED: [2020-02-23 Sun 01:52]
+*** DONE 2.1 Object names
+    CLOSED: [2020-02-23 Sun 00:25]
+    - /Variable and function names/ should be in _snake case style_ and use *ONLY*
+      + _lowercase_ letters
+      + numbers
+      + ~_~
+
+    - Base R uses dots in _function names_ (~contrib.url()~) and _class names_
+      (~data.frame~), but *it's better to _reserve dots exclusively for the S3
+      object system_.*
+      + In S3, /methods/ are given the name ~function.class~;
+        if you also use ~.~ in _function and class names_, you end up with
+        *confusing* methods like ~as.data.frame.data.frame()~.
+
+    - If you find yourself attempting to _cram data into variable names_ (e.g.
+      ~model_2018~, ~model_2019~, ~model_2020~), *consider using a /list/ _OR_
+      /data frame/ instead.*
+
+    - Generally,
+      + _variable names_ should be *nouns*
+      + _function names_ should be *verbs*.
+
+    - Where possible, *avoid* _re-using names_ of common functions and variables.
+
+*** DONE 2.2 Spacing
+    CLOSED: [2020-02-23 Sun 01:16]
+**** DONE 2.2.1 Commas
+     CLOSED: [2020-02-23 Sun 00:59]
+     Like _Regular English_, put a space after any comma, never before.
+
+**** DONE 2.2.2 Parentheses
+     CLOSED: [2020-02-23 Sun 01:01]
+     - For regular _function_:
+       Do not put spaces inside or outside parentheses.
+
+     - For ~if~, ~for~, or ~while~:
+       Place a space *before* and *after* ~()~
+
+     - Put a space after ~()~ of any function definition.
+
+**** DONE 2.2.3 Infix operators
+     CLOSED: [2020-02-23 Sun 01:07]
+     Surround by spaces.
+     - A few exceptions:
+       + The operators with high precedence ~::~, ~:::~, ~$~, ~@~, ~[~, ~[[~, ~^~,
+         unary ~\minus~, unary ~+~, and ~:~:
+         #+begin_src r
+           sqrt(x^2 + y^2)
+           df$z
+           x <- 1:10
+         #+end_src
+
+       + /Single-sided formulas/ when the right-hand side is a single identifier:
+         #+begin_src r
+           ~foo
+
+           tribble(
+             ~col1, ~col2,
+             "a",   "b"
+           )
+         #+end_src
+         * single-sided formulas with a _COMPLEX right-hand side_ do *need* a space:
+           #+begin_src r
+             ~ .x + .y
+           #+end_src
+
+       + Tidy evaluation ~!!~ and ~!!!~
+         #+begin_src r
+           call(!!xyz)
+         #+end_src
+
+       + The _help_ operator
+         #+begin_src r
+           package?stats
+
+           ?mean
+         #+end_src
+
+**** DONE 2.2.4 Extra spaces
+     CLOSED: [2020-02-23 Sun 01:16]
+     Add spaces to do alignment of ~=~ or ~<-~
+     #+begin_src r
+       list(
+         total = a + b + c
+         mean  = (a + b + c) / n
+       )
+     #+end_src
+
+*** DONE 2.3 Argument names
+    CLOSED: [2020-02-23 Sun 01:39]
+    - A _function's arguments_ typically fall into TWO broad categories:
+      + one supplies the data to compute on;
+      + the other controls the details of computation.
+
+    - When you call a function, you typically _omit the names of /data arguments/._
+      =from Jian=
+      * This often happens just because it's often clear which argument is /data
+        arguments/ -- often the first one or two.
+
+      * This rule should be broken when it is not clear that which are /data
+        arguments/.
+
+*** DONE 2.4 Code blocks
+    CLOSED: [2020-02-23 Sun 01:46]
+    - K&R style ~{~ and ~}~ location.
+
+    - 2 spaces indentation.
+
+**** 2.4.1 Inline statements
+     - Drop curly braces for very _simple_ statements that _fit on one line_,
+       as long as they do _NOT have side-effects_.
+
+     - Function calls that affect control flow (like ~return()~, ~stop()~ or
+       ~continue~) _should ALWAYS go in *their own ~{}~ block*:_
+       #+begin_src r
+         if (y < 0) {
+           stop("Y is negative")
+         }
+
+         find_abs <- function(x) {
+           if (x > 0) {
+             return(x)
+           }
+           x * -1
+         }
+
+         # from Jian: Of course, I never write the code llke the `find_abs`
+         #            definition above. I write:
+         find_abs_1 <- function(x) {
+           if (x > 0) x else x * -1
+         }
+       #+end_src
+
+*** DONE 2.5 Long lines
+    CLOSED: [2020-02-23 Sun 01:52]
+    80 characters per line.
+    - For too lone _function call_ (or _function definition_):
+      #+begin_src r
+        do_somethign_very_complicated(
+          something = "that",
+          requires = many,
+          arguments = "some of which may be long"
+        )
+      #+end_src
+
+    - Short unnamed arguments (mostly /data arguments/ which are usually used as
+      the first some arguments) can also go on the same line as the function
+      name, even if the whole function call spans multiple lines.
+      #+begin_src r
+        map(x, f,
+            extra_argument_a = 10,
+            extra_argument_b = c(1, 43, 390, 210209),
+        )
+      #+end_src
+
+    - You may also place several arguments on the same line if _they are CLOSELY
+      RELATED to each other_,
+      #+begin_src r
+        paste0(
+          "Requirement: ", requires, "\n",
+          "Result: ", result, "\n"
+        )
+      #+end_src
+
+*** DONE 2.6 Assignment
+    CLOSED: [2020-02-23 Sun 00:27]
+    #+begin_src r
+      # Use <-, NOT =, for assignment.
+      x <- 5
+    #+end_src
+
+*** DONE 2.7 Semicolons
+    CLOSED: [2020-02-23 Sun 00:46]
+    Try not use.
+    Especially, try not
+    - put ~;~ at the end of a line,
+    - use ~;~ to put multiple commands on one line.
+
+*** DONE 2.8 Quotes
+    CLOSED: [2020-02-23 Sun 00:51]
+    #+begin_src r
+      # 1. Use ", not ', for quoting text.
+      # 2. The only exception is when the text already contains double quotes and no single quotes.
+    #+end_src
+    - =from Jian= TODO TODO TODO
+      Why not follow the convention of linux shell:
+      + Constant string use ~'~
+      + String with interpolation use ~"~
+
+*** DONE 2.9 Comments
+    CLOSED: [2020-02-23 Sun 00:48]
+    - Follow the general rules of writing comments in any programming language.
+
+    - If you discover that you have _more comments than code_,
+      considering SWITCHING TO *RMarkdown*.
+
+** DONE 3 Functions
+   CLOSED: [2020-02-23 Sun 02:02]
+*** DONE 3.1 Naming
+    CLOSED: [2020-02-23 Sun 02:02]
+    As well as following the general advice for _object names_, strive to use
+    *verbs* for _function names_.
+
+*** DONE 3.2 Long lines
+    CLOSED: [2020-02-23 Sun 02:01]
+    As in the last chapter.
+    =from Jian= Even though this section does NOT mention 80 characters width.
+
+*** DONE 3.3 ~return()~
+    CLOSED: [2020-02-23 Sun 01:57]
+    Only use ~return()~ for *EARLY returns*.
+
+    - ~return()~ should ALWAYS be on their own line
+      because they have important effects on the control flow.
+      See also _inline statements_. =from Jian= The are consistent.
+
+    - TODO TODO TODO
+      If your function is called PRIMARILY for its /side-effects/ (like printing,
+      plotting, or saving to disk), *it should return the first argument
+      invisibly*.
+        This makes it possible to use the function as part of a pipe. ~print~
+      methods should usually do this, like this example from httr:
+      #+begin_src r
+        print.url <- function(x, ...) {
+          cat("Url: ", build_url(x), "\n", sep = "")
+          invisible(x)
+        }
+      #+end_src
+      TODO I don't know what is ~invisible~ here?????? TODO
+
+*** DONE 3.4 Comments
+    CLOSED: [2020-02-23 Sun 02:00]
+    In code, use comment to explain "why"
+    NOT "what" or "how".
+
+    - ~#~ follow a SINGLE space.
+
+    - In stentence case.
+
+    - Comments should be in sentence case, and only end with a full stop if they
+      contain at least two sentences:
+      #+begin_src r
+        # Good
+
+        # Objects like data frames are treated as leaves
+        x <- map_if(x, is_bare_list, recurse)
+
+        # Do not use `is.list()`. Objects like data frames must be treated
+        # as leaves.
+        x <- map_if(x, is_bare_list, recurse)
+      #+end_src
+
+** DONE 4 Pipes - TODO NOTE
+   CLOSED: [2020-02-23 Sun 02:11]
+*** 4.1 Introduction
+*** 4.2 Whitespace
+*** 4.3 Long lines
+*** 4.4 Short pipes
+*** 4.5 No arguments
+*** 4.6 Assignment
+
+** DONE 5 ggplot2 -TODO =READ-LATER=
+   CLOSED: [2020-02-23 Sun 14:11]
+*** 5.1 Introduction
+*** 5.2 Whitespace
+*** 5.3 Long lines
+
+* DONE II Packages
+  CLOSED: [2020-02-23 Sun 14:11]
+** DONE 6 Files
+   CLOSED: [2020-02-23 Sun 14:11]
+   - The majority of advice in Chapter 1 also applies to files in packages.
+   - Important differences are described below.
+
+*** DONE 6.1 Names
+    CLOSED: [2020-02-23 Sun 14:11]
+    - If a file contains a single function, give the file the same name as the
+      function.
+
+    - If a file contains multiple related functions, give it a concise, but
+      evocative name.
+
+    - _Deprecated functions_ should live in a file with =deprec-= prefix.
+
+    - _Compatibility functions_ should live in a file with =compat-= prefix.
+
+** DONE 7 Documentation - TODO - =Read-Later=
+   CLOSED: [2020-02-23 Sun 14:09]
+*** 7.1 Introduction
+    Use _roxygen2_ (TODO ???) with _markdown_ support enabled to keep your
+    documentation close to the code.
+
+*** 7.2 Title and description
+*** 7.3 Indents and line breaks
+*** 7.4 Documenting parameters
+*** 7.5 Capitalization and full stops
+*** 7.6 Cross-linking
+*** 7.7 R code
+*** 7.8 Internal functions
+
+** DONE 8 Tests - TODO
+   CLOSED: [2020-02-23 Sun 02:06]
+*** 8.1 Organisation
+    - The organisation of test files should match the organisation of R/ files:
+      if a function lives in =R/foofy.R=, then its tests should live in
+      =tests/testthat/test-foofy.R=.
+
+    - Use ~usethis::use_test()~ to automatically create a file with the correct
+      name. TODO TODO TODO ??? TODO TODO TODO
+
+    - The ~context()~ is NOT very important; a future version of testthat will
+      display the file name instead of the context in output.
+      TODO TODO TODO ??? TODO TODO TODO
+
+** DONE 9 Error messages - TODO - =Read-Later=
+   CLOSED: [2020-02-23 Sun 14:04]
+*** 9.1 Problem statement
+*** 9.2 Error location
+*** 9.3 Hints
+*** 9.4 Punctuation
+*** 9.5 Before and after
+
+** DONE 10 News - TODO - =Read-Later=
+   CLOSED: [2020-02-23 Sun 14:04]
+*** 10.1 Bullets
+**** 10.1.1 General style
+**** 10.1.2 Acknowledgement
+**** 10.1.3 Code style
+**** 10.1.4 Common patterns
+
+*** 10.2 Organisation
+**** 10.2.1 Development
+**** 10.2.2 Release
+**** 10.2.3 Breaking changes
+
+*** 10.3 Blog post
+
+** DONE 11 Git/GitHub - TODO - =Read-Later=
+   CLOSED: [2020-02-23 Sun 14:05]
+*** 11.1 Commit messages
+*** 11.2 Pull requests

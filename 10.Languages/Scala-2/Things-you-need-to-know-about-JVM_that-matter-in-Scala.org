@@ -1,0 +1,209 @@
+#+TITLE: Things you need to know about JVM (that matter in Scala)
+#+AUTHOR: Mateusz Kubuszok
+#+STATUS: This book is 90% complete, LAST UPDATED ON 2020-08-31
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* What is JVM - 1
+** Primitives and references - 2
+** Operations - 5
+   - In general, JVM follows the /von Neumann architecture/.
+     * When you do computation,
+       + some part of your memory contains _data_ the program operates on
+       + some part of your memory contains the _program itself_.
+
+     * At ANY given moment:
+       1. the computer knows that it is at exactly this point of the program,
+          by keeping trace of the memory address of current instruction,
+
+       2. the computer fetches the instruction from under the address,
+
+       3. then executes it,
+
+       4. after that it moves to the next instruction in the memory - unless the
+          instruction was to jump to another part of the program it would be the
+          next instruction right after the one we just finished.
+
+   - This /memory address/ of a program on JVM is, again, an implementation detail.
+     * JVM specification would tell you that EACH /thread/ knows its /program counter
+       (pc)/, telling at which instruction of which method it is currently.
+
+   - Additionally,
+     * computer can have /registers/ which store data that are intended to use by
+       the *current* operation.
+
+     * /Instructions/, whether it is CPU's instruction, or JVM's bytecode,
+       USUALLY *only* operate on these /registers/ (though JVM call them /local
+       variables/), taking values to process from them and storing the result in
+       /registers/ as well. (Exceptions would be things like _loading data from the
+       memory to registers and vice versa_).
+
+   - =TODO= NOTE =TODO=
+     
+** More about memory - 9
+   - /Memory/ can be _imagined as_ a big array where indices are memory addresses.
+
+   - This /memory/ can be divided into the part that contains
+     * program
+     * the part that contains data.
+     _But we could break it even more!_ =from Jian= when not consider the details.
+
+   - As a matter of the fact,
+     we can break the _data part_ of the /memory/ into
+     * /stacks/ (one per each thread)
+     * a heap (common for all threads).
+
+*** Stack - 9
+    - When we step into a /function/,
+      /compiler/ can calculate some things e.g.:
+      * *how many* /local variables/ will we need during a whole call
+
+      * *how much space* will they take
+        + /primitives/' size depend of their type
+        + /references/ have a fixed size
+
+    - It means, that every time compiler step into a /function/, it knows perfectly
+      how much size it needs in order to be able to call /function/.
+      * frame :: the description holding all pieces of information about a call.
+
+    - What JVM does when it calls a /function/ is creation of a new /frame/ for it,
+      populating the /variables/ storing arguments and putting in on a /stack/.
+      * This /stack of frames/ is *separate from* /stack of operands/ (which we
+        saw in action in the example above)
+
+    - How the /stack/ of /frames/ looks like, we can see every time we receive an
+      ~Exception~. An example in Ammonite:
+      =TODO=
+      As we can see, Ammonite has a method <clinit> which called method d, which
+      called c, which called b, which called a which threw Exception, and
+      Exception preserved information about the state of stack at the moment of
+      its creation. It is one of these build-in mechanisms of JVM, that makes
+      our life much easier than e.g. C/C++ programmer’s life (who not only would
+      get crash, but also without much information to figure out the cause).
+
+    - Similarly to C and C++, /JVM stack/ is intended to be _relatively SMALL._
+      * Each /frame/ contains _ONLY_ /references/ or /primitives/,
+        so it shouldn't grow too large,
+
+      * depth of calls is also expected to be finite and small,
+        so that whole /stack/ is _usually UNDER a few megabytes in size._
+        
+*** Heap - 14
+*** Boxing and unboxing - 15
+*** JVM types vs Scala type hierarchy - 16
+    
+** Exceptions - 18
+** Classpath and ~ClassLoader~'s - 21
+*** Classpath exception - 23
+    
+* Classes - 25
+** What a normal class is made of - 26
+*** Constructor - 27
+*** Methods - 28
+*** Inheritance - 35
+*** Access control - 44
+    
+** What are ~object~'s (modules) - 47
+** Parametric classes - 52
+*** Type parameters and type erasure - 53
+*** Issues with type erasure - 58
+*** ~@specialized~ - 60
+    
+** Functions vs methods - 62
+** ~case classe~'s and ~case object~'s - 67
+** ~sealed~ hierarchies - 73
+** ~AnyVal~'s - 74
+   
+* Threads - 79
+** Parallel vs concurrent - 79
+*** Concurrency - 79
+*** Parallelism - 81
+*** M:N threads - 82
+    
+** JVM’s Threads - 82
+*** Interruption and canceling - 84
+*** ~synchronized~ and ~@volatile~ - 85
+*** ~sleep~, ~wait~ and ~notify~ - 95
+*** Can we avoid concurrency pitfalls? - 96
+   
+* Garbage collectors - 99
+** GC root - 99
+** How JVM cleans up memory - 101
+*** Mark and sweep - 102
+*** Memory fragmentation - 103
+*** Generations, Serial GC and parallel GC - 104
+*** Concurrent Mark-Sweep - 106
+*** Garbage First (G1) - 107
+*** Zero Garbage Collection (ZGC) - 109
+*** No GC at all? - 112
+*** GCs beyond HotSpot - 112
+    
+** Value specially treated by memory management - 112
+** Memory leaks - 113
+** How does memory matter for Scala? - 124
+   
+* Reflection - 127
+** What ~Class[_]~ knows? - 127
+** How to obtain ~Class[_]~? - 129
+** Best thing since sliced bread? - 131
+** Reflection in Scala - 132
+** Why it matters that you understand reflection? - 139
+   
+* Optimizations - 141
+** HotSpot - 141
+** C1 and C2 - 142
+*** Architecture Description (=.ad= files) - 144
+    
+** Observing JIT at work - 145
+*** Printing assembly - 145
+*** Printing compilation and inlining - 147
+*** JITWatch - 150
+    
+** Microbenchmarks - 152
+*** Example benchmark - 153
+*** Flight Recorder and Java Mission Control - 156
+*** async -profiler and flame graph - 159
+    
+** Some of the optimizations done by HotSpot - 165
+*** Inlining - 165
+*** Loop unrooling - 173
+*** Dead code elimination - 175
+*** Escape analysis - 177
+*** Mono-, Bi- and Megamorphism and devirtualization - 181
+*** On Stack Replacement (OSR) - 184
+*** Reflection and optimizations - 186
+*** More about JVM optimizations - 186
+    
+** Optimizations beyond JVM - 187
+*** Memory alignment - 187
+*** Branch prediction - 189
+    
+** Why it matters to have some idea about JIT? - 190
+
+* Tooling and ecosystem - 193
+** Official tools - 193
+*** javap and scalap - 193
+*** jdb - 194
+*** jps - 196
+*** jstat and jstatd - 196
+*** jstack - 197
+*** jcmd - 199
+*** Other official tools - 199
+    
+** Third-party tools - 199
+*** jEnv - 199
+*** Dependency management and building - 201
+    
+** Printing all JVM flags - 203
+   
+* Summary - 205
+* Appendix: JVM flags - 207
+** GC and memory flags - 208
+*** Generation-based memory layout and flags - 208
+*** GC selection - 208
+*** Memory debugging flags - 209
+    
+** JIT flags - 209
+*** Compilation mode selection - 209
+*** Compilation options - 209
+*** Compilation debugging - 210

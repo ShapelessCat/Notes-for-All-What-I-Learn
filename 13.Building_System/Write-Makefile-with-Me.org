@@ -1,0 +1,367 @@
+#+TITLE: Write Makefile with Me
+#+VERSION: V1.0
+#+AUTHOR: Hao Chen
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* 1 概述 - 1
+** 1.1 关于程序的编译和链接 - 1
+
+* 2 makefile介绍 - 3
+** 2.1 makefile的规则 - 3
+** 2.2 一个示例 - 4
+** 2.3 make是如何工作的 - 5
+** 2.4 makefile中使用变量 - 5
+** 2.5 让make自动推导 - 6
+** 2.6 另类风格的makefiles - 7
+** 2.7 清空目标文件的规则 - 7
+** 2.8 Makefile里有什么？ - 8
+** 2.9 Makefile的文件名 - 8
+** 2.10 引用其它的Makefile - 8
+** 2.11 环境变量MAKEFILES - 9
+** 2.12 make的工作方式 - 9
+
+* 3 书写规则 - 11
+** 3.1 规则举例 - 11
+** 3.2 规则的语法 - 11
+** 3.3 在规则中使用通配符 - 12
+** 3.4 文件搜寻 - 13
+** 3.5 伪目标 - 14
+** DONE 3.6 多目标 - 15
+   CLOSED: [2021-02-21 Sun 19:03]
+   #+begin_src makefile
+     bigoutput littleoutput: text.g
+       generate text.g -$(subst output,,$@) > $@
+   #+end_src
+   
+   is equivlanet to
+   
+   #+begin_src makefile
+     bigoutput: text.g
+       generate text.g -big > bigoutput
+
+     littleoutput: text.g
+       generate text.g -little > littleoutput
+   #+end_src
+   
+** DONE 3.7 静态模式 - 15
+   CLOSED: [2021-02-21 Sun 19:23]
+   - SYNTAX:
+     #+begin_src text
+       <target ...> : <target-pattern> : <prereq-patterns ...>
+           <commands>
+           ...
+     #+end_src
+     
+   - Examples:
+     #+begin_src makefile
+       objects = foo.o, bar.o
+
+       all: $(objects)
+
+       $(objects): %.o: %.c
+         $(CC) -c $(CFLAGS) $< -o $@
+     #+end_src
+
+     will be expanded to
+   
+     #+begin_src makefile
+       foo.o: foo.c
+         $(CC) -C $(CFLAGS) foo.c -o foo.o
+
+       bar.o: bar.c
+         $(CC) -C $(CFLAGS) bar.c -o bar.o
+     #+end_src
+     
+   - Examples:
+     *With filters*
+     #+begin_src makefile
+       files = foo.elc bar.o lose.o
+
+       $(filter %.o,$(files)): %.o: %.c
+         $(CC) -C $(CFLAGS) $< -o $@
+
+       $(filter %.elc,$(files)): %.elc: %.el
+         emacs -f batch-byte-compile $<
+     #+end_src
+     
+** DONE 3.8 自动生成依赖性 - 16
+   CLOSED: [2021-02-21 Sun 20:16]
+   - Manually find out included headers is hard for a large project.
+     * C/C++ compilers support ~-M~, which can
+       1. *find* headers and *list* them, and
+       2. *generate* dependency relations.
+
+     * GNU C/C++ compilers need ~-MM~, which can avoid stanfard library dependencies.
+
+   - Generate the =.d= file:
+     #+begin_src makefile
+       %.d: %.c
+         @set -e; rm -f $@; \
+         $(CC) -M $(CPPFLAGS) $< > $@.$$$$; \
+         set 's, \($*\)\.o[ :]*, \1.o $@ : ,g' < $@.$$$$ > $@; \
+         rm -f $@.$$$$
+     #+end_src
+     * ~rm -f $@~ remove all target files.
+     * ~$<~ dependency files;
+     * ~$@~ represents ~%.d~, where ~%~ represents the stem of a file name;
+     * ~$$$$~ is a random number, and it can generate a file name like "name.d.12345";
+     * Example:
+       Generate ~main.o main.d : main.c defs.h~ from ~main.o : main.c defs.h~.
+       
+   - =TODO=:
+     ~include $(source:.c=.d)~
+     =???=
+     =???=
+     =???=
+
+* DONE 4 书写命令 - 19
+  CLOSED: [2021-02-22 Mon 00:41]
+  By default, Linux/Unix uses =/bin/sh=
+  
+** DONE 4.1 显示命令 - 19
+   CLOSED: [2021-02-21 Sun 21:53]
+   By default, ~make~ will display the commands it's executing.
+   
+   - *STOP* displaying a SINGLE command by prefix it an ~@~.
+     * For example,
+       When we write ~@echo 正在编译XXX模块......~, on screen we want to see 
+       =正在编译XXX模块......= instead of
+       #+begin_src text
+         @echo 正在编译XXX模块......
+         正在编译XXX模块......
+       #+end_src
+     
+   - *ONLY display* commands instead of executing them by using
+     ~-n~ or ~--just-print~.
+     
+   - *Fully forbid* displaying commands by using
+     ~-s~ or ~--silent~ or ~--quiet~.
+     
+** DONE 4.2 命令执行 - 19
+   CLOSED: [2021-02-21 Sun 21:58]
+   - If there are dependencies among commands for one /target/,
+     write them in the same line, separated by ~;~.
+     #+begin_src makefile
+       exec:
+         cd /home/hchen; pwd
+     #+end_src
+     
+     * Wrong:
+       #+begin_src makefile
+         exec:
+           cd /home/hchen
+           pwd
+       #+end_src
+       Here the ~cd /home/hchen~ *doesn't* affect te ~pwd~.
+
+   - About the Shell that being used:
+     * UNIX: =/bin/sh=
+     * MS-DOS: =NOTE=
+   
+** DONE 4.3 命令出错 - 20
+   CLOSED: [2021-02-21 Sun 22:17]
+   If one command return code is non-zero, ~make~ will terminate current rule.
+   The termination of current rule may lead to the termination of all rules.
+
+   - Ignore errors in different levels:
+     * Single comamnd:
+       prefix ~-~.
+
+     * Full file:
+       ~-i~ or ~--ignore-errors~ in command line.
+
+     * Target ~.IGNORE~:
+       all errors for the commands of this target will be ignored.
+
+     * Full file, terminate the current rule that includes a command with error:
+       ~-k~ or ~--keep-going~ in command line.
+
+   - =from Jian=
+     =???= =TODO=
+     Check the diff between ~-i~ and ~-k~ mentioned above.
+     
+** DONE 4.4 嵌套执行make - 20
+   CLOSED: [2021-02-22 Mon 00:39]
+   Assume there is a =subdir= that includes sub-makefile.
+   #+begin_src makefile
+     subsystem:
+       cd subdir && $(MAKE)
+   #+end_src
+   
+   is equivlanet to
+   
+   #+begin_src makefile
+     subsystem:
+       $(MAKE) -C subdir
+   #+end_src
+
+   - ~$(MAKE)~ is a macro, because ~make~ may need some parameters.
+
+   - The main =makefile= variables will be passed to lower level =makefiles=,
+     but it won't overwrite lower level variables in =makefiles=, except a ~-e~
+     option is specified.
+
+   - Pass variables to the next level =makefile=:
+     ~export <variable ...>;~
+     ~unexport <variable ...>;~
+     * My equivlanet forms:
+       + Example 1:
+          #+begin_src makefile
+            export variable = value
+
+            variable = value
+            export variable
+
+            export variable := value
+
+            variable := value
+            export variable
+          #+end_src
+
+       + Example 2:
+         #+begin_src makefile
+           export variable += value
+
+           variable += value
+           export variable
+         #+end_src
+     
+     * Pass ALL variables with ~export~.
+
+   - Two variables that will always be exported automatcially to the next level:
+     * ~SHELL~
+     * ~MAKEFLAGS~: the parameters of ~make~.
+       + Avoid pass this:
+         #+begin_src makefile
+           subsystem:
+             cd subdir && $(MAKE) MAKEFLAGS=
+         #+end_src
+
+   - Some variables that will always *NOT* be exported:
+     * ~-C~
+     * ~-f~
+     * ~-h~
+     * ~-o~
+     * ~-W~
+
+   - When you define ~MAKEFLAGS~, you need to make sure ~-t~, ~-n~, and ~q~
+     parameters, you often don't want them.
+
+   - Useful command line options:
+     ~-w~ or ~--print-directory~ will require ~make~ to print _current working
+     directory_ (when enter, and when leave).
+     
+   - When using ~-C~ to specify next level =makefile=, ~-w~ will be switched on.
+     If ~-s~ (~--silent~) or ~--no-print-directory~, then, ~-w~ will not work.
+   
+** DONE 4.5 定义命令包 - 22
+   CLOSED: [2021-02-22 Mon 00:41]
+   #+begin_src makefile
+     define run-yacc
+     yacc $(firstword $^)
+     mv y.tab.c $@
+     endef
+   #+end_src
+   
+   Use it:
+   #+begin_src makefile
+     foo.c : foo.y
+       $(run-yacc)
+   #+end_src
+
+* 5 使用变量 - 23
+  - /Makefile variables/ are like the macro in C/C++.
+
+  - /Makefile variables/ are case-sensitive.
+  
+** DONE 5.1 变量的基础 - 23
+   CLOSED: [2021-02-22 Mon 00:47]
+   - Example (*Should NEVER do this!* in real makefiles):
+     #+begin_src makefile
+       foo = c
+       prog.o: prog.$(foo)
+         $(foo)$(foo) -$(foo) prog.$(foo)
+     #+end_src
+     
+     will be expanded as
+     #+begin_src makefile
+       prog.o: prog.c
+         cc -c prog.c
+     #+end_src
+     
+** 5.2 变量中的变量 - 24
+   Keep using ~:=~, which always use variables defined before current one.
+   Variable definition that uses ~=~ can use variables defined after ~=~.
+   
+** 5.3 变量高级用法 - 25
+** 5.4 追加变量值 - 27
+** 5.5 override指示符 - 28
+** 5.6 多行变量 - 28
+** 5.7 环境变量 - 29
+** 5.8 目标变量 - 29
+** 5.9 模式变量 - 30
+
+* 6 使用条件判断 - 31
+** 6.1 示例 - 31
+** 6.2 语法 - 32
+
+* 7 使用函数 - 35
+** 7.1 函数的调用语法 - 35
+** 7.2 字符串处理函数 - 36
+** 7.2.1 subst - 36
+** 7.2.2 patsubst - 36
+** 7.2.3 strip - 36
+** 7.2.4 findstring - 37
+** 7.2.5 filter - 37
+** 7.2.6 filter-out - 37
+** 7.2.7 sort - 38
+** 7.2.8 word - 38
+** 7.2.9 wordlist - 38
+** 7.2.10 words - 38
+** 7.2.11 firstword - 39
+** 7.3 文件名操作函数 - 39
+** 7.3.1 dir - 39
+** 7.3.2 notdir - 39
+** 7.3.3 suffix - 40
+** 7.3.4 basename - 40
+** 7.3.5 addsuffix - 40
+** 7.3.6 addprefix - 40
+** 7.3.7 join - 41
+** 7.4 foreach函数 - 41
+** 7.5 if函数 - 41
+** 7.6 call函数 - 42
+** 7.7 origin函数 - 42
+** 7.8 shell函数 - 43
+** 7.9 控制make的函数 - 43
+
+* 8 make 的运行 - 45
+** 8.1 make的退出码 - 45
+** 8.2 指定Makefile - 45
+** 8.3 指定目标 - 45
+** 8.4 检查规则 - 47
+** 8.5 make的参数 - 47
+
+* 9 隐含规则 - 49
+** 9.1 使用隐含规则 - 49
+** 9.2 隐含规则一览 - 50
+** 9.3 隐含规则使用的变量 - 52
+** 9.3.1 关于命令的变量 - 52
+** 9.3.2 关于命令参数的变量 - 53
+** 9.4 隐含规则链 - 53
+** 9.5 定义模式规则 - 54
+** 9.5.1 模式规则介绍 - 54
+** 9.5.2 模式规则示例 - 54
+** 9.5.3 自动化变量 - 55
+** 9.5.4 模式的匹配 - 56
+** 9.5.5 重载内建隐含规则 - 56
+** 9.6 老式风格的“后缀规则” - 57
+** 9.7 隐含规则搜索算法 - 57
+
+* 10 使用make更新函数库文件 - 59
+** 10.1 函数库文件的成员 - 59
+** 10.2 函数库成员的隐含规则 - 59
+** 10.3 函数库文件的后缀规则 - 60
+** 10.4 注意事项 - 60
+
+* 11 后序 - 61

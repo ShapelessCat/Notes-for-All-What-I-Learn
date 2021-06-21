@@ -1,0 +1,5529 @@
+#+TITLE: Scala Cookbook
+#+VERSION: 1st, 2013 -> 2nd, 2021
+#+AUTHOR: Alvin Alexander
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Preface - 15
+** The Scala Language - xiii
+*** Solution - xiv
+
+** Audience - xvi
+** Contents of This Book - xvii
+** Online Bonus Chapters - xx
+** Installing the Software - xx
+** How the Code Listings Work - xxi
+** Conventions Used in This Book - xxi
+** Using Code Examples - xxii
+** How to Contact Us - xxiii
+** Acknowledgements - xxiii
+
+* TODO 1. Strings - 1
+** DONE Introduction - 1
+   CLOSED: [2018-03-01 Thu 19:36]
+   - Scala ~String~ is Java ~String~
+
+   - It seems Scala ~String~ has more methods than Java ~String~.
+       When you think you call a /method/ on an ~String~ object, the reality
+     might be you call a /method/ from the ~StringOps~, from the ~StringLike~ (a
+     /trait/ that ~StringOps~ extends), or from the ~WrappedString~, and so on.
+       Everything begins with the /implicit conversion/ from ~String~ to
+     ~StringOps~ in the ~Predef~ object.
+
+*** DONE Add Methods to Closed Classes - 3
+    CLOSED: [2018-03-01 Thu 19:36]
+    - =TODO= Recipe 1.9, "Accessing a Character in a String"
+
+    - *How Did the Preceding Example Work?*
+
+** DONE 1.1. Testing String Equality - 4
+   CLOSED: [2018-03-01 Thu 19:12]
+*** DONE Problem - 4
+    CLOSED: [2018-03-01 Thu 19:08]
+*** DONE Solution - 4
+    CLOSED: [2018-03-01 Thu 19:08]
+    - Use ~==~, NOT like Java.
+
+    - Since use ~==~, also NOT like Java, there is no longer
+      ~java.lang.NullPointerException~
+
+    - To compare two strings while ignoring their case, you can
+      + ~str1.toUpperCase == str2.toUpperCase~
+
+        *CAUTION*: Since you call method on ~str1~ and ~str2~, the
+        ~java.lang.NullPointerException~ may show up again.
+
+      + fall back to Java
+        ~str1.equalsIgnoreCase(str2)~
+
+*** DONE Discussion - 6
+    CLOSED: [2018-03-01 Thu 19:12]
+    - In Scala, the ~==~ /method/ defined in the ~AnyRef~ class
+      1. It first checks for ~null~ values,
+      2. then it calls the ~equals~ /method/ on the first object (i.e., this) to
+         see if the two objects are equal.
+
+      As a result, you don't have to check for ~null~ values when comparing
+      strings.
+
+    - In *idiomatic Scala*, you _NEVER_ use ~null~.
+
+    - =REDO= See Recipe 4.15 "Defining an equals Method (Object Equality)".
+
+** DONE 1.2. Creating Multiline Strings - 6
+   CLOSED: [2018-03-01 Thu 19:44]
+*** DONE Problem - 6
+    CLOSED: [2018-03-01 Thu 19:40]
+    
+*** DONE Solution - 6
+    CLOSED: [2018-03-01 Thu 19:40]
+    Use _three double quotes_:
+    #+BEGIN_SRC scala
+      val foo = """This is
+      a multiline
+      String"""
+    #+END_SRC
+
+*** DONE Discussion - 7
+    CLOSED: [2018-03-01 Thu 19:44]
+    You cannot expect left end alignment when you do something like
+    #+BEGIN_SRC scala
+      val foo = """This is
+                   a multiline
+                   String"""
+    #+END_SRC
+    The second and third lines will have _prefixed spaces_.
+
+    - *SOLUTION*
+      #+BEGIN_SRC scala
+        val speech = """Four score and
+                       |seven years ago
+                       |our fathers""".stripMargin
+
+
+        val speech1 = """Four score and
+                        #seven years ago
+                        #our fathers""".stripMargin('#')
+      #+END_SRC
+
+** DONE 1.3. Splitting Strings - 8
+   CLOSED: [2018-03-01 Thu 19:02]
+*** DONE Problem - 8
+    CLOSED: [2018-03-01 Thu 07:15]
+*** DONE Solution - 8
+    CLOSED: [2018-03-01 Thu 07:15]
+    The ~split~ method of ~String~ (acutally, ~String~ or ~StringLike~).
+
+*** DONE Discussion - 8
+    CLOSED: [2018-03-01 Thu 19:02]
+**** About that ~split~ method... - 9
+     - The ~split~ method is _overloaded_, with some versions of the method
+       coming from the _Java ~String~ class_ and some coming from the _Scala
+       ~StringLike~ class_.
+
+** DONE 1.4. Substituting Variables into Strings - 9
+   CLOSED: [2018-03-01 Thu 22:12]
+*** DONE Problem - 9
+    CLOSED: [2018-03-01 Thu 19:45]
+*** DONE Solution - 9
+    CLOSED: [2018-03-01 Thu 21:21]
+    Since Scala 2.10, you can use /string interpolation/
+
+    - Basic /string interpolation/
+      + use ~s~ method
+      + use ~$~ to insert variable
+      + use ~${variableName}~ to eliminate ambiguity.
+
+      #+BEGIN_SRC scala
+        val name = "Fred"
+        val age = 33
+        val weight = 200.0
+
+        println(s"$name is $age years old, and weighs $weight pounds.")
+        // Fred is 33 years old, and weighs 200.0 pounds.
+      #+END_SRC
+
+**** DONE Using expressions in string literals - 10
+     CLOSED: [2018-03-01 Thu 20:56]
+     - the official string interpolation documentation:
+       #+BEGIN_QUOTE
+       Any arbitrary expression can be embedded in ~${}~.
+       #+END_QUOTE
+
+     - Wrap /object fields/ in curly braces, or there will be a wrong
+       interpretation.
+       #+BEGIN_SRC scala
+         // error: this is intentionally wrong
+
+         println(s"$hannah.name has a score of $hannah.score")
+         // Student(Hannah,95).name has a score of Student(Hannah,95).score
+       #+END_SRC
+
+**** DONE ~s~ is a method - 10
+     CLOSED: [2018-03-01 Thu 21:00]
+     - The ~s~ that's placed before each string literal is actually a /method/.
+
+     - This seems not as convenient as the other languages that use interploation
+       as default, but it has at least _two benefits_:
+       + Scala provides other off-shelf interpolation funcitons to give you more
+         power.
+
+       + You can define your own string interpolation functions.
+
+**** DONE The ~f~ string interpolator (~printf~ style formatting) - 11
+     CLOSED: [2018-03-01 Thu 21:07]
+     #+BEGIN_SRC scala
+       println(f"$name is $age years old, and weighs $weight%.2f pounds.")
+       // Fred is 33 years old, and weighs 200.00 pounds.
+
+       ////  and then with no decimal places:
+       println(f"$name is $age years old, and weighs $weight%.0f pounds.")
+       // Fred is 33 years old, and weighs 200 pounds.
+
+       // For fields
+       case class S(i: Int, d: Double)
+       val s = S(1, 200.03)
+       println(f"${s.i}, ${s.d}%.0f")
+       // Only variable names can be inside the ${}
+       // You can't use `${s.d%.0f}`
+     #+END_SRC
+
+**** DONE The ~raw~ interpolator - 11
+     CLOSED: [2018-03-01 Thu 21:21]
+     /The official string interpolation documentation/ for ~raw~:
+     #+BEGIN_QUOTE
+     performs no escaping of literals within the string.
+     #+END_QUOTE
+
+     - Example:
+       #+BEGIN_SRC scala
+         s"foo\nbar"
+         // foo
+         // bar
+
+         raw"foo\nbar"
+         // foo\nbar
+       #+END_SRC
+
+     - _Triple double quote_ also performs no escaping of literals within the
+       string, and you can instert newline literally without escaping.
+
+     - Both ~raw~ and _triple double quote_ are especially useful when you work
+       with Regex.
+
+     - =TODO= =???=
+       =Now is 2.12, how about this feature now?=
+       String interpolation does not work with pattern-matching statements
+       in Scala 2.10. This feature is planned for inclusion in Scala 2.11.
+
+**** DONE Create your own interpolator - 12
+     CLOSED: [2018-03-01 Thu 21:21]
+     =TODO= See /the official Scala String Interpolation documentation/.
+
+*** DONE Discussion - 12
+    CLOSED: [2018-03-01 Thu 22:10]
+    - Prior to version 2.10, Scala didn't include the /string interpolation/
+      functionality just described. Use ~format~ /method/.
+
+    - =From Jian=
+      I think there is an error in the
+      Table 1-1. Common printf style format sepcifiers
+
+      There should be no ~%u~ format specifier !?!?
+      NOT 100% sure.
+
+*** TODO See Also - 13
+
+** DONE 1.5. Formatting String Output - 13
+   CLOSED: [2020-11-19 Thu 01:21]
+*** DONE Problem
+    CLOSED: [2020-11-19 Thu 00:50]
+    Format string output, including strings that contain
+    - integers
+    - floats
+    - doubles
+    - characters
+
+*** DONE Solution
+    CLOSED: [2020-11-19 Thu 01:13]
+    Use ~printf~-style formatting strings with /the ~f~ interpolator/.
+    
+    - Many configuration options are shown in the following examples.
+
+    - Note:
+      Data/time formatting - Recipe 2.12
+
+**** DONE FORMATTING STRINGS
+     CLOSED: [2020-11-19 Thu 00:50]
+     #+begin_src scala
+       val h = "Hello"
+
+       f"'${h}%s'"       // 'Hello'
+       f"'${h}%10s'"     // '     Hello'
+       f"'${h}%-10s'"    // 'Hello     '
+     #+end_src
+     The ~{}~'s here are optional, they are there only for better readability.
+     
+**** DONE FORMATTING FLOATING-POINT NUMBERS
+     CLOSED: [2020-11-19 Thu 00:53]
+     /Floating-point numbers/ are printed with the ~%f~ /format specifier/.
+     Here are several examples that show the effects of formatting
+     floating-point numbers, including ~Double~ and ~Float~ values:
+     #+begin_src scala
+       val a = 10.3456         // a: Double = 10.3456
+       val b = 101234567.3456  // b: Double = 1.012345673456E8
+
+       f"'${a}%.1f'"     // '10.3'
+       f"'${a}%.2f'"     // '10.35'
+       f"'${a}%8.2f'"    // '   10.35'
+       f"'${a}%8.4f'"    // ' 10.3456'
+       f"'${a}%08.2f'"   // '00010.35'
+       f"'${a}%-8.2f'"   // '10.35   '
+
+       f"'${b}%-2.2f'"   // '101234567.35'
+       f"'${b}%-8.2f'"   // '101234567.35'
+       f"'${b}%-14.2f'"  // '101234567.35  '
+     #+end_src
+     The same syntax as above works with ~Float~ values.
+     
+**** DONE INTEGER FORMATTING
+     CLOSED: [2020-11-19 Thu 00:56]
+     /Integers/ are printed with /the ~%d~ format specifier/.
+     #+begin_src scala
+       val ten = 10
+       f"'${ten}%d"    // '10'
+       f"'${ten}%5d"   // '   10'
+       f"'${ten}%-5d"  // '10   '
+
+       val maxInt = Int.MaxValue
+       f"'${maxInt}%5d"  // '2147483647'
+
+       val maxLong = Long.MaxValue
+       f"'${maxLong}%5d'"    // '9223372036854775807'
+       f"'${maxLong}%22d'"   // '   9223372036854775807'
+     #+end_src
+     
+**** DONE ZERO-FILL INTEGER OPTIONS
+     CLOSED: [2020-11-19 Thu 01:04]
+     #+begin_src scala
+       val zero = 0
+       val one = 1
+       val negTen = -10
+       val bigPos = 12345
+       val bigNeg = -12345
+       val maxInt = Int.MaxValue
+
+       // non-negative integers
+       f"${zero}%03d"      // 000
+       f"${one}%03d"       // 001
+       f"${bigPos}%03d"    // 12345
+       f"${bigPos}%08d"    // 00012345
+       f"${maxInt}%08d"    // 2147483647
+       f"${maxInt}%012d"   // 002147483647
+
+       // negative integers
+       f"${negTen}%03d"    // -10
+       f"${negTen}%05d"    // -0010
+       f"${bigNeg}%03d"    // -12345
+       f"${bigNeg}%08d"    // -0012345
+     #+end_src
+     
+**** DONE CHARACTER FORMATTING
+     CLOSED: [2020-11-19 Thu 01:06]
+     /Characters/ are printed with /the ~%c~ format specifier/.
+     #+begin_src scala
+       val s = 's'
+       f"|${s}%c|"    // |s|
+       f"|${s}%5c|"   // |    s|
+       f"|${s}%-5c|"  // |s    |
+     #+end_src
+     
+**** DONE ~f~ WORKS WITH MULTILINE STRINGS
+     CLOSED: [2020-11-19 Thu 01:12]
+     It's important to note that /the ~f~ interpolator/ works with _multiline
+     strings_, as shown in this example:
+     #+begin_src scala
+       val n = "Al"
+       val w = 200.0
+       val s = f"""Hi, my name is ${n}
+         |and I weigh ${w}%.1f pounds.
+         |""".stripMargin.replaceAll("\n", " ")
+
+       println(s)
+       // Hi, my name is Al and I weigh 200.0 pounds.
+     #+end_src
+     As noted in Recipe 1.2, there is no need to escape single- and double-quotes
+     when using multiline strings (triple-quoted).
+     
+*** DONE Discussion
+    CLOSED: [2020-11-19 Thu 01:18]
+    - Table 1-1. Common printf style format specifiers
+      Not mentioned before this section:
+      * ~%e~: Exponential floating-point number 
+
+      * ~%i~: Integer (base 10)
+      * ~%o~: Octal number (base 8)
+      * ~%x~: Hexadecimal number (base 16)
+
+      * ~%u~: Unsigned decimal (integer) number
+      
+    - Escape ~%~, ~$~, and ~\~ inside a string with /the ~f~ interpolator/:
+      #+begin_src scala
+        f"%%"  // %
+        f"$$"  // $
+        f"\\"  // \
+      #+end_src
+
+    - Table 1-2 shows special characters you can use when formatting string output.
+      
+*** TODO See Also
+    The The ~java.util.Formatter~ /class/ documentation shows all of the
+    available /formatting characters/.
+
+** DONE 1.6. Processing a String One Character at a Time - 13
+   CLOSED: [2018-03-01 Thu 01:08]
+*** DONE Problem - 13
+    CLOSED: [2018-02-28 Wed 22:22]
+*** DONE Solution - 13
+    CLOSED: [2018-02-28 Wed 22:21]
+    ~map~, ~foreach~, for-loop, for-iteration
+
+*** DONE Discussion - 14
+    CLOSED: [2018-03-01 Thu 01:08]
+    Corresponding Java code (if not use ~Stream~):
+    #+BEGIN_SRC java
+      String s = "Hello";
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < s.length(); i++) {
+          char c = s.charAt(i);
+          // do something with the character ...
+          // sb.append ...
+      }
+      String result = sb.toString();
+    #+END_SRC
+
+**** Understanding how map works - 15
+**** A complete example - 16
+
+*** TODO See Also - 17
+
+** DONE 1.7. Finding Patterns in Strings - 18
+   CLOSED: [2018-03-01 Thu 22:20]
+*** DONE Problem - 18
+    CLOSED: [2018-03-01 Thu 22:16]
+*** DONE Solution - 18
+    CLOSED: [2018-03-01 Thu 22:19]
+    Use the ~r~ method of string to create ~Regex~, and then use the
+    ~findFirstIn~ or the ~findAllIn~ methods to get the result.
+
+    - ~findFirstIn~ returns an ~Option[String]~ result.
+
+    - ~findAllIn~ returns an /iterator/ result.
+
+*** DONE Discussion - 19
+    CLOSED: [2018-03-01 Thu 22:20]
+    You can also use the ~scala.util.matching.Regex~ more explicity.
+    For example, ~new Regex(raw"[0-9]+")~
+
+**** DONE Handling the ~Option~ returned by ~findFirstIn~ - 19
+     CLOSED: [2018-03-01 Thu 22:20]
+
+*** TODO See Also- 20
+
+** DONE 1.8. Replacing Patterns in Strings - 21
+   CLOSED: [2018-03-01 Thu 22:27]
+*** DONE Problem - 21
+    CLOSED: [2018-03-01 Thu 22:22]
+*** DONE Solution - 21
+    CLOSED: [2018-03-01 Thu 22:27]
+    Two kinds of solutions:
+    - ~String~ /method/:
+      #+BEGIN_SRC scala
+        val address = "123 Main Street"
+
+        address.replaceAll(raw"[0-9]", "x")
+        // xxx Main Street
+
+        address.replaceFirst(raw"[0-9]", "x")
+        // x23 Main Street
+      #+END_SRC
+
+    - ~Regex~ /method/
+      #+BEGIN_SRC scala
+        val address = "123 Main Street"
+        val regex = raw"[0-9]".r
+
+        regex.replaceAllIn(address, "x")
+        // xxx Main Street
+
+        regex.replaceFirstIn(address, "x")
+        // x23 Main Street
+      #+END_SRC
+
+*** TODO See Also - 21
+
+** DONE 1.9. Extracting Parts of a String That Match Patterns - 22
+   CLOSED: [2018-03-01 Thu 22:39]
+*** DONE Problem - 22
+    CLOSED: [2018-03-01 Thu 22:32]
+*** DONE Solution - 22
+    CLOSED: [2018-03-01 Thu 22:32]
+    #+BEGIN_SRC scala
+      val pattern = "([0-9]+) ([A-Za-z]+)".r
+      val pattern(count, fruit) = "100 Bananas"
+      // count: String = 100
+      // fruit: String = Bananas
+    #+END_SRC
+
+*** DONE Discussion - 22
+    CLOSED: [2018-03-01 Thu 22:39]
+*** TODO See Also - 24
+
+** DONE 1.10. Accessing a Character in a String - 24
+   CLOSED: [2018-03-01 Thu 22:41]
+*** DONE Problem - 24
+    CLOSED: [2018-03-01 Thu 22:39]
+*** DONE Solution - 24
+    CLOSED: [2018-03-01 Thu 22:41]
+    - Java use the way of ~"hello".charAt(0)~, and Scala do it like ~"hello"(0)~.
+*** DONE Discussion - 24
+    CLOSED: [2018-03-01 Thu 22:41]
+    Scala actully call the ~apply~ method.
+    ~"hello"(0)~ is converted to ~"hello".apply(0)~ in the background.
+
+** TODO 1.11. How to Create Your Own String Interpolator - NEW
+*** DONE Problem
+    CLOSED: [2020-11-19 Thu 01:45]
+    Create your own /string interpolator/.
+    
+*** TODO Solution
+    To create _YOUR OWN_ /string interpolator/, create an /implicit class/ that
+    adds your /method/ to the ~StringContext~ /class/.
+
+    - Your /class/ will take a ~StringContext~ /constructor parameter/, and define
+      a /method/ that handles the behavior you want.
+      To demonstrate this I'll share a string interpolator I wrote.
+    
+**** TODO BACKGROUND
+**** TODO UNDERSTANDING THE SOLUTION
+**** TODO SOURCE CODE FOR THE SOLUTION
+     - Implementation: =TODO= =TRY-THIS-CODE=
+       #+begin_src scala
+         object QInterpolator {
+           extension (sc: StringContext)
+           def Q(expressions: Any*): Seq[String] = {
+             // for my purpose I can just put the original string back together
+             // by calling the `s` interpolator
+             val originalString: String = sc.s(expressions: _*)
+             originalString.split("\n")
+               .toVector
+               .map(_.trim)
+               .filter(_ != "")
+           }
+         }
+       #+end_src
+       Here's an explanation of this code:
+       The code adds a NEW /method/ named ~Q~ to the ~StringContext~ /class/.
+       * As shown in the earlier source code, the StringContext constructor takes
+         a variable number of parameters. While it’s not shown in this current
+         code, those parameters are embedded in the sc input parameter that
+         QHelper receives. (You can see the strings that sc contains by calling
+         sc.parts, which returns a Seq[String].)
+         =TODO= =???= =TODO=
+       
+       * The ~expressions~ variable contains a sequence of the /expressions/ that
+         were in the _original string_.
+           Note that these /expressions/ have *ALREADY* been evaluated *BEFORE*
+         they're passed in here.
+       
+       * For the purposes of ~Q~, I take a simple solution and put the original
+         string back together by calling /the ~s~ interpolator/ of the
+         ~StringContext~ /instance/ ~sc~.
+       
+       * In the ~sc.s(expressions: _*)~ code, the ~_*~ operator converts ~expressions~,
+         which is a ~WrappedArray~, into a list of _SEPARATE_ /arguments/, because the
+         ~s~ method requires a ~String*~ /varargs parameter/.
+       
+       * After that initial processing work the final line of code that includes
+         ~split~, ~toVector~, ~map~, and ~filter~ is run.
+       
+     - In the ~listOfFruits~ example, by the time the final line of code receives
+       ~originalString~, it's a _multiline string_ that looks like this:     
+       #+begin_src scala
+         """
+             apple
+             banana
+             cherry
+         """
+       #+end_src
+     
+*** TODO Discussion
+*** TODO See Also
+
+** DONE 1.12. Create Random Strings - NEW
+   CLOSED: [2020-11-19 Thu 01:41]
+*** DONE Problem
+    CLOSED: [2020-11-19 Thu 01:41]
+    When you try to generate a /random string/ using the ~nextString~ /method/ of
+    the ~Random~ /class/ you see a lot of unusual output or ~?~ characters.
+    For instance:
+    #+begin_src scala
+      val r = new scala.util.Random
+      // val r: scala.util.Random = scala.util.Random@360d41d0
+      
+      r.nextString(10)
+      // res0: String = ??????????
+    #+end_src
+    
+*** DONE Solution
+    CLOSED: [2020-11-19 Thu 01:41]
+    What's happening with ~nextString~ is that it returns /Unicode characters/,
+    which may or may _not display well on your system_.
+      To generate *only* _alphanumeric characters_ — the letters ~[A-Za-z]~ and
+    the numbers ~[0-9]~ — use this approach:
+    #+begin_src scala
+      import scala.util.Random
+
+      Random.alphanumeric.take(10).mkString  // 7qowB9jjPt
+      Random.alphanumeric.take(10).mkString  // a0WylvJKmX
+    #+end_src
+    ~Random.alphanumeric~ returns a ~LazyList~.
+    
+*** DONE Discussion
+    CLOSED: [2020-11-19 Thu 01:35]
+    If you want a *wider range* of characters, the ~nextPrintableChar~ /method/
+    returns values in _the ASCII range 33-126_.
+
+    - This includes almost every simple character on your keyboard, including
+      * letters
+      * numbers
+      * characters like !, -, +, ], >, etc.
+
+    - See http://www.asciitable.com/ or a similar website for the complete list
+      of characters in that range.
+
+* TODO 2. Numbers and Dates - 31
+** DONE Introduction - 31
+   CLOSED: [2018-02-28 Wed 17:31]
+   - In Scala, all the /numeric types/ are /objects/, including ~Byte~, ~Char~,
+     ~Double~, ~Float~, ~Int~, ~Long~, and ~Short~.
+
+     These seven /numeric types/ extend the ~AnyVal~ /trait/.
+
+   - There are some other /objects/, /nonnumeric value types/, that extend the
+     ~AnyVal~ /trait/: ~Unit~ and ~Boolean~.
+
+   - Table 2-1. Data ranges of Scala’s built-in numeric types
+     (Save ranges as in Java)
+     | Data type | Range                                  |
+     |-----------+----------------------------------------|
+     | Char      | 16-bit unsigned Unicode character      |
+     | Byte      | 8-bit signed value                     |
+     | Short     | 16-bit signed value                    |
+     | Int       | 32-bit signed value                    |
+     | Long      | 64-bit signed value                    |
+     | Float     | 32-bit IEEE 754 single precision float |
+     | Double    | 64-bit IEEE 754 single precision float |
+
+*** DONE Complex Numbers and Dates - 32
+    CLOSED: [2018-02-28 Wed 17:38]
+    - =TODO= (This book is not very new. I should also check these libraries
+      condition) =TODO=
+
+      If you need more powerful math classes than those that are included with
+      the standard Scala distribution,
+      + check out the *Spire project*, which includes classes like ~Rational~,
+        ~Complex~, ~Real~, and _more_; and
+
+      + ~ScalaLab~, which offers Matlab-like scientific computing in Scala.
+
+    - ~nscala-time~ is a wrapper for Java's Joda Time library, which help users
+      to use Joda Time in a more Scala-like way.
+
+      + =From Jian=
+        However, since Java 8, a Joda Time like library is a part of the standard
+        JDK. Use ~nscala-time~ and Joda Time is NO Longer a good choice.
+
+      + =TODO=
+        check if this exist? Or will be created? Or Java API is considered OK.
+        =TODO=
+
+        I think Scala has or will have a wrapper for the new Joda-Time-like
+        standard library.
+
+** DONE 2.1. Parsing a Number from a String - 32
+   CLOSED: [2018-02-28 Wed 17:16]
+*** DONE Problem - 32
+    CLOSED: [2018-02-28 Wed 17:05]
+*** DONE Solution - 32
+    CLOSED: [2018-02-28 Wed 17:05]
+    - Use ~toXXX~ pattern /methods/ for ~Short~, ~Int~, ~Long~, ~Float~, and
+      ~Double~.
+
+    - Use the ~apply~ /method/ of ~BigInt~ and ~BigDecimal~.
+      #+BEGIN_SRC scala
+        BigInt("1")
+
+        BigInt("3.14159")
+      #+END_SRC
+
+**** Handling a base and radix - 33
+     - You need to use Java's method to solve this problem.
+       #+BEGIN_SRC scala
+         Integer.parserInt("1", 2)
+       #+END_SRC
+
+     - You can also create /implict class/ with a ~toInt~ method with ~radix~
+       parameter.
+       #+BEGIN_SRC scala
+         implicit class StringToInt(s: String) {
+           def toInt(radix: Int) = Integer.parseInt(s, radix)
+         }
+       #+END_SRC
+
+*** DONE Discussion - 34
+    CLOSED: [2018-02-28 Wed 17:16]
+    - If your scala code, which includes ~String~ to numbers conversion, will be
+      used by Java, you'd better take care of the ~NumberFormatException~ with
+      the ~@throws~ annotation.
+
+    - For scala itself, you can use ~Option~ or ~Try~ (since Scala 2.10).
+      =From Jian= For dealing with exceptions, I think ~Try~ is better.
+      #+BEGIN_SRC scala
+        def toIntOpt(s: String): Option[Int] =
+          try {
+            Some(s.toInt)
+          } catch {
+            case e: NumberFormatException => None
+          }
+
+      #+END_SRC
+
+**** Alternatives to ~Option~ - 35
+     ~Try~ (since Scala 2.10) or ~Either~
+
+*** TODO See Also - 36
+
+** DONE 2.2. Converting Between Numeric Types (Casting) - 36
+   CLOSED: [2018-02-28 Wed 15:55]
+*** DONE Problem - 36
+    CLOSED: [2018-02-28 Wed 15:52]
+*** DONE Solution - 36
+    CLOSED: [2018-02-28 Wed 15:53]
+    - ~toByte~
+    - ~toChar~
+    - ~toDouble~
+    - ~toFloat~
+    - ~toInt~
+    - ~toLong~
+    - ~toShort~
+    - ~toString~
+
+*** DONE Discussion - 36
+    CLOSED: [2018-02-28 Wed 15:54]
+    If you want to _avoid potential conversion errors_ when casting from one
+    numeric type to another, you can use the related ~isValidXXXX~.
+      For example, ~a.isValidByte~
+
+*** TODO See Also - 36
+
+** DONE 2.3. Overriding the Default Numeric Type - 37
+   CLOSED: [2018-02-28 Wed 16:06]
+*** DONE Problem - 37
+    CLOSED: [2018-02-28 Wed 16:02]
+*** DONE Solution - 37
+    CLOSED: [2018-02-28 Wed 16:02]
+    #+BEGIN_SRC scala
+      // Method 1
+      val a = 1D
+      val b = 1F
+
+      // Method 2 (type ascription)
+      val c = 1 : Double
+      val d = 1 : Long
+
+      // Method 3 (For simple variable initialization, Method 3 is prefered)
+      val c: Double = 1
+      val d: Long = 1
+    #+END_SRC
+
+*** DONE Discussion - 39
+    CLOSED: [2018-02-28 Wed 16:06]
+    - You can use the *underscore* character as a placeholder when assigning an
+      initial value.
+      #+BEGIN_SRC scala
+        class Foo {
+          var a: Short = 0
+          var b: Short = _  // defaults to 0
+        }
+      #+END_SRC
+
+      This works when creating /class variables/, but *does NOT work in other
+      places*, such as inside a method.
+
+    - For numeric types this isn't an issue -- you can just assign the type the
+      value zero -- but with most other types, you can use this approach inside a
+      method: ~var name = null.asInstanceOf[String]~
+
+*** TODO See Also - 39
+
+** DONE 2.4. Replacements for ~++~ and ~−−~ - 39
+   CLOSED: [2018-02-28 Wed 15:16]
+*** DONE Problem - 40
+    CLOSED: [2018-02-28 Wed 15:16]
+    Find the replacement of ~++~ and ~--~, which are NOT supported by Scala.
+
+*** DONE Solution - 41
+    CLOSED: [2018-02-28 Wed 15:14]
+    Use the /methods/ like ~+=~ and ~-=~.
+
+    =From Jian=
+    Like Java, Scala doesn't support operator overloading.
+
+    However, operators in Java like ~+~ and ~-~ are /methods/ in Scala, and you
+    can overload them.
+
+*** DONE Discussion - 41
+    CLOSED: [2018-02-28 Wed 15:16]
+    /Methods/ like ~+=~ and ~-=~ are more general then ~++~ and ~--~.
+    You can use them with non-integer types.
+
+*** TODO See Also - 41
+
+** DONE 2.5. Comparing Floating-Point Numbers - 41
+   CLOSED: [2018-02-28 Wed 15:31]
+*** DONE Problem - 41
+    CLOSED: [2018-02-28 Wed 15:24]
+    Like most other languages that use IEEE standard to save floating numbers,
+    Scala also cannot compare floating numbers directly. Then how to do it in
+    Scala
+
+*** DONE Solution - 41
+    CLOSED: [2018-02-28 Wed 15:23]
+    Use a funcition like
+    #+BEGIN_SRC scala
+      def ~=(x: Double, y: Double, tolerance: Double) =
+        (x - y).abs < tolerance
+    #+END_SRC
+
+*** DONE Discussion - 42
+    CLOSED: [2018-02-28 Wed 15:30]
+    How to use the ~~=~ function in the Solution section?
+
+    + Write it in an utility object.
+      As a function with three parameters, alphabetical names, like
+      ~approximatelyEqual~ or ~equalWithinTolerance~, might be better.
+
+
+    + Use a default ~tolerance~ setting, create an implicit conversion to
+      floating numbers, and use ~+=~ as an infix-operator-like /method/.
+
+*** TODO See Also - 43
+
+** DONE 2.6. Handling Large Numbers - 43
+   CLOSED: [2018-02-28 Wed 17:25]
+*** DONE Problem - 43
+    CLOSED: [2018-02-28 Wed 17:19]
+*** DONE Solution - 43
+    CLOSED: [2018-02-28 Wed 17:19]
+    ~BigInt~ and ~BigDecimal~
+    Unlike their Java equivalents, these classes support all the operators
+    (actually operator-like methods) you're used to using with numeric types:
+    #+BEGIN_SRC scala
+      var b = BigInt(1234567890)
+      val bb = b + b
+      b += 1
+    #+END_SRC
+
+*** DONE Discussion - 44
+    CLOSED: [2018-02-28 Wed 17:25]
+    - Although the Scala ~BigInt~ and ~BigDecimal~ classes are backed by the Java
+      ~BigInteger~ and ~BigDecimal~ classes, they are simpler to use than their
+      Java counterparts.
+
+    - Before using ~BigInt~ or ~BigDecimal~, you may want to check the range of
+      the non-Big numeric types like:
+      #+BEGIN_SRC scala
+        Byte.MaxValue    // 127
+        Short.MaxValue   // 32767
+        Int.MaxValue     // 2147483647
+        Long.MaxValue    // 9223372036854775807
+        Double.MaxValue  // 1.7976931348623157E308
+
+        Double.PositiveInfinity  // Infinity
+        Double.NegativeInfinity  // -Infinity
+
+        // CAUTION: compare floating numbers simply with `>`, `<`, and `==` is NOT a good
+        //          idea!
+        1.7976931348623157E308 > Double.PositiveInfinity  // false
+      #+END_SRC
+
+*** TODO See Also - 45
+
+** DONE 2.7. Generating Random Numbers - 45
+   CLOSED: [2018-02-28 Wed 17:02]
+*** DONE Problem - 45
+    CLOSED: [2018-02-28 Wed 16:33]
+*** DONE Solution - 45
+    CLOSED: [2018-02-28 Wed 16:38]
+    Use ~scala.util.Random~ class
+    #+BEGIN_SRC scala
+      val r = scala.util.Random
+
+      r.nextInt
+
+      r.nextInt(100)  // with limit 0 (inclusive) and 100 (exclusive)
+
+      r.nextFloat
+
+      r.nextDouble
+
+      // Set the seed value using an `Int` or `Long`
+      // 1. When new an instance
+      val rr = new scala.util.Random(100)
+
+      // 2. After the creation of an `Random` instance
+      val rrr = new scala.util.Random
+      rrr.setSeed(1000L)
+    #+END_SRC
+
+*** DONE Discussion - 46
+    CLOSED: [2018-02-28 Wed 17:01]
+    - The ~Random~ class handles all the usual use cases.
+      For example, generate random characters ~r.nextPrintableChar~
+
+    - Random-length ranges:
+      ~0 to r.nextInt(10)~
+
+    - Random number collections (with bound):
+      ~(1 to 5).map(_ => r.nextInt(100))~
+
+*** TODO See Also - 47
+
+** DONE 2.8. Creating a ~Range~ or Sequence of Numbers - 47
+   CLOSED: [2018-02-28 Wed 15:46]
+*** DONE Problem - 47
+    CLOSED: [2018-02-28 Wed 15:43]
+*** DONE Solution - 47
+    CLOSED: [2018-02-28 Wed 15:43]
+    - ~1 to 10~
+
+    - ~1 to 10 by 2~
+
+    - ~1 until 10~
+
+    - ~1 until 10 by 2~
+
+*** DONE Discussion - 48
+    CLOSED: [2018-02-28 Wed 15:46]
+    - ~Range~ can be converted to ~List~ and ~Array~ easily.
+      Just use the ~toListl~ and ~toArray~ method.
+
+    - You are actually invoking the ~to~ or ~until~ method of ~RichInt~.
+      Scala help you to implictly do the converstion from ~Int~ to ~RichInt~.
+
+*** TODO See Also - 49
+
+** DONE 2.9. Formatting Numbers and Currency - 49
+   CLOSED: [2018-02-28 Wed 18:05]
+*** DONE Problem - 49
+    CLOSED: [2018-02-28 Wed 18:00]
+*** DONE Solution - 49
+    CLOSED: [2018-02-28 Wed 17:43]
+    :LOGBOOK:
+    CLOCK: [2018-02-28 Wed 17:57]--[2018-02-28 Wed 18:22] =>  0:25
+    :END:
+    - For basic number formatting, use ~f~ string interpolator. For example,
+      #+BEGIN_SRC scala
+        val pi = scala.math.Pi
+
+        println(f"$pi%1.5f")   // 3.14159
+        println(f"$pi%1.2f")   // 3.14
+        println(f"$pi%06.2f")  // 003.14
+      #+END_SRC
+
+      + Prior to Scala 2.10, you don't have the ~f~ string interpolator.
+        You need to use the ~format~ method like ~"%06.2f".format(pi)~.
+
+      + Use ~java.text.NumberFormat.getIntegerInstance~ to add commas to numbers
+        for clarity.
+        #+BEGIN_SRC scala
+          val formatter = java.text.NumberFormat.getIntegerInstance
+
+          formatter.format(10000)
+          // res0: String = 10,000
+          formatter.format(1000000)  // 1,000,000
+          // res1: String = 1,000,000
+        #+END_SRC
+
+        * You can also set a locale with the ~getIntegerInstance~ /method/
+          #+BEGIN_SRC scala
+            val locale = new java.util.Locale("de", "DE")
+            val formatter = java.text.NumberFormat.getIntegerInstance(locale)
+            formatter.format(1000000)
+            //res2: String = 1.000.000
+          #+END_SRC
+
+        * You can also handle floating numbers:
+          #+BEGIN_SRC scala
+            val formatter = java.text.NumberFormat.getInstance
+            formatter.format(10000.33)
+            // res0: String = 10,000.33
+          #+END_SRC
+
+    - For /currency/ output, use the ~getCurrencyInstance~ formatter:
+      #+BEGIN_SRC scala
+        val formatter = java.text.NumberFormat.getCurrencyInstance
+
+        println(formatter.format(123.456789))
+        // $123.46
+
+        println(formatter.format(1234.56789))
+        // $1,234.57
+
+        println(formatter.format(12345.6789))
+        // $12,345.68
+
+        println(formatter.format(123456.789))
+        // $123,456.79
+      #+END_SRC
+
+      + For international currency:
+        #+BEGIN_SRC scala
+          import java.util.{Currency, Locale}
+
+          val de = Currency.getInstance(new Locale("de", "DE"))
+          // de: java.util.Currency = EUR
+
+          formatter.setCurrency(de)
+          println(formatter.format(123456.789))
+          // EUR123,456.79
+        #+END_SRC
+
+*** DONE Discussion - 51
+    CLOSED: [2018-02-28 Wed 18:04]
+    This recipe falls back to the Java approach for dealing with /currency/.
+
+    In the experience of the author of this book, as a consultant, most companies
+    he know use Java ~BigDecimal~ to process currency, and others create their
+    own custom currency classes, which are typically wrappers around ~BigDecimal~.
+
+*** TODO See Also - 51
+    - JSR 354
+
+** DONE 2.10. Creating New Date and Time Instances - ???
+** DONE 2.11. Calculating The Difference Between Two Dates - ???
+** DONE 2.12. Formatting Dates - ???
+** DONE 2.13. Parsing Strings Into Dates - ???
+** DONE 2.14. Converting To/From Legacy Date/Time Classes - ???
+   
+* TODO 3. Control Structures - 53
+** DONE Introduction - 53
+   CLOSED: [2018-03-01 Thu 23:36]
+** TODO 3.1. Looping Over Data Structures with ~for~ - 54
+   =54=
+*** DONE Problem
+    CLOSED: [2017-07-18 Tue 12:03]
+*** DONE Solution
+    CLOSED: [2017-07-18 Tue 12:09]
+   - Loops in Scala:
+     + ~for~ loop
+     + ~while~ loop
+     + collection methods:
+       * ~foreach~
+       * ~map~
+       * ~flatMap~, and more
+
+   - This section concentrate on ~for~ loop and ~foreach~ method.
+
+**** DONE Returning values from a for loop
+     CLOSED: [2017-07-18 Tue 12:04]
+     ~yield~
+
+**** DONE ~for~ loop counters
+     CLOSED: [2017-07-18 Tue 12:07]
+     #+BEGIN_SRC scala
+       for (i <- 0 until a.length) {
+         println(s"$i is ${a(i)}")
+       }
+
+       for ((e, count) <- a.zipWithIndex) {
+         println(s"$count is $e")
+       }
+     #+END_SRC
+
+     =TODO= Recipe 10.11 ~zipWithIndex~
+**** DONE Generators and guards
+     CLOSED: [2017-07-18 Tue 12:07]
+     ~Range~
+     #+BEGIN_SRC scala
+       for (i <- 1 to 3) println(i)
+
+       // With guard
+       for (i <- 1 to 10 if i < 4) println(i)
+     #+END_SRC
+**** DONE Looping over a Map
+     CLOSED: [2017-07-18 Tue 12:09]
+     #+BEGIN_SRC scala
+       for ((k,v) <- names) println(s"key: $k, value: $v")
+     #+END_SRC
+
+     =TODO= Recipe 11.17, "Traversing a Map"
+*** DONE Discussioin
+    CLOSED: [2017-07-18 Tue 13:40]
+**** DONE How ~for~ loops are translated
+     CLOSED: [2017-07-18 Tue 13:40]
+     - A _simplification_ of the rules in /Scala Language Specification/:
+       1. a ~for~ loop on a collection -> ~foreach~ method;
+
+       2. a ~for~ loop with a guard -> a ~withFilter~ methods call on the
+          collection followed by a ~foreach~ call;
+
+       3. a ~for~ comprehension -> ~map~ method;
+
+       4. a ~for~ comprehension with a guard -> a ~withFilter~ methods call on
+          the collection followed by a ~map~ call;
+
+     - Example:
+       #+BEGIN_SRC scala
+         class Main {
+           for (i <- 1 to 10) println(i)
+         }
+
+         // In CLI:
+         // scalac -Xprint:parse Main.scala
+
+         // [[syntax trees at end of parser]] // Main.scala
+         // package <empty> {
+         //   class Main extends scala.AnyRef {
+         //     def <init>() = {
+         //       super.<init>();
+         //       ()
+         //     };
+         //     1.to(10).foreach(((i) => println(i)))
+         //   }
+         // }
+       #+END_SRC
+
+     - ~-Xprint:parse~ shows the result after the first step.
+
+     - ~-Xprint:all~ shows the result after all steps in the compilation process.
+
+** DONE 3.2. Using for Loops with Multiple Counters - 60
+   CLOSED: [2017-07-18 Tue 13:45]
+*** DONE Problem
+    CLOSED: [2017-07-18 Tue 13:45]
+
+*** DONE Solution
+    CLOSED: [2017-07-18 Tue 13:44]
+    #+BEGIN_SRC scala
+      val array = Array.ofDim[Int](2, 2)
+      array(0)(0) = 0
+      array(0)(1) = 1
+      array(1)(0) = 2
+      array(1)(1) = 3
+
+      for {
+        i <- 0 to 1
+        j <- 0 to 1
+      } println(s"($i)($j) = ${array(i)(j)}")
+    #+END_SRC
+
+*** DONE Discussion
+    CLOSED: [2017-07-18 Tue 13:45]
+
+** DONE 3.3. Using a for Loop with Embedded if Statements (Guards) - 62
+   CLOSED: [2017-07-18 Tue 13:47]
+*** Problem
+*** Solution
+*** Discussion
+** TODO 3.4. Create a New Collection From an Existing Collection With ~for~ / ~yield~ - 63
+*** Problem
+*** Solution
+*** Discussion
+** DONE 3.5. Using the ~if~ Construct Like a Ternary Operator - 71
+   CLOSED: [2017-07-19 Wed 01:09]
+*** Problem
+*** Solution
+*** Discussion
+** DONE 3.6. Using a Match Expression Like a ~switch~ Statement - 72
+   CLOSED: [2017-07-19 Wed 02:07]
+*** DONE Problem
+    CLOSED: [2017-07-19 Wed 02:03]
+*** DONE Solution
+    CLOSED: [2017-07-19 Wed 02:03]
+**** DONE The ~@switch~ annotation
+     CLOSED: [2017-07-19 Wed 02:03]
+     Issue a warning if the pattern matching can't be compiled to ~tableswitch~
+     or ~lookupswitch~.
+
+     ~tableswitch~ and ~lookupswitch~ have good performance, because they are
+     /branch tables/ rather than /decision trees/. They use _jump_ rather than
+     walk through the decision tree.
+
+     - Example: =SwitchDemo.scala= Version _1_, which has no warning.
+       #+BEGIN_SRC scala
+         // Version 1 - compiles to a tableswitch
+         import scala.annotation.switch
+
+         class SwitchDemo {
+           val i = 1
+           val x = (i: @switch) match {
+             case 1 => "One"
+             case 2 => "Two"
+             case _ => "Other"
+           }
+         }
+       #+END_SRC
+       =SwitchDemo.scala= can be compiled without warnings
+
+       The output of ~javap -c SwitchDemo~
+       #+BEGIN_SRC text
+         16:  tableswitch{ //1 to 2
+                     1: 50;
+                     2: 45;
+                     defalut: 40 }
+       #+END_SRC
+
+     - Example: =SwitchDemo.scala= Version _2_, which has a warning.
+       #+BEGIN_SRC scala
+         // Version 2 - leads to a compiler warning
+         import scala.annotation.switch
+
+         class SwitchDemo {
+           val i = 1
+           val Two = 2  // added compared to Ver 1
+           val x = (i: @switch) match {
+             case 1 => "One"
+             case Two => "Two"   // replaced the '2'
+             case _ => "Other"
+           }
+         }
+       #+END_SRC
+
+       ~scalac SwitchDemo.scala~ will issue a warning:
+       #+BEGIN_SRC text
+         SwitchDemo.scala:7: warning: could not emit switch for @switch annotated match
+         val x = (i: @switch) match {
+         ^
+         one warning found
+       #+END_SRC
+
+     - Rules (from the book *Scala In Depth* by Joshua Suereth) for Scala to
+       apply the ~tableswitch~ optimization:
+       1. The matched value must be a known integer
+
+       2. The matched expression must be "simple". It can't contain any type
+          checks, if statements, or extractors.
+
+       3. The expression must also have its value available at compile time.
+
+       4. There should be more than two ~case~ statements.
+
+     - =From Jian= Where are the rules for ~lookupswitch~???
+
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 02:07]
+**** DONE Handling the default case
+     CLOSED: [2017-07-19 Wed 02:05]
+     =TODO= Recipe 9.8, "Creating Partial Functions".
+**** DONE Do you really need a switch statement?
+     CLOSED: [2017-07-19 Wed 02:07]
+     Use ~Map~.
+
+     #+BEGIN_SRC scala
+       val monthNumberToName = Map(
+         1 -> "January",
+         2 -> "February",
+         3 -> "March",
+         4 -> "April",
+         5 -> "May",
+         6 -> "June",
+         7 -> "July",
+         8 -> "August",
+         9 -> "September",
+         10 -> "October",
+         11 -> "November",
+         12 -> "December"
+       )
+
+       val monthName = monthNumberToName(4)
+       println(monthName) // prints "April"
+     #+END_SRC
+
+** DONE 3.7. Matching Multiple Conditions with One Case Statement - 76
+   CLOSED: [2017-07-19 Wed 02:08]
+*** DONE Problem
+    CLOSED: [2017-07-19 Wed 02:09]
+*** DONE Solution
+    CLOSED: [2017-07-19 Wed 02:09]
+    Use ~|~ to separate patterns
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 02:09]
+
+** DONE 3.8. Assigning the Result of a Match Expression to a Variable - 77
+   CLOSED: [2017-07-19 Wed 02:11]
+*** Problem
+*** Solution
+*** Discussion
+
+** DONE 3.9. Accessing the Value of the Default Case in a Match Expression - 78
+   CLOSED: [2017-07-19 Wed 02:12]
+*** DONE Problem
+    CLOSED: [2017-07-19 Wed 02:11]
+
+*** DONE Solution
+    CLOSED: [2017-07-19 Wed 02:11]
+    In the last case use a name, rather than ~_~.
+
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 02:12]
+
+** DONE 3.10. Using Pattern Matching in Match Expressions - 79
+   CLOSED: [2018-03-01 Thu 23:35]
+*** DONE Problem - 79
+    CLOSED: [2018-03-01 Thu 22:44]
+    You need to match one or more patterns in a match expression, and the
+    pattern may be a
+    - constant pattern
+    - variable pattern
+    - constructor pattern
+    - sequence pattern
+    - tuple pattern
+    - type pattern
+
+*** DONE Solution - 79
+    CLOSED: [2018-03-01 Thu 23:02]
+    - Use ~_*~ to match the tail of a sequence:
+      #+BEGIN_SRC scala
+        case List(1, _*) => "a list beginning with 1, having any number of elements"
+        case Vector(1, _*) => "a vector starting with 1, having any number of elements"
+      #+END_SRC
+
+    - Use /type wildcard/ to match arbitrary type:
+      #+BEGIN_SRC scala
+        case list: List[_] => s"thanks for the List: $list"
+        case m: Map[_, _] => m.toString
+      #+END_SRC
+
+      =IMPORTANT=
+      This is not mandatory! You can use type like ~List[x]~ to annotate your
+      pattern. However, due to /type erasure/ in the JVM, nothing you can do with
+      the ~x~. Therefore, before JVM solves this problem, there is NO reason to
+      a named variable to match the actually erased type.
+
+    - *Tips*: =IMPORTANT=
+      About /type erasure/, if you write something like
+      ~case l: List[Int] => "List"~, the Scala compiler will give you a warning
+      #+BEGIN_QUOTE
+      Test1.scala:7: warning: non-variable type argument Int in type pattern
+      List[Int] is unchecked since it is eliminated by erasure
+          case l: List[Int] => "List[Int]"
+      #+END_QUOTE
+
+      =From Jian=
+      Before JVM solves the /type erasure/ problem, /generics type annotation/ in
+      pattern matching is useless!
+
+*** DONE Discussion - 82
+    CLOSED: [2018-03-01 Thu 23:27]
+**** DONE Patterns - 82
+     CLOSED: [2018-03-01 Thu 23:21]
+**** DONE Adding variables to patterns - 84
+     CLOSED: [2018-03-01 Thu 23:21]
+     - ~case list @ List(1, _*) => s"$list"~
+
+     - ~case List(1, tl @ _*) => s"$list"~
+
+**** DONE Using ~Some~ and ~None~ in match expressions - 85
+     CLOSED: [2018-03-01 Thu 23:27]
+     - =From Jian=
+       Mostly you work with ~Option~ type and ~Try~ type with ~map~, ~flatMap~,
+       and ~foreach~. Only when you try to get the inside value out, you may use
+       /pattern matching/.
+
+     - =From Jian=
+       The /wave-particle duality/ of ~Option~'s and ~Try~'s:
+       + particle: When you want to interact with them, use /pattern matching/.
+
+       + wave: when you want them to propagate, use ~map~, ~flatMap~, and
+         ~foreach~.
+
+*** TODO See Also - 86
+    =IMPORTANT=
+
+** DONE 3.11. Using Enums and Case Classes in Match Expressions - 86
+   CLOSED: [2017-07-19 Wed 02:13]
+*** DONE Problem - 86
+    CLOSED: [2018-03-01 Thu 22:49]
+*** DONE Solution - 86
+    CLOSED: [2018-03-01 Thu 22:49]
+
+** DONE 3.12. Adding if Expressions (Guards) to Case Statements - 87
+   CLOSED: [2017-07-19 Wed 02:13]
+*** Problem
+*** Solution
+*** Discussion
+
+** DONE 3.13. Using a Match Expression Instead of ~isInstanceOf~ - 88
+   CLOSED: [2017-07-19 Wed 02:31]
+*** DONE Problem
+    CLOSED: [2017-07-19 Wed 02:28]
+
+*** DONE Solution
+    CLOSED: [2017-07-19 Wed 02:28]
+    ~if (x.isInstanceOf[Foo]) { do something ... }~
+    NOT ALWAYS BAD! This is good ONLY for some simple cases.
+
+    For most situations use the TWO solutions listed below:
+    #+BEGIN_SRC scala
+      // 1
+      def isPerson(x: Any): Boolean = x match {
+        case p: Person => true
+        case _ => false
+      }
+
+
+
+      // 2: case classes extended from some base class
+      trait SentientBeing
+      trait Animal extends SentientBeing
+      case class Dog(name: String) extends Animal
+      case class Person(name: String, age: Int) extends SentientBeing
+
+      def printInfo(x: SentientBeing) = x match {
+        case Person(name, age) => // handle the Person
+        case Dog(name) => // handle the Dog
+      }
+    #+END_SRC
+
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 02:30]
+
+** DONE 3.14. Working with a List in a Match Expression - 89
+   CLOSED: [2017-07-19 Wed 02:31]
+*** Problem
+*** Solution
+*** Discussion
+
+** DONE 3.15. Matching One or More Exceptions with ~try~ / ~catch~ - 91
+   CLOSED: [2017-07-19 Wed 02:43]
+*** DONE Problem
+    CLOSED: [2017-07-19 Wed 02:32]
+
+*** DONE Solution
+    CLOSED: [2017-07-19 Wed 02:34]
+    The Scala ~try/catch/finally~ syntax is _similar_ to Java,
+    BUT it uses the _match expression approach_ in the ~catch~ block:
+    #+BEGIN_SRC scala
+      val s = "Foo"
+
+      try {
+        val i = s.toInt
+      } catch {
+        case e: Exception => e.printStackTrace
+        // case ...
+      }
+    #+END_SRC
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 02:43]
+    A catch-all ~try ... catch~ should use a type ~Throwable~ case variable,
+    rather than just ~_~ with no type specified.
+
+    (NOTE form Jian: ~Throwable~ is a super class of ~Exception~,
+     as well as ~Error~)
+
+    #+BEGIN_SRC scala
+      try {
+        openAndReadAFile("foo")
+      } catch {
+        case t: Throwable => t.printStackTrace()
+      }
+    #+END_SRC
+
+    If you prefer to declare the exceptions that your method throws,
+    or you need to interact with Java,
+    add the ~@throws~ annotation to your method definition:
+    #+BEGIN_SRC scala
+      @throws(classOf[NumberFormatException])
+      def toInt(s: String): Option[Int] =
+        try {
+          Some(s.toInt)
+        } catch {
+          case e: NumberFormatException => throw e
+        }
+    #+END_SRC
+
+** DONE 3.16. Declaring a Variable Before Using It in a ~try~ / ~catch~ / ~finally~ Block - 92
+   CLOSED: [2017-07-19 Wed 02:53]
+*** Problem
+*** Solution
+    #+BEGIN_SRC scala
+      import java.io._
+
+      object CopyBytes extends App {
+        var in = None: Option[FileInputStream]
+        var out = None: Option[FileOutputStream]
+        try {
+          in = Some(new FileInputStream("/tmp/Test.class"))
+          out = Some(new FileOutputStream("/tmp/Test.class.copy"))
+          var c = 0
+          while ({c = in.get.read; c != −1}) {
+            out.get.write(c)
+          }
+        } catch {
+          case e: IOException => e.printStackTrace
+        } finally {
+          println("entered finally ...")
+          if (in.isDefined) in.get.close
+          if (out.isDefined) out.get.close
+        }
+      }
+    #+END_SRC
+*** Discussion
+
+** DONE 3.17. Creating Your Own Control Structures - 95
+   CLOSED: [2018-03-01 Thu 23:53]
+*** DONE Problem - 95
+    CLOSED: [2018-03-01 Thu 23:38]
+*** DONE Solution - 95
+    CLOSED: [2018-03-01 Thu 23:42]
+    - =From Jian= Summary
+      When _defining_ it, combine the features of
+      + /funciton definition/
+
+      + /currying/
+        Since it is a control structure, you don't want to evaluate all parts of
+        it when you see its header. Or else, this is NOT a control structure --
+        a real control structure is used to decide what to do and what not to do,
+        rather than do them all.
+
+      + /lazy parameter(s)/
+        The body of the control structure shouldn't be evaluated when the
+        condition in the header isn't fulfilled.
+
+    - For example,
+      #+BEGIN_SRC scala
+        package com.alvinalexander.controls
+
+        import scala.annotation.tailrec
+
+
+        object Whilst {
+          // 2nd attempt
+          @tailrec
+          def whilst(testCondition: => Boolean)(codeBlock: => Unit) {
+            if (testCondition) {
+              codeBlock
+              whilst(testCondition)(codeBlock)
+            }
+          }
+        }
+      #+END_SRC
+
+    - When _using_ it, use the feature that function can accept /code blocks/ as
+      parameters
+
+    - For example
+      #+BEGIN_SRC scala
+        package foo
+
+        import com.alvinalexander.controls.Whilst._
+
+
+        object WhilstDemo extends App {
+
+          var i = 0
+
+          whilst (i < 5) {
+            println(i)
+            i += 1
+          }
+
+        }
+      #+END_SRC
+
+*** DONE Discussion - 96
+    CLOSED: [2018-03-01 Thu 23:53]
+    #+BEGIN_SRC scala
+      def doubleif(test1: => Boolean)(test2: => Boolean)(codeBlock: => Unit) {
+        if (test1 && test2) {
+          codeBlock
+        }
+      }
+
+
+      doubleif(age > 18)(numAccidents == 0) {
+        println("Discount!")
+      }
+    #+END_SRC
+
+** DONE =DEPRECATED= 3.5. Implementing break and continue - 65
+   CLOSED: [2017-07-19 Wed 01:08]
+*** DONE Problem
+    CLOSED: [2017-07-18 Tue 13:52]
+    Scala doesn't have ~break~ or ~continue~ keywords.
+
+*** DONE Solution
+    CLOSED: [2017-07-18 Tue 23:37]
+    ~break~-like and ~continue~-like functionalities are provided through
+    ~scala.util.control.Breaks~
+
+    #+BEGIN_SRC scala
+      package com.alvinalexander.breakandcontinue
+
+      import util.control.Breaks._
+
+      object BreakAndContinueDemo extends App {
+        println("\n=== BREAK EXAMPLE ===")
+        breakable {
+          for (i <- 1 to 10) {
+            println(i)
+            if (i > 4) break  // break out of the for loop
+          }
+        }
+
+        println("\n===CONTINUE EXAMPLE ===")
+
+        val searchMe = "peter piper picked a peck of pickled peppers"
+        var numPs = 0
+
+        for (i <- 0 until searchMe.length) {
+          breakable {
+            if (searchMe.charAt(i) ! = 'p') {
+              break  // break out of the 'breakable', continue the outside loop
+            } else {
+              numPs += 1
+            }
+          }
+        }
+        println("Found " + numPs + " p's in the string.")
+      }
+
+      // === BREAK EXAMPLE ===
+      // 1
+      // 2
+      // 3
+      // 4
+      // 5
+      //
+      // === CONTINUE EXAMPLE ===
+      // Found 9 p's in the string.
+    #+END_SRC
+
+**** DONE The *break* example
+     CLOSED: [2017-07-18 Tue 23:37]
+     - ~break~ will throw a ~BreakControl~ exception when it's called.
+       #+BEGIN_SRC scala
+         private val breakException = new BreakControl
+         def break(): Nothing = { throw breakException }
+       #+END_SRC
+
+     - ~breakable~ will catch a ~BreakControl~ exception.
+       #+BEGIN_SRC scala
+         def breakable(op: => Unit) {
+           try {
+             op
+           } catch {
+             case ex: BreakControl =>
+               // TODO: ???
+               if (ex ne breakException) throw ex
+           }
+         }
+       #+END_SRC
+
+     - =TODO= rECIPE 3.18
+
+**** DONE The *continue* example
+     CLOSED: [2017-07-19 Wed 00:16]
+     Use ~break~ and ~breakable~ to implement ~continue~-like functionality.
+     #+BEGIN_SRC scala
+       package com.alvinalexander.breakandcontinue
+
+       // import util.control.Breaks._
+       val searchMe = "peter piper picked a peck of pickled peppers"
+       var numPs = 0
+
+       for (i <- 0 until searchMe.length) {
+         breakable {
+           if (searchMe.charAt(i) ! = 'p') {
+             break  // break out of the 'breakable', continue the outside loop
+           } else {
+             numPs += 1
+           }
+         }
+       }
+       println("Found " + numPs + " p's in the string.")
+     #+END_SRC
+
+**** DONE General syntax
+     CLOSED: [2017-07-19 Wed 00:20]
+     - _break_ functionality
+       #+BEGIN_SRC scala
+         breakable {
+           for (x <- xs) {
+             if (cond)
+               break
+           }
+         }
+       #+END_SRC
+
+       Corresponds to this Java:
+
+       #+BEGIN_SRC java
+         for (X x : xs) {
+             if (cond) break;
+         }
+       #+END_SRC
+
+     - _continue_ functionality
+       #+BEGIN_SRC scala
+         for (x <- xs) {
+           breakable {
+             if (cond)
+               break
+           }
+         }
+       #+END_SRC
+
+       Corresponds to this Java:
+
+       #+BEGIN_SRC java
+         for (X x : xs) {
+             if (cond) continue;
+         }
+       #+END_SRC
+
+**** DONE About that *continue* example..
+     CLOSED: [2017-07-19 Wed 00:23]
+     ~val count = searchMe.count(_=='p')~
+
+**** DONE Nested loops and /labeled breaks/
+     CLOSED: [2017-07-19 Wed 00:55]
+     - Example
+       #+BEGIN_SRC scala
+         package com.alvinalexander.labeledbreaks
+
+         object LabeldBreakDemo extends App {
+           import scala.util.control._
+
+           // TODO: Why capital
+           val Inner = new Breaks
+           // TODO: Why capital
+           val Outer = new Breaks
+
+           Outer.breakable {
+             for (i <- 1 to 5) {
+               Inner.breakable {
+                 for (j <- 'a' to 'e') {
+                   if (i == 1 && j == 'c') Inner.break else println(s"i: $i, j: $j")
+                   if (i == 2 && j == 'b') Outer.break
+                 }
+               }
+             }
+           }
+         }
+       #+END_SRC
+
+     - Use one labeled break, the pattern below is like the _continue_ pattern.
+       However, since we used the labeled break, we actually implement a _break_
+       pattern.
+       #+BEGIN_SRC scala
+         import scala.util.control._
+
+         val Exit = new Breaks
+         Exit.breakable {
+           for (j <- 'a' to 'e') {
+             if (j == 'c') Exit.break else println(s"j: $j")
+           }
+         }
+       #+END_SRC
+
+*** DONE Discussion
+    CLOSED: [2017-07-19 Wed 01:08]
+    If you don't like the _break_ pattern and the _continue_ pattern, try
+    + guard
+
+    + write a function, use ~return~ to break
+
+    + Use recursive algorithm -- calculation stops when the base case/cases
+      is/are reached.
+
+* TODO 4. Classes and Enums - NEW TITLE
+** TODO Introduction - 99
+   - Some of the biggest differences between Scala and Java:
+     + the declaration of classes
+     + class constructors
+     + the control of field visibility
+
+   - TODO NOTE
+
+   - In Java, it seems correct to refer to /accessor/ and /mutator/ /methods/ as
+     "getter" and "setter" methods, primarily because of the /JavaBeans standard/.
+     In this chapter, I use the terms interchangeably, but to be clear,
+       _Scala does *NOT follow* the JavaBeans NAMING CONVENTION for /accessor/ and
+     /mutator/ methods._
+
+** DONE 4.1. Creating a Primary Constructor - 100
+   CLOSED: [2019-05-28 Tue 11:25]
+*** Problem - 100
+    How to create a /primary constructor/ for a /class/ (this is different from
+    Java)?
+
+*** Solution - 100
+    - The /primary constructor/ of a /Scala class/ is a combination of:
+      + The _constructor parameters_
+
+      + /Methods/ that are *called* _IN THE BODY OF the class_
+
+      + /Statements/ and /expressions/ that are *executed* _IN THE BODY OF the class_
+
+    - /Fields/ declared _in the body of a Scala class_ are handled in a manner
+      *similar to Java*;
+      _they are assigned when the class is FIRST instantiated._
+
+    - Example:
+      #+BEGIN_SRC scala
+        class Person(var firstName: String, var lastName: String) {
+          println("the constructor begins")
+
+          // some class fields
+          private val HOME = System.getProperty("use.home")
+          var age: Int = 0
+
+          // some methods
+          override def toString: String = s"$firstName $lastName is $age years old"
+          def printHome(): Unit = { println(s"HOME = $HOME") }
+          def printFullName(): Unit = { println(this) }  // uses `toString`
+
+          printHome
+          printFullName
+          println("still in the constructor")
+        }
+      #+END_SRC
+      + =from Jian=
+        ~firstName~ and ~lastName~ is initialized before any other things in the
+        body, they ALWAYS have values.
+
+      + =from Jian=
+        If you write
+        #+BEGIN_SRC scala
+          def printHome { println(s"HOME = $home") }
+          private val HOME = System.getProperty("use.home")
+        #+END_SRC
+        The ~printHome~ will use the uninitialized ~Home~, which is ~null~.
+        See above, this book mentioned when Scala initialize the /field/.
+
+        _The *order* is IMPORTANT!_
+
+*** Discussion - 101
+    - *Tips*
+      Anything defined within the body of the class
+      _OTHER THAN /method declarations/_
+      is a part of the /primary class constructor/.
+
+      Because /auxiliary constructors/ *must always call* a previously defined
+      constructor in the same class, /auxiliary constructors/ will also execute
+      the same code.
+
+**** A comparison with Java - 102
+     Translate the code into Java:
+     #+BEGIN_SRC java
+       // java
+       public class Person {
+           private String firstName;
+           private String lastName;
+           private final String HOME = System.getProperty("user.home");
+           private int age;
+
+           public Person(String firstName, String lastName) {
+               super();
+               this.firstName = firstName;
+               this.lastName = lastName;
+               System.out.println("the constructor begins");
+               age = 0;
+               printHome();
+               printFullName();
+               System.out.println("still in the constructor");
+           }
+
+           public String firstName() { return firstName; }
+           public String lastName() { return lastName; }
+           public int age() { return age; }
+
+           public void firstName_$eq(String firstName) {
+               this.firstName = firstName;
+           }
+
+           public void lastName_$eq(String lastName) {
+               this.lastName = lastName;
+           }
+
+           public void age_$eq(int age) {
+               this.age = age;
+           }
+
+           public String toString() {
+               return firstName + " " + lastName + " is " + age + " years old";
+           }
+
+           public void printHome() {
+               System.out.println(HOME);
+           }
+
+           public void printFullName() {
+               System.out.println(this);
+           }
+       }
+     #+END_SRC
+
+     - This code is more verbose.
+       However, you don't have to reason much about waht the compiler is doing
+       for you.
+
+     - Here you can see the /getter/ and /setter/, which in Scala are generated
+       automatically according to how you declare a /field/ -- ~var~ or ~val~.
+       #+BEGIN_SRC scala
+         p.name = "Ron Artest"
+         // is actually
+         p.name_$eq("Ron Artest")
+       #+END_SRC
+
+**** Those ~_$eq~ methods - 103
+     - The ~firstName_$eq~, ~lastName_$eq~ and ~age_$eq~ are part of the /Scala
+       syntactic sugar/ for mutating ~var~ fields -- /mutators/.
+
+       Because ~firstName~, ~lastName~, and ~age~ are declared with ~var~, Scala
+       generates /accessor methods/ and /mutator methods/ for them.
+
+     - When you mutate a ~var~ in Scala with code like ~p.name = "Ron Artest"~,
+       Scala converts this code to ~p.name_$eq("Ron Artest")~.
+
+     - Even if you can't see the generated mutators (~_$eq~ suffixed /methods/),
+       you can use them in your code, though there is no reason at all to use
+       them manually.
+       #+begin_src scala
+         object Test extends App {
+           val p = new Person
+
+           // the 'normal' mutator approach
+           p.name = "Ron Artest"
+           println(p)
+           //// name = Ron Artest
+
+           // the 'hidden' mutator method
+           p.name_$eq("Metta World Peace")
+           println(p)
+           //// name = Metta World Peace
+         }
+       #+end_src
+
+**** Summary - 104
+     - Java is verbose but straightforward.
+
+       Scala is more concise, but you need to know more compiler behaviors to
+       understand it.
+
+     - =from Jian=
+       When you write ~var~ in Scala, it's like you write declare a non-~final~
+       variable in Java with ~@Getter~ and ~@Setter~ /annotations/.
+
+** DONE 4.2. Controlling the Visibility of Constructor Fields - 104
+   CLOSED: [2019-05-28 Tue 14:01]
+*** Problem - 104
+    How to control the visibility of /fields/ that are used as /constructor
+    parameters/ in a Scala /class/?
+
+    =from Jian=
+    CAUTION: here we ONLY talk about /constructor parameter/!!
+
+*** Solution - 105
+    Summary:
+    Here's the short version of the solution:
+    - ~var~ /fields/:
+      Scala generates
+      + /getter methods/
+      + /setter methods/
+
+    - ~val~ /fields/.
+      Scala generates
+      + /getter/
+
+    - NO ~var~ or ~val~ /modifier/
+      NO /getter/ or /setter/ generated.
+
+    - The code generation behavior can be modified if a ~var~ or ~val~ has a
+      ~private~ modifier. ~private~ prevents /getters/ and /setters/ from being
+      generated.
+
+**** ~var~ fields - 105
+**** ~val~ fields - 106
+**** Fields without ~val~ or ~var~ - 106
+**** Adding ~private~ to ~val~ or ~var~ - 106
+     #+begin_src scala
+       class Person(private var name: String) { def getName {println(name)} }
+
+       val p = new Person("Alvin Alexander")
+       // p: Person = Person@3cb7cee4
+
+       p.name
+       // <console>:10: error: variable name in class Person cannot be accessed in Person
+       //               p.name
+       //                 ^
+
+       p.getName
+       // Alvin Alexander
+     #+end_src
+
+*** Discussion - 107
+**** Case classes - 107
+     For /case classes/, ~val~ is the default.
+
+** DONE 4.3. Defining Auxiliary Constructors for Classes - 108 - =RE-READ=
+   CLOSED: [2019-05-29 Wed 14:55]
+*** Problem - 108
+    How to define _ONE or MORE_ /auxiliary constructors/ for a /class/?
+
+*** Solution - 108
+    - Define the /auxiliary constructors/ as /methods/ in the /class/ with the
+      *name* ~this~.
+
+    - You can define _MULTIPLE_ /auxiliary constructors/, but they *must*
+      + have *different* /signatures/ (parameter lists).
+      + call one of the *previously* defined /constructors/.
+
+    - Example:
+      #+begin_src scala
+        // primary constructor
+        class Pizza (var crustSize: Int, var crustType: String) {
+
+          // one-arg auxiliary constructor
+          def this(crustSize: Int) {
+            this(crustSize, Pizza.DEFAULT_CRUST_TYPE)
+          }
+
+          // one-arg auxiliary constructor
+          def this(crustType: String) {
+            this(Pizza.DEFAULT_CRUST_SIZE, crustType)
+          }
+
+          // zero-arg auxiliary constructor
+          def this() {
+            this(Pizza.DEFAULT_CRUST_SIZE, Pizza.DEFAULT_CRUST_TYPE)
+          }
+
+          override def toString = s"A $crustSize inch pizza with a $crustType crust"
+        }
+
+        object Pizza {
+          val DEFAULT_CRUST_SIZE = 12
+          val DEFAULT_CRUST_TYPE = "THIN"
+        }
+      #+end_src
+
+*** Discussion - 109
+    - There are several important points to this recipe:
+      + /Auxiliary constructors/ are defined by creating methods named ~this~.
+
+      + EACH /auxiliary constructor/ *must begin with* a call to a *previously
+        defined* /constructor/.
+
+      + EACH /constructor/ *must* have a *different* /signature/.
+
+      + One /constructor/ calls another /constructor/ with the name ~this~.
+
+    - An /auxiliary constructor/ needs to call one of the previously defined
+      /constructors/.
+
+    - *NOTE*
+      Read Recipe 4.5, "Providing Default Values for Constructor Parameters", and
+      it will be clear why, NOT like Java, you usually do *NOT* need to create
+      _MULTIPLE_ /constructors/ in Scala even though you can do it with the
+      recipe of this section.
+
+**** Generating auxiliary constructors for case classes - 110
+     Because of the way /case classes/ work (generates a lot of boilerplate code
+     for you),
+     adding what appears to be an /auxiliary constructor/ to a case
+     class is *DIFFERENT* than adding an auxiliary constructor to a “regular”
+     class.
+
+     - This is because they're _NOT really /constructors/:_ they're ~apply~ /methods/
+       in the /companion object/ of the /class/.
+
+     - If you want to add new "constructors" to your case class,
+       you write new ~apply~ /methods/.
+
+*** See Also - 112
+    - Recipe 6.8, "Creating Object Instances Without Using the ~new~ Keyword"
+    - Recipe 4.5, "Providing Default Values for Constructor Parameters"
+    - Recipe 4.14, "Generating Boilerplate Code with Case Classes"
+
+** TODO 4.4. Defining Auxiliary Constructors for Case Classes - ???
+** DONE 4.5. Defining a Private Primary Constructor - 112
+   CLOSED: [2019-05-29 Wed 15:13]
+*** Problem - 112
+    How to make the /primary constructor/ of a /class/ *private*, such as to
+    enforce the /Singleton pattern/?
+
+*** Solution - 112
+    #+begin_src scala
+      // a private no-args primary constructor
+      class Order private {
+        // ...
+      }
+
+      // a private one-arg primary constructor
+      class Person private (name: String) {
+          //...
+      }
+    #+end_src
+
+*** Discussion - 112
+    Example of the /Singleton pattern/ in Scala
+    #+begin_src scala
+      class Brain private {
+        override def toString = "This is the brain."
+      }
+
+      object Brain {
+        val brain = new Brain
+        def getInstance = brain
+      }
+
+      object SingletonTest extends App {
+        // this won't compile
+        // val brain = new Brain
+
+        // this works
+        val brain = Brain.getInstance
+        println(brain)
+      }
+    #+end_src
+
+**** Utility classes - 113
+     Java has some /utility classes/, which only contain definitions of /static
+     methods/.
+
+     Scala doesn't need this, it can define a /singleton object/ DIRECTLY with ~object~.
+
+
+     =from Jian=
+     =IMPORTANT= =TODO=
+     Find out the use cases of /private constructors/ in Scala!!!!!!!!!!!!!!!
+
+** DONE 4.6. Providing Default Values for Constructor Parameters - 114 - =2020=
+   CLOSED: [2020-04-30 Thu 03:40]
+*** Problem - 114
+*** Solution - 114
+    #+begin_src scala
+      class Socket(val timeout: Int = 10000)
+
+      val s1 = new Socket
+      s1.timeout  // 10000
+
+      val s2 = new Socket(5000)  // Or new Socket(timeout = 5000)
+      s2.timeout  // 5000
+    #+end_src
+
+*** Discussion - 114
+    This recipe demonstrates a powerful feature that can *ELIMINATE the need for
+    /auxiliary constructors/.*
+
+    - Example:
+      With a default value, the single constructor in the "Solution" section is
+      _the EQUIVALENT of *two* constructors without default values_:
+      + In Scala
+        #+begin_src scala
+          class Socket(val timeout: Int) {
+
+            def this() = this(10000)  // Here the `()` is mandatory!!!
+
+            override def toString = s"timeout: $timeout"
+          }
+        #+end_src
+
+      + In Java
+        #+begin_src java
+          class Socket {
+              final int timeout;
+
+              public Socket() {
+                  this.timeout = 10000;
+              }
+
+              public Socket(int timeout) {
+                  this.timeout = timeout;
+              }
+          }
+        #+end_src
+
+**** DONE Multiple parameters - 115
+     CLOSED: [2020-04-30 Thu 03:40]
+
+**** DONE Using named parameters - 115
+     CLOSED: [2020-04-30 Thu 03:39]
+
+*** See Also - 115
+    Recipe 4.3, "Defining Auxiliary Constructors", for more information on
+    creating /auxiliary class constructors/
+
+** DONE 4.7. Handling Constructor Parameters When Extending a Class - =NEW=
+   CLOSED: [2020-04-30 Thu 12:15]
+*** Problem - 124
+*** Solution - 124
+    #+begin_src scala
+      class Person(var name: String, var address: Address) {
+        override def toString = if (address == null) name else s"$name @ $address"
+      }
+
+      class Employee(name: String, address: Address, var age: Int) extends Person(name, address)
+    #+end_src
+*** Discussion - 125
+    We use =javap= to check the generated code:
+    #+begin_src java
+      // Compiled from "Person.scala"
+      public class Person {
+          public java.lang.String name();
+          public void name_$eq(java.lang.String);
+          public Address address();
+          public void address_$eq(Address);
+          public java.lang.String toString();
+          public Person(java.lang.String, Address);
+      }
+
+      // Compiled from "Person.scala"
+      public class Employee extends Person {
+          public Employee(java.lang.String, Address);
+      }
+    #+end_src
+    - Here you can't see the /getters/ and /setters/ for ~name~ and ~address~,
+      because for ~Empolyee~ you declare them without ~var~ or ~val~ and
+      ~Employee~ inherits them from ~Person~.
+
+** DONE 4.8. Calling a Superclass Constructor - 127 - =NEW=
+   CLOSED: [2020-05-01 Fri 01:24]
+*** Problem - 127
+    How to control the /superclass constructor/ that's called when you create
+    /subclass constructors/?
+
+*** Solution - 127
+    - This is a bit of a trick question, because
+      + you *CAN* CONTROL the /superclass constructor/ that's called by _the /primary
+        constructor/ in a /subclass/,_
+
+      + but you *CANNOT* CONTROL the /superclass constructor/ that's called by _an
+        /auxiliary constructor/ in the /subclass/._
+
+    - The /subclass primary constructor/ can call any /superclass constructor/:
+      #+begin_src scala
+        // Primary constructor
+        class Animal(val name: String, val age: Int) {
+          // Auxiliary constructor
+          def this(name: String) {
+            this(name, 0)
+          }
+
+          override def toString = s"$name is $age years old"
+        }
+      #+end_src
+      Then you can define its /subclass/ ~Dog~ as:
+      + Call the _two-arg_ /primary constructor/ of ~Animal~
+        #+begin_src scala
+          class Dog(name: String) extends Animal(name, 0) {
+            println("Dog constructor called")
+          }
+        #+end_src
+
+      + Call the _one-arg_ /auxiliary constructor/ of ~Animal~
+        #+begin_src scala
+          class Dog(name: String) extends Animal(name) {
+            println("Dog constructor called")
+          }
+        #+end_src
+
+**** Auxiliary constructors - 128
+     - Regarding (/subclass/) /auxiliary constructors/,
+       because *the FIRST LINE of an /auxiliary constructor/ must be a call to
+       ANOTHER /constructor/ of the CURRENT /class/,* there is no way for
+       /auxiliary constructors/ to call a /superclass constructor/.
+       + In fact, because EACH /auxiliary constructor/ MUST call a _previously
+         defined_ /constructor/ in the SAME /class/, all /auxiliary constructors/
+         will *eventually* call the SAME /superclass constructor/ that's called
+         from the /subclass/'s /primary constructor/.
+         * =from Jian=
+           However, since every constructor has their own settings (the reason
+           why these constructors exist), *eventually* here is _COMPLETELY
+           different from_ *directly*.
+
+
+     - Example:
+       #+begin_src scala
+         // from Jian: I modify the code from the book to make it more idiomatic
+         final case class Address(city: String, state: String)
+
+         final case class Role(role: String)
+
+         class Person(val name: String, val address: Option[Address]) {
+           // no way for `Employee` auxiliary constructors to call this constructor
+           def this(name: String) {
+             this(name, None)
+           }
+
+           override def toString =
+             address
+               .map(a => s"$name @ $a")
+               .getOrElse(name)
+         }
+
+         class Employee(name: String, address: Option[Address], val role: Option[Role]) extends Person(name, address) {
+           def this(name: String) {
+             this(name, None, None)
+           }
+
+           def this(name: String, role: Option[Role]) {
+             this(name, role, None)
+           }
+
+           def this(name: String, address: Option[Address]) {
+             this(name, None, address)
+           }
+         }
+       #+end_src
+
+** DONE 4.9. Generating Boilerplate Code with Case Classes - =NEW= - =RE-READ=
+   CLOSED: [2020-05-07 Thu 02:31]
+*** Problem - 136
+*** Solution - 136
+*** TODO Discussion - 138
+**** TODO Generated code - 138
+
+*** TODO See Also - 140
+
+** TODO 4.10. Preventing Accessor and Mutator Methods from Being Generated - 119
+** DONE 4.11. Overriding Default Accessor and Mutators - 116 - =NEW=
+   CLOSED: [2020-04-30 Thu 04:08]
+*** Problem - 116
+*** Solution - 116
+    - WRONG WAY (can't compile):
+      #+begin_src scala
+        // error: this won't work
+        class Person(private var name: String) {
+          // this line essentially create a circular reference
+          def name = name
+
+          def name_=(aName: String) { name = aName }
+        }
+        // Person.scala:3: error: overloaded method name needs result type
+        //   def name = name
+        //              ^
+        // Person.scala:4: error: ambiguous reference to overloaded definition,
+        // both method name_= in class Person of type (aName: String)Unit
+        // and method name_= in class Person of type (x$1: String)Unit
+        // match argument types (String)
+        //   def name_=(aName: String) { name = aName }
+        //                               ^
+        // Person.scala:4: error: method name_= is defined twice
+        //   def name_=(aName: String) { name = aName }
+        //       ^
+        // three errors found
+      #+end_src
+
+    - The right way with a naming convention in Scala:
+      #+begin_src scala
+        class Person(private var _name: String) {
+          def name = _name
+
+          def name_=(aName: String) { _name = aName }
+        }
+      #+end_src
+
+*** Discussion - 117
+    - ~class Stock (var symbol: String)~
+      The output of =javap Stock=
+      #+begin_src java
+        public class Stock extends java.lang.Object {
+            public java.lang.String symbol();
+            public void symbol_$eq(java.lang.String);
+            public Stock(java.lang.String);
+        }
+      #+end_src
+
+**** Summary - 118
+     - As shown in the Solution,
+       the recipe for *overriding* default /getter and setter methods/ is:
+       1. Create a /private ~var~ constructor parameter/ with a name you want to
+          reference from within your class. In the example in the Solution, the
+          field is named ~_name~.
+
+       2. Define /getter/ and /setter/ names that you want other classes to use.
+          In the Solution the /getter name/ is ~name~, and the /setter name/ is
+          ~name_=~ (which, combined with /Scala's syntactic sugar/, lets users
+          write ~p.name = "Jony"~).
+
+       3. Modify the body of the /getter and setter methods/ as desired.
+          =from Jian=
+          If no this 3 step, you actually don't need to override the accessor.
+          Compiler will insert the default accessors.
+
+     - If we forget the ~private~ modifier, and write
+       #+begin_src scala
+         class Stock(var _symbol: String) {
+           def symbol = _symbol
+
+           def symbol_=(s: String) {
+             _symbol = s
+             println(s"symbol was updated, new value is $symbol")
+           }
+         }
+       #+end_src
+       The output of =javap Stock=
+       #+begin_src java
+         public class Stock extends java.lang.Object{
+             public java.lang.String _symbol();         // defect, because of forget `private` before `var _symbol: String`
+             public void _symbol_$eq(java.lang.String); // defect, because of forget `private` before `var _symbol: String`
+             public java.lang.String symbol();
+             public void symbol_$eq(java.lang.String);
+             public Stock(java.lang.String);
+         }
+       #+end_src
+
+     - Remember the ~private~ modifier, and write
+       #+begin_src scala
+         class Stock(private var _symbol: String) {
+           def symbol = _symbol
+
+           def symbol_=(s: String) {
+             _symbol = s
+             println(s"symbol was updated, new value is $symbol")
+           }
+         }
+       #+end_src
+       The output of =javap Stock=
+       #+begin_src java
+         public class Stock extends java.lang.Object{
+             public java.lang.String symbol();
+             public void symbol_$eq(java.lang.String);
+             public Stock(java.lang.String);
+         }
+       #+end_src
+
+** TODO 4.12. Assigning a Block or Function ot a (Lazy) Field - =NEW=
+*** Problem
+*** Solution
+*** Discussion
+
+** TODO 4.13. Setting Uninitialized ~var~ Field Types - =NEW=
+*** Problem - 122
+*** Solution - 123
+    Default value or ~None~
+*** Discussion - 124
+*** See Also - 124
+
+** TODO 4.14. Defining an equals Method (Object Equality) - 140
+*** Problem - 140
+*** Solution - 140
+*** Discussion - 141
+**** Theory - 142
+
+*** See Also - 143
+
+** TODO 4.15. How to Create Sets of Named Values with Enums
+** TODO 4.16. Modeling Algebraic Data Types with Enums
+* TODO 5. Methods - 147
+** DONE Introduction - 147
+   CLOSED: [2018-02-28 Wed 00:27]
+   - Difference syntax between Scala and Java in declaring /methods/.
+
+   - In addition to the differences in syntax, there are other differences
+     between Scala and Java /methods/, including:
+     + Specifying /method/ /access control (visibility)/
+
+     + The ability to set /default values/ for /method parameters/
+
+     + The ability to /specify the names/ of /method parameters/ when calling a
+       /method/
+
+     + How you declare the /exceptions/ a /method/ can throw
+
+     + Using /varargs/ fields in /methods/
+
+     This chapter demonstrates all of these method-related features.
+
+** DONE 5.1. Controlling Method Scope (Access Modifiers) - 148 =re-read=
+   CLOSED: [2018-02-28 Wed 00:57]
+*** DONE Problem - 148
+    CLOSED: [2018-02-28 Wed 00:55]
+    Scala /methos/ are *public* _by default_. NO keyword for this.
+    How about to set upt other visibility?
+
+*** DONE Solution - 148
+    CLOSED: [2018-02-28 Wed 00:55]
+    - Scala provides *more* control to the /visibility/ than that of Java:
+
+    - Scala provides these scope options:
+      + Object-private scope
+      + Private
+      + Package
+      + Package-specific
+      + Public
+
+**** DONE Object-private scope - 148
+     CLOSED: [2018-02-28 Wed 00:46]
+     - ~private[this]~ -- the most restrictive one.
+       A /method/ marked with this is only visible to a /instance/ itself.
+
+     - Non-compilable code
+       #+BEGIN_SRC scala
+         class Foo {
+           private[this] def isFoo = true
+
+           def doFoo(other: Foo) {
+             is (other.isFoo) {  // This line WON'T compile
+               // code
+             }
+           }
+         }
+       #+END_SRC
+
+**** DONE Private scope - 149
+     CLOSED: [2018-02-28 Wed 00:46]
+     - ~private~ makes the /method/ available to
+       + the /current class/
+       + other /instances/ of the /current class/
+
+     - There is only one meaning for ~private~ in both Scala and Java.
+
+     - Compilable (which is non-compilable in the last section with
+       ~private[this]~)
+       #+BEGIN_SRC scala
+         class Foo {
+           private def isFoo = true
+
+           def doFoo(other: Foo) {
+             is (other.isFoo) {  // This line WON'T compile
+               // code
+             }
+           }
+         }
+       #+END_SRC
+
+     - By making a method private, it is not available to subclasses -- you can't
+       call it.
+       + Non-compilable example
+       #+BEGIN_SRC scala
+         class Animal {
+           private def heartBeat {}
+         }
+
+         class Dog extends Animal {
+           heartBeat  // WON'T compile
+         }
+       #+END_SRC
+
+       However, you can create one with the same name with any visibility you
+       like.
+       + Compilable - the superclass ~hearBeat~ is NOT available, and the
+         subclass create a same name but complete different one. This is NOT
+         shadowing, no ~override~ required, and, actually, you *MUST'T* add
+         ~override~
+         #+BEGIN_SRC scala
+           class Animal {
+             private def heartBeat {}
+           }
+
+           class Dog extends Animal {
+             def heartBeat {}
+           }
+         #+END_SRC
+
+**** DONE Protected scope - 149
+     CLOSED: [2018-02-28 Wed 00:49]
+     - ~protected~ -- available to /subclasses/.
+       + Compilable code (Non-compilable in the last section with ~private~):
+         #+BEGIN_SRC scala
+           class Animal {
+             protected def heartBeat {}
+           }
+
+           class Dog extends Animal {
+             heartBeat  // compilable
+           }
+         #+END_SRC
+
+     - ~protected~ in Scala is different from that in Java.
+
+**** DONE Package scope - 150
+     CLOSED: [2018-02-28 Wed 00:48]
+     - ~private[packageName]~ -- available to all members of the current package.
+       This is called "package scope" in Java, and Java use its ~protected~ to
+       mark this.
+
+**** DONE More package-level control - 150
+     CLOSED: [2018-02-28 Wed 00:55]
+     - Use the ~private[packageName]~ pattern, but specify a package name of
+       *different hierarchy* to make more control.
+
+     - Example:
+       #+BEGIN_SRC scala
+         package com.acme.coolapp.model {
+           class Foo {
+             private[model] def doX {}
+             private[coolapp] def doY {}
+             private[acme] def doZ {}
+           }
+         }
+         import com.acme.coolapp.model._
+         package com.acme.coolapp.view {
+           class Bar {
+             val f = new Foo
+             f.doX // won't compile
+             f.doY
+             f.doZ
+           }
+         }
+         package com.acme.common {
+           class Bar {
+             val f = new Foo
+             f.doX // won't compile
+             f.doY // won't compile
+             f.doZ
+           }
+         }
+       #+END_SRC
+
+**** DONE Public scope - 151
+     No modifier means *public*.
+
+*** DONE Discussion - 152
+    CLOSED: [2018-02-28 Wed 00:57]
+    *Summary* ...
+    Table 5-1. Descriptions of Scala's access control modifiers
+
+** DONE 5.2. Calling a Method on a Superclass or Trait - 152 =re-read=
+   CLOSED: [2018-02-28 Wed 01:13]
+*** DONE Problem - 152
+    CLOSED: [2018-02-28 Wed 01:05]
+*** DONE Solution - 153
+    CLOSED: [2018-02-28 Wed 01:13]
+    Use the ~super.methodName~ pattern.
+
+**** DONE Controlling which trait you call a method from - 153
+     CLOSED: [2018-02-28 Wed 01:13]
+     - Use the ~super[traitName].methodName~ pattern to resolve confliction when
+       a /class/ extends multiple /traits/ which have *same name* /methods/.
+       #+BEGIN_SRC scala
+         trait Human {
+           def hello = "the Human trait"
+         }
+
+         trait Mother extends Human {
+           override def hello = "Mother"
+         }
+
+         trait Father extends Human {
+           override def hello = "Father"
+         }
+
+         class Child extends Human with Mother with Father {
+           def printSuper = super.hello  // same as `super[Father].hello`
+           // TODO: ?? By default, the last one (this is a guess for all triats, how about
+           //       when one of them is a class????)
+
+           def printMother = super[Mother].hello
+           def printFather = super[Father].hello
+           def printHuman = super[Human].hello
+         }
+       #+END_SRC
+
+     - Note that when using this technique, _you *CANNOT* continue to REACH UP
+       THROUGH the parent class hierarchy_ unless you directly /extend/ the
+       target class or trait using the ~extends~ or ~with~ keywords.
+       + Non-compilable
+         #+BEGIN_SRC scala
+           trait Animal {
+             def walk { println("Animal is walking") }
+           }
+
+           class FourLeggedAnimal extends Animal {
+             override def walk { println("I'm walking on all fours") }
+           }
+
+           class Dog extends FourLeggedAnimal {
+             def walkThenRun {
+               super.walk // works
+               super[FourLeggedAnimal].walk // works
+               super[Animal].walk // error: won't compile
+             }
+           }
+         #+END_SRC
+
+       + Make the code above compilable:
+         Change the signature of ~Dog~ to
+         ~class Dog extends FourLeggedAnimal with Animal~
+
+** DONE 5.3. Using Parameter Names When Calling a Method
+   CLOSED: [2018-05-20 Sun 23:21]
+*** DONE Problem - 157
+    CLOSED: [2018-05-20 Sun 23:21]
+*** DONE Solution - 157
+    CLOSED: [2018-05-20 Sun 23:21]
+*** DONE Discussion - 158
+    CLOSED: [2018-05-20 Sun 23:21]
+    This method is more verbose but more readable.
+    You'll never want to see an invocation like ~engage(true, true, true, false)~,
+    and this one is more reasonable:
+    #+BEGIN_SRC scala
+      engage(speedIsSet = true,
+             directionIsSet = true,
+             picardSaidMakeItSo = true,
+             turnedOffParkingBrake = false)
+    #+END_SRC
+
+** DONE 5.4. Setting Default Values for Method Parameters
+   CLOSED: [2018-05-20 Sun 23:17]
+*** DONE Problem - 154
+    CLOSED: [2018-05-20 Sun 23:17]
+*** DONE Solution - 155
+    CLOSED: [2018-05-20 Sun 23:17]
+    - =IMPORTANT=
+      When you call a method with _all parameters have default values_,
+      even if your /method/ is _side-effect free_,
+      you _MUST_ call it with ~()~ when you use all its defaluts parameter values.
+
+      *If you don't do this, you'll see an error in compile time.*
+      =TODO= =Review= =!!!=
+      The reason for this error is discussed in Recipe 9.6, "Using Partially
+      Applied Functions".
+
+*** DONE Discussion - 156
+    CLOSED: [2018-05-20 Sun 23:17]
+    - If your /method/ provides a mix of some fields that offer default values
+      and others that don't,
+      *list the fields that have default values last.* Then you don't need explicitly
+      use parameter names to specify their values, which make your code concise.
+
+** DONE 5.5. Defining a Method That Returns Multiple Items (Tuples) - 159
+   CLOSED: [2018-05-20 Sun 23:24]
+*** DONE Problem - 159
+    CLOSED: [2018-05-20 Sun 23:24]
+*** DONE Solution - 159
+    CLOSED: [2018-05-20 Sun 23:24]
+*** DONE Discussion - 159
+    CLOSED: [2018-05-20 Sun 23:24]
+**** Working with tuples - 160
+
+*** DONE See Also - 160
+    CLOSED: [2018-05-20 Sun 23:24]
+
+** DONE 5.6. Forcing Callers to Leave Parentheses Off Accessor Methods - 161
+   CLOSED: [2018-05-20 Sun 23:32]
+*** DONE Problem - 161
+    CLOSED: [2018-05-20 Sun 23:29]
+*** DONE Solution - 161
+    CLOSED: [2018-05-20 Sun 23:29]
+*** DONE Discussion - 161
+    CLOSED: [2018-05-20 Sun 23:30]
+    - Define your accessor without empty parentheses, and the caller won't have
+      the option to call it with empty parentheses.
+
+    - There is NO WAY to do in the opposite direction!
+      You CANNOT force an empty parentheses.
+
+      Always use call with empty parentheses is ONLY a CONVENTION for Scala.
+      However, the good news is if you forget the empty parentheses for calling a
+      /method/ with side-effect, the IDE or your editor plugin may warn you, if
+      you configure them well and switched them on.
+
+    - *Side Effects*
+      + Definition (from Wikipedia):
+        A function is said to have a /side effect/
+        #+BEGIN_QUOTE
+        if, in addition to returning a value, it also modifies some state or has
+        an observable interaction with calling functions or the outside world.
+        #+END_QUOTE
+
+      + Side effects include things like:
+        * Writing or printing output.
+
+        * Reading input.
+
+        * Mutating the state of a variable that was given as input, changing data
+          in a data structure, or modifying the value of a field in an object.
+
+        * Throwing an exception, or stopping the application when an error occurs.
+
+        * Calling other functions that have side effects.
+
+
+*** TODO See Also - 162
+
+** DONE 5.7. Creating Methods That Take Variable-Argument Fields - 163
+   CLOSED: [2018-05-20 Sun 23:50]
+*** DONE Problem - 163
+    CLOSED: [2018-05-20 Sun 23:50]
+*** DONE Solution - 163
+    CLOSED: [2018-05-20 Sun 23:50]
+    - Example:
+      #+BEGIN_SRC scala
+        def stringRepr(strings: String*): String = {
+          strings.toString
+        }
+      #+END_SRC
+
+      + *CAUTION*
+        You *CANNOT* call this /method/ without empty parentheses!
+          Or else the compiler will be confused: this is a partial application or
+        not?
+
+    - You can use ~_*~ to *adapt* a sequence:
+      #+BEGIN_SRC scala
+        val fruits = List("apple", "banana", "cherry")
+        printAll(fruits: _*)
+      #+END_SRC
+
+*** DONE Discussion - 163
+    CLOSED: [2018-05-20 Sun 23:49]
+    - Attempting to define a field in a /method/ signature _after a varargs
+      field_ is an *ERROR*!!! =IMPORTANT=
+
+      As an implication of this rule, a /method/ *can have ONLY ONE varargs field*.
+
+    - The parameter sequence type:
+      #+BEGIN_SRC scala
+        def printAll(numbers: Int*) {
+          println(numbers.getClass)
+        }
+
+        scala> printAll(1, 2, 3)
+        // class scala.collection.mutable.WrappedArray$ofInt
+
+        scala> printAll()
+        // class scala.collection.immutable.Nil$
+      #+END_SRC
+      Treating the "no args" situation as a ~Nil$~ in the second situation
+      _KEEPS your code FROM throwing_ a ~NullPointerException~.
+
+      + =TODO= =???=
+        Why ~scala.collection.mutable.WrappedArray$ofInt~ rather than ~Seq[Int]~???
+
+** DONE 5.8. Declaring That a Method Can Throw an Exception - 165
+   CLOSED: [2018-02-28 Wed 14:12]
+*** DONE Problem - 165
+    CLOSED: [2018-02-28 Wed 14:05]
+*** DONE Solution - 165
+    CLOSED: [2018-02-28 Wed 14:11]
+    Use ~@throws(classOf[className])~
+
+    - Example
+      #+BEGIN_SRC scala
+        @throws(classOf[Exception])
+        override def play {
+          // exception throwing code here ...
+        }
+
+        @throws(classOf[IOException])
+        @throws(classOf[LineUnavailableException])
+        @throws(classOf[UnsupportedAudioFileException])
+        def playSoundFileWithJavaAudio {
+          // exception throwing code here ...
+        }
+      #+END_SRC
+
+*** TODO Discussion - 165
+    - *Java Exception Types* =TODO=
+
+*** TODO See Also - 166
+
+** DONE 5.9. Supporting a Fluent Style of Programming - 167
+   CLOSED: [2018-02-28 Wed 14:03]
+*** DONE Problem - 167
+    CLOSED: [2018-02-28 Wed 14:03]
+*** DONE Solution - 167
+    CLOSED: [2018-02-28 Wed 13:27]
+    To support fluent (method chanining) style of programming:
+    - If your class can be extended, specify ~this.type~ as the return type of
+      fluent style methods.
+
+      + =From Jian=
+        Suppose you have ~A~ (trait or class) and ~B~ (traits or class), and B is
+        a subclass/subtrait of A (B extends A). Then, with the help of
+        ~this.type~, when ~A.method_1~ returns ~A.type~, ~B.method_1~ returns
+        ~B.type~.
+
+      + =From Jian=
+        I think this is different from Java. In Java, if a superclass/supertrait
+        ~A~ method returns an object of type ~A~, its subclass/subtrait will
+        still returns an object of type ~A~, and you need to use cast which
+        convert the returned ~A~ type object to a ~B~ type object at runtime.
+
+      + =From Jian=
+        Look the code below (*caution* this is Java code):
+        #+BEGIN_SRC java
+          // Person.java
+          public class Person {
+              public Person method_1() {
+                  // some code
+              }
+          }
+
+          // Employee.java
+          public class Employee extends Person {
+              @Override
+              public Exployee method_1() {   // Wrong type! This is NOT an override!!!
+                  // some code
+              }
+          }
+        #+END_SRC
+        * Java dosen't have ~this.type~. You have to use runtime cast when you
+          use ~Employee~
+
+      + Example:
+        #+BEGIN_SRC scala
+          class Person {
+            protected var fname = ""
+            protected var lname = ""
+
+            def setFirstName(firstName: String): this.type = {
+              fname = firstName
+              this
+            }
+
+            def setLastName(lastName: String): this.type = {
+              lname = lastName
+              this
+            }
+          }
+
+          class Employee extends Person {
+            protected var role = ""
+
+            def setRole(role: String): this.type = {
+              this.role = role
+              this
+            }
+
+            override def toString = {
+              "%s, %s, %s".format(fname, lname, role)
+            }
+          }
+
+          object Main extends App {
+            val employee = new Employee
+
+            // use the fluent methods
+            employee.setFirstName("Al")
+              .setLastName("Alexander")
+              .setRole("Developer")
+            println(employee)
+          }
+        #+END_SRC
+
+        * If there is no ~this.type~ in Scala (like Java, even ~Employee~ methods
+          return ~Person~), the last part will be
+          #+BEGIN_SRC scala
+            object Main extends App {
+              val employee = new Employee
+
+              // use the fluent methods
+              employee.setFirstName("Al")
+                .setLastName("Alexander")
+                .asInstanceOf[Employee]
+                .setRole("Developer")
+              println(employee)
+            }
+          #+END_SRC
+
+          Luckily, we don't need to do this.
+
+    - If you're sure that your class won't be extended (use ~final~ in the
+      declaration), you can optionally return ~this~ from your fluent style
+      methods.
+
+*** DONE Discussion - 168
+    CLOSED: [2018-02-28 Wed 14:03]
+    =TODO= More experiemnts!!!
+    Explicitly use ~this.type~ as the return type can guarantee you won't get
+    wrong type (superclass type or the type inference you don't want).
+
+    - Interesting Example:
+      Kamil Banaszczyk's answer for the question
+      https://stackoverflow.com/questions/42062109/can-java-return-type-write-like-scala-this-type
+
+*** TODO See Also - 170
+
+** TODO 5.10. Extension Methods: Add New Methods to Closed Classes - =NEW=
+* TODO 6. Objects - 171
+  /object/ has two meanings in Scala:
+  - An instance of a class
+
+  - An singleton object define with ~object~
+
+** DONE 6.1. Object Casting - 172
+   CLOSED: [2018-02-21 Wed 21:07]
+*** DONE Problem - 172
+    CLOSED: [2018-02-21 Wed 21:07]
+*** DONE Solution - 172
+    CLOSED: [2018-02-21 Wed 21:07]
+    The /method/ ~asInstanceOf[aType]~ is defined in the ~Any~ /class/ and is
+    therefore available on *all* /objects/.
+
+    Same meaning in semantics in different languages:
+    - Scala:
+      ~val recognizer = cm.lookup("recognizer").asInstanceOf[Recognizer]~
+
+    - Java:
+      ~Recognizer recognizer = (Recognizer)cm.lookup("recognizer")~
+
+*** DONE Discussion - 172
+    CLOSED: [2018-05-23 Wed 12:58]
+    As with Java, /cast/ can lead to a ~ClassCastException~.
+
+*** TODO See Also - 173
+
+** DONE 6.2. The Scala Equivalent of Java's =.class= - 174
+   CLOSED: [2018-05-23 Wed 13:11]
+*** DONE Problem - 174
+    CLOSED: [2018-05-23 Wed 13:11]
+    When an API requires that you pass in a ~Class~, you'd call ~.class~ on an
+    object in Java, but that _doesn't work_ in Scala.
+
+*** DONE Solution - 174
+    CLOSED: [2018-05-23 Wed 13:11]
+    Use the ~classOf~ /method/ that is defined in the ~Predef~.
+
+    - Example:
+      (Scala) ~val info = new DataLine.Info(classOf[TargetDataLine], null)~
+
+      Compare with Java
+      ~info = new DataLine.Info(TargetDataLine.class, null);~
+
+*** DONE Discussion - 174
+    CLOSED: [2018-05-23 Wed 13:11]
+    This approach also lets you begin with SIMPLE /reflection techniques/.
+    The following REPL example demonstrates how to access the /methods/ of the
+    ~String~ /class/:
+    #+BEGIN_SRC scala
+      val stringClass = classOf[String]
+      // stringClass: Class[String] = class java.lang.String
+
+      stringClass.getMethods
+      // res0: Array[java.lang.reflect.Method] = Array(public boolean
+      // java.lang.String.equals(java.lang.Object), public java.lang.String
+      // (output goes on for a while ...)
+    #+END_SRC
+
+*** TODO See Also - 174
+
+** DONE 6.3. Creating Singletons with ~object~ - =NEW=
+   CLOSED: [2018-05-23 Wed 14:10]
+*** DONE Problem - 178
+    CLOSED: [2018-05-23 Wed 14:10]
+*** DONE Solution - 178
+    CLOSED: [2018-05-23 Wed 14:10]
+*** DONE Discussion - 180
+    CLOSED: [2018-05-23 Wed 14:10]
+
+** DONE 6.4. Creating "Static" Members with Companion Objects - 180
+   CLOSED: [2018-02-21 Wed 21:04]
+*** DONE Problem - 180
+    CLOSED: [2018-02-21 Wed 21:04]
+    Scala does NOT have the ~static~ keyword.
+    Create /static members/ in a /class's companion object/.
+
+*** DONE Solution - 180
+    CLOSED: [2018-02-21 Wed 21:03]
+    - companion object :: an object fulfill the requirements:
+      + it must have the *same name* as its /companion class/
+      + it must reside in the *same file* as its /companion class/
+
+*** DONE Discussion - 181
+    CLOSED: [2018-02-21 Wed 21:03]
+    Although this approach is different than Java, the recipe is straightforward:
+    - Define your ~class~ and ~object~ in the *SAME file*, giving them the
+      *SAME name*.
+
+    - Define members that should appear to be /static/ in the ~object~.
+
+    - Define nonstatic (instance) members in the /class/.
+
+**** Accessing private members - 181
+     - =From Jian=
+       A /class/ and its /companion object/ can access each other's
+       /private members/. More concretely,
+       + The /companion object/ accesses the /private memebers/ of the passed in
+         its /companion class/'s instance(s).
+         #+BEGIN_SRC scala
+           class Foo {
+             private val secret = 2
+           }
+
+           object Foo {
+             // access the private class field 'secret'
+             def double(foo: Foo) = foo.secret * 2
+           }
+
+           object Driver extends App {
+             val f = new Foo
+             println(Foo.double(f)) // prints 4
+           }
+         #+END_SRC
+
+       + The /companion class/ accesses the /private memebers/ of its /companion
+         object/ through the prefix of /companion object/'s name.
+
+         =From Jian= I forget about this prefix for a long time. If you don't
+         want this prefix, use ~import companionObjectName._~ inside the
+         /compation class/.
+         #+BEGIN_SRC scala
+           class Foo {
+             // access the private object field 'obj'
+             def printObj { println(s"I can see ${Foo.obj}") }
+           }
+
+           object Foo {
+             private val obj = "Foo's object"
+           }
+
+           object Driver extends App {
+             val f = new Foo
+             f.printObj
+           }
+         #+END_SRC
+
+** TODO 6.5. Using ~apply~ Methods in Objects as Constructors - =NEW=
+** TODO 6.6. Implement a Static Factory with ~apply~ - =NEW=
+*** DONE Problem - 189
+    CLOSED: [2018-05-23 Wed 15:16]
+*** DONE Solution - 189
+    CLOSED: [2018-05-23 Wed 15:16]
+    #+BEGIN_SRC scala
+      trait Animal {
+        def speak
+      }
+
+      object Animal {
+        private class Dog extends Animal {
+          override def speak { println("woof") }
+        }
+
+        private class Cat extends Animal {
+          override def speak { println("meow") }
+        }
+
+        // the factory method
+        def apply(s: String): Animal = {
+          if (s == "dog") new Dog
+          else new Cat
+        }
+      }
+
+      // val cat = Animal("cat")
+      // val dog = Animal("dog")
+    #+END_SRC
+
+*** DONE Discussion - 190
+    CLOSED: [2018-05-23 Wed 15:22]
+    The example above centralize the management of the generation of ~Dog~ and
+    ~Cat~, and avoid to expose their /constructors/ to outside.
+
+    However, you may not like this way.
+    If so, you can use a method name you as you which. The only change is that
+    you need to call that /method/ explicitly. Nothing else is changed.
+    For instance, replace the ~apply~ /method/ with
+    #+BEGIN_SRC scala
+      def getAnimal(s: String): Animal = {
+        if (s == "dog") return new Dog
+        else            return new Cat
+      }
+
+      // val cat = Animal.getAnimal("cat")
+      // val dog = Animal.getAnimal("dog")
+    #+END_SRC
+
+*** TODO See Also - 190
+
+** DONE 6.7. Reifying Traits as Objects - =NEW=
+** DONE 6.8. Implement Pattern Matching with ~unapply~ - =NEW=
+
+* TODO 7. Packaging and Imports - 191
+** DONE Introduction - 191
+   CLOSED: [2019-07-23 Tue 17:38]
+   - Instead of Java way, you can also use a /curly brace packaging style/,
+     _similar to C++ and C# /namespaces/._
+
+   - It’s helpful to know that in Scala, two packages are implicitly imported for you:
+     + ~java.lang._~
+     + ~scala._~
+
+   - In addition to those /packages/, all members from the ~scala.Predef~ /object/ are
+     imported into your applications _implicitly_ (???). =TODO=
+
+   - A great suggestion from the book _Beginning Scala by David Pollak (Apress)_, is to
+     *dig into the source code of the ~Predef~ /object/.*
+     TODO TODO TODO
+
+** DONE 7.1. Packaging with the Curly Braces Style Notation - 192
+   CLOSED: [2019-07-23 Tue 17:42]
+*** Problem - 192
+*** Solution - 192
+*** Discussion - 193
+
+** DONE 7.2. Importing One or More Members - 193
+   CLOSED: [2019-07-23 Tue 17:49]
+*** Problem - 193
+*** Solution - 193
+*** Discussion - 194
+    - /import selector clause/, for instance,
+      ~import java.io.{File, IOException, FileNotFoundException}~
+      This is NOT supported by Java.
+
+**** Placing import statements anywhere - 194
+
+** DONE 7.3. Renaming Members on Import - 195
+   CLOSED: [2019-07-23 Tue 18:02]
+*** Problem - 195
+*** Solution - 195
+*** Discussion - 195
+    - /renaming clause/, for instance,
+      ~import java.util.{ArrayList => JavaList}~
+
+    - You can even rename /object members/
+      (=from Jian= The book use /class members/, which is not exact! Only
+                   /package members/ and /object members/ can be imported):
+      #+begin_src scala
+        import System.out.{println => p}
+      #+end_src
+
+** DONE 7.4. Hiding a Class During the Import Process - 196
+   CLOSED: [2019-07-23 Tue 18:12]
+*** Problem - 196
+*** Solution - 196
+    For example,
+    #+begin_src scala
+      import java.util.{Random => _, _}
+    #+end_src
+
+    - Since you can hide multiple members during the import process,
+      then you should put them first, and ~_~ can only show up at the end.
+      For instance,
+      #+begin_src scala
+        // Legal
+        import java.util.{Random => _, _}
+
+        // Illegal
+        import java.util.{_, Random => _}
+        // From Jian:
+        // The semantics of this line is not clear.
+        // People can give it a clear meaning, but why should the designer of Scala do that?
+        // This looks awkard, right? "Import all and then hide Random" is not very
+        // meaningful in logic.
+      #+end_src
+
+** DONE 7.5. Importing "Static" Members - =NEW TITLE=
+   CLOSED: [2019-07-23 Tue 18:24]
+*** Problem - 197
+*** Solution - 197
+*** Discussion - 198
+    
+** DONE 7.6. Using Import Statements Anywhere - 199
+   CLOSED: [2019-07-23 Tue 18:26]
+*** Problem - 199
+*** Solution - 199
+*** Discussion - 200
+
+** DONE 7.7. Importing Givens - =NEW=
+* TODO 8. Functional Programming - 217
+** TODO Introduction - 217
+** DONE 8.1. Using Function Literals (Anonymous Functions) - 218
+   CLOSED: [2020-05-08 Fri 03:06]
+*** Problem - 218
+*** Solution - 218
+*** Discussion - 218
+
+** DONE 8.2. Passing Functions Around as Variables - =NEW TITLE=
+   CLOSED: [2020-05-08 Fri 03:09]
+*** Problem - 219
+*** Solution - 219
+*** Discussion - 220
+**** Using a method like an anonymous function - 221
+**** Assigning an existing function/method to a function variable - 222
+
+*** See Also - 223
+
+** DONE 8.3. Defining a Method That Accepts a Simple Function Parameter - 223
+   CLOSED: [2020-05-08 Fri 03:10]
+*** Problem - 223
+*** Solution - 223
+*** Discussion - 224
+    - *Scala's Unit*
+
+*** See Also - 225
+
+** TODO 8.4. Declaring More Complex Higher-Order Functions - 226
+*** Problem - 226
+*** Solution - 226
+*** Discussion - 226
+**** Passing in a function with other parameters - 227
+
+** TODO 8.5. Using Partially Applied Functions - 234
+*** Problem - 234
+*** Solution - 234
+*** Discussion - 235
+
+** TODO 8.6. Creating a Function That Returns a Function - 236
+*** Problem - 236
+*** Solution - 236
+*** Discussion - 237
+**** Another example - 237
+
+*** See Also - 238
+
+** TODO 8.7. Creating Partial Functions - =NEW=
+** TODO 8.8. Using Function Literals (Anonymous Functions) - =NEW=
+** TODO 8.9. Real-World Example: Passing Functions Around to Create an Algorithm - =NEW=
+*** Problem - 238
+*** Solution - 238
+**** The ~PartialFunction~ explained - 239
+**** ~orElse~ and ~andThen~ - 240
+
+*** Discussion - 241
+*** See Also - 242
+
+** TODO 8.10. Real-World Example: Data and Functions - =NEW=
+
+* TODO 9. Collections - 245
+** TODO Introduction - 245
+*** A Few Important Concepts - 245
+    
+** TODO 9.1. Understanding the Collections Hierarchy - 246
+*** DONE Problem - 246
+    CLOSED: [2018-02-19 Mon 11:40]
+    The /Scala collections hierarchy/ is very rich (deep and wide), and
+    _understanding how it's organized can be helpful when choosing a
+    collection to solve a problem_.
+
+    - =from Jian=
+      + Before Scala 2.7, Scala don't have a good design of collection library,
+        and the one it had is also NOT very functional.
+        =GUESS= Java colleciton with wrapper???
+
+      + Since Scala 2.8, Scala has it own much functional collection library.
+        However, the design is problematic. Even though is very functional and
+        easy to use, it implementation is too complicated, and extend it to get
+        some new fully functional collection types is complicated!
+
+      + From Scala 2.13 on, a new design of collection library will be used.
+        It simplify its implementation, and re-design its hierarchy structure.
+        Scala 2.12 can use, but not as standard library.
+
+*** DONE Solution - 247
+
+** TODO 9.2. Choosing a Collection Class - 250
+** TODO 9.3. Choosing a Collection Method to Solve a Problem - 255
+** TODO 9.4. Understanding the Performance of Collections - 261
+** TODO 9.5. Declaring a Type When Creating a Collection - 264
+** TODO 9.6. How to Randomize a Sequence, of Get a Random Element - ???
+** TODO 9.7. Understanding Mutable Variables with Immutable Collections - 265
+** TODO 9.8. Make ~Vector~ Your "Go To" Immutable Sequence - 266
+** TODO 9.9. Looping over a Collection with ~foreach~ - 270
+** TODO 9.10. Looping over a Collection with a ~for~ Loop (TODO) - 272
+** TODO 9.11. Using ~zipWithIndex~ or ~zip~ to Create Loop Counters - 276
+** TODO 9.12. Using ~Iterator~'s - 278
+** TODO 9.13. Transforming One Collection to Another with ~for/yield~ - 279
+** TODO 9.14. Transforming One Collection to Another with ~map~ - 282
+** TODO 9.15. Flattening a List of Lists with ~flatten~ - 285
+** TODO 9.16. Combining ~map~ and ~flatten~ with ~flatMap~ - 286
+** TODO 9.17. Using ~filter~ to Filter a Collection - 289
+** TODO 9.18. Extracting a Sequence of Elements from a Collection - 291
+** TODO 9.19. Splitting Sequences into Subsets (~groupBy~, ~partition~, etc.) - 293
+** TODO 9.20. Walking Through a Collection with the ~reduce~ and ~fold~ Methods - 295
+** TODO 9.21. Extracting Unique Elements from a Sequence - 300
+** TODO 9.22. Merging Sequential Collections - 302
+** TODO 9.23. Merging Two Sequential Collections into Pairs with ~zip~ - 304
+** TODO 9.24. Creating a Lazy View on a Collection - 306
+** TODO 9.25. Sorting a Collection - =NEW=
+** TODO 9.26. Converting a Collection to a ~String~ with ~mkString~ - =NEW=
+
+* TODO 10. List, Array, Map, Set, etc.
+** Introduction
+   - ~List~
+   - ~Array~ (and ~ArrayBuffer~)
+   - ~Maps~
+   - ~Sets~
+
+** 10.1. Different Ways to Create and Populate a ~List~ - 322
+*** Problem - 322
+*** Solution - 322
+*** See Also - 324
+
+** 10.2. Creating a Mutable ~List~ - 324
+*** Problem - 324
+*** Solution - 324
+*** Discussion - 325
+
+** 10.3. Adding Elements to a ~List~ - 325
+*** Problem - 325
+*** Solution - 326
+*** Discussion - 327
+*** See Also - 328
+
+** 10.4. Merging (Concatenating) ~List~'s - 330
+*** Problem - 330
+*** Solution - 330
+*** Discussion - 330
+*** See Also - 330
+
+** 10.5. Deleting Elements from a ~List~ (or ~ListBuffer~) - 328
+*** Problem - 328
+*** Solution - 328
+**** ~ListBuffer~ - 328
+
+*** Discussion - 329
+*** See Also - 329
+
+** 10.6. Different Ways to Create and Update an ~Array~ - 333
+*** Problem - 333
+*** Solution - 333
+*** Discussion - 334
+*** See Also - 334
+
+** 10.7. Creating an Array Whose Size Can Change (~ArrayBuffer~) - 335
+*** Problem - 335
+*** Solution - 335
+
+** 10.8. Deleting ~Array~ and ~ArrayBuffer~ Elements - 335
+*** Problem - 335
+*** Solution - 336
+**** ~Array~ - 337
+
+** 10.9. Sorting ~Array~'s - 337
+*** Problem - 337
+*** Solution - 338
+**** Other solutions - 338
+
+*** See Also - 338
+
+** 10.10. Creating Multidimensional ~Array~'s - 338
+*** Problem - 338
+*** Solution - 339
+**** Using ~Array.ofDim~ - 339
+**** Using an array of arrays - 340
+
+*** Discussion - 340
+
+** 10.11. Creating ~Map~'s - 341
+*** Problem - 341
+*** Solution - 341
+*** Discussion - 342
+*** See Also - 342
+
+** 10.12. Choosing a ~Map~ Implementation - 343
+*** Problem - 343
+*** Solution - 343
+*** Discussion - 344
+*** See Also - 345
+
+** 10.13. Adding, Updating, and Removing Elements with a Mutable ~Map~ - 345
+*** Problem - 345
+*** Solution - 345
+*** Discussion - 346
+*** See Also - 347
+
+** 10.14. Adding, Updating, and Removing Elements with Immutable ~Map~'s - 347
+*** Problem - 347
+*** Solution - 347
+*** Discussion - 348
+*** See Also - 349
+
+** 10.15. Accessing ~Map~ Values - 349
+*** Problem - 349
+*** Solution - 349
+*** See Also - 350
+
+** 10.16. Testing for the Existence of a Key or Value in a ~Map~ - 353
+*** Problem - 353
+*** Solution - 353
+*** Discussion - 354
+*** See Also - 354
+
+** 10.17. Getting the Keys or Values from a ~Map~ - 352
+*** Problem - 352
+*** Solution - 352
+
+** 10.18. Traversing a ~Map~ - 350
+*** Problem - 350
+*** Solution - 351
+**** Operating on map values - 351
+
+** 10.19. Filtering a ~Map~ - 354
+*** Problem - 354
+*** Solution - 354
+**** Mutable maps - 355
+**** Mutable and immutable maps - 355
+
+** 10.20. Sorting an Existing Map by Key or Value - 357
+*** Problem - 357
+*** Solution - 357
+*** Discussion - 358
+**** About that _* - 359
+
+*** See Also - 360
+
+** 10.21. Finding the Largest Key or Value in a ~Map~ - 360
+*** Problem - 360
+*** Solution - 360
+*** See Also - 361
+
+** 10.22. How to Create a ~Set~ and Add Elements to It - =NEW TITLE=
+*** Problem - 361
+*** Solution - 362
+**** Mutable set - 362
+**** Immutable set - 363
+
+** 10.23. Deleting Elements from ~Set~'s - 363
+*** Problem - 363
+*** Solution - 363
+**** Mutable set - 364
+**** Immutable set - 365
+
+** 10.24. Using Sortable ~Set~'s - 365
+*** Problem - 365
+*** Solution - 365
+*** Discussion - 366
+*** See Also - 367
+
+** 10.25. Using a ~Queue~ - 367
+*** Problem - 367
+*** Solution - 367
+*** See Also - 369
+
+** 10.26. Using a ~Stack~ - 369
+*** Problem - 369
+*** Solution - 369
+*** Discussion - 371
+*** See Also - 371
+
+* TODO 11. Files and Processes - 375
+** DONE 11.0. Introduction - 375
+   CLOSED: [2018-02-20 Tue 18:30]
+   - ~scala.io.Source~ offers some nice simplifications comapred to Java:
+     - Open and read text files.
+     - Download content from URLs.
+     - Substitute a ~String~ for a ~File~, which is useful for testing.
+
+   - The Scala ~Console~ /class/ also SIMPLIFIES _console interaction_.
+
+   - In other cases, such as when
+     + reading a YAML file
+       or
+     + working with directories,
+     you simply _fall back to use existing Java libraries_.
+
+   - Execute system commands:
+     Scala makes it *much* easier.
+     Scala has a clean API to let you run external commands.
+
+** DONE 11.1. How to Read a Text File - =NEW TITLE=
+   CLOSED: [2018-02-20 Tue 18:24]
+*** DONE Problem
+    CLOSED: [2018-02-20 Tue 17:49]
+    1. open a plain-text file
+
+    2. process the lines in that file
+
+*** DONE Solution
+    CLOSED: [2018-02-20 Tue 17:49]
+    - _TWO_ primary ways:
+      + A concise one-line syntax.
+        * With side-effect of leaving the file open
+        * Be useful in short-lived programs, like shell scripts.
+
+      + A slightly longer approach that properly closes the file.
+
+**** Using the concise syntax
+     #+BEGIN_SRC scala
+       import scala.io.Source
+
+       val filename = "fileopen.scala"
+       for (line <- Source.fromFile(filename).getLines) {
+         println(line)
+       }
+     #+END_SRC
+
+     - Some variation:
+       #+BEGIN_SRC scala
+         val lines = Source.fromFile("/Users/Al/.bash_profile").getLines.toList
+         val lines = Source.fromFile("/Users/Al/.bash_profile").getLines.toArray
+       #+END_SRC
+
+     - ~fromFile~ method returns a ~BufferedSource~, and its ~getLines~ method
+       treats any =\r\n=, =\r=, or =\n= as a line separator.
+
+**** Properly closing the file
+     #+BEGIN_SRC scala
+       val bufferedSource = Source.fromFile("example.txt")
+
+       for (line <- bufferedSource.getLines) {
+         println(line.toUpperCase)
+       }
+
+       bufferedSource.close
+     #+END_SRC
+
+     - =TODO=
+       For automated methods of closing the file, see the "Loan Pattern" examples
+       in the *Discussion*.
+
+*** DONE Discussion - 377
+    CLOSED: [2018-02-20 Tue 18:23]
+**** DONE Leaving files open - 377
+     CLOSED: [2018-02-20 Tue 17:51]
+     You can use ~lsof~ ("list open files") to see the list of open files.
+     ~lsof -u <userName> | grep '<filename(s)Pattern>'~
+
+**** DONE Automatically closing the resource - 377
+     CLOSED: [2018-02-20 Tue 18:12]
+     Use the /load pattern/ - properly close resources once they goes out of
+     scope.
+
+     =From Jian= Until Scala 2.12.4, there is no Java /try-with-resources/ syntax
+
+     - The core part of a /load pattern/ implementation:
+       #+BEGIN_SRC scala
+         def using[A](r: Resource)(f: Resource => A): A =
+           try {
+             f(r)
+           } finally {
+             r.dispose()
+           }
+       #+END_SRC
+
+     - One way to IMPLEMENT the /Loan Pattern/ when working with files is to use
+       *Joshua Suereth’s ARM library*.
+       =From Jian= Check if this is outdated or NOT.
+
+       #+BEGIN_SRC scala
+         // in build.sbt
+         libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3"
+
+         // in TestARM
+         import resource._
+         import scala.io.Source
+
+         object TestARM extends App {
+
+           for (source <- managed(Source.fromFile("example.txt"))) {
+             for (line <- source.getLines) {
+               println(line)
+             }
+           }
+
+         }
+       #+END_SRC
+
+     - Another way (from the book Beginning Scala by David Pollak - modified)
+       #+BEGIN_SRC scala
+         object Control {
+
+           def using[A <: { def close(): Unit }, B](resource: A)(f: A => B): B =
+             try {
+               f(resource)
+             } finally {
+               resource.close()
+             }
+         }
+       #+END_SRC
+
+       + Usage:
+         #+BEGIN_SRC scala
+           import Control._
+           import scala.io.Source
+
+           object TestUsing extends App {
+
+             using(Source.fromFile("example.txt")) { source => {
+                 for (line <- source.getLines) {
+                   println(line)
+                 }
+               }
+             }
+
+           }
+         #+END_SRC
+
+     - =From Jian= =TODO= =RE-READ=
+       When you use the /Load Pattern/, take care about the /laziness/ --
+       make sure you really use the resource before its closing:
+
+       Read the answer of Rex Kerr from
+       https://stackoverflow.com/questions/20762240/loaner-pattern-in-scala
+
+**** DONE Handling exceptions - 379
+     CLOSED: [2018-02-20 Tue 18:19]
+     - Use ~try...catch~
+
+     - Also use ~Option~ type to mark the availability of the result, and ~Try~
+       can be better.
+
+**** DONE Multiple fromFile methods - 380
+     CLOSED: [2018-02-20 Tue 18:23]
+     - *8* ~fromFile~ methods exist that let you specify
+       + character encoding
+       + buffer size
+       + codec
+       + URI
+
+     - TIPS:
+       You can also use
+       + Java's ~FileReader~ and ~BufferedReader~
+         =TODO=
+
+       + Apache Commons ~FileUtils~ library.
+         =TODO=
+
+*** TODO See Also - 380
+
+** DONE 11.2. Writing Text Files - 381
+   CLOSED: [2018-02-21 Wed 14:29]
+*** DONE Problem - 381
+    CLOSED: [2018-02-21 Wed 14:16]
+*** DONE Solution - 381
+    CLOSED: [2018-02-21 Wed 14:29]
+    Fall back and use Java's ~PrintWriter~ or ~FileWriter~.
+    For example,
+    #+BEGIN_SRC scala
+      // PrintWriter
+      import java.io._
+
+      val pw = new PrintWriter(new File("hello.txt"))
+      pw.write("Hello, world")
+      pw.close()
+
+
+      // FileWriter
+      val file = new File(cannonicalFilename)
+      val bw = new BufferedWriter(new FileWriter(file))
+      bw.write(text)
+      bw.close()
+    #+END_SRC
+
+*** DONE Discussion - 381
+    CLOSED: [2018-02-21 Wed 14:29]
+    From https://coderanch.com/t/418148/certification/Information-PrintWriter-FileWriter
+
+    - ~FileWriter~ is the /character representation of IO/.
+      That means it can be used to write characters.
+
+    - *Internally* ~FileWriter~ would use
+      1. the _default character set of the underlying OS_
+      2. _convert the characters to bytes_
+      3. _write it to the disk_.
+
+    - ~PrintWriter~ & ~FileWriter~.
+      + SIMILARITIES
+        * Both extend from ~Writer~.
+
+        * Both are /character representation/ classes, that means they work with
+          *characters* and _convert them to bytes using default charset_.
+
+      + DIFFERENCES
+        * ~FileWriter~ throws ~IOException~ in case of any IO failure, this is a
+          /checked exception/.
+
+        * *None* of the ~PrintWriter~ methods throws ~IOException~,
+          instead they _set a boolean flag_ which can be obtained using
+          ~checkError()~.
+
+        * ~PrintWriter~ invokes /flush/ *after every byte of data is written*,
+          automatically.
+
+          In case of ~FileWriter~,
+          invoker as to take care of invoking /flush/.
+
+    - Difference between ~PrintStream~ and ~OutputStream~: Similar to above
+      explanation, just replace /character/ with /byte/.
+
+*** TODO See Also - 381
+
+** DONE 11.3. Reading and Writing Binary Files - 382
+   CLOSED: [2018-02-21 Wed 14:56]
+*** DONE Problem - 382
+    CLOSED: [2018-02-21 Wed 14:56]
+*** DONE Solution - 382
+    CLOSED: [2018-02-21 Wed 14:56]
+    - Use the Java ~FileInputStream~ and ~FileOutputStream~ classes.
+
+    - To demonstrate this, the following code is a close Scala *translation* of
+      the ~CopyBytes~ class on the _Oracle Byte Streams tutorial_:
+      #+BEGIN_SRC scala
+        import java.io._
+
+        object CopyBytes extends App {
+          var in = None: Option[FileInputStream]
+          var out = None: Option[FileOutputStream]
+          try {
+            in = Some(new FileInputStream("/tmp/Test.class"))
+            out = Some(new FileOutputStream("/tmp/Test.class.copy"))
+            var c = 0
+            while ({c = in.get.read; c != −1}) {
+              out.get.write(c)
+            }
+          } catch {
+            case e: IOException => e.printStackTrace
+          } finally {
+            println("entered finally ...")
+            if (in.isDefined) in.get.close
+            if (out.isDefined) out.get.close
+          }
+        }
+      #+END_SRC
+      + In the original Java version, the condition of ~while~ is like
+        ~c = in.read() != -1~, which doesn't work in Scala:
+        *assignment in Scala returns an ~Unit~ value, rather then the /assigned
+        value/ in Java.*
+
+
+*** TODO See Also - 383
+
+** DONE 11.4. Pretending that a String Is a File - 387
+   CLOSED: [2018-02-21 Wed 13:48]
+*** DONE Problem - 387
+    CLOSED: [2018-02-21 Wed 13:45]
+    For the purposes of testing, you may want to pretend that a ~String~ is a /file/.
+
+*** DONE Solution - 387
+    CLOSED: [2018-02-21 Wed 13:45]
+    - Since both ~Source.fromFile~ and ~Source.fromString~ return a ~Source~
+      (actually ~BufferedSource~) object, they are easily *interchangeable*.
+
+    - Example:
+      #+BEGIN_SRC scala
+        import io.Source
+
+        def printLines(source: Source) {
+          for (line <- source.getLines) {
+            println(line)
+          }
+        }
+
+        val s = Source.fromString("foo\nbar\n")
+        printLines(s)
+      #+END_SRC
+
+*** DONE Discussion - 388
+    CLOSED: [2018-02-21 Wed 13:48]
+*** TODO See Also - 389
+
+** TODO 11.5. Serializing and Deserializing Objects to Files - =NEW=
+** DONE 11.6. Listing Files in a Directory - 391
+   CLOSED: [2020-05-09 Sat 22:54]
+*** Problem - 391
+    - Q :: How to
+      + get a list of files that are in a directory,
+      + potentially limiting the list of files with a filter.
+
+*** Solution - 391
+    Use the Java ~File~:
+    #+begin_src scala
+      def getListOfFiles(dir: String):List[File] = {
+        val d = new File(dir)
+
+        if (d.exists && d.isDirectory) {
+          d.listFiles.filter(_.isFile).toList
+        } else {
+          List.empty[File]
+        }
+      }
+    #+end_src
+
+*** Discussion - 391
+    - If you want to *limit* the list of files that are returned based on their
+      filename extension,
+      + In Java, we'd implement a ~FileFilter~ with an ~accept~ /method/.
+      + In Scala, we can simply use ~filter~ and a function literal as predicate.
+
+    - Example:
+      #+begin_src scala
+        import java.io.File
+
+        def getListOfFiles(dir: File, extensions: Iterable[String]): List[File] =
+          dir.listFiles.filter(_.isFile).toList.filter { file =>
+            extensions.exists(file.getName.endsWith(_))
+          }
+      #+end_src
+
+*** See Also - 392
+
+
+** DONE 11.7. Executing External Commands - 394
+   CLOSED: [2020-05-11 Mon 00:34]
+*** DONE Problem - 394
+    CLOSED: [2018-02-20 Tue 18:39]
+    - Q :: Execute an external (system) command from within a Scala application.
+      + No concerned about the output from the command,
+        but you are interested in its /exit code/.
+
+*** DONE Solution - 394
+    CLOSED: [2018-02-20 Tue 18:39]
+    - There are *3* primary ways to execute external commands:
+      + Use the ~!~ method to execute the command and _get its exit status_.
+        (This recipie)
+
+      + Use the ~!!~ method to execute the command and _get its output_.
+        (NEXT recipie)
+
+      + Use the ~lines~ method to execute the command in the background and get
+        its result as a ~Stream~.
+        (This recipie Discussion section)
+        * =from Jian=
+          Use ~lazyLines~ method that returns a value of ~LazyList~.
+
+    - Example:
+      #+BEGIN_SRC scala
+        // scala>
+        import sys.process._
+
+        // scala>
+        "ls -al".!
+        // total 64
+        // drwxr-xr-x 10 Al staff 340 May 18 18:00 .
+        // drwxr-xr-x 3 Al staff 102 Apr 4 17:58 ..
+        // -rw-r--r-- 1 Al staff 118 May 17 08:34 Foo.sh
+        // -rw-r--r-- 1 Al staff 2727 May 17 08:34 Foo.sh.jar
+        // res0: Int = 0
+
+
+        // scala>
+        val exitcode = "ls -al".!
+        // total 64
+        // drwxr-xr-x 10 Al staff 340 May 18 18:00 .
+        // drwxr-xr-x 3 Al staff 102 Apr 4 17:58 ..
+        // -rw-r--r-- 1 Al staff 118 May 17 08:34 Foo.sh
+        // -rw-r--r-- 1 Al staff 2727 May 17 08:34 Foo.sh.jar
+        // result: Int = 0
+      #+END_SRC
+
+      + It is obvious that there must an /implicit conversion/ (from
+        ~sys.process._~) to add the ~!~ /method/ to a ~String~.
+
+*** DONE Discussion - 395
+    CLOSED: [2018-02-20 Tue 18:58]
+    - You can also use ~Seq~, where the first element is considered as a command,
+      and the elements after the first one is considered arguments. For example,
+      ~val exitCode = Seq("ls", "-al").!~
+
+    - Use ~Process~ directly. For example,
+      ~val exitCode = Process("ls").!~
+
+    - =IMPORTANT=
+      Remember to delete whitespaces around your command and arguments, or some
+      /exceptions/ will be thrown out.
+      #+BEGIN_SRC scala
+        // beware leading whitespace
+
+        // scala>
+        " ls".!
+        // java.io.IOException: Cannot run program "": error=2,
+        //   No such file or directory
+        //   at java.lang.ProcessBuilder.start(ProcessBuilder.java:460)
+
+        // scala>
+        val exitCode = Seq(" ls ", "-al").!
+        //   java.io.IOException: Cannot run program " ls ": error=2,
+        //     No such file or directory
+
+
+        // beware trailing whitespace
+
+        // scala>
+        val exitCode = Seq("ls", " -al ").!
+        // ls: -al : No such file or directory
+        // exitCode: Int = 1
+      #+END_SRC
+
+    - =From Jian=
+      + Q :: Why NOT the library automatically clean the input strings to make
+             them runnable commands???????
+
+      + A :: With leading or/and trailing spaces is not a good style!
+             Why not fail it!
+
+**** Using the lines method - 396
+     =from Jian=
+     Use ~lazyLines~ in Scala 2.13+
+     Use ~lineStream~ in Scala 2.12
+
+     - Since ~lines~ return a ~Stream~, you can use it, do something else, and
+        read the /stream/ later.
+
+     - The ~lines~ /method/ throws an /exception/ if the exit status of the
+       command is nonzero.
+
+     - ~lines~ return a value of ~Stream[String]~
+
+     - If you want to retrieve the standard error from the command, use the
+       ~lines_!~ /method/ instead.
+       TODO Read Recipe 12.11 and discussed in Table 12-1 in Recipe 12.19.
+
+**** External commands versus built-in commands - 396
+     - This recipe can only help to run /external commands (excutable in the
+       ~PATH~)/. You CANNOT use this recipe to run /shell built-in command/.
+
+     - TODO
+       See Recipe 12.13, “Building a Pipeline of Commands” for an example of how
+       to execute a shell built-in command.
+
+** DONE 11.8. Executing External Commands and READING Their STDOUT - =NEW TITLE=
+   CLOSED: [2020-05-11 Mon 00:53]
+*** Problem - 397
+    - Q :: How to
+      1. run an external command
+      2. then _use the standard output (STDOUT)_ from that process in your Scala program.
+
+*** Solution - 397
+    - A :: ~!!~ and get the standard output from the resulting process as a
+           ~String~ (multiple line string).
+
+*** Discussion - 398
+    - Summary:
+      + Use the ~!~ /method/ to get the /exit code/ from a /process/.
+      + Use the ~!!~ /method/ to get the standard output from a /process/.
+
+**** Unexpected newline characters - 398
+     When you run some command you know the output can be a one line string,
+     but unexpected newline characters may exist.
+     - Example:
+       #+begin_src scala
+         val dir = "pwd".!!
+         // dir: String =
+         // "/Users/Al/Temp
+         // "
+       #+end_src
+       + You need the ~trim~ /method/.
+
+**** Using the ~lines_!~ method - 399
+     ~lines_!~ returns a value of ~Option[Stream]~
+     - =from Jian=
+       Use ~lazyLines_!~ in Scala 2.13+
+       Use ~lineStream_!~ in Scala 2.12
+
+     - TODO See Recipe 12.19 for a description of the ~lines_!~ method.
+
+** TODO 11.9. Handling Both STDOUT and STDERR of Commands - =NEW TITLE=
+*** Problem - 399
+*** Solution - 399
+*** See Also - 400
+
+** TODO 11.10. Building a Pipeline of Commands - 401
+*** Problem - 401
+*** Solution - 401
+*** Discussion - 401
+*** See Also - 402
+
+** TODO 11.11. Redirecting the STDOUT and STDIN of External Commands - 402
+*** Problem - 402
+*** Solution - 402
+*** Discussion - 403
+*** See Also - 404
+
+** TODO 11.12. Handling Wildcard Characters in External Commands - 405
+*** Problem - 405
+*** Solution - 405
+*** Discussion - 405
+*** See Also - 406
+
+** TODO 11.13. Setting Environment Variables When Running Commands - 407
+*** TODO Problem - 407
+*** TODO Solution - 407
+*** TODO See Also - 407
+
+* TODO 12. Actors and Concurrency - 411
+** TODO Introduction - 411
+** TODO The Actor Model - 412
+   - Concepts:
+     + An /actor/ is the *SMALLEST unit* when building an actor-based system,
+       like an object in an OOP system.
+
+     + Like an object, an /actor/ *encapsulates* /state/ and /behavior/.
+
+     + You _CANNOT peek inside_ an /actor/ to get its state.
+
+       You _CAN send_ an /actor/ a /message/ requesting state information (like
+       asking a person how they're feeling),
+
+       _BUT_ you can't
+       * reach in and execute one of its methods,
+         or
+       * access its fields.
+
+     + An /actor/ has a /mailbox/ (an inbox), and its purpose in life is to process
+       the messages in its /mailbox/.
+
+     + You *communicate* with an /actor/ *by sending* it an IMMUTABLE /message/.
+       These messages go into the /actor/'s /mailbox/.
+
+     + When an /actor/ *receives* a /message/, it's LIKE taking a letter out of
+       its /mailbox/.
+         It opens the letter, processes the message using one of its algorithms,
+       then moves on to the next letter in the /mailbox/.
+
+       If there are no more messages, the /actor/ _waits_ until it receives one.
+
+   - In an application, actors form hierarchies, like a family, or a business
+     organization: TODO
+
+   - TODO
+     NOTE
+
+** TODO Other Features - 413
+   - TODO
+     NOTE
+
+** TODO 12.1. Getting Started with Futures
+*** Problem - 414
+    You want to begin using /actors/ to build concurrency into your applications.
+
+*** Solution - 414
+    - Create an actor by extending the akka.actor.Actor class and writing a receive method
+      in your class. The receive method should be implemented with a case statement that
+      allows the actor to respond to the different messages it receives.
+
+*** Discussion - 415
+    - *Details*
+    - *ActorSystem*
+    - *ActorRef*
+*** See Aslo - 417
+
+** TODO 12.2. Using Callback and Transformation Methods with Futures
+** TODO 12.3. Writing Functions That Return Futures
+** TODO 12.4. How to Run Multiple Futures in Parallel
+** TODO 12.5. How to Create OOP-Style Actors
+** TODO 12.6. How to Create FP-Style Actors
+** TODO 12.7. How to Send Messages to Actors
+** TODO 12.8. Creating Actors That Have Multiple States (FSM)
+    
+* TODO 13. Web Services - 491
+** TODO Introduction - 491
+** 13.1. How to Create a Play Framework Project
+** 13.2. How to Create a New Play Endpoint
+** 13.3. Returning JSON from a GET Request with Play
+** 13.4. How to Serialize a Scala Object to a JSON String
+** 13.5. How to Deserialize JSON into a Scala Object
+** 13.6. Using the Play JSON Library Outside of the Play Framework
+** 13.7. How to Use the sttp HTTP Client
+
+* TODO 14. Ecosystem & Tools
+** 14.1. Getting Started With Spark
+** 14.2. Reading a File Into a Spark RDD
+** 14.3. Reading a CSV File Into a Spark RDD
+** 14.4. How to Use Spark Like a Database with DataFrames
+** 14.5. How to Read Data Files Into a Spark DataFrame
+** 14.6. How to Use Spark SQL Queries Against Multiple Files
+** 14.7. Creating a Spark Batch Application
+** 14.8. Getting Started With Scala.js
+** 14.9. Responding to Events with Scala.js
+** 14.10. Starting to Build Single-Page Applications with Scala.js
+** 14.11. Building Native Executables With GraalVM
+
+* TODO 15. Interacting with Java
+** 15.1. Using Java Collections in Scala
+** 15.2. Using Scala Collections in Java
+** 15.3. Using Java Optional Values in Scala
+** 15.4. Using Scala Option Values in Java
+** 15.5. Using Scala Traits in Java
+** 15.6. Using Java Interfaces in Scala
+** 15.7. Add Exception Annotations to Scala Methods to Work with Java
+** 15.8. Annotate varargs Methods to Work with Java
+** 15.9. Using ~@SerialVersionUID~ and Other Annotations
+** 15.10. Handling Numeric Conversions Between Scala and Java (Boxing)
+
+
+* Still Version 1   
+* TODO 8. Traits - 203
+** DONE 8.1. Using a Trait as an Interface - 203
+   CLOSED: [2020-05-08 Fri 02:11]
+*** Problem - 203
+*** Solution - 203
+*** Discussion - 205
+    - How to use ~extends~ and ~with~:
+      + If extend *one* /trait/, use the ~extends~ keyword.
+
+      + If extend MULTIPLE /traits/, use
+        * ~extends~ for the *first* /trait/
+        * ~with~ to extend (/mix in/) the other /traits/.
+
+      + If extends a /class/ (or /abstract class/) and a /trait/, _ALWAYS_ use
+        ~extends~ before the /class/ name, and use ~with~ before the trait name(s).
+
+    - When a /class/ has *multiple* /traits/, *those /traits/ are said to _be mixed
+      in to_ the class.* The term *mixed in* is also used when _extending_ a
+      /single object instance/ _with_ a /trait/, like this: ~val f = new Foo with Trait1~
+      TODO See Recipe 8.8, "Adding a Trait to an Object Instance".
+
+** DONE 8.2. Using Abstract Fields in Traits - 206
+   CLOSED: [2020-05-08 Fri 02:11]
+*** Problem - 206
+*** Solution - 206
+*** Discussion - 206
+    - /Fields/ of a /trait/ can be declared as either ~var~ or ~val~.
+      You don't need to use the ~override~ keyword to _override_ a ~var~ /field/
+      in a /subclass/ (or /trait/), but you DO NEED to use it to _override_ a
+      ~val~ /field/.
+
+    - Recipie 4.13, "Defining Properties in an Abstract Base Class (or Trait)"
+
+** DONE 8.3. Using a Trait Like an Abstract Class - 207
+   CLOSED: [2020-05-08 Fri 01:43]
+*** Problem - 207
+*** Solution - 207
+*** Discussion - 207
+*** See Also - 208
+
+** DONE 8.4. Using Traits as Mixins - 208 - =2020= - =READ Tips=
+   CLOSED: [2020-05-08 Fri 01:46]
+*** Problem - 208
+*** TODO Solution - 208
+    - *Tips*
+      To see a great demonstration of the power of /mixins/, read _Artima's short
+      "Stackable Trait Pattern" article._ By defining /traits/ and /classes/ as
+      base, core, and stackable components, they demonstrate how sixteen
+      different classes can be derived from three traits by “stacking” the
+      traits together.
+
+*** See Also - 209
+
+** DONE 8.5. Marking Traits So They Can Only Be Used by Subclasses of a Certain Type - 211
+   CLOSED: [2020-05-08 Fri 02:00]
+*** Problem - 211
+*** Solution - 211
+    #+begin_src scala
+      trait MyTrait { this: BaseType =>
+      }
+    #+end_src
+*** Discussion - 212
+*** See Also - 213
+
+** DONE 8.6. Ensuring a Trait Can Only Be Added to a Type That Has a Specific Method - 213
+   CLOSED: [2020-05-08 Fri 01:59]
+*** Problem - 213
+*** Solution - 213
+    #+begin_src scala
+      trait WrapCore { this: { def ejectWrapCore(password: String): Boolean } =>
+      }
+    #+end_src
+*** Discussion - 214
+*** See Also - 214
+
+** DONE 8.7. Limiting Which Classes Can Use a Trait by Inheritance - 209
+   CLOSED: [2020-05-08 Fri 02:10]
+*** Problem - 209
+*** Solution - 209
+    Use the of restriction that one class/object can ONLY extends /traits/ or
+    /classes/ that have the same /superclasses/ as a tool to "Limiting Which
+    Classes Can Use a Trait by Inheritance".
+
+    - See the example in _Discussion - 210_
+
+*** Discussion - 210
+    Assume there is a rule that "people who deliver pizzas to customers must be a
+    /subclass/ of ~StoreEmployee~ and cannot be a /subclass/ of ~CorporateEmployee~."
+    #+begin_src scala
+      abstract class Employee
+      class CorporateEmployee extends Employee
+      class StoreEmployee extends Employee
+
+      trait DeliversFood extends StoreEmployee
+      class DeliveryPerson extends StoreEmployee with DeliversFood
+
+      // Won't compile
+      class Receptionist extends CorporateEmployee with DeliversFood
+    #+end_src
+
+*** Discussion - 211 - =CAUTION= can be a better name
+    _It seems *RARE* that a /trait/ and a /class/ the /trait/ will be mixed into
+    should both have the same superclass_,
+    so I suspect the need for this recipe is also rare.
+    + Advice:
+      When you want to limit the /classes/ a /trait/ can be mixed into,
+      1. *don't create an artificial inheritance tree to use this recipe*;
+      2. *use one of the following recipes instead.*
+
+*** See Also - 211
+
+** DONE 8.8. Using Trait Parameters - ???
+** DONE 8.9. Parameterized Traits - ???
+** DONE 8.10. Resolving Method Name Conflicts and Understanding super - ???
+** DONE 8.11. Using Traits to Create Modules - ???
+** =DEPRECATED= 8.8. Adding a Trait to an Object Instance - 215
+*** Problem - 215
+*** Solution - 215
+*** Discussion - 215
+    A practical example is adding a _debugging or logging trait_ to an /object/:
+    #+begin_src scala
+      trait Debugger {
+        def log(message: String) {
+          // do something with message
+        }
+      }
+
+      // no debugger
+      val child = new Child
+
+      // debugger added as the object is created
+      val problemChild = new ProblemChild with Debugger
+    #+end_src
+
+** =DEPRECATED= 8.9. Extending a Java Interface Like a Trait - 216
+*** Problem - 216
+*** Solution - 216
+    *Trivial*
+    Just as extend a /trait/ with only /abstract methods/, and you must implement all of them.
+
+* TODO 14. Command-Line Tasks - 453
+** TODO 14.0. Introduction - 453
+** TODO 14.1. Getting Started with the Scala REPL - 454
+*** Problem - 454
+*** Solution - 454
+*** Discussion - 456
+**** REPL command-line options - 457
+**** Deprecation and feature warnings - 457
+**** The Scala Worksheet - 458
+
+*** See Also - 459
+
+** TODO 14.2. Pasting and Loading Blocks of Code into the REPL - 459
+
+*** Problem - 459
+*** Solution - 459
+**** The ~:paste~ command - 459
+**** The ~:load~ command - 460
+
+*** Discussion - 461
+**** Scala's ~-i~ option
+
+*** See Also - 461
+
+** TODO 14.3. Adding JAR Files and Classes to the REPL Classpath - 461
+*** Problem - 461
+*** Solution - 461
+
+** TODO 14.4. Running a Shell Command from the REPL - 462
+*** Problem - 462
+*** Solution - 463
+**** Scala's ~-i~ option - 463
+
+*** See Also - 464
+
+** TODO 14.5. Compiling with scalac and Running with scala - 465
+*** Problem - 465
+*** Solution - 465
+*** Discussion - 465
+
+** TODO 14.6. Disassembling and Decompiling Scala Code - 466
+*** Problem - 466
+*** Solution - 466
+**** Using ~javap~ - 467
+**** Using ~scalac~ print options - 467
+**** Use a decompiler - 468
+
+*** Discussion - 469
+*** See Also - 471
+
+** TODO 14.7. Finding Scala Libraries - 471
+*** Problem - 471
+*** Solution - 471
+
+** TODO 14.8. Generating Documentation with scaladoc - 472
+*** Problem - 472
+*** Solution - 472
+*** Discussion - 476
+*** See Also - 478
+
+** TODO 14.9. Faster Command-Line Compiling with fsc - 479
+*** Problem - 479
+*** Solution - 479
+*** Discussion - 479
+*** See Also - 480
+
+** TODO 14.10. Using Scala as a Scripting Language - 480
+*** Problem - 480
+*** Solution - 480
+*** Discussion - 480
+**** Using the App trait or main method - 481
+**** Building the classpath - 482
+
+*** See Also - 483
+
+** TODO 14.11. Accessing Command-Line Arguments from a Script - 483
+*** Problem - 483
+*** Solution - 483
+*** Discussion - 484
+
+** TODO 14.12. Prompting for Input from a Scala Shell Script - 485
+*** Problem - 485
+*** Solution - 485
+*** Discussion - 485
+**** Reading multiple values from one line - 486
+**** Fun with output - 488
+
+*** See Also - 488
+
+** TODO 14.13. Make Your Scala Scripts Run Faster - 489
+*** Problem - 489
+*** Solution - 489
+*** Discussion - 490
+
+* TODO 16. Databases and Persistence - 527
+** TODO Introduction - 527
+** TODO 16.1. Connecting to MySQL with JDBC - 528
+*** Problem - 528
+*** Solution - 528
+*** Discussion - 529
+*** See Also - 530
+
+** 16.2. Connecting to a Database with the Spring Framework - 530
+** 16.3. Connecting to MongoDB and Inserting Data - 533
+** 16.4. Inserting Documents into MongoDB with insert, save, or += - 537
+** 16.5. Searching a MongoDB Collection - 539
+** 16.6. Updating Documents in a MongoDB Collection - 542
+** 16.7. Accessing the MongoDB Document ID Field - 544
+** 16.8. Deleting Documents in a MongoDB Collection - 545
+** 16.9. A Quick Look at Slick - 547
+
+* TODO 17. Interacting with Java - 549
+** TODO Introduction - 549
+** TODO 17.1. Going to and from Java Collections - 549
+*** Problem - 549
+*** Solution - 550
+*** Discussion - 550
+**** Conversion tables - 552
+**** Going from Scala collections to Java collections - 553
+**** The JavaConverters object - 554
+
+*** See Also - 554
+
+** DONE 17.2. Add Exception Annotations to Scala Methods to Work with Java - 554
+   CLOSED: [2018-02-28 Wed 14:24]
+*** DONE Problem - 554
+    CLOSED: [2018-02-28 Wed 14:14]
+    You want to let Java users know that a method can throw one or more
+    /exceptions/ so they can handle those exceptions with ~try/catch~ blocks.
+
+*** DONE Solution - 554
+    CLOSED: [2018-02-28 Wed 14:21]
+    - Use the ~@throws~ annotation - see Section 5.8 for details.
+
+    - From the point of view of a Java caller, the Scala code with ~@throws~ is
+      just like some Java code with ~throws~, and the Java caller must use
+      ~try/catch~ block to deal with it.
+
+*** DONE Discussion - 555
+    CLOSED: [2018-02-28 Wed 14:24]
+    If your Scala code does throw some exception (/checked exception/ in Java),
+    and you don't use ~@throws~ to let Java callers know, then Java callers will
+    have no chance to know this until their applications crash -- this is BAD!!!
+
+** TODO 17.3. Using ~@SerialVersionUID~ and Other Annotations - 556
+*** Problem - 556
+*** Solution - 556
+*** Discussion - 556
+*** See Also - 557
+
+** TODO 17.4. Using the Spring Framework - 557
+*** Problem - 557
+*** Solution - 557
+*** Discussion - 560
+*** See Also - 560
+
+** TODO 17.5. Annotating varargs Methods - 560
+*** Problem - 560
+*** Solution - 560
+*** Discussion - 561
+
+** TODO 17.6. When Java Code Requires JavaBeans - 562
+*** Problem - 562
+*** Solution - 562
+*** Discussion - 563
+*** See Also - 565
+
+** TODO 17.7. Wrapping Traits with Implementations - 565
+*** Problem - 565
+*** Solution - 565
+*** Discussion - 566
+**** Other attempts - 566
+
+* TODO 18. The Simple Build Tool (SBT) - 569
+** TODO Introduction - 569
+** TODO 18.1. Creating a Project Directory Structure for SBT - 570
+*** Problem - 570
+*** Solution - 570
+**** Use a shell script - 570
+**** Use Giter8 - 571
+**** Giter8 notes - 572
+
+*** Discussion - 573
+*** See Also - 574
+
+** TODO 18.2. Compiling, Running, and Packaging a Scala Project with SBT - 574
+*** Problem - 574
+*** Solution - 574
+*** Discussion - 575
+**** SBT commands - 576
+**** Continuous compiling - 577
+**** Use last to get more information on the last command - 578
+
+*** See Also - 578
+
+** TODO 18.3. Running Tests with SBT and ScalaTest - 579
+*** Problem - 579
+*** Solution - 579
+*** Discussion - 579
+*** See Also - 580
+
+** TODO 18.4. Managing Dependencies with SBT - 581
+*** Problem - 581
+*** Solution - 581
+*** Discussion - 582
+**** Repositories - 583
+
+*** See Also - 584
+
+** TODO 18.5. Controlling Which Version of a Managed Dependency Is Used - 584
+*** Problem - 584
+*** Solution - 584
+*** See Also - 585
+
+** TODO 18.6. Creating a Project with Subprojects - 586
+*** Problem - 586
+*** Solution - 586
+*** Discussion - 587
+*** See Also - 588
+
+** TODO 18.7. Using SBT with Eclipse - 588
+*** Problem - 588
+*** Solution - 588
+*** Discussion - 589
+*** See Also - 590
+
+** TODO 18.8. Generating Project API Documentation - 590
+*** Problem - 590
+*** Solution - 590
+*** See Also - 591
+
+** TODO 18.9. Specifying a Main Class to Run - 591
+*** Problem - 591
+*** Solution - 591
+**** Using run-main - 592
+
+*** Discussion - 592
+*** See Also - 593
+
+** TODO 18.10. Using GitHub Projects as Project Dependencies - 593
+*** Problem - 593
+*** Solution - 593
+*** Discussion - 594
+*** See Also - 595
+
+** TODO 18.11. Telling SBT How to Find a Repository (Working with Resolvers) - 595
+*** Problem - 595
+*** Solution - 595
+*** Discussion - 595
+
+** TODO 18.12. Resolving Problems by Getting an SBT Stack Trace - 596
+*** Problem - 596
+*** Solution - 596
+
+** TODO 18.13. Setting the SBT Log Level - 597
+*** Problem - 597
+*** Solution - 597
+
+** TODO 18.14. Deploying a Single, Executable JAR File - 597
+*** Problem - 597
+*** Solution - 598
+**** Using sbt-assembly - 598
+
+*** Discussion - 599
+*** See Also - 600
+
+** TODO 18.15. Publishing Your Library - 601
+*** Problem - 601
+*** Solution - 601
+
+** TODO 18.16. Using Build.scala Instead of build.sbt - 602
+*** Problem - 602
+*** Solution - 602
+*** Discussion - 603
+**** The Full Configuration Example in the SBT documentation - 603
+
+*** See Also - 604
+
+** TODO 18.17. Using a Maven Repository Library with SBT - 604
+*** Problem - 604
+*** Solution - 604
+*** See Also -  606
+
+** TODO 18.18. Building a Scala Project with Ant - 606
+*** Problem - 606
+*** Solution - 606
+*** Discussion - 607
+**** The =build.xml= code - 608
+**** Creating a JAR file with Ant - 608
+
+*** See Also - 609
+
+* DONE 19. Types - 611 - _Re-Read some parts_
+  CLOSED: [2019-03-07 Thu 18:02]
+*** DONE Introduction - 611
+    CLOSED: [2019-03-07 Thu 16:04]
+*** DONE Variance - 611
+    CLOSED: [2019-03-07 Thu 16:01]
+    ~T~, ~+T~, ~-T~
+
+*** DONE Bounds - 612
+    CLOSED: [2019-03-07 Thu 15:12]
+    - Table 19-2. Descriptions of Scala’s bounds symbols
+      |                       | Name                   | Description                      |
+      |-----------------------+------------------------+----------------------------------|
+      | ~A <: B~              | Upper Bound            | ~A~ must be a /suBtype/ of ~B~   |
+      |-----------------------+------------------------+----------------------------------|
+      | ~A >: B~              | Lower Bound            | ~A~ must be a /suPERtype/ of ~B~ |
+      |-----------------------+------------------------+----------------------------------|
+      | ~A <: Upper >: Lower~ | Lower and upper Bounds | Bounded by an upper              |
+      |                       |                        | bound and an lower bound         |
+
+    - Bounds that mentioned but _NOT_ included in this book:
+      + ~T : B~ form: /context bound/ -- /type class/ pattern.
+
+      + ~A <% B~ form: /view bound/, deprecated.
+
+*** DONE Type Constraints - 613
+    CLOSED: [2019-03-07 Thu 15:17]
+    Type constraints (NOT covered in this book):
+    + ~A \equal{}:\equal{} B~: ~A~ must be equal to ~B~
+
+    + ~A <:< B~: ~A~ must be a subtype of ~B~
+
+    + ~A <%< B~: ~A~ must be /viewable/ as ~B~
+      *DEPRECATED*
+
+*** TODO Type Examples in Other Chapters - 613
+
+** DONE 19.1. Creating Classes That Use Generic Types - 614
+   CLOSED: [2019-03-07 Thu 16:33]
+*** DONE Problem - 614
+    CLOSED: [2019-03-07 Thu 16:05]
+    Create a /class/ (and associated /methods/) that uses a /generic type/.
+
+*** DONE Solution - 614
+    CLOSED: [2019-03-07 Thu 16:07]
+*** DONE Discussion - 615
+    CLOSED: [2019-03-07 Thu 16:33]
+    Later Scala compilers (for example, version 2.10) can give you a reminder
+    that some place you may use different /variant/ to avoid some compile errors.
+
+**** DONE Type parameter symbols - 616
+     CLOSED: [2019-03-07 Thu 16:33]
+     - *Java* has its /naming convention/ for /type parameters/.
+       You can find it in
+       *The Java™ Tutorials*
+          -> *Trails Covering the Basics*
+            -> *Learning the Java Language*
+              -> *Generics*
+                -> *Generics Types*
+                  -> *Type Parameter Naming Conventions*
+
+       + It is obvious that this naming convention attatch meanings to /type
+         parameter/ names, and it use ~T~ instead of ~A~ if there is a single
+         /type parameter/.
+
+       + Nameing Convetion:
+         * ~E~ - Element (used extensively by the Java Collections Framework)
+         * ~K~ - Key
+         * ~N~ - Number
+         * ~T~ - Type
+         * ~V~ - Value
+         * ~S~, ~U~, ~V~ etc. - 2nd, 3rd, 4th types
+
+     - Scala doesn't follow this naming convention, though its also prefer to use
+       single capital letter as /type parameters/.
+
+       =from Jian=
+       + Rules from *Scala Style Guide*:
+         * Use ~A~ instead of ~T~ as a SINGLE /type parameter/.
+
+         * Use descriptive names for more specific meaning.
+           The first letter of a name should be capitalized.
+           Usually shouldn't use all-caps.
+
+         * Use mnemonic name, rather than a full name,
+           if the scope is very small.
+
+       + For the last two points, for example,
+         * use ~Key~ and ~Value~ as /type parameter names/ for a conprehensive
+           implementation of ~Map~.
+
+         * use ~K~ and ~V~ as /type parameter names/ for a structure defined and
+           used in a small scope and needs /type parameters/ to represent key
+           type and value type.
+
+*** TODO See Also - 617
+
+** DONE 19.2. Creating a Method That Takes a Simple Generic Type - 617
+   CLOSED: [2019-03-07 Thu 16:35]
+*** DONE Problem - 617
+    CLOSED: [2019-03-07 Thu 16:35]
+*** DONE Solution - 617
+    CLOSED: [2019-03-07 Thu 16:35]
+*** DONE Discussion - 618
+    CLOSED: [2019-03-07 Thu 16:35]
+
+** DONE 19.3. Using Duck Typing (Structural Types) - 618
+   CLOSED: [2019-03-07 Thu 16:39]
+*** DONE Problem - 618
+    CLOSED: [2019-03-07 Thu 16:39]
+*** DONE Solution - 618
+    CLOSED: [2019-03-07 Thu 16:39]
+    Example:
+    #+begin_src scala
+      def callSpeak[A <: { def speak(): Unit }](obj: A) {
+        // code here ...
+        obj.speak()
+      }
+    #+end_src
+
+*** DONE Discussion - 619
+    CLOSED: [2019-03-07 Thu 16:39]
+
+** DONE 19.4. Make Mutable Collections Invariant - 620
+   CLOSED: [2019-03-07 Thu 16:47]
+*** DONE Problem - 620
+    CLOSED: [2019-03-07 Thu 16:46]
+*** DONE Solution - 620
+    CLOSED: [2019-03-07 Thu 16:46]
+    *When creating a collection of elements that can be changed (_mutated_), its
+    /generic type parameter/ should be declared as ~[A]~, making it /invariant/.*
+
+*** DONE Discussion - 622
+    CLOSED: [2019-03-07 Thu 16:46]
+*** DONE See Also - 622
+    CLOSED: [2019-03-07 Thu 16:46]
+
+** DONE 19.5. Make Immutable Collections Covariant - 622
+   CLOSED: [2019-03-07 Thu 16:57]
+*** DONE Problem - 622
+    CLOSED: [2019-03-07 Thu 16:57]
+*** DONE Solution - 622
+    CLOSED: [2019-03-07 Thu 16:57]
+*** DONE Discussion - 623
+    CLOSED: [2019-03-07 Thu 16:57]
+    Defining an /immutable collection/ to take a /covariant generic type
+    parameter/ makes the collection _more flexible and useful_ throughout your
+    code.
+
+** DONE 19.6. Create a Collection Whose Elements Are All of Some Base Type - 624
+   CLOSED: [2019-03-07 Thu 17:19]
+*** DONE Problem - 624
+    CLOSED: [2019-03-07 Thu 17:09]
+    Write generic /classes/ or /methods/ with limited /generic types/.
+
+*** DONE Solution - 625
+    CLOSED: [2019-03-07 Thu 17:10]
+    Use /upper bound/.
+
+*** DONE Discussion - 626
+    CLOSED: [2019-03-07 Thu 17:10]
+**** Methods - 626
+
+*** DONE See Also - 627
+    CLOSED: [2019-03-07 Thu 17:19]
+    /Lower bound/ is used *LESS* frequently!
+    + See Recipe 19.8
+
+    + "A Tour of Scala: Lower Type Bounds" gives a example of /lower bound/:
+
+      the ~U~ of ~prepend~ method. Without it, here you can only make your
+      classes/traits /invariant/ or have /compile error/ (for ~+B~, the /type
+      parameter/ location if not a legal /covariant site/).
+
+      #+begin_src scala
+        trait Node[+B] {
+          def prepend[U >: B](elem: U): Node[U]
+        }
+
+        case class ListNode[+B](h: B, t: Node[B]) extends Node[B] {
+          def prepend[U >: B](elem: U): ListNode[U] = ListNode(elem, this)
+          def head: B = h
+          def tail: Node[B] = t
+        }
+
+        case class Nil[+B]() extends Node[B] {
+          def prepend[U >: B](elem: U): ListNode[U] = ListNode(elem, this)
+        }
+      #+end_src
+
+** DONE 19.7. Selectively Adding New Behavior to a Closed Model - 627 - =RE-READ=
+   CLOSED: [2019-03-07 Thu 18:01]
+*** DONE Problem - 627
+    CLOSED: [2019-03-07 Thu 17:24]
+    - Assumptiion :: a *closed* model,
+
+    - Requirement :: add new behavior to certain types within that model,
+                     while
+                     potentially excluding that behavior from being added to
+                     other types.
+
+*** DONE Solution - 627
+    CLOSED: [2019-03-07 Thu 17:52]
+    /Type class/
+
+**** Creating a type class - 628
+     - The _process of creating_ a /type class/ is a LITTLE COMPLICATED,
+       but there is a FORMULA:
+       + Usually you start with a need, such as having a _closed model_ to which
+         you want to _add new behavior_.
+
+       + To add the new behavior, you define a /type class/.
+         The typical approach is to
+         1. *create* a _base_ /trait/,
+
+         2. *write* _specific implementations_ of that /trait/ *using* /implicit
+            objects/.
+
+       + Back in your main application,
+         create a /method/ that uses the /type class/ to apply the behavior to
+         the /closed model/.
+
+     - Example:
+       + An _existing_ and _closed_ model:
+         #+begin_src scala
+           // Animal.scala
+           package typeclassdemo
+
+           trait Animal
+           final case class Dog(name: String) extends Animal
+           final case class Cat(name: String) extends Animal
+         #+end_src
+
+       + /Type class/ related:
+         #+begin_src scala
+           // Humanish.scala
+           package typeclassdemo
+
+           object Humanish {
+             // the type class.
+             // defines an abstract method named `speak`.
+             trait HumanLike[A] {
+               def speak(speaker: A): Unit
+             }
+
+             // companion object
+             object HumanLike {
+               // implement the behavior for each desired type.
+               // In this case ONLY for `Dog`.
+               implicit object DogIsHumanLike extends HumanLike[Dog] {
+                 def speak(dog: Dog) { println(s"I'm a Dog, my name is ${dog.name}") }
+               }
+             }
+           }
+         #+end_src
+
+       + Use it:
+         #+begin_src scala
+           // TypeClassDemo.scala
+           package typeclassdemo
+
+           object TypeClassDemo extends App {
+
+             import Humanish.HumanLike
+
+             // create a method to make an animal speak
+             def makeHumanLikeThingSpeak[A](animal: A)(implicit humanLike: HumanLike[A]) {
+               humanLike.speak(animal)
+             }
+
+             // because `HumanLike` implemented this for `Dog`, it will work
+             makeHumanLikeThingSpeak(Dog("Rover"))
+
+             // however, the method won't compile for `Cat` (as desired)
+             // `makeHumanLikeThingSpeak(Cat("Morris"))`
+           }
+         #+end_src
+
+*** DONE Discussion - 629 - =RE-READ=
+    CLOSED: [2019-03-07 Thu 18:01]
+    /Type class/ can
+    - help you adding new functionality to /closed models/.
+
+    - let you define methods that take generic types, and provide control
+      over what those types are.
+      =from Jian=
+      + Illustration with this example:
+        * ~HumanLike[A]~ /trait/ must be defined, but ONLY dose NOT help you.
+
+        * For a concrete type, an /implicit object/ must be defined, imported,
+          and then /type class/ can work.
+
+          =???=
+          To make /type class work/, we need
+          single type parameter type class trait *+* implicit convertion for a
+          concrete type argument
+
+*** TODO See Also - 630
+    - =TODO=
+      Read source code of Scala ~Numeric~.
+
+    - Recipe 1.10, “Add Your Own Methods to the String Class” demonstrates how to
+      add new functionality to closed classes using implicit conversions.
+      =TODO=/=RE-DO=  =COMPARE= =???=
+
+** DONE 19.8. Building Functionality with Types - 630
+   CLOSED: [2019-03-07 Thu 15:01]
+*** DONE Example 1: Creating a Timer - 630
+    CLOSED: [2019-03-07 Thu 15:01]
+    Implement a function that generate results like ~time~ command in usual *nix
+    System. Try =time find . -name "*.scala"= to check its result in deail.
+
+    - Imagine the output before implementing it:
+      #+begin_src scala
+        val (result, time) = timer { Thread.sleep(500); 1 }
+        // result: Int = 1
+        // time: Double = 500.32
+      #+end_src
+
+    - Implementation:
+      #+begin_src scala
+        def timer[A](blockOfCode: => A) = {
+          val startTime = System.nanoTime
+          val result = blockOfCode
+          val stopTime = System.nanoTime
+          val delta = stopTime - startTime
+          (result, delta/1000000d)
+        }
+      #+end_src
+      Use type parameter ~A~ here without any constraint, make sure ~timer~ can
+      be used to time anything, _no matter_ what its exact /type/ is.
+
+*** DONE Example 2: Writing Your Own "Try" Class - 631
+    CLOSED: [2019-03-07 Thu 14:49]
+    - Before Scala 2.10, there was no ~Try~, ~Success~, and ~Failure~ in
+      ~scala.util~. You can only get it from Twitter's library.
+
+    - =RE-DO=
+      Try to implement them with ~apply~, ~get~, ~getOrElse~ methods, and other
+      auxiliary values and/or methods.
+
+**** The Scala 2.10 ~Try~ classes - 633
+     Read the /signatures/ of ~map~ and ~flatten~.
+
+* TODO 20. Idioms - 635
+** DONE Introduction - 635
+   CLOSED: [2018-02-18 Sun 00:21]
+   - This chapter talks about writing Scala in the Scala way.
+     #+BEGIN_QUOTE
+     I wanted to write code that “makes it look like the language was made for
+     the problem.
+                                               -- Ward Cunningham (Clean Code)
+     #+END_QUOTE
+
+   - Scala's best practices:
+     + At the _application level_:
+       * The 80/20 rule - try to write 80% of your appplication as pure
+         functions, with a thin layer of other code on top of those functions for
+         things like I/O.
+
+       * Learn "Expression-Oriented Programming" (=TODO= Recipe 20.3).
+
+       * Use the ~Actor~ classes to implement *concurrency* (=TODO= Chapter 13).
+
+       * Move behavior from classes into more granular traits.
+         This is best described in _the Scala Stackable Trait pattern_. =TODO=
+
+     + At the _coding level_:
+       * Learn how to write pure functions.
+
+       * Learn how to pass functions around as variables (Recipes 9.2 to 9.4).
+
+       * Learn how to use the _Scala collections API_. Know the most common classes
+         and methods (10 and 11). =TODO=
+
+       * Prefer immutable code.
+         Use ~val~'s and /immutable collections/ first (Recipe 20.2).
+
+       * Drop the ~null~ keyword from your vocabulary.
+         Use the ~Option~ type (~Some~ and ~None~) and ~Try~ type (~Success~ and
+         ~Failure~) classes instead (Recipe 20.6). =TODO= =TODO=
+
+       * Use TDD and/or BDD testing tools like ScalaTest and specs2
+
+     + Outside the code:
+       * Learn how to use *SBT*.
+         It’s the _de-facto_ /Scala build tool/ (Chapter 18).
+
+       * Keep a /REPL/ session open while you’re coding (or use the /Scala
+         Worksheet/), and constantly try small experiments (Recipes 14.1 to 14.4,
+         and many examples throughout the book). =TODO= =TODO=
+
+*** Other Resources
+    - Highly recommended:
+      Twitter's *Effective Scala document* (free online).
+
+    - Recommended:
+      *Scala Style Guide*
+
+** TODO 20.1. Create Methods with No Side Effects (Pure Functions) - 636
+*** Problem - 636
+*** Solution - 636
+**** Referential transparency - 637
+**** Pure functions - 637
+**** The Java approach - 639
+**** Fixing the problems - 640
+
+*** Discussion - 642
+**** StockUtils or Stock object?
+
+*** See Also
+
+** TODO 20.2. Prefer Immutable Objects - 644
+** TODO 20.3. Think "Expression-Oriented Programming" - 647
+** DONE 20.4. Use Match Expressions and Pattern Matching - 650
+   CLOSED: [2018-02-21 Wed 14:00]
+*** DONE Problem - 650
+    CLOSED: [2018-02-21 Wed 13:49]
+*** TODO Solution - 651
+**** DONE Replacement for the Java switch statement and unwieldy if/then statements - 651
+     CLOSED: [2018-02-21 Wed 13:52]
+**** DONE In ~try/catch~ expressions - 651
+     CLOSED: [2018-02-21 Wed 13:53]
+**** DONE As the body of a function or method - 652
+     CLOSED: [2018-02-21 Wed 13:53]
+     - In the case that the whole function body is a ~match~ expression.
+
+     - In the case of the function is a /partial function/.
+       #+BEGIN_SRC scala
+         val divide: PartialFunction[Int, Int] = {
+           case d: Int if d != 0 => 42 / d
+         }
+       #+END_SRC
+
+**** DONE Use with ~Option/Some/None~ - 653
+**** TODO In actors - 653
+     =From Jian= I think this an outdated example. Now people use Akka rather than Actor.
+                 However, I'm not sure.
+
+     #+BEGIN_SRC scala
+       class SarahsBrain extends Actor {
+         def receive = {
+           case StartMessage => handleStartMessage
+           case StopMessage => handleStopMessage
+           case SetMaxWaitTime(time) => helper ! SetMaxWaitTime(time)
+           case SetPhrasesToSpeak(phrases) => helper ! SetPhrasesToSpeak(phrases)
+           case _ => log.info("Got something unexpected.")
+         }
+
+         // other code here ...
+       }
+     #+END_SRC
+**** DONE Summary - 654
+     CLOSED: [2018-02-21 Wed 13:57]
+
+*** TODO See Also - 653
+
+** DONE 20.5. Eliminate ~null~ Values from Your Code - 654
+   CLOSED: [2018-02-18 Sun 22:02]
+*** DONE Problem - 654
+    CLOSED: [2018-02-18 Sun 22:02]
+    - Tony Hoare invents the ~null~ reference way back in 1965.
+
+    - Tony Hoare refers the creation of the ~null~ value as his "billion dollar
+      mistake."
+
+    - In the modern best practice of programming,
+      you should eliminate ~null~.
+
+*** DONE Solution - 654
+    CLOSED: [2018-02-18 Sun 22:02]
+    - Guide line:
+      + When a ~var~ field in a /class/ or /method/ does _not have an initial
+        default value_,
+        initialize it with ~Option~ instead of ~null~.
+
+      + When a /method/ does _not produce the intended result_, you may be
+        tempted to return ~null~.
+        Use an ~Option~ or ~Try~ instead.
+
+      + If you're _working with a Java library that returns ~null~,_
+        *convert* it to an ~Option~, or *something else* =TODO=.
+
+**** DONE Initialize ~var~ fields with ~Option~, not ~null~ - 655
+     CLOSED: [2018-02-18 Sun 21:54]
+     Use an example to illustrate:
+     #+BEGIN_SRC scala
+       case class Address(city: String, state: String, zip: String)
+     #+END_SRC
+
+     - Bad:
+       #+BEGIN_SRC scala
+         case class Address (city: String, state: String, zip: String)
+         class User(email: String, password: String) {
+           var firstName: String = _
+           var lastName: String = _
+           var address: Address = _
+         }
+       #+END_SRC
+
+     - Good:
+       #+BEGIN_SRC scala
+         class User(email: String, password: String) {
+           var firstName = Option.empty[String]
+           var lastName = Option.empty[String]
+           var address = Option.empty[Address]
+         }
+       #+END_SRC
+       + The author use ~None: Option[TypeName]~ rather than the
+         ~Option.empty[TypeName]~ value.
+         =TODO: read the source code of the ~empty~ method=
+
+       + =From Jian=
+         I'm not sure the reason of the author not do this.
+         The reason might be
+         * the author didn't know this at that time.
+           OR
+         * there was NO ~empty~ method in the old librar???
+           =TODO: do some research about his!=
+
+     - How to exploit the ~Option~ type representation:
+       #+BEGIN_SRC scala
+         val u = new User("al@example.com", "secret")
+
+         u.firstName = Some("Al")
+         u.lastName = Some("Alexander")
+         u.address = Some(Address("Talkeetna", "AK", "99676"))
+
+         println(firstName.getOrElse("<not assigned>"))
+
+         u.address.foreach { a =>
+           println(a.city)
+           println(a.state)
+           println(a.zip)
+         }
+       #+END_SRC
+
+     - Use ~Option~ type parameters in constructors:
+       #+BEGIN_SRC scala
+         case class Stock(id: Long,
+                          var symbol: String,
+                          var company: Option[String])
+       #+END_SRC
+
+**** DONE Don't return ~null~ from methods - 656
+     CLOSED: [2018-02-18 Sun 04:10]
+     - Q: How to avoid returning ~null~?
+
+       A: Return an ~Option~.
+          Or, if you need to know about an error that may have occurred in the
+          method, use ~Try~ instead of ~Option~.
+
+     - Use ~Option~:
+       #+BEGIN_SRC scala
+         def readTextFile(filename: String): Option[List[String]] = {
+           try {
+             Some(io.Source.fromFile(filename).getLines.toList)
+           } catch {
+             case e: Exception => None
+           }
+         }
+       #+END_SRC
+
+     - With error info -- use ~Try~: =IMPORTANT=
+       #+BEGIN_SRC scala
+         import scala.util.{Try, Success, Failure}
+
+         object Test extends App {
+
+           def readTextFile(filename: String): Try[List[String]] = {
+             Try(io.Source.fromFile(filename).getLines.toList)
+           }
+
+           val filename = "/etc/passwd"
+           readTextFile(filename) match {
+             case Success(lines) => lines.foreach(println)
+             case Failure(f)     => println(f)
+           }
+       #+END_SRC
+
+     - The Twitter /Effective Scala/ page recommends *not overusing* ~Option~,
+       and using the /Null Object Pattern/ where it makes sense.
+       =IMPORTANT=
+
+       + Null Object Patter :: =IMPORTANT=
+            #+BEGIN_SRC scala
+              trait Animal {
+                def makeSound()
+              }
+
+              class Dog extends Animal {
+                def makeSound() { println("woof") }
+              }
+
+              class NullAnimal extends Animal {
+                def makeSound() {}
+              }
+            #+END_SRC
+
+**** DONE Converting a ~null~ into an ~Option~, or something else - 657
+     CLOSED: [2018-02-18 Sun 21:53]
+     - ~null~ from Java legacy code:
+       #+BEGIN_SRC scala
+         def getName: Option[String] =
+           Option(javaPerson.getName)
+       #+END_SRC
+
+**** DONE Benefits - 658
+     CLOSED: [2018-02-18 Sun 22:00]
+     Following these guidelines leads to these benefits:
+     - NO ~NullPointerExceptions~.
+
+     - Your code will be safer.
+
+     - You won't have to write if statements to check for ~null~ values.
+
+       =From Jian=
+       MOSTLY, /pattern matching/ is NOT the best way to use types like ~Option~
+       and ~Try~. Consider them as collections, and use ~flatMap~ and ~foreach~.
+
+     - Adding an ~Option[T]~ return type declaration to a method is a terrific
+       way to indicate that something is happening in the method such that the
+       caller may receive a ~None~ instead of a ~Some[T]~.
+         This is a much BETTER approach than returning ~null~ from a method that
+       is expected to return an object.
+
+     - You'll become more comfortable using ~Option~, and as a result, you'll be
+       able to take advantage of how it's used in the collection libraries and
+       other frameworks.
+
+*** TODO See Also - 658
+
+** DONE 20.6. Using the ~Option~, ~Some~, ~None~ Pattern - 658
+   CLOSED: [2018-02-19 Mon 05:15]
+*** DONE Problem - 658
+    CLOSED: [2018-02-18 Sun 22:37]
+*** DONE Solution - 658
+    CLOSED: [2018-02-19 Mon 05:15]
+    - There is some overlap between this recipe and the previous recipe.
+      The previous recipe gives the solutions to
+      + Using ~Option~ in /method and constructor parameters/
+
+      + Using ~Option~ to /initialize/ class ~var~ fields (instead of using
+        ~null~)
+
+      + Converting ~null~ results from other code (such as Java code) into an
+        ~Option~
+
+    - This recipe adds these additional solutions:
+      + *Returning* an ~Option~ from a /method/
+
+      + *Getting* the value from an ~Option~
+
+      + Using ~Option~ with /collections/
+
+      + Using ~Option~ with _frameworks_
+
+      + Using ~Try/Success/Failure~ when you need the error message (Scala 2.10
+        and newer)
+
+      + Using ~Either/Left/Right~ when you need the error message (*pre-Scala
+        2.10*)
+
+**** DONE Returning an ~Option~ from a method - 659
+     CLOSED: [2018-02-18 Sun 22:50]
+     Common pattern:
+     #+BEGIN_SRC scala
+       def toInt(s: String): Option[Int] = {
+         try {
+           Some(Integer.parseInt(s.trim))
+         } catch {
+           case e: Exception => None
+         }
+       }
+     #+END_SRC
+
+**** DONE Getting the value from an ~Option~ - 659
+     CLOSED: [2018-02-18 Sun 22:50]
+     Many ways:
+     - Use ~getOrElse~
+       get the _value_ if it is ~Some(v)~
+       get the _default value_ if it is ~None~
+
+     - Use ~foreach~
+       Consume with side effect and no return value
+
+     - Use a ~match~ expression
+       pattern matching
+
+**** DONE Using ~Option~ with Scala collections - 660
+     CLOSED: [2018-02-18 Sun 23:09]
+     Two ways:
+     For example, get all the integers for a list below which includes (NOT only)
+     number strings ~val bag = List("1", "2", "foo", "3", "bar")~. The result
+     should be ~List(1, 2, 3)~
+
+     - ~bag.flatMap(toInt)~
+
+       + Redundant way:
+         ~bag.map(toInt).flatten~
+
+     - ~bag.map(toInt).collect { case Some(i) => i }~
+       =From Jian=
+       I don't think the ~collect~ /method/ is good for this use, if consider the
+       solution with ~flatMap~. It can be a best practice to more complicated
+       cases.
+
+**** DONE Using ~Option~ with other frameworks - 661
+     CLOSED: [2018-02-19 Mon 05:03]
+     - Examples from the Play framework.
+       =TODO=
+
+       =From Jian= I don't understand Play, and I only understand the ~Option~
+       inside the example. Explain the example in the paragraph above when I
+       understand it.
+
+     - *TIPS*
+       The ~scala.util.control.Exception~ object gives you another way to use an
+       ~Option~ -- which can replace the ~try ... catch~ block if you want.
+       #+BEGIN_SRC scala
+         import scala.util.control.Exception._
+
+         def readTextFile(f: String): Option[List[String]] =
+           allCatch.opt(Source.fromFile(f).getLines.toList)
+       #+END_SRC
+       + ~allCatch~ is described as a ~Catch~ object “that catches everything.”
+         The ~opt~ /method/ returns
+         * ~None~ if an exception is caught (such as a ~FileNotFoundException~)
+           AND
+         * ~Some(value)~ if the block of code succeeds.
+
+       + ~allCatch~ methods support the ~Try~ and ~Either~ approaches.
+         =TODO=
+
+**** TODO Using ~Try~ (~Success~ and ~Failure~) - 662
+     - ~scala.util.Try~ is introduced in Scala 2.10
+
+     - Example:
+       #+BEGIN_SRC scala
+         import scala.util.{Try, Success, Failure}
+
+         def divideXByY(x: Int, y: Int): Try[Int] =
+           Try(x / y)
+
+         divideXByY(1, 1)
+         // res0: scala.util.Try[Int] = Success(1)
+
+         divideXByY(1, 0)
+         // res0: scala.util.Try[Int] = Failure(java.lang.ArithmeticException: / by zero)
+       #+END_SRC
+
+     - As with ~Option~, you can access the result using ~getOrElse~, use
+       ~foreach~, or pattern matching.
+       + If you don't care the error message, you can use ~getOrElse~ or
+         ~foreach~
+         #+BEGIN_SRC scala
+           // -- getOrElse --
+           // Success
+           // scala>
+           val x = divideXByY(1, 1).getOrElse(0)
+           // x: Int = 1
+
+           // Failure
+           // scala>
+           val y = divideXByY(1, 0).getOrElse(0)
+           // y: Int = 0
+
+           // -- foreach --
+           // scala>
+           divideXByY(1, 1).foreach(println)
+           // 1
+
+           // scala>
+           divideXByY(1, 0).foreach(println)
+           // (no output printed)
+         #+END_SRC
+
+       + Use pattern matching if you're interested in the ~Failure~ message.
+         #+BEGIN_SRC scala
+           divideXByY(1, 1) match {
+             case Success(i) => println(s"Success, value is: $i")
+             case Failure(s) => println(s"Failed, message is: $s")
+           }
+         #+END_SRC
+
+     - As use ~Option~, you can use ~Try~ and chain your operation, catching
+       /exceptions/ as you go. =TODO=
+       #+BEGIN_SRC scala
+         val z = for {
+           a <- Try(x.toInt)
+           b <- Try(y.toInt)
+         } yield a * b
+
+         val answer = z.getOrElse(0) * 2
+       #+END_SRC
+
+     - The ~readTextFile~ /method/ in *Recipe 20.5* shows another ~Try~ example.
+       The /method/ from that example is REPEATED here:
+       #+BEGIN_SRC scala
+         def readTextFile(filename: String): Try[List[String]] = {
+           Try(Source.fromFile(filename).getLines.toList)
+         }
+       #+END_SRC
+
+     - =TODO= =TODO= =TODO=
+       The Try class includes a nice collection of methods that let you handle
+       situations in many ways, including:
+       + Collection-like implementations of ~filter~, ~flatMap~, ~flatten~,
+         ~foreach~, and ~map~
+
+       + ~get~, ~getOrElse~, and ~orElse~
+
+       + ~toOption~, which lets you treat the result as an ~Option~
+
+       + ~recover~, ~recoverWith~, and ~transform~, which let you gracefully
+         handle ~Success~ and ~Failure~ results
+
+**** DONE Using ~Either~ (~Left~ and ~Right~) - 664
+     CLOSED: [2018-02-19 Mon 05:10]
+     - Before Scala 2.10, there is NO ~Try~.
+       ~Either~ is used:
+       + ~Right~ is like ~Success~
+         AND
+       + ~Left~ is like ~Failure~
+
+     - Usage (re-write the ~divideXByY~ example):
+       #+BEGIN_SRC scala
+         def divideXByY(x: Int, y: Int): Either[String, Int] = {
+           if (y == 0) Left("Dude, can't divide by 0")
+           else        Right(x / y)
+         }
+
+         val x = divideXByY(1, 1).right.getOrElse(0)  // returns 1
+         val x = divideXByY(1, 0).right.getOrElse(0)  // returns 0
+
+         // prints "Answer: Dude, can't divide by 0"
+         divideXByY(1, 0) match {
+           case Left(s)  => println("Answer: " + s)
+           case Right(i) => println("Answer: " + i)
+         }
+
+         // scala>
+         val x = divideXByY(1, 0)
+         // x: Either[String,Int] = Left(Dude, can't divide by 0)
+
+         // scala>
+         x.isLeft
+         // res0: Boolean = true
+
+         // scala>
+         x.left
+         // res1: scala.util.Either.LeftProjection[String,Int] =
+         //       LeftProjection(Left(Dude, can't divide by 0))
+       #+END_SRC
+
+     - =TODO= =From Jian=
+       ~Try~ is much concise in dealing with success and failure.
+
+       Then, does ~Either~ has any shining points???
+
+*** DONE Discussion - 665
+    CLOSED: [2018-02-19 Mon 05:15]
+**** DONE Don't use the ~get~ method with ~Option~ - 665
+     CLOSED: [2018-02-19 Mon 05:15]
+     - Only ~Some~ class has ~get~ /method/.
+       Use ~get~ when you have ~None~, the result is NOT any better than a
+       ~NullPointerException~.
+
+       If you test and then use ~get~ when you are sure about the value is
+       ~Some~ type, then you can successfully get the result. However, the
+       redundant code is then looks like what you did when you have ~null~.
+
+     - Conclusion:
+       As with ~null~ values, when you work with ~Option~ values, PLEASE just
+       imagine the ~get~ does NOT exist.
+
+
+*** TODO See Also - 666
+
+* Index - 667
+* TODO Bonus Chapter. XML and XPath - 5 - _Low Priority_
+** 1. Creating XML Literals - 5
+** 2. Mixing Scala and XML - 8
+** 3. Extracting Data from XML Nodes - 10
+** 4. Basic XPath Searching with ~\~ and ~\\~ - 15
+** 5. Deeper XML Parsing and Extracting Tag Attributes - 19
+** 6. Extracting Data from an Array of XML Elements - 22
+** 7. Using Match Expressions with XML - 25
+** 8. Serializing and Deserializing XML - 30
+** 9. Loading XML from a URL - 35
+** 10. Loading XML from a File - 38
+** 11. Saving XML to a File - 40
+** 12. Displaying XML in a Human-Readable Format (Pretty Printing) - 42
+
+* TODO Bonus Chapter. Testing and Debugging - 45
+** 1. Installing ScalaTest - 45
+** 2. Writing TDD Tests with ScalaTest - 46
+** 3. Writing a First BDD Test with ScalaTest - 49
+** 4. Adding Given/When/Then Behavior to BDD Tests - 51
+** 5. Adding More Tests and Test Suites - 54
+** 6. Printing Expected and Actual Values When a Test Fails - 55
+** 7. Marking a Test as Pending - 56
+** 8. Testing Expected Exceptions - 57
+** 9. Mark Your Tests with Tags So You Can Include or Exclude Them - 58
+** 10. Temporarily Disabling a Test - 60
+** 11. Using Mock Objects with ScalaTest - 61
+** 12. Java-Style Logging with SLF4J - 64
+** 13. Scala-Style Logging with Grizzled-SLF4J - 65
+** 14. Using JUnit with Scala - 67
+
+* TODO Bonus Chapter. The Play Framework - 71
+** 1. Creating a “Hello, World” Project - 72
+** 2. Adding a Route, Model, and Controller Method to a Play Application - 81
+** 3. Using Multiple Template Wrappers - 85
+** 4. Creating Reusable Code Blocks in Templates - 86
+** 5. Calling Scala Functions from Templates - 89
+** 6. Creating a Widget and Including It in Pages - 91
+** 7. Using CoffeeScript and LESS - 93
+** 8. Creating a Simple Form - 94
+** 9. Validating a Form - 102
+** 10. Displaying and Validating Common Play Form Elements - 111
+** 11. Selecting from a Database with Anorm - 118
+** 12. Inserting Data into a Database with Anorm - 124
+** 13. Deleting Records in a Database Table with Anorm - 129
+** 14. Updating Records in a Database Table with Anorm - 130
+** 15. Testing Queries Outside of Play - 131
+** 16. Deploying a Play Framework Project - 134
+** 17. Handling 404 and 500 Errors - 138
+
+* Index - 141
+* TODO TodoList
+  - How to create a function to accept ANY (from ~Tuple1~ to ~Tuple22~) /tuple/
+    argument?
+
+    + It seems Scala 3.0 will have /tuples/ that not limited to 22.
+
+      =TODO= find out the information resource.
+
+* TODO Tips
+  *These tips may not all come from this book!*
+  - Like Haskell ~divMod~
+    #+BEGIN_SRC scala
+      import scala.math.Integral.Implicits._
+
+      val (quotient, remainder) = 5 /% 2
+    #+END_SRC
+
+    + ~BigInt~ has this ~/%~ operator.
+
+  - Scala 2.13 Standard Library:
+    + ~Using~
+      Resource management
+
+    + ~import scala.util.chainning._~ (import implicits)
+      Add ~pipe~ and ~tap~ to all types.

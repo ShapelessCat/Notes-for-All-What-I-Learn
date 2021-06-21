@@ -1,0 +1,638 @@
+#+TITLE: Java Shell User's Guide
+#+VERSION: JDK 10
+#+YEAR: 2018 March
+#+AUTHOR: Gastón C. Hillar
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface
+** Audience  - v                     
+** Documentation Accessibility  - v
+** Related Documents  - v
+** Con - ventions v
+
+* 1 Introduction to JShell
+  - For _reference information_ for this tool, see jshell in _Java Platform, Standard Edition
+    Tools Reference_.
+
+** Why Use JShell? - 1-1
+   - xx
+
+** Starting and Stopping JShell - 1-1
+   - In this manual we will use the /verbose mode/ of /JShell/.
+
+     Start the /JShell/ with the command ~jshell -v~, and then you can get the
+     maximum amount of feedback available.
+
+     This mode is especially helpful if you are not familier with /JShell/.
+
+* DONE 2 Snippets
+  CLOSED: [2018-07-27 Fri 16:14]
+  - /JShell/ accepts
+    + Java statements;
+    + variable, method, and class definitions;
+    + imports; and
+    + expressions.
+
+    These pieces of Java code are referred to as /snippets/.
+
+  - Topics =TODO=
+    + Trying Out Snippets
+    + Changing Definitions
+    + Forward References
+    + Exceptions
+    + Tab Completion for Snippets
+    + Snippet Transformation
+
+** DONE Trying Out Snippets - 2-1
+   CLOSED: [2018-07-27 Fri 13:09]
+   - *Note*:
+     Terminating _semicolons_ are *automatically added* to the end of a complete
+     snippet if not entered.
+
+   - When an expression is entered that is NOT assigned to a variable,
+     a /scratch variable/ is created so that the value _can be referenced later_.
+     #+BEGIN_SRC java
+       // jshell> 2 + 2
+       // $3 ==> 4
+       // |  created scratch variable $3 : int
+
+       // jshell> $3
+       // $3 ==> 4
+       // |  value of $3: int
+     #+END_SRC
+
+   - The /continuation prompt (=...>=)/ that is used when a /snippet/ requires
+     more than one line of input to complete. For example,
+     #+BEGIN_SRC java
+       // jshell>
+       2 + 2
+
+       // jshell> String twice(String s) {
+       //    ...>    return s + s;
+       //    ...> }
+       //    created method twice(String)
+     #+END_SRC
+
+** DONE Changing Definitions - 2-2
+   CLOSED: [2018-07-27 Fri 13:09]
+   - The definition is easily changed by entering a new one, which *overwrites*
+     the previous definition.
+
+*** Changing the Level of Feedback - 2-2
+    We are using the /verbose feedback mode/.
+    You can use ~/set feedback~ to _change the level of feedback_.
+
+    - ~/set feedback concise~
+
+    - ~/set feedback silent~
+      If you primarily use JShell by pasting from other windows, then you might
+      prefer a feedback mode with no prompt and only error feedback.
+
+** DONE Forward References - 2-3
+   CLOSED: [2018-07-27 Fri 13:47]
+   JShell accepts /forward references/.
+
+   However, it will warn you, and tell you what you should do before invoking
+   these kind of functions.
+
+   - Example:
+     #+BEGIN_QUOTE
+     jshell> double volume(double radius) {
+        ...> return 4.0 / 3.0 * PI * cube(radius);
+        ...> }
+     |  created method volume(double), however, it cannot be invoked until variable PI,
+     and method cube(double) are declared
+     #+END_QUOTE
+
+     Then, you can do
+
+     #+BEGIN_SRC java
+     double PI = 3.1415926535
+     // PI ==> 3.1415926535
+     // |  created variable PI : double 
+
+     volume(2)
+     // | attempted to call method volume(double) which cannot be invoked until method
+     // cube(double) is declared
+     
+     double cube(double x) { return x * x * x; }
+     // |  created method cube(double)
+     // |    update modified method volume(double)
+     #+END_SRC
+
+** DONE Exceptions - 2-4
+   CLOSED: [2018-07-27 Fri 14:21]
+   There is *NO* _absolute line number_ in JShell.
+
+   - Q :: Then how does JShell mark the line location in an /exception
+          backtrace/?
+
+   - A :: JShell use the form of =#ID:line-number=, where snippet ID is the number
+          displayed by the ~/list~ command, and line-number is the line number
+          within the snippet.
+
+   - Example
+     #+BEGIN_QUOTE
+     jshell> int divide(int x, int y) {
+        ...> return x / y;
+        ...> }
+     |  created method divide(int,int)
+
+     jshell> divide(5, 0)
+     |  java.lang.ArithmeticException thrown: /by zero
+     |        at divide (#1:2)
+     |        at (#2:1)
+
+     jshell> /list
+        1 : int divide(int x, int y) {
+                return x / y;
+            }
+
+        2 : divide(5, 0)
+     #+END_QUOTE
+
+** DONE Tab Completion for Snippets - 2-4
+   CLOSED: [2018-07-27 Fri 16:02]
+   1. Tab to complete the name or list candidate names.
+
+   2. Tab again to list the parameter(s) info if there
+      is/are parameter(s).
+
+   3. Tab again to show the document of this /method/.
+
+** DONE Snippet Transformation - 2-5
+   CLOSED: [2018-07-27 Fri 16:14]
+   - In JShell, when you use a class that you _haven't imported_, you can use
+     =<Shift+Tab i>= to trigger a query, which can be used to help you import the
+     class.
+
+     #+BEGIN_QUOTE
+     jshell> new JFrame<Shift+Tab i>
+     0: Do nothing
+     1: import: javax.swing.JFrame
+     Choice: 1
+     Imported: javax.swing.JFrame
+
+     jshell> new JFrame
+     #+END_QUOTE
+
+   - Convert an expression to a variable declaration by pressing =<Shift+Tab v>=
+     after enter the expression.
+
+     #+BEGIN_QUOTE
+     jshell> new JFrame("Demo") <Shift+Tab v>
+     jshell> JFrame | = new JFrame("Demo")
+     #+END_QUOTE
+
+     Here =|= is the cursor, and you can enter a variable name there.
+
+     + For the result type that you did't import:
+       #+BEGIN_QUOTE
+       jshell> frame.getGraphics() <Shift+Tab v>
+       0: Do nothing
+       1: Create variable
+       2: import: java.awt.Graphics. Create variable
+       Choice: 2
+       Imported: java.awt.Graphics
+
+       jshell> Graphics | = frame.getGraphics()
+       #+END_QUOTE
+
+* DONE 3 Commands
+  CLOSED: [2018-07-27 Fri 16:57]
+  JShell commands are entered in a JShell session, and used to control the
+  environment and display information.
+
+  - Topics
+    + Introduction to Commands
+
+    + Tab Completion for Commands
+
+    + Command Abbreviations
+
+** DONE Introduction to Commands - 3-1
+   CLOSED: [2018-07-27 Fri 16:26]
+   - ~/vars~
+
+   - ~/methods~
+
+   - ~/list~
+     + JShell has a _default startup script_ that is silently and automatically
+       executed before JShell starts, so that you can get to work quickly.
+         Entries from the startup script are *NOT* listed unless you request
+       them with the ~/list -start~ or ~/list -all~ command:
+       #+BEGIN_QUOTE
+       jshell> /list -all
+         s1 : import java.util.*;
+         s2 : import java.io.*;
+         s3 : import java.math.*;
+         s4 : import java.net.*;
+         s5 : import java.util.concurrent.*; 
+         s6 : import java.util.prefs.*;
+         s7 : import java.util.regex.*;
+          1 : System.out.println("Hi");
+          2 : int x = 45;
+          3 : 2 + 2
+          4 : String twice(String s) {
+                return s + s;
+              }
+          5 : twice("Ocean")
+       #+END_QUOTE
+
+   - You can personalize the startup settings with the ~/set start~
+     command. Use the command ~/help /set start~.
+
+     ~/save -start~ saves the current startup script as a starting point for
+     your own startup script.
+
+   - ~/exit~
+
+   - ~/save~ 
+     Save your snippets
+
+   - ~/open~ 
+     Open to enter snippets from a file
+
+   - ~/help~
+
+** DONE Tab Completion for Commands - 3-2
+   CLOSED: [2018-07-27 Fri 16:56]
+   Type ~/~, and then more letters if you want. Now you can use /tab completion/
+   -- this can be used to complete command options.
+
+   Tab again you can get the full document.
+
+** DONE Command Abbreviations - 3-4
+   CLOSED: [2018-07-27 Fri 16:57]
+   Use the unique prefix.
+
+* DONE 4 Editing
+  CLOSED: [2018-08-03 Fri 00:42]
+  - JShell supports
+    + editing input at the jshell prompt.
+
+    + editing in an external editor of your choice.
+
+** DONE Shell Editing - 4-1
+   CLOSED: [2018-08-03 Fri 00:29]
+   - Shell editing in JShell is built on JLine2, which is functionally similar to
+     BSD ~editline~ and GNU ~readline~ in Emacs mode.
+
+     See 
+     + _JLine2 user information_
+     + _GNU Readline documentation_
+
+   - Topics
+     + Input Line Navigation
+     + History Navigation
+     + Input Line Modification
+     + Search and More
+
+*** DONE Input Line Navigation - 4-1
+    CLOSED: [2018-08-03 Fri 00:24]
+
+*** DONE History Navigation - 4-2
+    CLOSED: [2018-08-03 Fri 00:24]
+    - Ctrl+up arrow goes up by snippets.
+      + For single-line snippets, Ctrl+up arrow behaves the same as up arrow.
+
+      + For multiline snippets, Ctrl+up arrow skips the additional lines and goes
+        to the top of the snippet.
+*** DONE Input Line Modification - 4-3
+    CLOSED: [2018-08-03 Fri 00:26]
+*** DONE Search and More - 4-3 =???=
+    CLOSED: [2018-08-03 Fri 00:29]
+    =???= =TODO= =???=  Macro????
+    | Keys     | Action                      |
+    |----------+-----------------------------|
+    | Ctrl+X ( | Starts a macro definition   |
+    | Ctrl+X ) | Finishes a macro definition |
+    | Ctrl+X e | Executes a macro            |
+
+** DONE External Editor - 4-4
+   CLOSED: [2018-08-03 Fri 00:41]
+   - If you don’t specify an editor, then the following /environment variables/
+     are checked in order: ~JSHELLEDITOR~, ~VISUAL~, and ~EDITOR~.
+
+     If none of those are set, then a simple default editor is used.
+
+   - To set up JShell to open the editor of your choice, use the 
+     ~/set editor~ command.
+
+     + For example, ~/set editor /usr/bin/vim~
+
+* DONE 5 External Code
+  CLOSED: [2018-07-27 Fri 17:26]
+  - /External classes/ are accessed from a JShell session through the /class path/.
+
+  - /External modules/ are accessed through
+    + the /module path/
+    + additional modules setting
+    + module exports setting.
+
+  - Topics
+    + Setting the Class Path
+
+    + Setting Module Options
+
+** DONE Setting the Class Path - 5-1
+   CLOSED: [2018-07-27 Fri 17:19]
+   Two ways:
+   - ~jshell --class-path myOwnClassPath~
+
+   - ~/env --class-path myOwnClassPath~
+
+** DONE Setting Module Options - 5-1
+   CLOSED: [2018-07-27 Fri 17:26]
+   - ~jshell --module-path myOwnClassPath --add-modules my.module~
+
+   - Use ~/env~ without options to see current environment settings.
+     + Example:
+       if you set both /class path/ and /module options/, you'll see something
+       like:
+       #+BEGIN_QUOTE
+       jshell> /env
+       |     --add-modules my.module
+       |     --module-path myOwnModulePath
+       |     --class-path myOwnClassPath
+       #+END_QUOTE
+
+   - =TODO=
+     For details about the options, enter the following command:
+     ~/help context~
+     =???= =???=
+
+* TODO 6 Feedback Modes
+  - The feedback mode determines the prompts, feedback, and other interactions
+    within JShell. Predefined modes with different levels of feedback are
+    provided. Custom modes can be created as needed.
+
+  - Topics
+    + Setting the Feedback Mode
+    + Defining a Feedback Mode
+
+** DONE Setting the Feedback Mode - 6-1
+   CLOSED: [2018-07-28 Sat 13:31]
+   - feedback mode :: the prompts and feedback that are used in your interaction
+                      with JShell.
+
+   - /Predefined modes/ are provided for your convenience.
+     _You can create /custom modes/ as needed._
+
+   - The /predefined modes/ *CANNOT* be modified, but they can be used as the BASE
+     of a /custom mode/.
+
+   - The /predefined modes/, in *descending order of verbosity* are ~verbose~,
+     ~normal~, ~concise~, and ~silent~.
+
+   - The following table shows the differences in the predefined modes.
+
+     |-----------+----------------+-------------+---------+----------+-----------|
+     | Mode      | Value Snippets | Declaration | Updates | Commands | Prompt    |
+     |-----------+----------------+-------------+---------+----------+-----------|
+     | ~verbose~ | name ==>       |             |         |          |           |
+     |           | value (and     |             |         |          |           |
+     |           | description)   | Yes         | Yes     | Yes      | \njshell> |
+     |-----------+----------------+-------------+---------+----------+-----------|
+     | ~normal~  | name ==>       |             |         |          |           |
+     |           | value          | Yes         | No      | Yes      | \njshell> |
+     |-----------+----------------+-------------+---------+----------+-----------|
+     | ~concise~ | name ==>       |             |         |          |           |
+     |           | value (only    |             |         |          |           |
+     |           | expressions)   | No          | No      | No       | jshell>   |
+     |-----------+----------------+-------------+---------+----------+-----------|
+     | ~silent~  | No             | No          | No      | No       | ->        |
+     |-----------+----------------+-------------+---------+----------+-----------|
+
+     * _Mode_
+       indicates the /mode/ that is being described.
+
+     * _Value Snippets_
+       indicates what is shown for snippets that have values, such as
+       expressions, assignments, and variable declarations.
+
+     * _Declaration_
+       indicates if feedback is provided for declarations or methods, classes,
+       enum, interfaces, and annotation interfaces.
+
+     * _Updates_
+       indicates if changes to other than the current snippet are shown.
+
+     * _Commands_
+       indicates if commands give feedback indicating success.
+
+     * _Prompt_
+       indicates the prompt that is used.
+
+   - The /default feedback mode/ is ~normal~.
+
+   - Use commands like ~/set feedback verbose~ to set the /feedback mode/.
+
+   - Use the command ~/set feedback~ to see the current /feedback mode/ and the
+     choices.
+
+** TODO Defining a Feedback Mode - 6-2
+   - *Custom* /feedback modes/ *enable* you to
+     + define the prompts that you want to see
+
+     + the feedback that you want to receive for the different elements that you
+       enter into JShell.
+
+   - A feedback mode has the following settings:
+     + Prompts: Regular and continuation
+     + Truncation: Maximum length of values displayed
+     + Format: Format of the feedback provided
+
+   - *The /predefined modes/ _CANNOT_ be changed*,
+     but you can easily create a _copy_ of an existing mode, as shown in the
+     following example:
+     #+BEGIN_QUOTE
+     jshell> /set mode mine normal -command
+     |  Created new feedback mode: mine
+     #+END_QUOTE
+     + The ~-command~ option indicates that you want _command feedback_.
+
+       If you don't want commands to describe the action that occurred, then use
+       ~-quiet~ instead of ~-command~.
+
+*** DONE Set Prompts
+    CLOSED: [2018-07-29 Sun 03:39]
+    - Check the current prompt setting:
+      #+BEGIN_QUOTE
+      jshell> /set prompt normal
+      |  /set prompt normal "\njshell> " "   ...> "
+      #+END_QUOTE
+      + The first string is the _regular prompt_.
+
+      + The second string is the _continuation prompt_.
+
+      + Example:
+        #+BEGIN_QUOTE
+        jshell> /set prompt mine "\nmy mode: " ".......: "
+
+        jshell> /set feedback mine
+        | Feedback mode: mine
+
+        my mode: class C {
+        .......:    int x;
+        .......: }
+        | created class C
+
+        my mode: 
+        #+END_QUOTE
+
+    - The prompt strings can contain ~%s~, which _is substituted with the next
+      snippet ID_.
+
+      However,
+      IF a command is entered or the snippet results in an error,
+      THEN the value that users enter at the prompt might not be assigned that
+      ID.
+
+    - All settings have a _DURATION_ of the _current session_;
+      they are *NOT* _reset_ by the ~/reset~ command.
+
+    - If you want to keep the settings, use the ~-retain~ option.
+      For example,
+      #+BEGIN_QUOTE
+      my mode: /set mode mine -retain
+
+      my mode: /set feedback mine -retain
+      | Feedback mode: mine
+
+      my mode: /exit
+      | Goodbye
+
+      % jshell
+      | Welcome to JShell -- Version 9
+      | For an introduction type: /help intro
+
+      my mode:
+      #+END_QUOTE
+
+    - xxx
+
+*** TODO Set Truncation
+    - Check the current truncation setting:
+      #+BEGIN_QUOTE
+      my mode: /set truncation mine
+      |  /set truncation mine 80
+      |  /set truncation mine 1000 expression,varvalue
+      #+END_QUOTE
+
+*** TODO Set Formats
+    - xxxx
+
+    - xxxx
+
+    - _To PERMANENTLY DELETE a /retained mode/,_
+      use the ~-retain~ option with the ~-delete~ option:
+      #+BEGIN_QUOTE
+      my mode: /set feedback verbose -retain
+      | Feedback mode: verbose
+
+      jshell> /set mode mine -delete -retain
+      #+END_QUOTE
+
+* DONE 7 Scripts
+  CLOSED: [2018-07-27 Fri 18:02]
+  - JShell script :: a sequence of snippets and JShell commands in a file, one
+                     snippet or command per line.
+
+  - /JShell script/ can be
+    + a /local file/
+      OR
+    + one of the following predefined scripts:
+      * =DEFAULT=
+
+      * =PRINTING=
+        Defines /JShell methods/ that *redirect to* the ~print~, ~println~, and
+        ~printf~ /methods/ in ~PrintStream~
+
+      * =JAVASE=
+        Imports the core Java SE API defined by the ~java.se~ /module/, which
+        *causes a noticeable delay* in starting JShell _due to the number of
+        packages_.
+
+  - Topics:
+    + Startup Scripts
+
+    + Creating and Loading Scripts
+
+** DONE Startup Scripts - 7-1
+   CLOSED: [2018-07-27 Fri 17:53]
+   - /Startup scripts/ are loaded _EACH time_ the jshell tool is /reset/.
+
+     /Reset/ occurs
+     + during the initial startup
+
+       and with the
+
+     + ~/reset~
+       ~/reload~
+       ~/env~.
+
+   - *Note*
+     ~java.lang~ is automatically imported so this package does NOT need to be
+     explicitly imported.
+
+   - Use JShell command to setup scripts
+     #+BEGIN_QUOTE
+     jshell> /set start mystartup.jsh
+
+     jshell> /reset
+     |  Resetting state
+     #+END_QUOTE
+
+   - As with ALL ~/set~ commands, the duration of the setting is the _current
+     session_ *UNLESS* the ~-retain~ option is used.
+
+   - TYPICALLY, the ~-retain~ option is _NOT_ used when you test a /startup script
+     setting/.
+
+     When the desired setting is found, use the ~-retain~ option to preserve it:
+     ~jshell> /set start -retain~
+     The startup script is then loaded the next time you start the jshell tool.
+
+   - /Startup scripts/ can also be specified with the ~--startup~ command-line flag:
+     ~% jshell --startup mystartup.jsh~
+
+   - If you think you want use print /methods/ directly, you can
+     ~jshell> /set start -retain DEFAULT PRINTING~
+
+   - ~/set start~ without arguments is used to see the details of what is defined
+     by these startup scripts.
+
+   - To set _more than one_ startup script on the command line, use the ~--startup~
+     flag for each script: ~% jshell --startup DEFAULT --startup PRINTING~
+
+** DONE Creating and Loading Scripts - 7-2
+   CLOSED: [2018-07-27 Fri 18:02]
+*** DONE Creating Scripts - 7-2
+    CLOSED: [2018-07-27 Fri 18:01]
+    - A script can be created externally in an editor.
+
+    - A script can be generated from items entered in JShell.
+      Use one of the following commands to create a script from the entries in a
+      JShell session:
+      + ~jshell> /save mysnippets.jsh~
+        saves the *current active snippets* to =mysnippets.jsh=.
+
+      + ~jshell> /save -history myhistory.jsh~
+        saves the *history of all of the snippets and commands, both valid and
+        invalid*, to =myhistory.jsh=.
+
+      + ~jshell> /save -start mystartup.jsh~
+        saves the contents of the _CURRENT /startup script/ setting_ to
+        =mystartup.jsh=.
+
+      The file name provided can be any valid file path and name.
+
+*** DONE Loading Scripts - 7-2
+    CLOSED: [2018-07-27 Fri 18:02]
+    - Scripts can be loaded _from the command line_ when a JShell session is started:
+      ~% jshell mysnippets.jsh~
+
+    - Scripts can also be loaded _within a JShell session_ by using the /open command:
+      ~jshell> /open PRINTING~

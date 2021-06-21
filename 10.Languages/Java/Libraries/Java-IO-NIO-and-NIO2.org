@@ -1,0 +1,1670 @@
+#+TITLE: Java I/O, NIO and NIO.2
+#+VERSION: 1st
+#+YEAR: 2015
+#+AUTHOR: Jeff Friesen
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* About the Author - xv
+* About the Technical Reviewers - xvii
+* Acknowledgments - xix
+* DONE Introduction - xxi
+  CLOSED: [2018-10-12 Fri 14:27]
+  This book introduces Java's I/O capabilities as of Java 8 update 51.
+
+  - Chapter 1
+    A broad overview of Java's classic I/O, NIO, and NIO.2.
+
+    You learn what each category offers in terms of its capabilities, and you
+    also learn about concepts such as /paths/ and /Direct Memory Access/.
+
+  - Chapter 2 ~ 5
+    Cover *classic I/O* APIs.
+    + ~File~
+
+    + ~RandomAccessFile~ 
+
+    along with /streams/ (including object *serialization* and *externalization*)
+    and *writers/readers*.
+
+  - Chapter 6 ~ 11
+    *NIO*
+    + /buffers/
+
+    + /channels/
+
+    + /selectors/
+
+    + /regular expressions/
+
+    + /charsets/
+
+    + /formatters/, which were not introduced with the other NIO types in Java 1.4
+      because they depend on the variable arguments capability that was
+      introduced in Java 5.
+
+  - Chapter 12 ~ 14
+    *NIO.2*, which improves (add some features that NIO doesn't have but is
+    really useful):
+    + file system interface
+    + asynchronous I/O
+    + the completion of socket channel functionality
+
+  - Appendix A
+    The _answers and solutions_ to the exercises after every chapter.
+
+  - Appendix B
+    A tutorial on /sockets and network interfaces/.
+
+    =TODO=
+    =Read= =!!!=
+    Although not directly related to I/O, they leverage I/O capabilities and are
+    mentioned elsewhere in this book.
+
+* Part I: Getting Started with I/O - 1
+* DONE Chapter 1: I/O Basics and APIs - 3
+  CLOSED: [2018-07-26 Thu 19:42]
+   - *History*
+     1. Java initial suite of I/O APIs and related architecture are known as
+        classic I/O.
+
+     2. Because modern operating systems feature newer I/O paradigms, which
+        classic I/O doesn't support, new I/O (NIO) was introduced as part of JDK
+        1.4 to support them.
+
+     3. Lack of time prevented some planned NIO features from being included in
+        this release, which led to these other NIO features being deferred to
+        JDK 5 and JDK 7
+
+** DONE Classic I/O - 3
+   CLOSED: [2018-07-23 Mon 02:42]
+   - JDK 1.0 introduced rudimentary I/O facilities for
+     + *accessing* the /file system/, to
+       * create a directory
+       * remove a file
+       * perform another task
+
+     + *accessing* file content randomly (as _opposed to sequentially_);
+
+     + *streaming* /byte-oriented data/ BETWEEN _sources_ AND _destinations_ in a
+       /sequential manner/.
+
+*** DONE File System Access and the ~File~ Class - 3
+    CLOSED: [2018-07-23 Mon 01:39]
+    Chapter 2 explores the File class.
+    =TODO=
+
+*** DONE Accessing File Content via ~RandomAccessFile~ - 5
+    CLOSED: [2018-07-23 Mon 01:51]
+    - ~java.io.RandomAccessFile~ provides /random access/ to a /file/.
+      #+BEGIN_SRC java
+        val raf = new RandomAccessFile("employees.dat", "r");
+        int empIndex = 10;
+        raf.seek(empIndex * EMP_REC_LEN);
+        // Read contents of employee record.
+      #+END_SRC
+
+    - Chapter 3 explores the ~RandomAccessFile~ /class/.
+      =TODO=
+
+*** DONE Streaming Data via Stream Classes - 5
+    CLOSED: [2018-07-23 Mon 02:39]
+    - stream :: an ordered sequence of bytes of arbitrary length.
+
+    - Example:
+      #+BEGIN_SRC java
+        try (val fis = new FileInputStream("image.jpg"))
+        {
+            // Read bytes from file.
+            int _byte;
+            while ((_byte = fis.read()) != -1) // -1 signifies EOF
+            {
+                // Process _byte in some way.
+            }
+        }
+        catch (IOException ioe)
+        {
+            // Handle exception.
+        }
+      #+END_SRC
+
+    - Example (with /buffer/ for improving performance):
+      #+BEGIN_SRC java
+        try (val fis = new FileInputStream("image.jpg");
+             val bis = new BufferedInputStream(fis))
+        {
+            // Read bytes from file.
+            int _byte;
+            while ((_byte = bis.read()) != -1) // -1 signifies EOF
+            {
+                // Process _byte in some way.
+            }
+        }
+        catch (IOException ioe)
+        {
+            // Handle exception.
+        }
+      #+END_SRC
+
+    - Chapter 4 expores the /stream classes/.
+      =TODO=
+
+**** DONE Stream Classes and Standard I/O - 5
+     CLOSED: [2018-07-23 Mon 02:39]
+     - Many operating systems support /standard I/O/, which is _preconnected_ /input
+       and output data streams/ BETWEEN a _computer program_ AND _its environment_
+       WHEN it begins execution.
+
+       The /preconnected streams/ are known as /standard input/, /standard output/,
+       and /standard error/.
+
+     - /Standard input/ *defaults to reading* its input from the keyboard.
+
+       /standard output/ and /standard error/ *default to writing* their output
+       to the screen.
+
+       However, these /streams/ can be *redirected* to read input from a
+       different source and write output to a different destination (such as a
+       file).
+
+     - _JDK 1.0_ introduced support for /standard I\slash{}O/ by adding the ~in~, ~out~,
+       and ~err~ objects of type ~InputStream~ and ~PrintStream~ to the ~java.lang.System~
+       /class/. You specify /method/ calls on these objects to access /standard input/,
+       /standard output/, and /standard error/, as follows:
+       #+BEGIN_SRC java
+         int ch = System.in.read(); // Read single character from standard input.
+         System.out.println("Hello"); // Write string to standard output.
+         System.err.println("I/O error: " +
+                            ioe.getMessage()); // Write string to standard error.
+       #+END_SRC
+
+     - As well as exploring ~InputStream~ and ~PrintStream~,
+       Chapter 4 also _revisits_ /standard I/O/ to show you how to
+       _programmatically_ *redirect* these /streams/.
+
+*** DONE JDK 1.1 and the Writer/Reader Classes - 8
+    CLOSED: [2018-07-23 Mon 02:41]
+    - JDK 1.0's I/O capabilities are suitable for _streaming bytes_,
+
+      BUT *CANNOT* properly _stream characters_ because they don't account for
+      /character encodings/.
+
+      JDK 1.1 overcame this problem by introducing /writer\slash{}reader classes/ that
+      take /character encodings/ into account.
+        For example, the ~java.io~ /package/ includes ~FileWriter~ and ~FileReader~
+      /classes/ for writing and reading /character streams/.
+
+    - Chapter 5 explores various /writer and reader classes/.
+      =TODO=
+
+** DONE NIO - 8
+   CLOSED: [2018-07-26 Thu 19:01]
+   - /Modern operating systems/ offer sophisticated I/O services (such as
+     _readiness selection_ =???=) for *improving I/O performance and simplifying
+     I/O*.
+
+       /Java Specification Request (JSR) 51/ (www.jcp.org/en/jsr/detail?id=51) was
+     created to address these capabilities.
+
+   - JSR 51's description indicates that it provides APIs for
+     + /scalable I\slash{}O/ =???=
+     + /fast buffered binary and character I\slash{}O/
+     + /regular expressions/
+     + /charset conversion/.
+
+     Collectively, these APIs are known as /NIO/.
+
+   - _JDK 1.4_ *implemented* /NIO/ in terms of the following APIs:
+     + Buffers
+     + Channels
+     + Selectors
+     + Regular expressions
+     + Charsets
+     The /regular expression and charset APIs/ were provided to *simplify* _common
+     I/O-related tasks_.
+
+*** DONE Buffers - 9
+    CLOSED: [2018-07-24 Tue 22:11]
+    - /Buffers/ are the *foundation* for NIO operations.
+      Essentially, NIO is _ALL about moving data INTO and OUT of buffers_.
+      =IMPORTANT=
+      + A process such as the JVM performs I/O by asking the OS to _drain_ a
+        /buffer/'s contents to storage via a *write* operation.
+
+      + Ask the OS to _fill_ a /buffer/ with data *read* from a storage device.
+
+    - =TODO= NOTE =TODO=
+
+    - Consider a read operation involving a disk drive.
+      =TODO=
+
+      1. The OS issues a command to the /disk controller/ to *read* a block of
+         bytes _FROM_ a disk _INTO_ an /OS buffer/.
+
+         Once this operation completes,
+         the OS copies the /buffer/ contents to the /process buffer/ specified
+         by the process when it issued a read() operation.
+
+      2. In turn, the OS has requested to the /disk controller/ to *read* a block
+         of bytes from the disk. The disk controller (also known as a DMA
+         controller) reads these bytes directly into an operating system buffer
+         via Direct Memory Access (DMA), a feature of computer systems that
+         allows certain hardware subsystems to access main system (RAM) memory
+         independently of the central processing unit (CPU). The operating
+         system then copies these bytes to the process’s buffer.
+
+    - Copying bytes _FROM_ the /OS buffer/ _TO_ the /process buffer/ is *NOT very
+      efficient*.
+
+        It would be _MORE performant_ to have the /DMA controller/ copy _directly_
+      to the /process buffer/,
+
+      _BUT there are *TWO problems* with this approach_:
+
+      + The /DMA controller/ typically *CANNOT communicate directly* with the /user
+        space/ in which the JVM process runs.
+          Instead, it communicates with the OS's /kernel space/.
+
+      + Block-oriented devices such as a /DMA controller/ work with _fixed-size data
+        blocks_.
+          IN CONTRAST,
+        the /JVM process/ might request a size of data that is
+        * *NOT a multiple* of the block size
+          OR
+        * that is /misaligned/.
+
+      Because of these problems, the OS acts as an intermediary, _tearing apart_
+      and _recombining_ data as it SWITCHES BETWEEN the /JVM process/ and the
+      /DMA controller/.
+
+    - =TODO= NOTE =TODO=
+
+    - The data assembly/disassembly tasks can be made *more efficient* _BY_ letting
+      the /JVM process/ *pass* _a list of buffer addresses_ *to* the OS in a SINGLE
+      /system call/. The OS then *fills* or *drains* these /buffers/ in sequence,
+      + *scattering* data *to* _MULTIPLE_ /buffers/ DURING a _read_ operation;
+        OR
+      + *gathering* data *from* SEVERAL /buffers/ DURING a _write_ operation.
+
+      This scatter/gather activity
+      *reduces* the number of (potentially expensive) /system calls/ that the JVM
+      process must make
+      _AND_
+      lets the OS _optimize data handling_ because it knows the total amount of
+      /buffer/ space.
+
+      Furthermore, when _multiple processors or cores_ are available, the OS may
+      allow /buffers/ to be _filled_ or _drained_ *SIMULTANEOUSLY*.
+
+    - JDK 1.4's ~java.nio.Buffer~ /class/ abstracts the concept of a /JVM process
+      buffer/. It serves as the /superclass/ for ~java.nio.ByteBuffer~ and /OTHER buffer
+      classes/.
+
+      Because I/O is fundamentally byte-oriented, *only* ~ByteBuffer~ instances can
+      be used with /channels/ (which are discussed shortly).
+        Most of the other ~Buffer~ /subclasses/ are *conveniences* for working with
+      /multibyte data/ (such as /characters/ or /integers/).
+
+    - =TODO=
+      Chapter 6 explores the ~Buffer~ class and its children.
+
+*** DONE Channels - 10
+    CLOSED: [2018-07-25 Wed 11:36]
+    - Forcing a CPU to perform I/O tasks and wait for I/O completions (such a
+      CPU is said to be I/O bound) is *wasteful of this resource*.
+
+      _Performance can be improved by offloading these tasks to DMA controllers
+      so that the processor can get on with other work._
+
+    - A /channel/ serves as a conduit for communicating (via the OS) with a /DMA
+      controller/ to *EFFICIENTLY* _drain_ /byte buffers/ to or _fill_ /byte
+      buffers/ from a disk.
+
+    - JDK 1.4's ~java.nio.channels.Channel~ /interface/, its /subinterfaces/, and
+      various /classes/ implement the /channel/ architecture.
+
+    - One of these /classes/ is called ~java.nio.channels.FileChannel~, and it
+      abstracts a /channel/ for _READING_, _WRITING_, _MAPPING_, and _MANIPULATING_
+      a file.
+
+      + One interesting feature of ~FileChannel~ is its support for /file locking/,
+        upon which _sophisticated applications such as database management systems
+        rely_. =from Jian= one usage -- explore this later =TODO=
+
+        * /File locking/ lets a process *prevent* or *limit* access to a file while
+          the process is accessing the file.
+
+        * /File locking/ is OFTEN USED to lock _a region of a file_, although it can
+          be applied to an entire file.
+
+        *A lock ranges from a starting byte offset in the file and continues for
+        a specific number of bytes.*
+
+      + Another interesting ~FileChannel~ feature is *memory-mapped file I/O via the
+        ~map()~ method.* ~map()~ returns a ~java.nio.MappedByteBuffer~ whose content is
+        a _memory-mapped region_ (=TODO= =???=) of a file.
+          File content is accessed via memory accesses; *buffer copies and read-write
+        system calls are eliminated.*
+
+    - You can obtain a /channel/ by calling the ~java.nio.channels.Channels~ /class/'s
+      /methods/ or the methods in classic I/O classes such as ~RandomAccessFile~.
+
+    - =TODO= Chapter 7 explores /Channel/, Channels, and more.
+
+*** DONE Selectors - 11
+    CLOSED: [2018-07-26 Thu 19:01]
+    - I/O is classified as
+      + /block-oriented/
+        Example: Reading from or writing to a file.
+        or
+      + /stream-oriented/.
+        Example: Reading from the keyboard or writing to a network connection.
+
+    - /Stream I/O/ is *often slower* than /block I/O/.
+      Further more, input tends to be _intermittent_.
+
+      For example, the user might _pause_ while entering a /stream/ of characters
+      or _momentary slowness_ in a network connection causes a playing video to
+      proceed in a jerky fashion.
+
+    - Many OS's allow /streams/ to be configured to operate in /nonblocking mode/
+      in which a /thread/ continually checks for available input *WITHOUT blocking*
+      when no input is available.
+        The /thread/ can handle incoming data or perform other tasks until data
+      arrives.
+
+    - This "polling for available input" activity _can be *WASTEFUL*,_ especially
+      when the /thread/ needs to monitor many input streams (such as in a web
+      server context).
+
+      Modern OS's can perform this checking _EFFICIENTLY_, which is known as
+      /readiness selection/, and which is often built on top of /nonblocking mode/.
+        The OS monitors a collection of /streams/ and returns an indication to the
+      /thread/ of which /streams/ are ready to perform I/O.
+        As a result, a single /thread/ can multiplex many active /streams/ via
+      common code and makes it possible, in a web server context, to manage a
+      huge number of network connections.
+
+    - JDK 1.4 supports /readiness selection/ by providing /selectors/, which are
+      instances of the ~java.nio.channels.Selector~ /class/ that can examine one
+      or more /channels/ and determine which /channels/ are ready for reading or
+      writing.
+        This way a SINGLE /thread/ can manage MULTIPLE /channels/ (and, therefore,
+      MULTIPLE network connections) *efficiently*. Being able to use *fewer* /threads/
+      is advantageous where /thread/ creation and /thread/ context switching is
+      expensive in terms of performance and/or memory use. See Figure 1-3.
+
+      Figure 1-3. A thread manages three channels via a selector
+
+    - =TODO= Chapter 8 explores Selector and its related types.
+
+*** DONE Regular Expressions - 12
+    CLOSED: [2018-07-23 Mon 03:07]
+    - /Regular expressions/ were introduced as part of /NIO/.
+
+    - =From Jian= This looks not that reasonable!
+      Although you might wonder about the _rationale_ for doing this (what have
+      /regular expressions/ got to do with I/O?), /regular expressions/ are commonly
+      used to scan textual data that is read from a file or other source.
+
+      The need to perform these scans as quickly as possible mandated their
+      inclusion.
+
+    - JDK 1.4 supports /regular expressions/ via the ~java.util.regex~ /package/
+      and its ~Pattern~ and ~Matcher~ /classes/.
+
+    - =TODO=
+      Chapter 9 explores the ~Pattern~ and ~Matcher~ /classes/.
+
+*** DONE Charsets - 13
+    CLOSED: [2018-07-23 Mon 03:10]
+    - I previously mentioned that JDK 1.1 introduced /writer/reader classes/ that
+      take /character encodings/ into account.
+
+    - Originally, /classes/ such as ~java.io.InputStreamReader~ worked with the
+      ~java.io.ByteToCharConverter~ /class/ to perform *conversions based on
+      encodings*.
+        ~ByteToCharConverter~ was eventually *deprecated and removed from _JDK
+      6_ and successors.*
+
+    - In its place, the more capable ~java.nio.charset~ package along with its
+      ~Charset~, ~CharsetEncoder~, ~CharsetDecoder~, and _related types_ was
+      introduced.
+
+    - =TODO=
+      Chapter 10 explores the ~Charset~ /class/.
+
+*** DONE Formatter - 13
+    CLOSED: [2018-07-23 Mon 03:13]
+    - /JSR 51/ mentions a simple printf-style formatting facility.
+
+      Such a facility offers significant value in preparing data for
+      presentation, to which many C programmers can attest.
+        However, JDK 1.4 did *NOT* include this capability because it relies on
+      /variable argument lists/, a language feature that did *NOT debut until
+      JDK 5.*
+
+      Fortunately, JDK 5 also included a ~java.util.Formatter~ /class/ with a
+      wealth of formatting capabilities along with related types that support
+      custom formatting, and added ~printf()~ (and related ~format()~) methods
+      to the ~PrintStream~ /class/.
+
+    - Chapter 11 explores ~Formatter~ and demonstrates ~printf()~.
+
+** DONE NIO.2 - 13
+   CLOSED: [2018-07-26 Thu 19:37]
+   - /JSR 51/ specifies that NIO would *introduce an improved* /file system
+     interface/ that *overcomes* various problems with the legacy ~File~
+     /class/. *HOWEVER*,
+
+     + lack of time prevented this feature from being included.
+
+     + Also, it wasn't possible to support /asynchronous I\slash{}O/ and complete /socket
+       channel/ functionality.
+
+     /JSR 203/ (www.jcp.org/en/jsr/detail?id=203) was subsequently created to
+     address these omissions, which debuted in *JDK 7*.
+
+   - *NOTE* =TODO= =DETAILS=
+     /big buffers (buffers with 64-bit addressability)/.
+
+*** DONE Improved File System Interface - 14
+    CLOSED: [2018-07-26 Thu 19:29]
+    - The legacy ~File~ /class/ *suffers from various problems*.
+      For example,
+      + the ~renameTo()~ /method/ does *NOT* work *consistently* across OS's.
+  
+      + many of ~File~'s /methods/ do *NOT scale*;
+        requesting a large directory listing from a server could result in a
+        hang.
+
+    - The _NEW_ /file system interface/ mentioned in /JSR 203/ fixes these and
+      other problems.
+      For example,
+      + it
+        * supports /bulk access/ to file attributes,
+        * provides a change notification facility,
+        * offers the ability to escape to file system-specific APIs, and
+        * has a service provider interface for pluggable file system implementations.
+
+       =TODO= Chapter 12 explores the improved file system interface.
+
+*** DONE Asynchronous I/O - 14
+    CLOSED: [2018-07-26 Thu 19:31]
+    - =TODO= More notes
+
+    - =TODO= Chapter 13 explores asynchronous I/O.
+
+*** DONE Completion of Socket Channel Functionality - 14
+    CLOSED: [2018-07-26 Thu 19:37]
+    - /JDK 1.4/ added the ~DatagramChannel~, ~ServerSocketChannel~, and
+      ~SocketChannel~ /classes/ to the ~java.nio.channels~ /package/.
+
+      *HOWEVER*,
+      + lack of time prevented these classes from supporting /binding/ and /option
+        configuration/.
+
+      + Also, /channel-based multicast/ datagrams were *not* supported.
+
+    - /JDK 7/ added /binding/ support and /option configuration/ to the aforemen-
+      tioned /classes/.
+
+      Also, it introduced a new ~java.nio.channels.MulticastChannel~ interface.
+
+    - =TODO= Chapter 14 explores the completion of socket channel functionality.
+
+    - Exercises =???= =TODO=
+
+** DONE Summary - 15
+   CLOSED: [2018-10-12 Fri 14:27]
+   I/O is fundamental to OS's, computer languages, and language libraries.
+
+   Java supports I/O through its classic I/O, NIO, and NIO.2 API categories.
+   =from Jian= Historical reason!
+
+   - Classic I/O
+     provides APIs to
+     + *access* the /file system/,
+
+     + *access* _file content randomly (as opposed to sequentially)_,
+
+     + *stream* /byte-oriented data/ BETWEEN _sources_ AND _destinations_, and
+       support /character streams/.
+
+   - NIO
+     provides APIs to
+     + *manage* /buffers/
+
+     + *communicate* _buffered data_ over /channels/,
+
+     + *leverage* _readiness selection_ via /selectors/
+
+     + *scan* _textual data_ quickly via /regular expressions/
+
+     + *specify* _character encodings_ via /charsets/
+
+     + *support* _printf-style formatting_.
+
+   - NIO.2
+     provides APIs to
+     + *improve* the /file system interface/;
+
+     + *support* /asynchronous I\slash{}O/;
+
+     + *complete* /socket channel/ _functionality_ by upgrading ~DatagramChannel~,
+       ~ServerSocketChannel~, and ~SocketChannel~, and by introducing a new
+       ~MulticastChannel~ /interface/.
+
+* Part II: Classic I/O APIs - 17
+* TODO Chapter 2: ~File~ - 19
+  - Applications often _interact_ with a /file system/, which is usually implemented
+    as a hierarchy of files and directories starting from a root directory.
+
+    OS's on which a JVM runs typically support *at least ONE* /file system/.
+    For example,
+    + _Unix/Linux_ combines all _mounted (attached and prepared) disks_ into one 
+      /virtual file system/.
+
+    + In contrast,
+      _Windows_ associates a separate file system with each active disk drive.
+
+  - Java offers access to the underlying OS's available file system(s) via its
+    concrete ~java.io.File~ /class/, which this chapter explores.
+    =TODO=
+
+** DONE Constructing ~File~ Instances - 19
+   CLOSED: [2018-07-26 Thu 20:19]
+   - *NOTE*
+     ~java.io~ use the property ~user.dir~ to identify the current working directory,
+     which is usually the location where JVM launches.
+
+     + You can obtain the /system property/ value by calling the ~java.lang.System~'s
+       ~getProperty()~ /method/.
+
+   - “\\” for a /Windows Universal Naming Convention (UNC)/ path,
+
+   - *NOTE*
+     The /default name-separator character/ is defined by the /system property/
+     ~file.separator~ and is made available in ~File~'s ~public static separator~
+     (of type ~String~) and ~separatorChar~ fields.
+
+   - *TIP*
+     Because ~File(String path)~, ~File(String parent, String child)~, and
+     ~File(File parent, String child)~ _do *NOT* detect invalid path arguments_
+     (apart from throwing a ~java.lang.NullPointerException~ when /path/ or /child/
+     is ~null~), you must be careful when specifying paths.
+
+** DONE Learning About Stored Abstract Paths - 22
+   CLOSED: [2018-07-26 Thu 20:43]
+   Methods
+   - ~File getAbsoluteFile()~ is equivalent to ~new File(this.getAbsolutePath())~.
+
+   - ~String getAbsolutePath()~
+
+   - About "Canonical"
+     Doing so typically involves
+     + removing redundant names such as “.” and “..” from the path,
+
+     + resolving symbolic links (on Unix/Linux operating systems),
+
+     + converting drive letters to a standard case (on Windows operating systems).
+
+     + This method throws ~IOException~ when an I/O error occurs (creating the
+       /canonical path/ may require _file system queries_).
+
+   - ~File getCanonicalFile()~
+
+   - ~String getCanonicalPath()~
+
+   - ~String getName()~
+     The last part of the path saved in a ~File~ object.
+
+   - ~String getParent()~
+     Return ~null~ when this path doesn't name a /parent directory/.
+
+   - ~File getParentFile()~
+
+   - ~String getPath()~
+
+   - ~boolean isAbsolute()~
+     The definition of /absolute path/ is _system dependent_.
+     + For Unix/Linux operating systems,
+       a path is absolute when its prefix is ~"/"~.
+
+     + For Windows operating systems,
+       a path is absolute when its prefix is a drive
+       specifier followed by ~"\"~ or when its prefix is ~"\\"~
+
+   - ~String toString()~ is the synonym for ~getPath()~.
+
+** DONE Learning About a Path's File or Directory - 25
+   CLOSED: [2018-07-26 Thu 21:03]
+   Methods
+   - ~boolean exists()~
+
+   - ~boolean isDirectory()~
+
+   - ~boolean isFile()~
+
+   - ~boolean isHidden()~
+
+   - ~boolean lastModified()~
+     Return the time that the file denoted by this File object's abstract path was
+     last modified, or _0 when the file doesn't exist_ or an _I/O error occurred
+     during this method call_.
+
+     The returned value is measured in *milliseconds* since the /Unix epoch/
+     (00:00:00 GMT, January 1, 1970)
+
+   - ~boolean length()~
+
+** DONE Listing File System Root Directories - 27
+   CLOSED: [2018-07-26 Thu 20:50]
+   The /static method/ ~listRoots()~ of ~File~ returns ~File[]~, which is OS
+   dependent:
+
+   - For Linux/Unix, the result only contains one element.
+
+   - For Windows, the result contains all the dirves.
+
+** TODO Obtaining Disk Space Information - 28
+** TODO Listing Directories - 30
+   - Methods
+     + ~String[] list()~
+
+     + ~String[] list(FilenameFilter filter)~
+
+     + ~File[] listFiles()~
+
+     + ~File[] listFiles(FileFilter filter)~
+
+     + ~File[] listFiles(FilenameFilter filter)~
+
+   - =TODO=
+
+** TODO Creating/Modifying Files and Directories - 33
+** TODO Setting and Getting Permissions - 37
+** DONE Exploring Miscellaneous Capabilities - 39
+   CLOSED: [2018-07-26 Thu 21:01]
+   - Methods -- ~File~ implements ~java.lang.Comparable~ /interface/'s ~compareTo()~
+     /method/ and overrides ~equals()~ and ~hashCode()~. 
+
+     + ~int compareTo(File path)~
+       Compare two paths lexicographically.
+       The ordering defined by this /method/ depends on the underlying OS.
+       + For Windows, alphabetic case is INSIGNIFICANT.
+
+     + ~boolean equals(Object obj)~
+       OS dependent.
+
+     + ~int hashCode()~
+       OS dependent.
+       * On Unix/Linux operating systems, a path’s hash code equals the XOR
+         of its path string’s hash code and decimal value 1234321.
+
+       * On Windows operating systems, the hash code is the XOR of the lowercased
+         path string's hash code and decimal value 1234321.
+
+
+       The current locale (geographical, political, or cultural region) is *not
+       taken into account when lowercasing the path string.*
+       =From Jian= How can this happen?????? =???= =TODO=
+
+** TODO Exercise - 41
+** TODO Summary - 42
+
+* DONE Chapter 3: ~RandomAccessFile~ - 43 - =TODO= =NOTE=
+  CLOSED: [2018-10-10 Wed 20:15]
+** TODO Exploring ~RandomAccessFile~ - 43
+   - /Constructors/:
+     + They
+       * *Create* and open a *new* ~file~ when it doesn't exist
+         OR
+       * *Open* an *existing* file.
+
+     + ~RandomAccessFile(File file, String mode)~
+
+     + ~RandomAccessFile(String path, String mode)~
+
+   - The /mode/ can be ~"r"~, ~"rw"~, ~"rws"~, or ~"rwd"~.
+     Otherwise an ~IllegalArgumentException~ is thrown.
+     + ~"r"~
+       Open a existing file for reading ONLY.
+
+       Any attempt to write to the file results in a thrown instance of the
+       ~java.io.IOException~.
+
+     + ~"rw"~
+
+     + ~"rws"~
+       Each update to the file's *content must be written _synchronously_ to the
+       underlying storage device*.
+       =TODO= =???=
+
+     + ~"rwd"~.
+       Each update to the file's *content or /metadata/ must be written
+       _synchronously_ to the underlying storage device*.
+       =TODO= =???=
+
+       * *Note*
+         A file's /metadata/ is data about the file and _NOT_ the actual file
+         contents. Examples of /metadata/ include
+         + the file's _length_
+           and
+         + the _time_ the file was last modified.
+
+   - The ~"rwd"~ and ~"rws"~ have _guarantees when_ a file reside in the local
+     storage device.
+
+     *NO guarantee* is made when the file does NOT reside on a local device.
+
+   - *Note*
+     A file's /metadata/ is data about the file and _NOT_ the actual file
+     contents. Examples of /metadata/ include
+     + the file's _length_
+       and
+     + the _time_ the file was last modified.
+
+   - =From Jian=
+     It is obvious the guarantee from the ~"rwd"~ and ~"rws"~ have a cost.
+
+   - *CAUTION*
+     + Use ~"r"~ mode, you cannot create a file -- this is write, not read only.
+       If you do this, you will get a ~FileNotFoundException~.
+
+     + 
+
+** TODO Using ~RandomAccessFile~ - 49
+   - ~RandomAccessFile~ is useful for creating a _flat file database_, a single
+     file organized into /records/ and /fields/.
+     + A /record/ stores a single *entry* (such as a part of a database);
+
+     + A /field/ stores a single *attribute* of the /entry/ (such number of parts
+       of a database).
+
+** TODO Summary - 57
+
+* TODO Chapter 4: Streams - 59
+  - Along with ~java.io.File~ and ~java.io.RandomAccessFile~,
+    Java's _classic I/O infrastructure_ (~java.io~) provides /streams/ for
+    performing I/O operations.
+
+  - stream :: an ordered sequence of bytes of an ARBITRARY length.
+
+  - Java provides /classes/ in the ~java.io~ that
+    + *identify* VARIOUS /stream destinations/ for _writing_;
+    + *identify* VARIOUS /stream sources/ for _reading_.
+
+    for example,
+    + /byte arrays/
+    + /files/
+    + /thread pipes/.
+
+** TODO Stream Classes Overview - 59
+   - The base classes:
+     + ~OutputStream~
+       #+BEGIN_SRC java
+         public abstract class OutputStream
+             extends Object implements Closeable, Flushable
+       #+END_SRC
+       with /methods/:
+       * ~void close()~
+       * ~void flush()~
+       * ~void write(byte[] b)~
+       * ~void write(byte[] b, int off, int len)~
+       * ~abstract void write(int b)~
+
+     + ~InputStream~
+       #+BEGIN_SRC java
+         public abstract class InputStream
+             extends Object implements Closeable
+       #+END_SRC
+       with /methods/:
+       * ~int available()~
+       * ~void close()~
+       * ~void mark(int readlimit)~
+       * ~boolean markSupport()~
+       * ~abstract int read()~
+       * ~int read(byte[] b)~
+       * ~int read(byte[] b, int off, int len)~
+       * ~void reset()~
+       * ~long skip(long n)~
+
+** TODO Touring the Stream Classes - 61
+*** ~OutputStream~ and ~InputStream~ - 61
+*** ~ByteArrayOutputStream~ and ~ByteArrayInputStream~ - 64
+*** ~FileOutputStream~ and ~FileInputStream~ - 67
+*** ~PipedOutputStream~ and ~PipedInputStream~ - 71
+*** ~FilterOutputStream~ and ~FilterInputStream~ - 75
+*** ~BufferedOutputStream~ and ~BufferedInputStream~ - 84
+*** ~DataOutputStream~ and ~DataInputStream~ - 86
+*** Object Serialization and Deserialization - 88
+**** Default Serialization and Deserialization - 89
+**** Custom Serialization and Deserialization - 95
+**** Externalization - 101
+*** ~PrintStream~ - 104
+
+** TODO Revisiting Standard I/O - 107
+** TODO Summary - 111
+
+* TODO Chapter 5: Writers and Readers - 113
+** ~Writer~ and ~Reader~ Classes Overview - 114
+** ~Writer~ and ~Reader~ - 116
+** ~OutputStreamWriter~ and ~InputStreamReader~ - 117
+** ~FileWriter~ and ~FileReader~ - 119
+** ~BufferedWriter~ and ~BufferedReader~ - 121
+** Summary - 124
+
+* Part III: New I/O APIs - 125
+* DONE Chapter 6: Buffers - 127
+  CLOSED: [2018-10-12 Fri 13:41]
+  =IMPORTANT=
+  - NIO is based on /buffers/, whose contents are _sent to_ OR _received from_
+    I/O services via /channels/.
+
+  - This chapter introduces you to NIO's /buffer/ classes.
+
+** DONE Introducing Buffers - 127
+   CLOSED: [2018-10-10 Wed 23:55]
+   - /buffer/
+
+   - /Buffers/ possess *four* properties:
+
+     Figure 6-1 is the example!
+
+     + Capacity:
+       * The total number of data items that can be stored in the /buffer/.
+
+       * It is specified when the /buffer/ is created and *cannot* be changed
+         later.
+
+     + Limit:
+       The zero-based index of the first element that *should not* be read or
+       written. In other words, *it identifies the number of “live” data items in
+       the buffer.*
+
+     + Position:
+       The zero-based index of the next data item that can be read or the location
+       where the data item can be written.
+
+     + Mark:
+       A zero-based index to which the /buffer's position/ will be *reset* when
+       the buffer's ~reset()~ /method/ (presented shortly) is called.
+       *The mark is initially undefined.*
+
+   - These FOUR properties are related as follows:
+     0 <= mark <= position <= limit <= capacity
+
+** DONE ~Buffer~ and its Children - 128
+   CLOSED: [2018-10-11 Thu 00:59]
+   - /Buffers/ are implemented by classes that derive from the abstract
+     ~java.nio.Buffer~ /class/.
+     #+BEGIN_SRC java
+       public abstract class Buffer
+           extends Object
+     #+END_SRC
+
+   - Table 6-1 describes ~Buffer~'s /methods/
+     =TODO= =RE-READ=
+
+   - Table 6-1 shows many ~Buffer~'s /methods/ return ~Buffer~'s references
+     so that you can write fluent style code with ~Buffer~'s.
+
+     =from Jian= even if it return ~Buffer~, mostly they have /side effects/.
+     =from Jian= This is why the code below are equivalent:
+     + Step by Step process
+       #+BEGIN_SRC java
+         buf.mark();
+         buf.position(2);
+         buf.reset();
+       #+END_SRC
+
+     + Fluent Style
+       #+BEGIN_SRC java
+         buf.mark()
+             position(2).
+             reset();
+       #+END_SRC
+
+   - Table 6-1 also shows that
+     + All /buffers/ can be read
+     + BUT *NOT* all /buffers/ can be written.
+
+   - If you try to write a /read-only buffer/, you'll see ~ReadOnlyBufferException~.
+     For example, a /buffer/ BACKED by a /memory-mapped file/ is READ-ONLY!
+
+   - Use ~isReadOnly()~ to check if are UNSURE.
+
+   - /Buffers/ are *NOT* /thread-safe/.
+
+   - The ~java.nio~ includes several /abstract classes/ that extend ~Buffer~,
+     one for each /primitive type/ *except for Boolean*:
+     + ~ByteBuffer~ and its /subclass/ ~MappedByteBuffer~
+     + ~CharBuffer~
+     + ~DoubleBuffer~
+     + ~FloatBuffer~
+     + ~IntBuffer~
+     + ~LongBuffer~
+     + ~ShortBuffer~
+
+   - Note =TODO= =RE-WRITE= =Shorten=
+     Operating systems perform byte-oriented I/O and you use ByteBuffer to
+     create byte-oriented buffers that store the bytes to write to a destination
+     or that are read from a source. The other primitive-type buffer classes let
+     you create multibyte view buffers (discussed later) so that you can
+     conceptually perform I/O in terms of characters, double precision
+     floating-point values, 32-bit integers, and so on. However, the I/O
+     operation is really being carried out as a flow of bytes
+
+   - Listing 6-1
+     Play with ~Buffer~
+
+     You write ~Buffer buffer = ByteBuffer.allocate(7);~.
+     You print this ~buffer~, and you'll see ~java.nio.HeapByteBuffer~.
+
+     =from Jian= Learn more about ~HeapByteBuffer~!
+
+** DONE Buffers in Depth - 133
+   CLOSED: [2018-10-12 Fri 13:41]
+   - This section takes you deeper into buffers by exploring
+     + _buffer CREATION_
+     + _buffer WRITING and READING_
+     + _buffer FLIPPING_
+     + _buffer MARKING_
+     + ~Buffer~ subclass operations
+     + _byte ordering_
+     + _direct buffers_
+
+   - NOTE
+     Why use ~ByteBuffer~ to do the illustration?
+     It is the most versatile, and, after all, bytes are the basic unit used by OS
+     to transfer data items.
+
+     Also use ~CharBuffer~.
+
+*** DONE Buffer Creation - 133
+    CLOSED: [20
+    18-10-11 Thu 13:15]
+    - Through /static methods/:
+      + Position is 0, limit is capacity, mark is undefined, and element is
+        initialized to 0:
+        * ~ByteBuffer allocate(int capacity)~
+
+        * ~ByteBuffer allocateDirect(int capacity)~ -- /direct byte buffer/ =TODO=
+          From JDK 7 on, implementation changes, and no alignment on a page boundary.
+          This bring better performance.
+
+        * ~ByteBuffer wrap(byte[] array)~
+
+      + /Capacity/ is ~array.length~, /position/ is ~offset~, /limit/ is ~offset + length~
+        Unreasonable settings will lead to /exceptions/.
+        ~ByteBuffer wrap(byte[] array, int offset, int length)~
+
+    - Create a /view buffer/ of another /buffer/:
+      + create /view buffer/:
+        /instance method/ ~ByteBuffer duplicate()~
+
+      + create /read-only view buffer/:
+        * apply the ~duplicate~ /method/ to a read-only buffer.
+
+        * apply the ~asReadOnlyBuffer()~ to any buffer.
+
+*** DONE Buffer Writing and Reading - 136
+    CLOSED: [2018-10-11 Thu 14:48]
+    - ~ByteBuffer~ and the other /primitive-type buffer/ classes declare several
+      /overloaded/ ~put()~ and ~get()~ /methods/.
+
+      The /overloaded/ lead to two kind of semantics:
+      + *absolute* when they require an _index argument_
+        * *Throw* ~IndexOutOfBoundsException~
+          when ~index~ is _negative_ or _greater than or equal to the buffer's
+          limit_.
+
+        * ~put(int index, byte b)~ as =Jian's= guess
+
+        * ~get(int index)~ fetch the /byte/ located at position index.
+          *CAUTIOIN*: This is reasonable!!! NO increment of the current position.
+
+      + *relative* when they do _not_ require an index.
+        * ~put~ may *throw* ~java.nio.BufferOverflowException~
+          when the _current position_ is _greater than or equal to the limit_.
+
+        * ~get~ may *throw* ~java.nio.BufferUnderflowException~
+          when the _current position_ is _greater than or equal to the limit_.
+
+        * ~put(byte b)~ write ~b~ to current location
+
+        * ~get()~ read the byte located at the /buffer/'s current position
+                  and
+                  increment the current position.
+
+    - NO matter it /absolute/ or /relative/ ~put()~,
+      ~ReadOnlyBufferException~ can be thrown when the *buffer is read-only*.
+
+    - *Tip*
+      For maximum EFFICIENCY, use bulk data transfermations -- ~put~ and ~get~
+      parameter can be ~byte[]~:
+      + ~ByteBuffer put(byte[] src)~
+      + ~ByteBuffer put(byte[] src, int offset, int length)~
+      + ~ByteBuffer get(byte[] dst)~
+      + ~ByteBuffer get(byte[] dst, in offset, int length)~
+
+*** DONE Flipping Buffers - 139
+    CLOSED: [2018-10-11 Thu 14:56]
+    - ~buffer.limit(buffer.position()).position(0);~
+      \equiv{}
+      ~buffer.flit();~ *PREFERED*
+
+      Now the buffer is ready to be drained.
+
+    - *Note*
+      ~rewind()~ is similar to ~flip()~ but *ignores the limit*.
+
+      Also, calling ~flip()~ _TWICE_ does *NOT return you to the original state.*
+      Instead, the buffer has a zero size.
+
+*** DONE Marking Buffers - 141
+    CLOSED: [2018-10-11 Thu 16:38]
+    Use ~mark~ /method/ to mark a /postion/, and use ~reset~ /method/ later to
+    back to THIS /position/.
+
+    - *CAUTION*
+      Do NOT confuse ~reset()~ with ~clear()~.
+      + ~clear()~ marks a buffer _AS empty_.
+
+*** TODO Buffer Subclass Operations - 142
+    - ByteBuffer and the other primitive-type buffer classes declare a compact()
+      method that’s useful for compacting a buffer by copying all bytes between
+      the current position and the limit to the beginning of the buffer.
+
+      The byte at current position ~p~ is copied to index 0, the byte at index
+      ~p + 1~ is copied to index 1, and so on until the byte at index ~limit() -
+      1~ is copied to index ~n = limit() - 1 - p~.
+
+      The buffer's /current position/ is then set to ~n + 1~ and its /limit/ is
+      set to its /capacity/. The /mark/, when defined, is *discarded*.
+
+    - ~equals~ =TODO=
+
+    - ~compareTo~ =TODO=
+
+*** DONE Byte Ordering - 143 - =IMPORTANT=
+    CLOSED: [2018-10-12 Fri 13:40]
+    *It's all about /big endian/ and /little endian/.*
+
+    - /Nonbyte primitive types/ EXCEPT FOR ~Boolean~ (which might be represented
+      by a bit or by a byte) are _composed of several bytes_:
+
+      + Each value of one of these multibyte types is stored in _a sequence of
+        *contiguous* memory locations_.
+
+        _However, the order of these bytes can DIFFER FROM operating system to
+        operating system._
+
+    - Use an example (32-bit long integer 0x10203040) to illustrate the concepts
+      of /big endian/ and /little endian/:
+      + /big endian/: from /low address/ to /high address/ as 10, 20, 30, 40
+
+      + /little endian/: from /high address/ to /low address/ as 40, 30, 20, 10
+
+    - The *core class* is the ~java.nio.ByteOrder~.
+      It has a /method/ ~ByteOrder nativeOrder()~, which rerurns one of the two
+      important constant instances (instances of ~ByteOrder~):
+      + ~ByteOrder.BIG_ENDIAN~
+      + ~ByteOrder.LITTLE_ENDIAN~
+
+      These two constant instances are /singleton/, and youcan use ~==~ and ~!=~
+      to do comparison.
+
+    - Each /multibyte buffer class/ declares a ~ByteOrder order()~ /method/ that
+      returns ~ByteOrder.BIG_ENDIAN~ or ~ByteOrder.LITTLE_ENDIAN~.
+      + Complicated parts: =TODO= _Simplify this part_
+        The ByteOrder value returned from order() can take on a different value
+        based on how the buffer was created. If a multibyte buffer (such as a
+        floating-point buffer) was created by allocation or by wrapping an existing
+        array, the buffer’s byte order is the native order of the underlying operating
+        system.
+
+    - A /view buffer/ keep the /byte order/ setting when it is created.
+      It cannot be subsequently changed.
+
+      =from Jian=
+      This means the underlying if the /buffer/ change /its byte order/, the
+      /view buffer/ will have ill-behaviors
+
+    - ~ByteBuffer~ is by default always /big endian/, no matter the way the OS
+      uses.
+        This is because *Java's default byte order is also /big endian/,* which
+      lets /classfiles/ and /serialized objects/ store data consistently across
+      JVM.
+
+    - You can change the /byte order/ of ~ByteBuffer~ through the ~order(ByteOrder bo)~
+      /method/.
+        We use this /method/ because /big endian/ setting can impact performance
+      on /little endian/ OS.
+
+    - Q & A:
+      + Q :: Why /single byte buffer/ ~ByteBuffer~ also need /byte ordering
+             indicator/?
+
+      + A :: Do NOT forget ~ByteBuffer~ has /methods/ like
+             ~ByteBuffer putInt(int value)~, which write and read these values
+             accroding to the byte buffer's *current* byte order.
+
+             Also, it has /methods/ like ~[Type]Buffer as[Type]Buffer()~, which
+             return a /view buffer/ whose order will reflect the /byte buffer/'s
+             changed buffer order.
+
+*** DONE Direct Byte Buffers - 145 - =TODO= =RE-READ= =EXAMPLES=
+    CLOSED: [2018-10-12 Fri 13:41]
+** DONE Summary - 147
+   CLOSED: [2018-10-12 Fri 11:49]
+   - A /buffer/ is an /NIO object/ that stores a *FIXED AMOUNT of data* to be sent
+     to or received from an _I/O service_.
+
+     It sits
+     *BETWEEN*
+     + an _application_
+
+       *AND*
+
+     + a _channel_
+       that
+       * WRITES the buffered data TO the service
+         or
+       * READS the data FROM the service and deposits it into the buffer.
+
+   - /Buffers/ possess /capacity/, /limit/, /position/, and /mark properties/.
+
+     + These four properties are related as follows:
+       0 <= mark <= position <= limit <= capacity.
+
+     + /Buffers/ are implemented by /abstract classes/ that derive from the
+       ~abstract Buffer class~.
+         These /classes/ include ~ByteBuffer~, ~CharBuffer~, ~DoubleBuffer~,
+       ~FloatBuffer~, ~IntBuffer~, ~LongBuffer~, and ~ShortBuffer~.
+
+     + Furthermore, ~ByteBuffer~ is /subclassed by/ the ~abstract MappedByteBuffer
+       class~.
+
+   - In this chapter, you learned
+     + how to create buffers (including view buffers),
+     + write and read buffer contents
+     + flip buffers
+     + mark buffers, and
+     + perform additional operations on buffers such as compaction.
+     + (You also learned about) /byte ordering/ and /direct byte buffers/.
+
+   - =TODO= Chapter 7 presents /NIO's channel/ types.
+
+* TODO Chapter 7: Channels - 149
+  /Channels/ *partner with* /buffers/ to achieve *high-performance I/O*.
+
+** TODO Introducing Channels - 149
+   - /Channel/ :: an object that represents an open connection
+                  to a hardware device, a file, a network socket, an application
+                  component, or another entity that's capable of performing
+                  writes, reads, and other I/O operations.
+
+   - /Channels/ efficiently *transfer* data between /byte buffers/ and /OS-based
+     I/O service sources or destinations/.
+
+   - *Note*
+     + /Channels/ *are* gateways through which I/O services are accessed.
+
+     + /Channels/ *use* /byte buffers/ as the endpoints for sending and receiving
+       data.
+
+   - There often exists a *one-to-one correspondence*
+     BETWEEN
+     an /OS file handle/ or /file descriptor/ =from Jian= these two concepts??? =TODO=
+     AND
+     a /channel/.
+
+     When you work with /channels/ in a file context, the /channel/ will often
+     be connected to an /open file descriptor/.
+       Despite /channels/ being _more abstract_ than /file descriptors/, they
+     are still capable of modeling an operating system’s I/O facilities.
+
+** DONE Channel and Its Children - 149 - =Re-READ=
+   CLOSED: [2018-10-12 Fri 16:56]
+   - Java supports /channels/ via its ~java.nio.channels~ and ~java.nio.channels.spi~
+     /packages/.
+     + Applications interact with the types located in the _former_ package;
+
+     + developers who are defining *new* /selector providers/ work with the _latter_
+       package. (I will discuss selectors in the next chapter.)
+       =TODO= =???=
+
+   - All /channels/ implement the ~java.nio.channels.Channel~ /interface/.
+     It declares the following /methods/:
+     + ~void close()~
+       * Close a *already closed* /channel/ has *NO* effect.
+
+       * This /method/ can throw ~java.io.IOException~
+         when and I/O error occurs.
+
+       * This /method/ can throw ~java.nio.channels.ClosedChannelException~
+         when invoke operations on a *CLOSED* /channel/.
+
+     + ~boolean isOpen()~
+
+   - To support I/O, ~Channel~ is _extended by_
+     + The ~java.io.channels.WritableByteChannel~ /interface/
+       * It declares ~abstract int write(ByteBuffer buffer)~
+         - *Core Action* (side effect)
+           write a sequence of bytes _from_ /buffer/ _to_ the CURRENT /channel/.
+
+         - *Return value*
+           the _number of bytes_ *ACTUALLY* written.
+
+       * It throws
+         - ~java.nio.channels.NonWritableChannelException~
+           when the /channel/ was *NOT opened for writing*,
+
+         - ~java.nio.channels.ClosedChannelException~
+           when the /channel/ is *closed*,
+
+         - ~java.nio.channels.AsynchronousCloseException~
+           when _ANOTHER thread_ *closes* the /channel/ *during* the write,
+
+         - ~java.nio.channels.ClosedByInterruptException~
+           when _ANOTHER thread_ *interrupts* the _CURRENT thread_ while the
+           write operation is in progress (thereby closing the /channel/ and
+           setting the current thread's /interrupt status/ =???= =TODO=),
+           =TODO= =???=
+
+         - ~IOException~
+           when some other I/O error occurs.
+
+     + The ~java.io.channels.ReadableByteChannel~ /interface/
+       * It declares ~abstract int read(ByteBuffer buffer)~
+         - *Core Action* (side effect)
+           read bytes _from_ the CURRENT /channel/ _into_ /buffer/.
+
+         - *Return value* 
+           the _number of bytes_ *ACTUALLY* read (or -1 when there are no more
+           bytes to read).
+
+       * It throws
+         - ~java.nio.channels.NonReadableChannelException~
+           when the channel was not opened for reading;
+
+         - ~ClosedChannelException~
+           when the channel is closed;
+
+         - ~AsynchronousCloseException~
+           when another thread closes the channel during the read;
+
+         - ~ClosedByInterruptException~
+           when another thread interrupts the current thread while the write
+           operation is in progress, thereby closing the channel and setting the
+           current thread’s /interrupt status/;
+
+         - ~IOException~
+           when some other I/O error occurs.
+
+   - *Note*
+     + ~WritableByteChannel~ and ~ReadableByteChannel~ are *UNIdirectional*.
+
+     + You can use ~instanceof~ to test if a /channel/ is ~WritableByteChannel~
+       or ~ReadableByteChannel~.
+
+     + If some of your /channel/ implement _BOTH_, you can test with
+       ~instanceof ByteChannel~, which is a marker interface that *subtypes* 
+       ~WritableByteChannel~ and ~ReadableByteChannel~
+
+   - The ~java.nio.channels.InterruptibleChannel~ /interface/ (a sub-interface of
+     ~Channel~):
+       ~InterruptibleChannel~ describes a channel that _can be_ *asynchronously
+     closed and interrupted*.
+       It *overrides* its ~Channel~ /superinterface/'s ~close()~ /method/ header,
+     presenting the following additional stipulation to ~Channel~'s contract for
+     this method: Any /thread/ currently /blocked/ in an I/O operation on this
+     /channel/ will receive ~AsynchronousCloseException~ (an ~IOException~
+     descendent). =TODO= =???= =???=
+
+     A /channel/ that implements this /interface/ is
+     + *asynchronously closeable*:
+       When a /thread/ is /BLOCKED/ in an I/O operation on an /interruptible
+       channel/, ANOTHER /thread/ may invoke the /channel/'s ~close()~ /method/.
+       This causes the _blocked_ /thread/ to receive a thrown
+       ~AsynchronousCloseException~ instance. =TODO=
+
+     + *interruptible*:
+       When a /thread/ is /BLOCKED/ in an I/O operation on an /interruptible
+       channel/, ANOTHER /thread/ may invoke the /BLOCKED/ /thread/'s
+       ~interrupt()~ method.
+         Doing this causes the /channel/ to be closed, the /blocked thread/ to
+       receive a thrown ~ClosedByInterruptException~ instance, and the /blocked
+       thread/ to have its /interrupt status/ set. (When a thread’s interrupt
+       status is already set and it invokes a blocking I/O operation on a
+       channel, the channel is closed and the thread will immediately receive a
+       thrown ~ClosedByInterruptException~ instance; its /interrupt status/ will
+       remain set.)
+       =TODO=
+
+     + NIO's designers chose to shut down a /channel/ when a /blocked thread/ is
+       interrupted because they couldn't find a way to reliably handle interrupted
+       I/O operations in the same manner across operating systems.
+
+       The *only* way to guarantee _deterministic behavior_ was to shut down the
+       channel.
+       =TODO=
+
+   - *Tip*
+     You can determine WHETHER OR NOT a /channel/ SUPPORTS /asynchronous closing
+     and interruption/ by using the ~instanceof~ operator in an expression such
+     as ~channel instanceof InterruptibleChannel~.
+
+   - /Channels/ have are *two* ways to obtain a /channel/:
+     + The ~java.nio.channels~ package provides a ~Channel~'s /utility class/
+       that offers *two* /methods/ for _obtaining /channels/ from /streams/._
+
+       For each of the following /methods/, *the underlying /stream/ is closed
+       when the /channel/ is closed,* and the /channel/ is *NOT buffered*:
+
+       * ~WritableByteChannel newChannel(OutputStream outputStream)~
+         for the given ~outputStream~.
+
+       * ~ReadableByteChannel newChannel(InputStream inputStream)~
+         for the given ~inputStream~.
+
+     + Various classic I/O classes have been retrofitted to support _channel
+       creation_.
+       For example,
+       * ~java.io.RandomAccessFile~ declares a ~FileChannel getChannel()~;
+       * ~java.net.Socket~ declares a ~SocketChannel getChannel()~.
+
+   - Listing 7-1. Copying Bytes from an Input Channel to an Output Channel
+     #+BEGIN_SRC java
+       import java.io.IOException;
+
+       import java.nio.ByteBuffer;
+
+       import java.nio.channels.Channels;
+       import java.nio.channels.ReadableByteChannel;
+       import java.nio.channels.WritableByteChannel;
+
+
+       public class ChannelDemo
+       {
+           public static void main(String[] args)
+           {
+               ReadableByteChannel src = Channels.newChannel(System.in);
+               WritableByteChannel dest = Channels.newChannel(System.out);
+
+               try
+               {
+                   copy(src, dest); // or copyAlt(src, dest);
+               }
+               catch (IOException ioe)
+               {
+                   System.err.println("I/O error: " + ioe.getMessage());
+               }
+               finally
+               {
+                   try
+                   {
+                       src.close();
+                       dest.close();
+                   }
+                   catch (IOException ioe)
+                   {
+                       ioe.printStackTrace();
+                   }
+               }
+           }
+
+           static void copy(ReadableByteChannel src, WritableByteChannel dest)
+               throws IOException
+           {
+               ByteBuffer buffer = ByteBuffer.allocateDirect(2048);
+
+               while (src.read(buffer) != -1)
+               {
+                   buffer.flip();
+                   dest.write(buffer);
+                   buffer.compact();
+               }
+               buffer.flip();
+
+               while (buffer.hasRemaining())
+                   dest.write(buffer);
+           }
+
+           static void copyAlt(ReadableByteChannel src, WritableByteChannel dest)
+               throws IOException
+           {
+               ByteBuffer buffer = ByteBuffer.allocateDirect(2048);
+
+               while (src.read(buffer) != -1)
+               {
+                   buffer.flip();
+                   while (buffer.hasRemaining())
+                       dest.write(buffer);
+                   buffer.clear();
+               }
+           }
+       }
+     #+END_SRC
+     + =TODO= =TODO= =TODO=
+       detailed NOTE
+
+   - *Note*
+     It's important to realize that a single ~write()~ /method/ call *may NOT
+     output the ENTIRE content* of a /buffer/.
+
+     Similarly, a single ~read()~ call *may NOT COMPLETELY fill* a /buffer/.
+
+** TODO Channels in Depth - 155
+   This section takes you deeper into /channels/ by exploring /scatter\slash{}gather
+   I\slash{}O/, /file channels/, /socket channels/, and /pipes/.
+
+*** TODO Scatter/Gather I/O - 155
+    - scatter\slash{}gather I\slash{}O (vectored I\slash{}O) ::
+         perform a SINGLE I\slash{}O operation *across multiple* /buffers/.
+
+    - No matter /scatter/ or /gather/, use /buffers/ in *sequence*.
+      + a /scatter/ read data to buffers in sequence to thier /limits/.
+        Stop when no data to read or all /buffers/ are used up.
+
+      + a /gather/ drain /buffers/ in sequence -- no identical capacities are
+        required.
+
+    - *NOTE*
+      Modern OS's provide APIs that support /vectored I\slash{}O/ to *eliminate*
+
+*** TODO File Channels - 158
+**** TODO Locking Files - 164
+**** TODO Mapping Files into Memory - 172
+**** TODO Transferring Bytes Among Channels - 177
+
+*** TODO Socket Channels - 179
+**** TODO Understanding Nonblocking Mode - 180
+**** TODO Exploring Server Socket Channels - 182
+**** TODO Exploring Socket Channels - 184
+**** TODO Exploring Datagram Channels - 189
+
+*** TODO Pipes - 195
+
+** TODO Summary - 201
+
+* TODO Chapter 8: Selectors - 203
+  /Selectors/ let you achieve /readiness selection/ _in a Java context_.
+
+  - This chapter
+    1. introduces you to /selector/ _fundamentals_
+       and
+    2. provides a _demonstration_.
+
+** TODO Selector Fundamentals - 204
+** TODO Selector Demonstration - 209
+** DONE Summary - 214
+   CLOSED: [2018-10-12 Fri 17:08]
+   - A /selector/ is an object created from a /subclass/ of the ~abstract Selector class~.
+
+   - The /selector/ *maintains a set of channels* that it examines to determine
+     which /channels/ are *READY FOR*
+     + _reading_
+     + _writing_
+     + _completing a connection sequence_
+     + _accepting another connection_
+     + _SOME combination of these tasks_.
+
+   - /Selectors/ are used with /selectable channels/, which are objects whose
+     classes ultimately inherit from the ~abstract SelectableChannel class~,
+     which describes a /channel/ that can be *multiplexed* by a /selector/.
+
+   - One or more previously created /selectable channels/ are _REGISTERED WITH_ a
+     /selector/.
+       Each _registration_ returns an /instance/ of a /subclass/ of the ~abstract
+     SelectionKey class~, which is a token signifying the _relationship BETWEEN
+     one /channel/ and the /selector/._
+
+     When a /selection method/ is invoked, the /selector's associated keys/ are
+     updated by checking all /channels/ registered with that /selector/.
+
+     The application can then obtain a set of keys whose /channels/ were found
+     ready and iterate over these keys to service each /channel/ that has become
+     ready since the previous select method call.
+
+   - Chapter 9 presents NIO's support for regular expressions.
+
+* DONE Chapter 9: Regular Expressions - 215 - =TODO= =NOTE=
+  CLOSED: [2018-10-13 Sat 12:32]
+** ~Pattern~, ~PatternSyntaxException~, and ~Matcher~ - 215
+   - /Regular expression/ is also known as /regex/ or /regexp/.
+
+   - /regex/ is a string-based pattern that
+     _REPRESENTS_ the set of strings that match this pattern.
+
+     This /pattern/ contains
+     + /literal characters/
+     + /metacharacters/
+
+   - The Regular Expressions API provides the ~java.util.regex.Pattern~
+     class to _represent patterns via compiled regexes._
+       
+     /Compiled regexes/ are much faster than the non-compiled counterparts.
+
+** Character Classes - 221
+** Capturing Groups - 223
+** Boundary Matchers and Zero-Length Matches - 224
+** Quantifiers - 225
+** Practical Regular Expressions - 228
+** DONE Summary - 230
+   CLOSED: [2018-10-13 Sat 12:32]
+   - Java supports regular expressions by, through NIO, providing the ~Pattern~,
+     ~PatternSyntaxException~, and ~Matcher~ classes. We explored them in this
+     chapter.
+
+   - We also learned about /character classes/, /capturing groups/, /boundary
+     matchers/ and /zero-length matches/, and /quantifiers/.
+
+* TODO Chapter 10: Charsets - 231
+** A Brief Review of the Fundamentals - 231
+** Working with Charsets - 232
+** Charsets and the ~String~ Class - 239
+** Summary - 241
+
+* TODO Chapter 11: Formatter - 243
+** Exploring ~Formatter~ - 243
+** Exploring ~Formattable~ and ~FormattableFlags~ - 249
+** Summary - 255
+
+* Part IV: More New I/O APIs - 257
+* TODO Chapter 12: Improved File System Interface - 259
+** Architecting a Better File Class - 259
+*** File Systems and File System Providers - 261
+
+** Locating Files with Paths - 263
+*** Getting a Path and Accessing Its Name Elements - 264
+*** Relative and Absolute Paths - 267
+*** Normalization, Relativization, and Resolution - 269
+*** Additional Capabilities - 271
+
+** Performing File System Tasks with Files - 273
+*** Accessing File Stores - 273
+*** Managing Attributes - 276
+*** Managing Files and Directories - 305
+*** Managing Symbolic and Hard Links - 343
+*** Walking the File Tree - 351
+*** Working with Additional Capabilities - 370
+
+** Using Path Matchers and Watch Services - 373
+*** Matching Paths - 374
+*** Watching Directories - 377
+
+** Summary - 386
+
+* TODO Chapter 13: Asynchronous I/O - 387
+** Asynchronous I/O Overview - 388
+** Asynchronous File Channels - 390
+** Asynchronous Socket Channels - 395
+*** AsynchronousServerSocketChannel - 396
+*** AsynchronousSocketChannel - 403
+
+** Asynchronous Channel Groups - 410
+*** What About AsynchronousFileChannel? - 413
+
+** Summary - 415
+
+* TODO Chapter 14: Completion of Socket Channel Functionality - 417
+  Completion of *socket channel functionality* is JDK 7's final contribution to
+  /NIO.2/.
+
+  - The ~java.nio.channels~ package's ~DatagramChannel~, ~ServerSocketChannel~,
+    and ~SocketChannel~ classes have been extended to SUPPORT *binding and
+    option configuration*. =TODO= =???=
+
+  - Also, /channel-based multicasting/ is supported.
+
+  =TODO=
+  This chapter wraps up the book by introducing you to these capabilities.
+
+** Binding and Option Configuration - 417
+** Channel-Based Multicasting - 422
+** Summary - 428
+
+* TODO Part V: Appendices - 429
+* TODO Appendix A: Answers to Exercises - 431
+** Chapter 1: I/O Basics and APIs - 431
+** Chapter 2: File - 432
+** Chapter 3: RandomAccessFile - 435
+** Chapter 4: Streams - 436
+** Chapter 5: Writers and Readers - 444
+** Chapter 6: Buffers - 446
+** Chapter 7: Channels - 449
+** Chapter 8: Selectors - 453
+** Chapter 9: Regular Expressions - 453
+** Chapter 10: Charsets - 455
+** Chapter 11: Formatter - 457
+** Chapter 12: Improved File System Interface - 458
+** Chapter 13: Asynchronous I/O - 471
+** Chapter 14: Completion of Socket Channel Functionality - 475
+
+* TODO Appendix B: Sockets and Network Interfaces - 481
+  - We have some pre-knowledge:
+    + Chapter 7
+      introduced the concept of a /peer socket/, which is a /socket/ that is
+      *associated with a /channel/.*
+
+    + Chapter 14
+      introduced the concept of a /network interface/.
+
+  - This appendix introduces
+    + /sockets/
+    + /network interfaces/
+    + the _APIs for interacting with these networking features_.
+
+** Sockets - 482
+*** Socket Addresses - 484
+*** Socket Options - 486
+*** Socket and ServerSocket - 488
+*** DatagramSocket and MulticastSocket - 495
+
+** Network Interfaces - 503
+** Using Network Interfaces with Sockets - 511
+
+* TODO Index - 513

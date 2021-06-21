@@ -1,0 +1,1635 @@
+#+TITLE: Programming Scala
+#+SUBTITLE: Scalability = Functional Programming + Objects
+#+VERSION: 3rd, June 2021
+#+AUTHOR: Dean Wampler
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Foreword
+** Foreword, Third Edition
+** Foreword, First and Second Edition
+   
+* Preface
+** Welcome to Programming Scala, Third Edition
+*** How to Read This Book
+    
+** Welcome to Programming Scala, Second Edition
+** Welcome to Programming Scala, First Edition
+** Conventions Used in This Book
+** Using Code Examples
+*** Getting the Code Examples
+    
+** O’Reilly Online Learning
+** How to Contact Us
+** Acknowledgments for the Third Edition
+** Acknowledgments for the Second Edition
+** Acknowledgments for the First Edition
+   
+* TODO 1. Zero to Sixty: Introducing Scala
+** Why Scala?
+*** The Appeal of Scala
+*** Why Scala 3?
+*** Migrating to Scala 3
+    
+** Installing the Scala Tools You Need
+** Building the Code Examples
+** More Tips
+*** Using sbt
+*** Running the Scala Command-Line Tools Using sbt
+    
+** A Taste of Scala
+** A Sample Application
+** Recap and What’s Next
+    
+* DONE 2. Type Less, Do More
+  CLOSED: [2021-06-17 Thu 00:52]
+** DONE New Scala 3 Syntax—Optional Braces
+   CLOSED: [2021-06-15 Tue 14:35]
+   - The indentation syntax and the old curly braces based syntax can be mixed,
+     and the parser can automatically identify them:
+     * If you omit braces, then indentation is significant.
+
+   - Enforce no indentation: ~-no-indent~
+   - Enforce indentation: ~-indent~
+
+   - Enforce new syntax for control structures: ~-new-syntax~
+   - Enforce old syntax for control structures: ~-old-syntax~
+       
+   - The flag for auto rewrite: ~-rewrite~
+
+   - =from Jian=
+     Currently (2021-06-15), I personally prefer the combination of ~-no-indent~
+     and ~-new-syntax~.
+
+   - Optional end markers.
+     They can be used to *end*
+     * ~if~
+     * ~while~
+     * ~for~
+     * ~match~
+     * ~try~
+     * ~new~
+     * ~this~
+     * ~val~
+     * ~given~
+     * ~extension~
+   
+** DONE Semicolons
+   CLOSED: [2021-06-15 Tue 14:37]
+** DONE Variable Declarations
+   CLOSED: [2021-06-15 Tue 14:54]
+   - *TIP*
+     Avoid using /mutable types/ like ~Array~, as mutation is a common source of
+     bugs in concurrent programs.
+     * =from Jian=
+       The conslution is right, but "Avoid using /mutable types/" in not always
+       a good way, repalce "Avoid using" with "Reduce the usages of" is better.
+       
+     * =from Jian=
+       Especially, we can avoid using ~Array~ -- Scala 3 introduces an alias of
+       it through the /opaque type/ feature: ~IArray~.
+         ~Array~, because of its mutability, is /invariant/,
+         WHILE ~IArray~ is /covariant/.
+
+   - A ~val~ *must be initialized when it is declared*,
+     *EXCEPT* in certain contexts like /abstract fields/ in /type declarations/.
+     * =from Jian=
+       This is different from Java's ~final~ variable declaration, which can be
+       assigned (initialized) ONLY once, but may not at the declaration site!
+     
+** DONE Ranges
+   CLOSED: [2021-06-15 Tue 15:20]
+   - You can create ranges for several types:
+     * ~Int~
+     * ~Long~
+     * ~Char~
+     * ~BigInt~, which represent _integers of arbitrary size_
+     * ~BigDecimal~, which represents _floating-point numbers of arbitrary size._
+     
+** DONE Partial Functions
+   CLOSED: [2021-06-15 Tue 15:35]
+   A ~PartialFunction[A, B]~ is a special kind of function with its own /literal
+   syntax/.
+
+   - =from Jian=
+     Distinguish /partial function/ and /function partial application/.
+
+   - *Combine* /partial functions/:
+     #+begin_src scala
+       val pfs: PartialFunction[Matchable, String] =
+         case s:String => "YES"
+       
+       val pfd: PartialFunction[Matchable, String] =
+         case d:Double => "YES"
+       
+       val pfsd = pfs.orElse(pfd)
+     #+end_src
+
+   - We can
+     * Lift a /partial function/ into a /regular (total) function/.
+       #+begin_src scala
+         val fs = pfs.lift
+         // val fs: Any => Option[String] = <function1>
+         
+         fs("str")
+         // val res0: Option[String] = Some(YES)
+         
+         fs(3.142)
+         // val res1: Option[String] = None
+       #+end_src
+
+     * Unlift a /regular (total) function/ into a /partial function/.
+       #+begin_src scala
+         def tryPF(x: Matchable, f: PartialFunction[Matchable, String]): String =
+           try f(x)
+           catch case _: MatchError => "ERROR!"
+         
+         val pfs2 = fs.unlift
+         // val pfs2: PartialFunciton[Any, String] = <funciton1>
+         
+         pfs2("str")
+         // val res3: String = YES
+         
+         tryPF(3.142, pfs2)
+         // val res4: String = ERROR!
+       #+end_src
+   
+** DONE Method Declarations
+   CLOSED: [2021-06-15 Tue 16:52]
+*** DONE Method Default and Named Parameters
+    CLOSED: [2021-06-15 Tue 15:37]
+*** DONE Methods with Multiple Parameter Lists
+    CLOSED: [2021-06-15 Tue 16:43]
+    - ~-language:experimental.fewerBraces~
+      * =from Jian=
+        From Scala 3.0.1-RC1 on, /experimental features/ can only be used in the
+        NIGHTLY versions -- this is mentioned in
+        [[https://dotty.epfl.ch/blog/2021/06/07/scala3.0.1-rc1-release.html][Scala 3.0.1-RC1 – further stabilising the compiler]]
+
+      
+**** DONE A Taste of Futures
+     CLOSED: [2021-06-15 Tue 16:43]
+     
+*** DONE Nesting Method Definitions and Recursion
+    CLOSED: [2021-06-15 Tue 16:52]
+    
+** DONE Inferring Type Information
+   CLOSED: [2021-06-15 Tue 17:10]
+   - Some FP languages, like _Haskell_, can *infer almost all* types because
+     they do global type inference.
+       _Scala_ *CAN'T* do this, in part because it has to support /subtype
+     polymorphism/ for /object-oriented inheritance/, which makes type inference
+     harder.
+
+   - *Overloaded* or *recursive* /method/ apply needs /return type/.
+
+   - *When Explicit Type Annotations Are Required*
+     In practical terms, you have to provide /EXPLICIT type declarations/ for the
+     following situations in Scala:
+     * *Abstract ~var~ or ~val~ declarations* in an /abstract class/ or /trait/.
+
+     * *All* /method parameters/ (e.g., ~def deposit(amount: Money) = …~).
+
+     * /Method return types/ in the following cases:
+       + When you _explicitly call_ ~return~ in a /method/ (*even at the end*).
+
+       + When a /method/ is *recursive*.
+
+       + When two or more methods are /overloaded/ (have the same name) and one of
+         them calls another. The calling method needs a return type declaration.
+
+       + When the /inferred return type/ would be *more general than you intended
+         (e.g., ~Any~).*
+         - This case is somewhat rare, fortunately.
+     
+** DONE Repeated Parameter Lists
+   CLOSED: [2021-06-15 Tue 17:15]
+   Scala 3.0 allows the Scala 2 syntax ~(ds: _*)~ syntax as well, for /backward
+   compatibility/, BUT *not Scala 3.1*.
+     
+** DONE Language Keywords - =???=
+   CLOSED: [2021-06-15 Tue 17:32]
+   - _All_ of the /soft keywords/ are *new* in Scala 3,
+     but _NOT ALL_ new keywords are /soft/, such as ~given~ and ~then~.
+     * The _REASON_ for treating most of them as /soft/ is to
+       *avoid breaking older code* that happens to use them as identifiers.
+
+   - Table 2-1 build the connections between keywords and sections in this book.
+     =Important= =RE-READ= =READ CORRESPONDING SECTIONS=
+     *  =???= =IMPORTANT=
+       I don't think ~requires~ is a keyword in Scala 2 -- double check later!!!!
+       ==???==
+       ==???==
+       ==???==
+       ==???==
+       ==???==
+    
+** DONE Literal Values
+   CLOSED: [2021-06-16 Wed 23:30]
+*** DONE Numeric Literals
+    CLOSED: [2021-06-16 Wed 21:43]
+    #+begin_src scala
+      val i: Int = 123                       // decimal
+      val x: Long = 0x123L                   // hexadecimal (291 decimal)
+      val f: Float = 123_456.789F            // 123456.789
+      val d: Double = 123_456_789.0123       // 123456789.0123
+      val y: BigInt = 0x123_a4b              // 1194571
+      val z: BigDecimal = 123_456_789.0123   // 123456789.0123
+    #+end_src
+
+    - =from Jian=
+      Currently, there is no prefix ~0b~ or ~0o~.
+    
+    - Scala allows _underscores_ to make long numbers easier to read.
+      They can appear anywhere in the literal (except between ~0x~), not just
+      between every third character.
+
+    - Table 2-2. Ranges of allowed values for integer literals (boundaries are inclusive)
+      * =IMPORTANT=
+        A /compile-time error/ occurs if an /integer literal/ is _outside these ranges_.
+
+    - =TODO= 
+      Scala 3 introduced a mechanism to allow using /numeric literals/ for library
+      and _user-defined types_ like ~BigInt~ and ~BigDecimal~. It is implemented with
+      a /trait/ called ~FromDigits~.
+      * =footnote 4=
+        “Internal DSLs” shows an example for a custom Money type.
+      
+*** DONE Boolean Literals
+    CLOSED: [2021-06-16 Wed 21:43]
+*** DONE Character Literals
+    CLOSED: [2021-06-16 Wed 21:54]
+    - A /character literal/ is
+      * either a /printable Unicode character/
+      * or an /escape sequence/, written between single quotes.
+        
+    - A character with a Unicode value between 0 and 255 may also be represented
+      by an /octal escape/; that is, a backslash (\) followed by a sequence of up
+      to *three* octal characters.
+
+    - /octal escape/ example: ~'012'~ is equivalent to ~'\n'~
+
+    - More general /escape sequence/ are hex sequence in the range ~\u{0000-FFFF}~.
+
+    - Table 2-3. Character escape sequences
+
+    - It is a /compile-time error/
+      if a backslash character in a character or /string literal/ does not start
+      a VALID /escape sequence/.
+
+    - _Releases of Scala before 2.13_ allowed THREE *Unicode arrow characters* to
+      be used instead of two-character ASCII equivalents: ⇒ for =>, → for ->,
+      and ← for <-.
+      * *These Unicode arrow characters alternatives are now DEPRECATED*!!!
+        =IMPORTANT=
+      
+*** DONE String Literals
+    CLOSED: [2021-06-16 Wed 23:30]
+    - string literal :: a sequence of characters enclosed in
+      * double quotes
+        or
+      * triples of double quotes
+
+    - =TODO= NOTE
+      /Triple-quoted string literals/ support /multiline strings/; the /line feeds/
+      will be part of the string.
+      * They can *include any* characters, including one or two double quotes
+        together, *but not* three together.
+
+      * They are useful for
+        + _strings with backslash (\) characters that don’t form valid Unicode_
+          or
+        + /escape sequences/ (those listed in Table 2-3).
+          /Regular expressions/, which use lots of /escaped characters/ with special
+          meanings, are a good example. Conversely, if /escape sequences/ appear,
+          they aren't interpreted.
+
+    - ~stripMargin~ example:
+      #+begin_src scala
+        // src/script/scala/progscala3/typelessdomore/MultilineStrings.scala
+        val welcome = s"""Welcome!
+        |   Hello!
+        |   * (Gratuitous Star character!!)
+        |   |This line has a margin indicator.
+        |   |  This line has some extra whitespace.""".stripMargin
+        
+        // val welcome: String = Welcome!
+        //   Hello!
+        //   * (Gratuitous Star character!!)
+        // This line has a margin indicator.
+        //   This line has some extra whitespace.
+      #+end_src
+      * Use can use a _margin marker_ that is different from ~|~, and then you
+        can use an overloaded ~stripMargin~ function, which can take a ~Char~
+        type parameter and you can pass your _margin marker_.
+
+    - ~stripPrefix~ and ~stripSuffix~:
+      #+begin_src scala
+        "<hello> <world>".stripPrefix("<").stripSuffix(">")
+        // val res0: String = hello> <world
+      #+end_src
+      
+*** DONE Symbol Literals
+    CLOSED: [2021-06-16 Wed 21:58]
+    Scala 3 *deprecated* /symbol literals/.
+
+    - The /symbol literals/ is still supported in Scala 3.0 if the import clause
+      is added:
+      ~import language.deprecated.symbolLiterals~
+    
+    - BEST PRACTICE:
+      Use the ~Symbol~ constructor to build /symbols/.
+    
+*** DONE Function Literals
+    CLOSED: [2021-06-16 Wed 21:59]
+    Example:
+    #+begin_src scala
+      val f1: (Int, Double) => String = (i, d) => (i + d).toString
+      val f2: Funciton2[Int, Double, String] = (i, d) => (i + d).toString
+    #+end_src
+    
+** DONE Tuples - =Notice a Scala3 defect!!!=
+   CLOSED: [2021-06-16 Wed 02:46]
+   - Indexing syntax:
+     * BESIDE the tuples _1-based indexing syntax_, ~_1~, ~_2~, etc.,
+     * _Scala 3_ adds the ability to access the elements like we can access
+       elements in arrays and sequences, with *zero-based indexing*.
+
+   - Scala 3 add Shapeless ~HList~-like syntax to tuples.
+     #+begin_src scala
+       val pair = (1, "two")
+       val pairTail: String *: scala.Tuple$package.EmptyTuple.type = pair.tail
+       val emptyTuple: EmptyTuple.type = ()
+     #+end_src
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+     =Add an issue to _lampepfl/dotty_: the type of `pairTail` is not good!=
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+     
+** DONE ~Option~, ~Some~, and ~None~: Avoiding Nulls
+   CLOSED: [2021-06-16 Wed 23:39]
+   - *TIP*
+     
+*** When You Really Can’t Avoid Nulls
+    Mark the ~Null~ explicitly with /union types/.
+    If you only do this, it's just a reminder to the future programmer (maybe
+    yourself). To get th full power, you can use the compiler flag:
+    ~-Yexplicit-nulls~.
+      However, this ~-Yexplicit-nulls~ is _experimental_ because the Scala
+    compiler team is still developing this feature, so *AVOID it in production
+    code.*
+
+    - =from Jian=
+      =NEED DOUBLE CHECK=
+      I remember this is *not* _formal experimental_, which can only be used in
+      NIGHTLY version.
+    
+** DONE Sealed Class Hierarchies and Enumerations
+   CLOSED: [2021-06-17 Thu 00:22]
+   - =from Jian=
+     The ~enum~ is a /syntactic sugar/, and when it translated to the core
+     language of Scala 3, its /variants/ will always be translated as singletons
+     or ~final~. This is better than the variants of ~seald class~'es or ~sealed
+     trait~'s, which by default are not ~final~, and can be extended.
+     * However, this also means if you want multiple hierarchies, you can't use
+       ~enum~.
+       =from Jian= =TODO= verify this.
+   
+   - =from Jian=
+     Another import thing is ~enum~ is created for building ADTs, and, in /type
+     inference/, its /variants/ will be inferred as this ~enum~ type, not the
+     /vairants/ theirselves.
+       On the other hand, for ~sealed class~ or ~sealed trait~ hierarchies, the
+     types of their subtypes won't be widden.
+
+   - =from Jian=
+     Conclusion:
+     - Always use ~enum~ when you need ADTs.
+
+     - ~sealed class~ and ~sealed trait~ are not a good designed for ADTs.
+       * In Scala 2, you have to use them to define ADTs.
+
+       * In Scala 3, use them only for subtypes and OO designs -- when you need
+         subtyping polymorphism. Leave ADTs to ~enum~.
+         
+       * In Scala 2, when using ~sealed class~ and ~sealed trait~, don't forget
+         to manually add ~final~ when the design really means ~final~! People
+         often forget to add enough ~final~'s. Which make these ~sealed~ leak to
+         the outside of their source file -- people can declare subtypes in
+         another source file, inherit the subtype of a ~sealed class~ and
+         ~sealed trait~, and extend a ~sealed class~ or ~sealed trait~
+         indirectly.
+           However, this defect has been fixed in Scala 3. In Scala 3, if one
+         _class/trait_ wants to extends another /class/ in a separate file, no
+         ~sealed~ is not enough, and the being extended /class/ must be marked
+         as ~open~, or else it is will be considered *effective final* outside
+         its source file. Of course, it is not really ~final~, and it can be
+         extended in its source file without the help of ~open~.
+         + ~open~ means *open to the other source files*!
+
+         + Use the compiler flag ~-language:adhocExtensions~ or per file import
+           ~scala.language.adhocExtensions~ can use the Scala 2 style extends.
+           *DON'T USE IT!!!*
+           *The Scala 3 way is current BEST PRACTICE!!!*
+   
+** DONE Organizing Code in Files and Namespaces
+   CLOSED: [2021-06-17 Thu 00:33]
+   - Scala has a /package/ concept for /namespaces/.
+
+   - Scala /package/ was inspired by /packages/ in Java,
+     (=from Jian= =TODO= =TODO=
+     for the following two points, the 1st is different from Java,
+     I'm not sure about the 2nd: does a Java project /package structure/ must
+     match its /directory structure/???)
+     * _filenames_ *do NOT* have to match the _type names_,
+     * the /package structure/ *does NOT* have to match the /directory structure/.
+       So you can define /packages/ in files independent of their “physical” location.
+
+   - The /root package/ is the first part in the package path.
+     For example, 
+     * The /root package/ of ~com.example.pkg1.Class11~ is ~com~
+     * The /root package/ of most Scala 3 standard library packages is ~scala~.
+       + =from Jian=
+         I remember there are also ~dotty~ /root package/ for the Scala 3
+         standard library packages.
+     
+   - Although the /package declaration syntax/ is *flexible*,
+     * _One LIMITATION_ exists:
+       /packages/ *cannot* be defined within /classes/ and /objects/, which
+       wouldn't make much sense anyway.
+     
+** DONE Importing Types and Their Members
+   CLOSED: [2021-06-17 Thu 00:39]
+   - TIP:
+     The author prefer to write down the /root package/ name when he import Scala
+     standard libraries to avoid misleading/confused imports.
+
+   - If an object is named as ~*~, and you need to import it, try to import it
+     with the help of _backticks_: ~import package0.package1.packagen.`*`~.
+     
+*** Package Imports and Package Objects
+    /Package objects/ are still supported in Scala 3, but they are _deprecated_.
+    
+** TODO Parameterized Types Versus Abstract Type Members - =RE-READ=
+   =TODO=
+   =TODO=
+   =TODO=
+   
+   =MORE NOTE=
+   /family polymorphism/ or /covariant specialization/.
+   
+** DONE Recap and What’s Next
+   CLOSED: [2021-06-17 Thu 00:52]
+    
+* DONE 3. Rounding Out the Basics
+  CLOSED: [2021-06-19 Sat 15:02]
+** DONE Defining Operators
+   CLOSED: [2021-06-18 Fri 11:40]
+   - To avoid excessive use, Scala 3 *deprecates* the use of _infix operator
+     notation_ for /methods/ with
+     * alphanumeric names,
+     * meaning names that contain letters,
+     * numbers,
+     * ~$~, and
+     * ~_~ characters.
+
+   - However, exceptions are allowed if one of the following is true:
+     * The method is declared with the ~infix~ keyword.
+     * The method was compiled with _Scala 2_.
+     * Use of the method is followed with _an opening curly brace_.
+     * The method is invoked with _backticks_.
+
+   - A _deprecation warning_ will be issued otherwise, but *only starting with
+     _Scala 3.1_,* to ease migration.
+
+   - Because the Scala 2 library is used by Scala 3.0, all the common uses of
+     /infix notation/, such as methods on collections like ~map~ and ~foreach~,
+     * _will work as before,_
+     * *BUT* _the long-term goal is to greatly reduce this practice._
+
+   - The names declared by the ~@targetName~ annotation *guide bytecode
+     generation*. You can't use those names in your Scala code.
+     * =from Jian=
+       Can those names be used if they are from a dependency jar (in bytecode)?
+       =TODO=
+       The book says the answer is not.
+       =TODO= I need to try to verify this.
+
+   - ~@targetName~ and ~infix~ are only for /methods/, and
+     they can be applied on /types/.
+     #+begin_src scala
+       // src/script/scala/progscala3/rounding/InfixType.scala
+       import scala.annotation.targetName
+       
+       @targetName("TIEFighter") case class <+>[A, B](a: A, b: B)
+       val ab1: Int <+> String = 1 <+> "one"
+       val ab2: Int <+> String = <+>(1, "one")
+       
+       infix case class tie[A, B](a: A, b: B)
+       val ab3: Int tie String = 1 tie "one"
+       val ab4: Int tie String = tie(1, "one")
+     #+end_src
+
+   - Use the ~@targetName~ annotation to work around a problem with /JVM type
+     erasure/ in /methods overloading/ when /generic types/ show up in
+     /parameter types/.
+     #+begin_src scala
+       object O:
+         def m(is: Seq[Int]): Int = is.sum
+         def m(ss: Seq[String]): Int = ss.length
+       
+       // 3 |  def m(ss: Seq[String]): Int = ss.length
+       //   |      ^  |Double definition:
+       //   |def m(is: Seq[Int]): Int in object O at line 2 and
+       //   |def m(ss: Seq[String]): Int in object O at line 3
+       //   |have the same type after erasure.
+       //   |
+       //   |Consider adding a @targetName annotation to one of the conflicting definitions
+       //   |for disambiguation.
+     #+end_src
+     * Follow the guide in the error message, re-write:
+       #+begin_src scala
+         // src/script/scala/progscala3/rounding/TypeErasureTargetNameFix.scala
+         import scala.annotation.targetName
+         
+         object O:
+           @targetName("m_seq_int")
+           def m(is: Seq[Int]): Int = is.sum
+         
+           @targetName("m_seq_string")
+           def m(ss: Seq[String]): Int = ss.length
+       #+end_src
+
+     * =TIP=
+       You don't need to apply ~@targetName~ to all these /methods/.
+       In general, apply ~@targetName~ to N - 1 /methods/ when _overloaded N
+       methods_.
+       
+** DONE Allowed Characters in Identifiers
+   CLOSED: [2021-06-19 Sat 01:31]
+   - Characters :: ...
+
+   - Keywords can't be used ::
+     * Check the list in a previous subsection: "Language Keywords"
+       + =from Jian=
+         You can use soft keywords as identifiers, but this is not encouraged. 
+
+     * Don't forget that ~_~ is a keyword!!!
+
+   - Plain identifiers -- combinations of letters, digits, $, _, and operators ::     
+     * plain identifier :: begin with a /letter/ or /underscore/, followed by more
+                           letters, digits, underscores, and dollar signs.
+                           Unicode-equivalent characters are also allowed.
+
+     * Scala reserves the /dollar sign/ for internal use, so you shouldn’t use it
+       in your own identifiers, although this isn’t prevented by the compiler.
+
+     * After an /underscore/, you can have
+       + either letters and digits,
+       + or a sequence of operator characters.
+
+       *This underscore is important.* It tells the compiler to treat all the
+       characters up to the next whitespace as part of the identifier.
+       + For example,
+         - ~val xyz_++= = 1~ assigns the variable ~xyz_++=~ the value ~1~,
+         - WHILE the expression ~val xyz++= = 1~ *won't compile*
+           because the identifier could also be interpreted as ~xyz ++=~, which
+           looks like an attempt to append something to ~xyz~.
+
+           * Similarly, if you have /operator characters/ after the /underscore/,
+             you *can't mix* them with /letters/ and /digits/.
+             + This restriction prevents ambiguous expressions like this:
+               ~abc_-123~. Is that an identifier ~abc_-123~ or an attempt to
+               subtract ~123~ from ~abc_~?
+
+   - Plain identifiers -- operators ::
+     If an identifier *begins with* an /operator character/,
+     the rest of the characters *must be* /operator characters/.
+      
+   - Backtick literals :: =RE-READ This NOTE=
+     An /identifier/ can also be an *arbitrary string between two backtick characters.*
+     * Possible and reasonable usages:
+       + Declare variable names or method names that _include spaces_ *for tests*.
+         - Example: ~def `test that addition works` = assert(1 + 1 == 2)~
+         - Of course, you can use this technique for non-tests related names, but WHY?
+           In practice,
+           * use names that include spaces is not convinient.
+           * For /tests/, you often need long and descriptive names, and you don't
+             need to invoke these names manually -- testing frameworks can help.
+
+       + Invoke a method or variable in a *non-Scala API* when the name is
+         identicial to a /Scala keyword/ -- e.g. ~java.net.Proxy.`type`()~.
+ 
+   - Pattern-matching identifiers ::
+     * Names with a lowercase letter as the first letter: /variable identifiers/.
+     * Names with an uppercase letter as the first letter: /constant identifiers/.
+       + All backticks surrounded variables are considered as /constant identifiers/.
+     
+** DONE Methods with Empty Parameter Lists
+   CLOSED: [2021-06-19 Sat 01:32]
+** DONE Operator Precedence Rules
+   CLOSED: [2021-06-19 Sat 01:59]
+   - Here they are in order from lowest to highest precedence:
+     1. All letters
+     2. |
+     3. ^
+     4. &
+     5. < >
+     6. = !
+     7. :
+     8. + -
+     9. * / %
+     10. All other special characters
+
+   - In the above list, characters on the same line have the same precedence.
+     * An *EXCEPTION*:
+       ~=~ when it's used for /assignment/, in which case it has the /lowest precedence/.
+
+   - *Tip*
+     Any method whose name *ENDS with* a ~:~ binds to the right, NOT the left, in
+     /infix operator notation/.
+     #+begin_src scala
+       val seq = Seq('b', 'c', 'd')
+       
+       val seq_i = 'a' +: seq
+       val seq_j = seq.+:('a')
+       
+       assert(seq_i.sameElements(seq_j))
+     #+end_src
+     =from Jian= =IMPORTANT= =I KNOW THIS, BUT OFTEN FORGET!=
+     You can see when you call ~+:~ through a traditional method call syntax, you
+     need to use a different order:
+     ~+:~ is the method of ~Seq~, not necessarily the method of the element of a
+     ~+:~.
+     
+** DONE Enumerations and Algebraic Data Types
+   CLOSED: [2021-06-19 Sat 02:31]
+   - The ~.values~ method of enumerations don't return enumeration variant values
+     in the ~.ordinal~ order. If you need this order, you need to call
+     ~sortBy(_.ordinal)~ on ~.values~.
+     
+** DONE Interpolated Strings
+   CLOSED: [2021-06-19 Sat 02:26]
+   - *THREE* kinds of interpolated strings in the Scala 3 standard library.
+     * s interpolator
+       #+begin_src scala
+         val name = "Buck Trends"
+         println(s"Hello, $name")
+         // Hello, Buck Trends
+       #+end_src
+
+     * f interpolator =RE-READ= =Learn more about ~Formatter~=
+       This provides Java ~printf~-style formatting.
+       #+begin_src scala
+         val gross   = 100000F
+         val net     = 64000F
+         val percent = (net / gross) * 100
+       
+         println(f"$$${gross}%.2f vs. $$${net}%.2f or ${percent}%.1f%%")
+         // $100000.00 vs. $64000.00 or 64.0%
+       #+end_src
+       + Scala uses Java's [[https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Formatter.html][Formatter]] /class/ for ~printf~ formatting.
+         The embedded references to expressions use the same ~${...}~ syntax as before,
+         but ~printf~ formatting directives _trail them with no spaces._
+
+       + The ~$$~ and ~%%~ in the interpolator are used for escaping.
+         When printing out, ~$$~ will be $, and ~%%~ will be %.
+
+       + The /type/ part of in the _format string_ (the ~%~ start substrings that
+         follows the ~}~) must be right, or else there will be /compilation errors/.
+         - Of course, /implicit conversion/ can _RALEX this constraint._
+
+     * raw interpolator
+       #+begin_src scala
+         val name = "Dean Wampler"
+         // val name: String = "Dean Wampler"
+       
+         val multiLine = s"123\n$name\n456"
+         // val multiLine: String = 123
+         // Dean Wampler
+         // 456
+       
+         val multiLineRaw = raw"123\n$name\n456"
+         // val multiLineRaw: String = 123\nDean Wampler\n456
+       #+end_src
+   
+   - =TODO=
+     Read the _"Build Your Own String Interpolator"_ section.
+   
+** DONE Scala Conditional Expressions
+   CLOSED: [2021-06-19 Sat 02:01]
+** DONE Conditional and Comparison Operators
+   CLOSED: [2021-06-19 Sat 02:03]
+   - Value equality and inequality check:
+     * ~==~ or ~equals~
+     * ~!=~
+
+   - Identity equality and inequality check:
+     * ~eq~
+     * ~ne~
+     
+** DONE ~for~ Comprehensions
+   CLOSED: [2021-06-19 Sat 10:59]
+   - The term /comprehension/ comes from /set theory/ and has been used in several
+     FP languages.
+
+   - Comprehension :: define a set or other collection by enumerating the members
+     explicitly or by specifying the properties that all members satisfy.
+     
+*** DONE ~for~ Loops
+    CLOSED: [2021-06-19 Sat 10:30]
+*** DONE Generators
+    CLOSED: [2021-06-19 Sat 10:32]
+    The expression like ~i <- 0 until 10~ is called a /generator/.
+
+    - =from Jian=
+      When you want to use /pattern matching/ to *implicitly* (Here, "implicitly"
+      means not use the ~if condition~ guard -- the syntax mentioned in the
+      following section) filter out some elements from a generator,
+      * in Scala 3
+        + when using the compiler flag ~-source:future~,
+          you must write ~case pattern <- ...~
+          
+        + when not using the compiler flag ~-source:future~,
+          the ~case~ is optional.
+          =from Jian= Not the best practice, and don't do this.
+
+      * in Scala 2,
+        the only way to write this implicit filter is ~pattern <- ...~.
+        + If you set the ~-Xsource:3~ flag, you can add ~case~ before patterns.
+    
+*** DONE Guards: Filtering Values
+    CLOSED: [2021-06-19 Sat 10:34]
+*** DONE Yielding New Values
+    CLOSED: [2021-06-19 Sat 10:34]
+*** DONE Expanded Scope and Value Definitions
+    CLOSED: [2021-06-19 Sat 10:43]
+    
+** DONE Scala ~while~ Loops
+   CLOSED: [2021-06-19 Sat 02:04]
+** DONE Using ~try~, ~catch~, and ~finally~ Clauses
+   CLOSED: [2021-06-19 Sat 02:42]
+   - =from Jian=
+     I think I don't need to take notes about this topic.
+     However, I want to mention some useful technique used in this section code
+     examples.
+
+   - ~scala.util.control.NonFatal~:
+     #+begin_src scala
+       try
+         // ...
+       catch
+         case NonFatal(ex) => println(s"Non fatal exception! $ex")
+       finally
+         // ...
+     #+end_src
+     ~NonFatal~ is the supertype of many non-fatal exceptions.
+     * =TODO=
+       The Scala 3 standard library API document for ~NonFatal~, an ~object~:
+       #+begin_quote
+       */Extractor/ of non-fatal /Throwables/.*
+       Will not match _fatal errors_ like ~VirtualMachineError~ (for example,
+       ~OutOfMemoryError~ and ~StackOverflowError~, /subclasses/ of
+       ~VirtualMachineError~), ~ThreadDeath~, ~LinkageError~,
+       ~InterruptedException~, ~ControlThrowable~.
+
+       Note that ~scala.util.control.ControlThrowable~, an *internal* ~Throwable~,
+       is NOT matched by ~NonFatal~ (and would therefore be thrown).
+       #+end_quote
+     
+   - ~import scala.compiletime.uninitialized~
+     
+** DONE Call by Name, Call by Value
+   CLOSED: [2021-06-19 Sat 11:05]
+** DONE Lazy Values
+   CLOSED: [2021-06-19 Sat 11:38]
+   - ~lazy val~'s are useful when:
+     * *The expression is expensive* (e.g., opening a database connection) and
+       you want to avoid the overhead until the value is actually needed, which
+       could be never.
+
+     * You want to *improve startup times* for modules by deferring work that
+       isn't needed immediately.
+
+     * A field in an instance needs to be initialized lazily so that other
+       initializations can happen first.
+       + We'll explore the last scenario when we discuss
+         _“Initializing Abstract Fields”._
+
+   - *One-time evaluation MAKES LITTLE SENSE for a _mutable field_.*
+     Therefore, the ~lazy~ keyword is *NOT allowed* on ~var~'s.
+
+   - The mechanism of the ~lazy val~'s evaluation:
+     *Lazy values are implemented with the equivalent of a guard.*
+     When client code references a lazy value, the reference is intercepted by
+     the guard to check if initialization is required. This guard step is really
+     only essential the first time the value is referenced, so that the value is
+     initialized first before the access is allowed to proceed.
+     * *UNFORTUNATELY*,
+       _there is no easy way to eliminate these checks for subsequent calls._
+       *So lazy values incur /overhead/ that /eager values/ don't.* Therefore,
+       you should only use lazy values when initialization is expensive,
+       especially if the value may not actually be used.
+         There are also some circumstances where careful ordering of initialization
+       dependencies is most easily implemented by making some values lazy (_see
+       “Initializing Abstract Fields”_). =TODO= =TODO= =TODO=
+
+   - =TODO= =LEARN MORE=
+     There is a ~@threadUnsafe~ annotation you can add to a ~lazy val~ (in package
+     ~scala.annotation~). It causes the _initialization to use a faster mechanism
+     that is not thread-safe,_ so *use it with caution.*
+     
+** DONE Traits: Interfaces and Mixins in Scala
+   CLOSED: [2021-06-19 Sat 14:44]
+   - *Warning*
+     _Be very careful about *overriding* concrete methods!_
+
+   - *Tip*
+     A corollary is this:
+     when declaring an /abstract field/ in a /supertype/, consider using a
+     /no-parameter method declaration/ instead -- this gives /concrete
+     implementations/ _greater flexibility_ to use either a ~val~ or a /method/
+     to implement it.
+     
+** DONE When ~new~ Is Optional
+   CLOSED: [2021-06-19 Sat 15:02]
+   - Scala 3 extends the /case-class/ scheme to *all* /concrete classes/:
+     It generates a /synthetic object/ with ~apply~ methods corresponding to the
+     /constructors/ in the /class/, *even for library types compiled in other
+     languages and Scala 2.*
+     * This feature is called /universal ~apply~ methods/, in the sense of using
+       ~apply~ to create things.
+       + These ~apply~ methods are called /constructor proxies/.
+
+     * =TODO= =TODO= =TODO=
+       =from Jian= Why does this book metion /Auxiliary (or secondary) constructors/ in this context???
+       =TODO= =TODO= =TODO=
+       /Auxiliary (or secondary) constructors/ are uncommon in Scala types, so
+       we'll wait until “Constructors in Scala” to discuss them in detail, but
+       here is an example:
+       #+begin_src scala
+         // src/script/scala/progscala3/typelessdomore/OptionalNew.scala
+         
+         class Person(name: String, age: Int):
+           def this() = this("unknown", 0)                               1
+       #+end_src
+       + =from Jian=
+         My preference is to define a method like ~def default = this("unknown", 0)~.
+         I don't like to use ~()~ in any context when there is NO /side effect/.
+
+   - The *motivation* for this feature:
+     provide *more uniform* syntax.
+
+   - A few rules to keep in mind:
+     * If a /class/ ALREADY has a /companion object/ (i.e., user-defined),
+       the /synthetic object/ *won't be generated*.
+
+     * If the /object/ already has an ~apply~ method _with a /parameter list/
+       *matching* a /constructor/,_ then a /constructor proxy/ for it won't be
+       generated.
+
+     * When a constructor takes no arguments, ~new Foo~ can be rewritten as ~Foo()~.
+       *Omitting the parentheses would be ambiguous for the compiler.*
+       + =from Jian=
+         For this case, I prefer ~new Foo~.
+         I don't want to see ~()~ when side effect doesn't exist.
+
+     * =CAUTION=
+       For a type ~Foo~ with a /companion object/,
+       _you should *still write* ~new Foo(…)~ *inside* the /object/'s ~apply~
+       methods when you want to call a constructor._
+       + Rationale:
+         Writing ~Foo(…)~ without ~new~ will be *interpreted* as ~Foo.apply(…)~,
+         if the arguments _MATCH_ one of the ~apply~ method's parameter lists,
+         leading to /infinite recursion/!
+           _This has always been necessary in Scala, of course, but it bears
+         repeating in this context._
+
+     * /Anonymous classes/ require ~new~.
+     
+** DONE Recap and What's Next
+   CLOSED: [2021-06-19 Sat 15:02]
+    
+* DONE 4. Pattern Matching - =TODO= =NOTE=
+  CLOSED: [2021-06-03 Thu 23:56]
+** Safer Pattern Matching with Matchable
+** Values, Variables, and Types in Matches
+** Matching on Sequences
+** Pattern Matching on Repeated Parameters
+** Matching on Tuples
+*** Parameter Untupling
+    
+** Guards in Case Clauses
+** Matching on Case Classes and Enums
+** Matching on Regular Expressions
+** Matching on Interpolated Strings
+** Sealed Hierarchies and Exhaustive Matches
+** Chaining Match Expressions
+** Pattern Matching Outside Match Expressions
+** Problems in Pattern Bindings
+** Pattern Matching as Filtering in for Comprehensions
+** Pattern Matching and Erasure
+** Extractors
+*** unapply Method
+*** Alternatives to Option Return Values
+*** unapplySeq Method
+*** Implementing unapplySeq
+    
+** Recap and What’s Next
+    
+* DONE 5. Abstracting Over Context: Type Classes and Extension Methods - =TODO= =NOTE=
+  CLOSED: [2021-06-03 Thu 23:56]
+** Four Changes
+** Extension Methods
+*** Build Your Own String Interpolator
+    
+** Type Classes
+*** Scala 3 Type Classes
+*** Alias Givens
+*** Scala 2 Type Classes
+    
+** Scala 3 Implicit Conversions
+** Type Class Derivation
+** Givens and Imports
+** Givens Scoping and Pattern Matching
+** Resolution Rules for Givens and Extension Methods
+** The Expression Problem
+** Recap and What’s Next
+    
+* DONE 6. Abstracting Over Context: Using Clauses - =TODO= =NOTE=
+  CLOSED: [2021-06-17 Thu 00:53]
+** Using Clauses
+** Context Bounds
+** Other Context Parameters
+** Context Functions
+** Constraining Allowed Instances
+*** Implicit Evidence
+    
+** Working Around Type Erasure with Using Clauses
+** Rules for Using Clauses
+** Improving Error Messages
+** Recap and What’s Next
+    
+* DONE 7. Functional Programming in Scala - =TODO= =NOTE=
+  CLOSED: [2021-06-17 Thu 00:53]
+** What Is Functional Programming?
+*** Functions in Mathematics
+*** Variables That Aren’t
+    
+** Functional Programming in Scala
+*** Anonymous Functions, Lambdas, and Closures
+*** Purity Inside Versus Outside
+    
+** Recursion
+** Tail Calls and Tail-Call Optimization
+** Partially Applied Functions Versus Partial Functions
+** Currying and Uncurrying Functions
+** Tupled and Untupled Functions
+** Partial Functions Versus Functions Returning Options
+** Functional Data Structures
+*** Sequences
+*** Maps
+*** Sets
+    
+** Traversing, Mapping, Filtering, Folding, and Reducing
+*** Traversing
+*** Mapping
+*** Flat Mapping
+*** Filtering
+*** Folding and Reducing
+*** Left Versus Right Folding
+    
+** Combinators: Software’s Best Component Abstractions
+** What About Making Copies?
+** Recap and What’s Next
+    
+* TODO 8. ~for~ Comprehensions in Depth - _READING_
+  In Scala, ~for~ is not a flexible version of the venerable /for loop/.
+
+  This chapter explores how ~for~ comprehension syntax is a more concise way to
+  use ~foreach~, ~map~, ~flatMap~, and ~withFilter~, some of the /functional
+  combinators/ we discussed in the previous chapter.
+  
+** Recap: The Elements of ~for~ Comprehensions
+** ~for~ Comprehensions: Under the Hood
+** Translation Rules of ~for~ Comprehensions
+** ~Option~'s and Container Types
+*** Option as a Container?
+*** Either: An Alternative to Option
+*** Try: When There Is No Do
+*** Validated from the Cats Library
+    
+** Recap and What's Next
+    
+* TODO 9. Object-Oriented Programming in Scala - _READING_
+** DONE Class and Object Basics: Review
+   CLOSED: [2021-06-19 Sat 16:53]
+   - *Tip*
+     * In Scala 2,
+       _ONLY the parameters in the first parameter list_ were considered when
+       determining the method signature for the purposes of overloading.
+
+     * In Scala 3,
+       _ALL parameter lists are considered._
+     
+   - A /field/ and /method/ can have the *SAME name*,
+     *BUT only if* the /method/ has a /parameter list/:
+     #+begin_src scala
+       trait Good:
+         def x(suffix: String): String
+         val x: Stringscala>
+       
+       trait Bad:
+         def x: String
+         val x: String
+       // 4 |  val x: String
+       //   |      ^
+       //   |      Double definition...
+     #+end_src
+     
+** DONE Open Versus Closed Types
+   CLOSED: [2021-06-19 Sat 17:36]
+   - Scala encourages us to think carefully about
+     * what types should be *abstract* versus *concrete*,
+     * what types should be *singletons*,
+     * what types should be *mixins*, and
+     * what types should be *open* versus *closed* for extension,
+       meaning allowed to be /subtyped/ or not. 
+
+   - /Mixins/ promote /composition/ *over* /inheritance/,
+     =TODO=
+     discussed in _“Good Object-Oriented Design: A Digression”._
+
+   - /Traits/ are used to define /mixins/,
+     while /abstract classes/ or /traits/ are used as BASE types in a hierarchy.
+     
+*** DONE Classes Open for Extension
+    CLOSED: [2021-06-19 Sat 17:22]
+    - There are *TWO exceptions* to the rule that ~open~ is now required for extension:
+      * /Subtypes/ in the *SAME* _source file_, like how /sealed/ hierarchies work.
+
+      * Use of the ~adhocExtensions~ language feature.
+        + =from Jian=
+          Can be useful for tesing, or for some specific reason that you want to
+          extends a non-~open~ class for some practical reason.
+
+        + It's better to use this through ~import~,
+          rather than as a whole project compiler flag.
+
+    - Because ~open~ is a breaking change, it is being introduced gradually.
+      1. In Scala 3.0, the feature warning is _only emitted when_ you compile with
+         ~-source:future~.
+      2. The warning will occur by default in a subsequent Scala 3 release.
+
+    - A type that is neither ~open~ nor ~final~ now has *similar* /subtyping behavior/
+      as a ~sealed~ type.
+      * The difference:
+        You can use ~adhocExtensions~ to reopen this kind of classes,
+        and you have no way to do similar things to ~sealed~ types.
+
+    - As a rule, I (the book author) try to
+      *use* ONLY /abstract types/ as /supertypes/ and
+      *treat* all /concrete types/ as ~final~, *except* for the testing scenario.
+
+      * The main reason for this rule is because it's difficult to get the semantics
+        and implementations correct for ~hashCode~, ~equals~, and /user-defined
+        members/.
+
+        + This is one reason why Scala simply prohibits case classes from being
+          subtypes of other case classes.
+
+    - =from Jian=
+      In Scala, we still *override* ~hashCode~ and ~equals~,
+      BUT at call sites, we prefer ~##~ and ~==~, which can be called from
+      ~null~ without throwing ~NullPointerException~.
+
+    - *Tip*
+      Because /composition/ is usually _more robust than_ /inheritance/,
+      *use ~open~ rarely.*
+      
+*** DONE Overriding Methods? The Template Method Pattern
+    CLOSED: [2021-06-19 Sat 17:36]
+    - Just as you should *avoid* /subtyping concrete types/,
+      you should *avoid* /overriding concrete methods/.
+      * Rationale:
+        _It is a common source of /subtle behavioral bugs/._
+        + For example,
+          1. Should the subtype implementation call the supertype method?
+          2. If so, when should it call it:
+             at the beginning or end of the overriding implementation?
+             
+          The correct answers depend on the context.
+
+        *It is too easy to make mistakes from OVERRIDING /concrete methods/.*
+        
+      * _UNFORTUNATELY_,
+        we are so accustomed to OVERRIDING the /concrete ~toString~ method/ that
+        we consider it normal practice. _It should *NOT* be normal._
+
+    - The preceding example uses the /template method pattern/ ([GOF1995])
+      _to *eliminate* the need to OVERRIDE /concrete methods/._
+
+    - However, _we *can't completely eliminate* OVERRIDING /concrete methods/,_
+      like ~toString~.
+        Fortunately, Scala requires the ~override~ keyword, which you should treat
+      as a reminder to be careful.
+      * =from Jian=
+        This means, ~override~ is good feature, but if we can see less ~override~
+        in our code, it is better!!! ~override~ is the last reminder.
+        + From today on,
+          I shouldn't add ~override~ to /abstract methods override/, which is
+          legal, but because of this discussion, we it's not a very useful.
+            _We can leave ~override~ as the reminder only for /overriding concrete
+          methods/._
+
+    - When you need to call a /supertype method/ ~foo~, use ~super().foo(…)~.
+      =TODO= =TODO= =TODO=
+      See also _“Self-Type Declarations”_ for handling the special case when
+      /MULTIPLE supertypes/ implement the SAME /method/ and you need a way to
+      specify a particular one of them.
+    
+** DONE Reference Versus Value Types
+   CLOSED: [2021-06-20 Sun 01:15]
+   - In Scala,
+     * all /reference types/ are subtypes of ~scala.AnyRef~ on the _JVM_ and
+     * ~js.Object~ in _Scala.js_.
+
+   - ~AnyRef~ is a /subtype/ of ~Any~, the root of the Scala type hierarchy.
+   - For _Scala.js_, ~js.Any~ is the equivalent /supertype/ of ~js.Object~.
+
+   - Note that /Java's root type/, ~Object~, is actually equivalent to
+     ~AnyRef~, *not* ~Any~.
+     * You will sometimes see documentation refer to ~Object~ instead of ~AnyRef~,
+       but it can be confusing to see them used interchangeably.
+       + I've used ~AnyRef~ in this book, but keep in mind that you'll see both
+         in documentation.
+
+   - For Scala.js, the JavaScript primitives are used, including ~String~, with a
+     rough correspondence to the ~AnyVal~ types.
+
+   - In the _Java_ and _JavaScript_ /object models/,
+     /primitives/ do *NOT* have a /common supertype/.
+
+   - To avoid confusion, I have used ~Any~, ~AnyRef~, and ~AnyVal~ consistently
+     with a bias toward the JVM implementations.
+     * See
+       + =TODO=
+         the _Scala.js_ _Type Correspondence guide_ for more details about
+         /Scala.js types/.
+
+       + =TODO=
+         The _Scala Native_ documentation discusses its handling of /Scala types/.
+
+   - ~Unit~ is an ~AnyVal~ type, but *it involves _NO_ storage at all.*
+     * Loosely speaking,
+       + ~Unit~ _is analogous to_ the ~void~ keyword in many languages in the
+         sense that a method returning ~Unit~ or ~void~ doesn’t return anything you can use
+
+       + *BUT* ~Unit~ or ~void~ are *quite different* in other senses.
+         While ~void~ is a keyword, ~Unit~ is a _REAL_ /type/ with _ONE_ /literal
+         value/, ~()~, and we rarely use that value explicitly.
+           This means that ALL /functions/ and /methods/ in Scala return a value,
+         whereas languages with ~void~ have a separate idea of functions that
+         return a value and procedures that don’t.
+         - =from Jian=
+           Some languages, like Fortran, distinguish /functions/ and /procedures/.
+           The latter doesn't return a value, and they are used for side-effects.
+
+   - *WHY IS UNIT's LITERAL VALUE ~()~?*
+     * The name *unit* comes from _algebra_, where adding (in the algebraic context)
+       the /unit/ to any value returns the original value, such as
+       + 0 for addition
+       + 1 for multiplication
+
+   - =from Jian=
+     =How to verify this???=
+     I guess when people want to introduce the only literal value for ~Unit~, they
+     think this value should mean no information returned, like an empty tuple.
+     Therefore, people choose the representation ~()~ -- no element, and no
+     useful information.
+       However, from Scala 3 on, ~EmptyTuple~, the real empty tuple, is introduced.
+     Now I think we should emphasize the empty view/feel of ~()~, not its tuple-like
+     view.
+         
+   - CAUTION: 
+     The only value of ~Unit~, ~()~, is not an /empty tuple/, though in Scala 2, in
+     some discussion context, it is considered as an analog to an /empty tuple/.
+       In Scala 3, there is clearly an empty tuple: ~EmptyTuple~.
+    
+** TODO Opaque Types and Value Classes
+*** Opaque Type Aliases
+*** Value Classes
+    
+** DONE Supertypes
+   CLOSED: [2021-06-20 Sun 01:43]
+   - Common OOP terms for subtyping include
+     * /derivation/,
+     * /extension/, and
+     * /inheritance/.
+
+   - The Scala documentation and community have some convention about using
+     /derivation/, /extension/, and /inheritance/. See the chapter, section,
+     subsection titls in this book, we can find some examples:
+     * Type Class /Derivation/.
+     * Classes Open for /Extension/.
+
+   - /Supertypes/ are also called *parent* or *base* /types/.
+     /Subtypes/ are also called *child* or *derived* /types/.
+     
+** DONE Constructors in Scala
+   CLOSED: [2021-06-21 Mon 12:39]
+   - Scala distinguishes between
+     * the /primary constructor/ and
+     * _zero or more_ /auxiliary constructors/, also called /secondary constructors/.
+
+   - In Scala, the /primary constructor/ is the *entire body of the /type/.*
+     Any parameters that the /constructor/ requires are listed after the /type/ name.
+
+   - /Auxiliary constructors/ example:
+     #+begin_src scala
+       // src/script/scala/progscala3/basicoop/people/ZipCodeAuxConstructors.scala
+       
+       case class ZipCodeAuxCtor(zip: Int, extension: Int = 0):
+         override def toString =
+           if extension != 0 then s"$zip-$extension" else zip.toString
+       
+         def this(zip: String, extension: String) =
+           this(zip.toInt, if extension.length == 0 then 0 else extension.toInt)
+       
+         def this(zip: String) = this(zip, "")
+     #+end_src
+
+   - The compiler also requires that a /constructor/ called is one that appears
+     earlier in the source code.
+       _So we *MUST order* /secondary constructors/ carefully in our code._
+     
+   - Forcing *ALL* construction to go through the /primary constructor/
+     *eliminates*
+     * duplication of constructor logic
+       AND
+     * the risk of inconsistent initialization of instances.
+     
+   - We haven't discussed /auxiliary constructors/ before now
+     *because it's rare to use them.*
+       _It's far more common to /overload/ object ~apply~ /methods/ instead when
+     multiple invocation options are desired:_
+     #+begin_src scala
+       // src/script/scala/progscala3/basicoop/people/ZipCodeApply.scala
+       
+       case class ZipCodeApply(zip: Int, extension: Int = 0):
+         override def toString =
+           if extension != 0 then s"$zip-$extension" else zip.toString
+       
+       object ZipCodeApply:
+         def apply(zip: String, extension: String): ZipCodeApply =
+           apply(zip.toInt, if extension.length == 0 then 0 else extension.toInt)
+       
+         def apply(zip: String): ZipCodeApply = apply(zip, "")
+     #+end_src
+     
+*** Calling Supertype Constructors
+    The /primary constructor/ in a /subtype/ *must invoke* one of the /supertype
+    constructors/:
+    #+begin_src scala
+      class Person(name: String, age: Int)
+      class Employee(name: String, age: Int, salary: Float) extends Person(name, age)
+      class Manager(name: String, age: Int, salary: Float, minions: Seq[Employee]) extends Employee(name, age, salary)
+    #+end_src
+    
+** TODO Export Clauses
+** TODO Good Object-Oriented Design: A Digression
+** DONE Fields in Types
+   CLOSED: [2021-06-21 Mon 14:37]
+   - =from Jian=
+     This part talks about how the ~val~'s and ~var~'s in /constructor/ are
+     translated.
+
+   - Example:
+     #+begin_src scala
+       class Name(var value: String)
+     #+end_src
+
+     is equivalent to
+     #+begin_src scala
+       class Name(s: String):
+         private var _value: String = s
+       
+         def value: String = _value
+       
+         def value_=(newValue: String): Unit =
+           _value = newValue
+     #+end_src
+     
+*** DONE The Uniform Access Principle
+    CLOSED: [2021-06-21 Mon 14:37]
+    - Uniform access principle :: the user experience is identicial to
+      _bare field access_ and _accessor methods_.
+    
+    - We are free to switch between _bare field access_ and _accessor methods_ as needed.
+      FOR EXAMPLE,
+      * if we want to _add some sort of validation on writes_ or _lazily construct
+        the field value on reads_, then *methods* are BETTER.
+
+      * Conversely, *bare field access* is _FASTER_ than a /method call/, although
+        some _simple method invocations_ will be /inlined/ by the compiler or
+        runtime environment anyway.
+        =from Jian= 
+        "by the compiler or runtime environment anyway."
+        I don't quite understand the "by the runtime environment anyway." part.
+
+    - Because of the flexibility provided by /uniform access/,
+      =IMPORTANT=
+      a *common convention* is to _declare /abstract/, /constant fields/ as
+      /methods/ instead:_
+      #+begin_src scala
+        // src/main/scala/progscala3/basicoop/AbstractFields.scala
+        
+        package progscala3.basicoop
+        
+        trait Logger:
+          def loggingLevel: Int
+          def log(message: String): Unit
+        
+        case class ConsoleLogger(loggingLevel: Int) extends Logger:
+          def log(message: String): Unit =
+            println(s"$loggingLevel: $message")
+      #+end_src
+      Implementers have the choice of using a /concrete method/ or using a ~val~.
+      * Using a ~val~ is legal here because the contract of ~loggingLevel~ is that
+        it returns some ~Int~. If the _same value is always returned_, that satisfies
+        the contract.
+  
+      * Conversely, if we declared ~loggingLevel~ to be a /field/ in ~Logger~,
+        then using a /concrete method implementation/ would *NOT be allowed*
+        because the compiler can't confirm that the /method/ would always return
+        a single value consistently.
+
+    - *TIP*
+      When declaring an /abstract field/,
+      consider declaring an /abstract method/ instead.
+      *That gives implementers the freedom to use a /method/ or a /field/.*
+      
+*** DONE Unary Methods
+    CLOSED: [2021-06-21 Mon 14:37]
+    =IMPORTANT=
+    =SYNTAX CORNER CASE=
+    #+begin_src scala
+      // src/main/scala/progscala3/basicoop/Complex.scala
+      package progscala3.basicoop
+      
+      import scala.annotation.targetName
+      
+      case class Complex(real: Double, imag: Double):
+        @targetName("negate") def unary_- : Complex =
+          Complex(-real, imag)
+      
+        @targetName("minus")  def -(other: Complex) =
+          Complex(real - other.real, imag - other.imag)
+    #+end_src
+    The _method name_ is ~unary_X~, where ~X~ is the prefix /operator character/
+    we want to use, ~-~ in this case.
+
+    - Note that *the SPACE between the ~-~ and the ~:~ is NECESSARY* to tell the
+      compiler that the method name ends with ~-~ and *not with* ~:~!
+    
+** TODO Recap and What's Next
+    
+* TODO 10. Traits
+** TODO Traits as Mixins
+** TODO Stackable Traits
+** TODO Union and Intersection Types
+** TODO Transparent Traits
+** DONE Using Commas Instead of ~with~
+   CLOSED: [2021-06-21 Mon 15:04]
+   Scala 3 also allows you to *SUBSTITUTE* a comma (~,~) *instead of* ~with~,
+   BUT *ONLY* when *declaring* a /type/:
+   #+begin_src scala
+     class B extends Button("Button!"), ObservableClicks, VetoableClicks(maxAllowed = 2):
+       def updateUI(): String = s"$label clicked"
+     
+     var button4b: Button =
+       new Button("Button!"), ObservableClicks, VetoableClicks(maxAllowed = 2):
+         def updateUI(): String = s"$label clicked"
+     // 1 |var button4b: Button = new Button("Button!"), ObservableClicks, ...
+     //   |                                            ^
+     //   |                                   end of statement expected but ',' found1
+     //   | ...
+   #+end_src
+   
+** TODO Trait Parameters
+** DONE Should That Type Be a Class or Trait?
+   CLOSED: [2021-06-21 Mon 15:05]
+   - When considering whether a /type/ should be a /trait/ or a /class/,
+     KEEP IN MIND that /traits/ are best for
+     * _pure interfaces_ and
+     * when used as /mixins/ for _complementary state and behavior_.
+
+   - If you find that a particular /trait/ is used *most often* as a /supertype/
+     of other /types/, then consider *defining the /type/ as a /class/ instead*
+     to make this logical relationship more clear.
+   
+** TODO Recap and What's Next
+    
+* 11. Variance Behavior and Equality
+** Parameterized Types: Variance Under Inheritance
+*** Functions Under the Hood
+*** Variance of Mutable Types
+*** Improper Variance of Java Arrays
+    
+** Equality of Instances
+*** The equals Method
+*** The ~==~ and ~!=~ Methods
+*** The eq and ne Methods
+*** Array Equality and the sameElements Method
+    
+** Equality and Inheritance
+** Multiversal Equality
+** Case Objects and hashCode
+** Recap and What’s Next
+    
+* 12. Instance Initialization and Method Resolution
+** Linearization of a Type Hierarchy
+** Initializing Abstract Fields
+** Overriding Concrete Fields
+** Abstract Type Members and Concrete Type Aliases
+** Recap and What’s Next
+    
+* 13. The Scala Type Hierarchy
+** Much Ado About ~Nothing~ (and ~Null~)
+** The ~scala~ Package
+** Products, Case Classes, Tuples, and Functions
+*** Tuples and the Tuple Trait
+    
+** The ~Predef~ Object
+*** Implicit Conversions
+*** Type Definitions
+*** Condition Checking Methods
+*** Input and Output Methods
+*** Miscellaneous Methods
+    
+** Recap and What's Next
+    
+* 14. The Scala Collections Library
+** Different Groups of Collections
+** Abstractions with Multiple Implementations
+*** The ~scala.collection.immutable~ Package
+*** The ~scala.collection.mutable~ Package
+*** The ~scala.collection~ Package
+*** The ~scala.collection.concurrent~ Package
+*** The ~scala.collection.convert~ Package
+*** The ~scala.collection.generic~ Package
+    
+** Construction of Instances
+** The Iterable Abstraction
+** Polymorphic Methods
+** Equality for Collections
+** Nonstrict Collections: Views
+** Recap and What's Next
+    
+* TODO 15. Visibility Rules
+** Public Visibility: The Default
+** Visibility Keywords
+** Protected Visibility
+** Private Visibility
+** Scoped Private and Protected Visibility
+** Recap and What’s Next
+    
+* 16. Scala's Type System, Part I
+** Parameterized Types
+** Abstract Type Members and Concrete Type Aliases
+*** Comparing Abstract Type Members Versus Parameterized Types
+    
+** Type Bounds
+*** Upper Type Bounds
+*** Lower Type Bounds
+    
+** Context Bounds
+** View Bounds
+** Intersection and Union Types
+*** Intersection Types
+*** Union Types
+    
+** Phantom Types
+** Structural Types
+** Refined Types
+** Existential Types (Obsolete)
+** Recap and What's Next
+    
+* 17. Scala's Type System, Part II
+** Match Types
+** Dependently Typed Methods
+** Dependent Method and Dependent Function Types
+** Dependent Typing
+** Path-Dependent Types
+*** Using ~this~
+*** Using ~super~
+*** Stable Paths
+    
+** Self-Type Declarations
+** Type Projections
+** More on Singleton Types
+** Self-Recursive Types: F-Bounded Polymorphism
+** Higher-Kinded Types
+** Type Lambdas
+** Polymorphic Functions
+** Type Wildcard Versus Placeholder
+** Recap and What's Next
+    
+* TODO 18. Advanced Functional Programming
+** Algebraic Data Types
+*** Sum Types Versus Product Types
+*** Properties of Algebraic Data Types
+*** Final Thoughts on Algebraic Data Types
+    
+** Category Theory
+*** What Is a Category?
+*** Functor
+*** The Monad Endofunctor
+*** The Semigroup and Monoid Categories
+    
+** Recap and What's Next
+    
+* 19. Tools for Concurrency
+** The ~scala.sys.process~ Package
+** ~Future~'s
+** Robust, Scalable Concurrency with Actors
+*** Akka: Actors for Scala
+*** Actors: Final Thoughts
+    
+** Stream Processing
+** Recap and What's Next
+    
+* TODO 20. Dynamic Invocation in Scala
+** Structural Types Revisited
+** A Motivating Example: ActiveRecord in Ruby on Rails
+** Dynamic Invocation with the Dynamic Trait
+** DSL Considerations
+** Recap and What’s Next
+   
+* 21. Domain-Specific Languages in Scala
+** Internal DSLs
+** External DSLs with Parser Combinators
+*** About Parser Combinators
+*** A Payroll External DSL
+    
+** Internal Versus External DSLs: Final Thoughts
+** Recap and What's Next
+    
+* 22. Scala Tools and Libraries
+** Scala 3 Versions
+** Command-Line Interface Tools
+*** Coursier
+*** Managing Java JDKs with Coursier
+*** The scalac Command-Line Tool
+*** The scala Command-Line Tool
+*** The scaladoc Command-Line Tool
+*** Other Scala Command-Line Tools
+    
+** Build Tools
+** Integration with IDEs and Text Editors
+** Using Notebook Environments with Scala
+** Testing Tools
+** Scala for Big Data: Apache Spark
+** Typelevel Libraries
+** Li Haoyi Libraries
+** Java and Scala Interoperability
+*** Using Java Identifiers in Scala Code
+*** Scala Identifiers in Java Code
+*** Java Generics and Scala Parameterized Types
+*** Conversions Between Scala and Java Collections
+*** Java Lambdas Versus Scala Functions
+*** Annotations for JavaBean Properties and Other Purposes
+    
+** Recap and What's Next
+    
+* TODO 23. Application Design
+** Recap of What We Already Know
+** Annotations
+** Using ~@main~ Entry Points
+** Design Patterns
+*** Creational Patterns
+*** Structural Patterns
+*** Behavioral Patterns
+    
+** Better Design with Design by Contract
+** The Parthenon Architecture
+** Recap and What's Next
+    
+* TODO 24. Metaprogramming: Macros and Reflection
+** Scala Compile Time Reflection
+** Java Runtime Reflection
+** Scala Reflect API
+** Type Class Derivation: Implementation Details
+** Scala 3 Metaprogramming
+*** Inline
+*** Macros
+*** Staging
+    
+** Wrapping Up and Looking Ahead
+    
+* A. Significant Indentation Versus Braces Syntax
+* Bibliography
+* Index

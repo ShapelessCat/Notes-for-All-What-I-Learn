@@ -1,0 +1,359 @@
+#+TITLE: Optics by Example
+#+SUBTITLE: Functional Lenses in Haskell
+#+VERSION: 2020-01-01
+#+AUTHORS: Chris Penner
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Foreword - 1
+* 1. Obligatory Preamble - 1
+** 1.1 About this book - 1
+** 1.2 Why should I read this book? - 1
+** 1.3 How to read this book - 2
+** 1.4 Chosen language and optics encodings - 2
+** 1.5 Your practice environment - 2
+** 1.6 Following examples - 4
+** 1.7 About the type signatures - 4
+** 1.8 About the exercises - 4
+   
+* 2. Optics - 6
+** 2.1 What are optics? - 6
+** 2.2 Strengths - 6
+** 2.3 Weaknesses - 7
+** 2.4 Practical optics at a glance - 8
+** 2.5 Impractical optics at a glance - 9
+   
+* 3. Lenses - 11
+** 3.1 Introduction to Lenses - 11
+*** Anatomy - 11
+*** Exercises – Optic Anatomy - 12
+    
+** 3.2 Lens actions - 13
+*** Viewing through lenses - 13
+*** Setting through a lens - 14
+*** Exercises - Lens Actions - 14
+    
+** 3.3 Lenses and records - 15
+*** Lenses subsume the “accessor” pattern - 15
+*** Building a lens for a record field - 16
+*** Exercises - Records Part One - 18
+*** Getting and setting with a field lens - 19
+*** Modifying fields with a lens - 20
+*** Automatically generating field lenses - 21
+*** Exercises - Records Part Two - 23
+    
+** 3.4 Limitations - 24
+*** Is it a Lens? - 24
+*** Is it a Lens? – Answers - 26
+    
+** 3.5 Lens Laws - 29
+*** Why do optics have laws? - 29
+*** The Laws - 30
+*** Case Study: ~_1~ - 31
+*** Case Study: ~msg~ - 32
+*** Case Study: ~lensProduct~ - 33
+*** Exercises - Laws - 36
+    
+** 3.6 Virtual Fields - 37
+*** What’s a virtual field - 37
+*** Writing a virtual field - 38
+*** Breakage-free refactoring - 39
+*** Exercises – Virtual Fields - 41
+    
+** 3.7 Data correction and maintaining invariants - 42
+*** Including correction logic in lenses - 42
+*** Exercises – Self-Correcting Lenses - 44
+    
+* 4. Polymorphic Optics - 46
+** 4.1 Introduction to polymorphic optics - 46
+*** Simple vs Polymorphic optics - 46
+    
+** 4.2 When do we need polymorphic lenses - 47
+*** Type-changing focuses - 47
+*** Changing type variables with polymorphic lenses - 49
+*** Exercises – Polymorphic Lenses - 50
+    
+** 4.3 Composing Lenses - 51
+*** How do I update fields in deeply nested records? - 52
+*** Composing update functions - 54
+*** Composing Lenses - 57
+*** How do Lens Types Compose? - 58
+*** Exercises – Lens Composition - 62
+   
+* 5. Operators - 64
+** 5.1 Lens Operators - 64
+** 5.2 ~view~ a.k.a. ~^~ - 65
+** 5.3 ~set~ a.k.a. ~.~~ - 65
+** 5.4 Chaining many operations - 68
+** 5.5 Using %~ a.k.a. ~over~ - 69
+** 5.6 Learning Hieroglyphics - 70
+** 5.7 Modifiers - 71
+** 5.8 When to use operators vs named actions? - 72
+** 5.9 Exercises – Operators - 73
+   
+* 6. Folds - 77
+** 6.1 Introduction to Folds - 77
+*** Focusing all elements of a container - 78
+*** Collapsing the Set - 80
+*** Collecting focuses as a list - 81
+*** Using lenses as folds - 83
+*** Composing folds - 84
+*** Foundational fold combinators - 85
+*** Exercises – Simple Folds - 86
+    
+** 6.2 Custom Folds - 88
+*** Mapping over folds - 90
+*** Combining multiple folds on the same structure - 91
+*** Exercises – Custom Folds - 92
+    
+** 6.3 Fold Actions - 94
+*** Writing queries with folds - 94
+*** Queries case study - 98
+*** Folding with effects - 101
+*** Combining fold results - 103
+*** Using ‘view’ on folds - 105
+*** Customizing monoidal folds - 106
+*** Exercises – Fold Actions - 108
+    
+** 6.4 Higher Order Folds - 110
+*** Taking, Dropping - 110
+*** Backwards - 115
+*** TakingWhile, DroppingWhile - 116
+*** Exercises – Higher Order Folds - 116
+    
+** 6.5 Filtering folds - 119
+*** Filtered - 119
+*** Exercises – Filtering - 125
+    
+** 6.6 Fold Laws - 125
+
+* 7. Traversals - 126
+** 7.1 Introduction to Traversals - 126
+*** How do Traversals fit into the hierarchy? - 126
+*** A bit of Nostalgia - 127
+*** From fold to traversal - 127
+    
+** 7.2 Traversal Combinators - 130
+*** Traversing each element of a container - 130
+*** More Combinators - 132
+*** Traversing multiple paths at once - 133
+*** Focusing a specific traversal element - 135
+    
+** 7.3 Traversal Composition - 136
+*** Exercises – Simple Traversals - 137
+    
+** 7.4 Traversal Actions - 139
+*** A Primer on Traversable - 139
+*** Traverse on Traversals - 142
+*** Infix traverseOf - 145
+*** Using Traversals directly - 146
+*** Exercises – Traversal Actions - 147
+    
+** 7.5 Custom traversals - 148
+*** Optics look like traverse - 149
+*** Our first custom traversal - 150
+*** Traversals with custom logic - 152
+*** Case Study: Transaction Traversal - 153
+*** Exercises – Custom Traversals - 156
+    
+** 7.6 Traversal Laws - 157
+*** Law One: Respect Purity - 157
+*** Law Two: Consistent Focuses - 159
+*** Good Traversal Bad Traversal - 160
+*** Exercises – Traversal Laws - 161
+    
+** 7.7 Advanced manipulation - 161
+*** partsOf - 161
+*** Polymorphic partsOf - 165
+*** partsOf and other data structures - 166
+*** Exercises – partsOf - 167
+
+* 8. Indexable Structures - 169
+*** 8.1 What’s an “indexable” structure? - 169
+*** 8.2 Accessing and updating values with ‘Ixed’ - 170
+**** The Ixed Class - 170
+**** Accessing and setting values with ix - 171
+**** Indexed Structures - 173
+**** Indexing monomorphic types - 173
+**** Indexing stranger structures - 174
+     
+*** 8.3 Inserting & Deleting with ‘At’ - 176
+**** Map-like structures - 176
+**** Manipulating Sets - 178
+**** Exercises – Indexable Structures - 179
+     
+*** 8.4 Custom Indexed Data Structures - 180
+**** Custom Ixed: Cyclical indexing - 180
+**** Custom At: Address indexing - 182
+**** Exercises – Custom Indexed Structures - 185
+     
+*** 8.5 Handling missing values - 185
+**** Checking whether updates succeed - 185
+**** Fallbacks with ‘failing’ - 187
+**** Default elements - 188
+**** Checking fold success/failure - 190
+**** Exercises – Missing Values - 192
+     
+* 9. Prisms - 194
+** 9.1 Introduction to Prisms - 194
+*** How do Prisms fit into the hierarchy? - 194
+*** Simple Pattern-Matching Prisms - 194
+*** Checking pattern matches with prisms - 196
+*** Generating prisms with makePrisms - 196
+*** Embedding values with prisms - 198
+*** Other types of patterns - 199
+*** Exercises – Prisms - 202
+    
+** 9.2 Writing Custom Prisms - 204
+*** Rebuilding ~_Just~ and ~_Nothing~ - 204
+*** Matching String Prefixes - 206
+*** Cracking the coding interview: Prisms style! - 207
+*** Exercises – Custom Prisms - 209
+    
+** 9.3 Laws - 210
+*** Law One: Review-Preview - 211
+*** Law Two: Prism Complement - 211
+*** Law Three: Pass-through Reversion - 212
+*** Summary - 214
+*** Exercises – Prism Laws - 214
+    
+** 9.4 Case Study: Simple Server - 215
+*** Path prefix matching - 217
+*** Altering sub-sets of functions - 218
+*** Matching on HTTP Verb - 222
+    
+* 10. Isos - 225
+** 10.1 Introduction to Isos - 225
+*** How do Isos fit into the hierarchy? - 225
+*** There and back again - 225
+    
+** 10.2 Building Isos - 226
+** 10.3 Flipping isos with from - 227
+** 10.4 Modification under isomorphism - 228
+** 10.5 Varieties of isomorphisms - 229
+*** Composing isos - 232
+*** Exercises – Intro to Isos - 234
+    
+** 10.6 Projecting Isos - 235
+*** Exercises – Projected Isos - 238
+    
+** 10.7 Isos and newtypes - 239
+*** Coercing with isos - 239
+*** Newtype wrapper isos - 241
+    
+** 10.8 Laws - 243
+*** The one and only law: Reversibility - 243
+*** Exercises – Iso Laws - 244
+    
+* 11. Indexed Optics - 246
+** 11.1 What are indexed optics? - 246
+** 11.2 Index Composition - 248
+*** Custom index composition - 250
+*** Exercises – Indexed Optics - 252
+    
+** 11.3 Filtering by index - 253
+*** Exercises – Index Filters - 254
+    
+** 11.4 Custom indexed optics - 255
+*** Custom IndexedFolds - 256
+*** Custom IndexedTraversals - 257
+*** Index helpers - 259
+*** Exercises – Custom Indexed Optics - 261
+    
+** 11.5 Index-preserving optics - 262
+   
+* 12. Dealing with Type Errors - 264
+** 12.1 Interpreting expanded optics types - 264
+** 12.2 Type Error Arena - 265
+*** First Foe: Level 1 Lenslion - 265
+*** Level 2 Tuplicant - 266
+*** Level 3 Settersiren - 267
+*** Level 4 Composicore - 267
+*** Level 5 Foldasaurus - 268
+*** Level 6 Higher Order Beast - 268
+*** Level 7 Traversacula - 269
+    
+* 13. Optics and Monads - 270
+** 13.1 Reader Monad and View - 270
+** 13.2 State Monad Combinators - 271
+** 13.3 Magnify & Zoom - 275
+    
+* 14. Classy Lenses - 277
+** 14.1 What are classy lenses and when do I need them? - 277
+*** No duplicate record fields - 277
+*** Separating logic and minimizing global knowledge - 280
+*** Granular dependencies with makeFields - 282
+*** Field requirements compose - 284
+    
+** 14.2 makeFields vs makeClassy - 285
+    
+* 15. JSON - 290
+** 15.1 Introspecting JSON - 290
+** 15.2 Diving deeper into JSON structures - 293
+** 15.3 Traversing into multiple JSON substructures - 294
+*** Traversing Arrays - 294
+*** Traversing Objects - 297
+     
+** 15.4 Filtering JSON Queries - 299
+** 15.5 Serializing & Deserializing within an optics path - 301
+** 15.6 Exercises: Kubernetes API - 305
+** BONUS Questions - 308
+    
+* 16. Appendices - 310
+** 16.1 Optic Composition Table - 310
+** 16.2 Optic Compatibility Chart - 310
+** 16.3 Operator Cheat Sheet - 311
+*** Legend for Getters - 311
+*** Legend for Setters/Modifiers - 312
+    
+** 16.4 Optic Ingredients - 313
+* 17. Answers to Exercises - 315
+** 17.1 Optic Anatomy - 315
+** 17.2 Lens Actions - 316
+** 17.3 Records Part One - 317
+** 17.4 Records Part Two - 318
+*** Laws - 319
+    
+** 17.5 Virtual Fields - 321
+** 17.6 Self-Correcting Lenses - 323
+** 17.7 Polymorphic Lenses - 325
+** 17.8 Lens Composition - 327
+** 17.9 Operators - 328
+** 17.10 Simple Folds - 332
+** 17.11 Writing Custom Folds - 334
+** 17.12 Querying Using Folds - 336
+** 17.13 Higher Order Folds - 339
+** 17.14 Filtering - 342
+** 17.15 Simple Traversals - 343
+** 17.16 Traversal Actions - 344
+** 17.17 Custom Traversals - 347
+** 17.18 Traversal Laws - 348
+** 17.19 partsOf - 349
+** 17.20 Indexable Structures - 351
+** 17.21 Custom Indexed Structures - 351
+** 17.22 Missing Values - 352
+** 17.23 Prisms - 354
+** 17.24 Custom Prisms - 355
+** 17.25 Prism Laws - 357
+** 17.26 Intro to Isos - 359
+** 17.27 Projected Isos - 360
+** 17.28 Iso Laws - 361
+** 17.29 Indexed Optics - 362
+** 17.30 Index Filters - 364
+** 17.31 Custom Indexed Optics - 365
+** 17.32 Type Errors - 367
+*** First Foe: Level 1 Lenslion - 367
+*** Level 2 Tuplicant - 367
+*** Level 3 Settersiren - 368
+*** Level 4 Composicore - 369
+*** Level 5 Foldasaurus - 369
+*** Level 6 Foldasaurus - 370
+*** Level 7 Traversacula - 371
+    
+** 17.33 Kubernetes API - 371
+*** BONUS Questions - 373
+    
+* 18. Upcoming Chapters - 376
+* 19. Thanks - 377
+** 19.1 Patreon Supporters - 377
+** 19.2 Book Cover - 379

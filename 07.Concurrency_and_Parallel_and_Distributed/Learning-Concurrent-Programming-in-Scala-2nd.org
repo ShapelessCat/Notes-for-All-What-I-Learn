@@ -1,0 +1,587 @@
+#+TITLE: Learning Concurrent Programming in Scala
+#+SUBTITLE: Learn the art of building intricate, modern, scalable, and concurrent applications using Scala
+#+VERSION: 2nd - 2017
+#+FOREWORD BY: Martin Odersky, Professor at EPFL, the creator of Scala
+#+AUTHOR: Aleksandar Prokopec
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Preface - 1
+* TODO Chapter 1: Introduction - 13
+  This chapter _explains the basics of concurrent computing and presents some
+  Scala preliminaries required for this book_. Specifically, it does the following:
+
+  - Shows a brief _overview_ of concurrent programming
+
+  - Studies the _advantages_ of using Scala when it comes to concurrency
+
+  - Covers the Scala _preliminaries required_ for reading this book
+
+** TODO Concurrent programming - 14
+   - Concurrent programming :: we express a program as a set of concurrent
+        computations that execute _during OVERLAPPING time intervals and
+        coordinate_ in some way.
+
+   - /Concurrent programming/ has MULTIPLE _advantages_:
+     1. Increased concurrency can _improve program performance_.
+        Instead of executing the entire program on a single processor, different
+        subcomputations can be performed on separate processors, making the
+        program run faster.
+
+        
+
+   - =TODO=
+
+*** A brief overview of traditional concurrency - 15
+    - There are
+      + Operating system level concurrency
+      + Programming language level concurrency
+
+    - We'll focus mainly on *programming-language-level concurrency*.
+
+    - synchronization :: the coordination of multiple executions in a concurrent
+         system.
+
+    - /synchronization/ is a key part in successfully *implementing* concurrency.
+
+    - /Synchronization/
+      + includes *mechanisms* used to order concurrent executions in time.
+
+      + specifies *how concurrent executions communicate*, that is, how they
+        exchange information.
+
+    - Java uses shared memory.
+
+      Its /synchronization/ is called /shared memory communication/.
+
+      Establishing _an /order/ between_ the /threads/ *ensures* that the memory
+      modifications done by one /thread/ are *visible* to a /thread/ that
+      executes later.
+
+    - The *crucial difference* lies in the fact that a /high-level concurrency/
+      framework _expresses which goal to achieve_, RATHER THAN _how to achieve
+      that goal_.
+
+*** Modern concurrency paradigms - 15
+
+** TODO The advantages of Scala - 17
+** TODO Preliminaries - 18
+*** Execution of a Scala program - 18
+*** A Scala primer - 20
+
+** TODO Overview of new features in Scala 2.12 - 25
+** TODO Summary - 26
+** TODO Exercises - 26
+
+* TODO Chapter 2: Concurrency on the JVM and the Java Memory Model - 29
+  - Since Scala has run primarily on top of JVM, and this fact has driven the
+    design of many of its concurrency libraries.
+
+    When we talk about concurrency in Scala, we should know Scala inherits things
+    from the JVM
+    * /memory model/
+    * /multithreading capabilities/
+    * /inter-thread synchronization/
+
+  - Most, if not all, /higher-level Scala concurrency/ _constructs_ are
+    _implemented in terms of the low-level primitives_ presented in this
+    chapter.
+
+    These primitives are the basic way to deal with concurrency -- in a way, the
+    APIs and synchronization primitives in this chapter constitute the assembly
+    of concurrent programming on the JVM. =TODO= =???=
+
+  - In most cases,
+    you should *avoid* /low-level concurrency/ in place of /higher-level/
+    constructs introduced later.
+
+  - It was important for you to understand what a /thread/ is, that a /guarded
+    block/ is better than /busy-waiting/,
+    or
+    _why a /memory model/ is useful_.
+
+  - We are convinced that this is essential for a better understanding of
+    /high-level concurrency/ abstractions.
+
+    Despite the popular notion that an abstraction that requires knowledge about
+    its implementation is broken, understanding the basics often proves very
+    handy -- in practice, all abstractions are to some extent leaky.
+
+  - In what follows, we
+    * not only *explain* _the cornerstones of concurrency on JVM_,
+    * but also *discuss* _how they interact with some Scala-specific features_.
+
+  - In particular, _we will cover the following topics in this chapter_:
+    * *Creating* and *starting* /threads/ and *waiting* for their completion
+
+    * Communication between /threads/ using /object monitors and the synchronized statement/ =???=
+
+    * How to *avoid* /busy-waiting/ using /guarded blocks/ =???=
+
+    * The semantics of /volatile variables/ =???=
+
+    * The specifics of the /Java Memory Model (JMM)/, and *why* the /JMM/ is
+      _important_
+
+    In the following section, we will study how to use /threads/ -- the basic
+    way to *express* /concurrent computations/.
+
+** TODO Processes and threads - 30
+   - In OS's of *modern*, *pre-emptive*, *multitasking*, the programmer has
+     _little or no control over the choice of processor_ on which the program will
+     be executed.
+
+     It is usually the task of the OS to assign executable parts of the program
+     to specific processors.
+
+   - In fact, the same program might
+     + run on *many different* processors during its execution
+       AND
+     + sometimes even *simultaneously* on several processors.
+
+   - multitasking :: =???=
+
+   - =TODO= =???=
+     multitasking happens _transparently_ =???= for the computer user.
+
+   - Historically,
+     /Multitasking/ was introduced to OS's to improve the user experience by
+     allowing multiple users or programs to share resources of the same computer
+     simutaneously.
+
+   - In cooperative /multitasking/,
+
+     + Old solution (complicated):
+       * *programs were able to decide*
+         1. when to stop using the processor
+            AND
+         2. yield control to other programs.
+
+       _HOWEVER_,
+       this required a lot of discipline on the programmer's part
+       and
+       programs could easily give the impression of being *unresponsive*.
+
+       *Blocking* the execution _UNTIL_ a non-short-term job complete often
+       *ruin* the /user experience/.
+
+     + New solution (modern and contemprary):
+       _MOST_ OS's today _rely on_ /pre-emptive multitasking/, in which each
+       program is *repetitively assigned* _slices of execution time (/time
+       slices/)_ at a specific processor.
+
+       Thus, /multitasking/ happens *transparently* =???= for the application
+       programmer as well as the user.
+
+   - The same computer program
+     can be started _more than once_, or _even simultaneously_ within the same OS.
+
+   - process :: an instance of a computer program that is being executed.
+     + a /process/ has its own /memory/ and _other computational resources_,
+       which are reserved to and associated with this /process/ by the OS, when
+       this /process/ starts. 
+         Eventually, the OS gives other processes control over the processor.
+
+   - Importantly, the /memory/ and _other computational resources_ of one /process/ are
+     *isolated* from the _other_ /processes/:
+     two /processes/ *CANNOT*
+     + read each other's /memory/ _directly_
+       or
+     + _simultaneously_ use most of the resources.
+
+   - For /multiple processes programs/,
+     different tasks within the program are expressed as SEPARATE /processes/.
+     Since SEPARATE /processes/ *cannot* access the SAME /memory/ areas
+     directly, *it can be _CUMBERSOME_ to express /multitasking/ using MULTIPLE
+     /processes/.*
+
+   - /Multitasking/ was important long *BEFORE* recent years when /multicore
+     computers/ became mainstream.
+
+   - Large programs are divided into many logical modules.
+     For example, web browsers:
+     + A browser's _download manager_ downloads files *independent* of
+       _rendering_ the web page or updating the HTML /Document Object Model
+       (DOM)/.
+
+     + *BUT*
+       both independent computations (/threads/) occur as part of the *SAME*
+       /process/.
+
+   - threads :: independent computations occurring in the *SAME* /process/.
+
+   - In a typical operating system, there are many *more* /threads/ _than_
+     /processors/.
+
+   - Every /thread/ describes
+     + the _current state_ of the /program stack/
+
+       * program stack :: a sequence of /method invocations/ that are
+            currently being executed, along with the local variables and method
+            parameters of each method.
+
+            =From Jian= Sounds like a /frame/, which in JVM means things
+            mentioned here.
+
+     + the /program counter/ _DURING_ program execution
+
+       * program counter :: describes the *position* of the current instruction
+            in the current /method/.
+
+   - A /processor/ can _advance_ the computation in some /thread/ by manipulating
+     + the /STATE/ of its /stack/
+       or
+     + the /STATE/ of the program objects
+
+     and
+     *executing* the instruction at the /current program counter/.
+
+   - When we say that a thread performs an action such as writing to a memory
+     location, we mean that the processor executing that thread performs that
+     action.
+
+   - In /pre-emptive multitasking/, /thread/ execution is *scheduled by* the OS.
+
+     A programmer *must assume* that the /processor/ _time assigned_ to their
+     /thread/ is *UNBIASED* towards other /threads/ in the system.
+
+   - /OS threads/ are a programming facility provided by the OS, usually exposed through an
+     OS-specific programming interface.
+
+     Unlike separate /processes/, separate /OS threads/ within the same /process/
+     *share* a region of /memory/, and *communicate* by _writing_ to and
+     _reading_ parts of that /memory/.
+
+   - /process/ :: (alternative definition)
+                  a set of OS /threads/ along with the /memory/ and /resources/
+                  *shared* by these /threads/.
+
+   - Having shown the relationship between the /OS threads/ and /processes/,
+
+     _we turn our attention to see how these concepts relate to the JVM , the
+     runtime on top of which Scala programs execute._
+
+   - _Starting a new JVM instance_ ALWAYS creates *only one* /process/.
+
+     Within the JVM /process/, MULTIPLE /threads/ can run simultaneously.
+
+     The JVM represents its /threads/ with the ~java.lang.Thread~ /class/.
+
+   - Unlike runtimes for languages such as Python, the JVM _does NOT implement
+     its custom_ /threads/. Instead, each /Java thread/ is directly mapped to an
+     /OS thread/.
+
+     This means that Java /threads/
+     + behave in a _very similar_ way to the /OS threads/
+
+     + the JVM depends on the OS and its restrictions.
+
+   - Scala is a programming language that is by default compiled to the JVM
+     bytecode, and the Scala compiler output is largely equivalent to that of
+     Java from the JVM's perspective. This allows Scala programs to
+     transparently call Java libraries, and in some cases, even vice versa.
+     =Re-write=
+
+   - Scala *reuses* the /threading API/ from Java for several reasons.
+     + Scala can _transparently_ *interact with* the existing /Java thread model/,
+       which is already sufficiently comprehensive.
+
+     + it is useful to *retain* the same /threading API/ *for compatibility
+       reasons*, and _there is *NOTHING* fundamentally new_ that Scala can
+       introduce with respect to the /Java thread API/.
+
+   - =TODO=
+     The rest of this chapter shows
+     + how to create /JVM threads/ using Scala
+     + how they can be executed
+     + how they can communicate.
+
+   - =TODO=
+     We will show and discuss several concrete examples.
+     Java aficionados, already well-versed in this subject, might choose to skip
+     the rest of this chapter.
+
+*** TODO Creating and starting threads - 33
+    - Every time a new /JVM process/ starts, *t creates several /threads/ _by
+      default_.*
+
+    - The most important /thread/ among them is the /main thread/, which executes
+      the ~main~ /method/ of the Scala program.
+
+    - We will show this in the following program, which gets the name of the
+      current thread and prints it to the standard output:
+      #+BEGIN_SRC scala
+        object ThreadsMain extends App {
+          val t: Thread = Thread.currentThread
+          val name = t.getName
+          println(s"I am the thread $name")
+        }
+      #+END_SRC
+      + If you run this program directly, you can see
+        =[info] I am the thread main=
+
+      + If you run this program in SBT, you see something like
+        =[info] I am the thread run-main-0=
+        This is because SBT started our program on a separate /thread/ *inside*
+        the SBT /process/.
+
+        * To ensure that the program runs *inside* _a separate JVM process_, type
+          ~set fork := true~ in SBT console, and then you can see:
+          =[info] I am the thread main=
+
+    - EVERY /thread/ goes through several /thread states/ during its existence.
+      When a ~Thread~ object is created, it is initially in the NEW /state/.
+      + After the newly created /thread/ object *starts* executing, it goes into
+        the /runnable state/.
+
+      + After the /thread/ is *done* executing, the /thread/ object goes into the
+        /terminated state/, and _CANNOT execute anymore_.
+
+    - Starting an independent /thread/ of computation consists of *two* steps.
+      1. we need to create a ~Thread~ object to allocate the /memory/ for the
+         /stack/ and /thread/ /state/.
+
+      2. To _start the computation_, we need to call the ~start~ /method/ on this
+         object. We show how to do this in the following example application
+         called ~ThreadsCreation~:
+         #+BEGIN_SRC scala
+           object ThreadsCreation extends App {
+             class MyThread extends Thread {
+               override def run(): Unit = {
+                 println("New thread running.")
+               }
+             }
+
+             val t = new MyThread
+             t.start()
+             t.join()
+             println("New thread joined.")
+           }
+         #+END_SRC
+
+      3. A JVM application starts and creates the /main thread/ to execute the
+         /method/ call ~main~ (here ~main~ is a /method/ of the
+         ~ThreadsCreattion~, and is is synthesized, not write out explicitly)
+
+         In this example, the /main thread/ first creates another /thread/ of
+         the ~MyThread~ type and assigns it to ~t~.
+
+      4. Next, the /main thread/ starts ~t~ by calling the ~start~ /method/.
+         Calling the ~start~ /method/ eventually results in executing the run
+         /method/ from the new /thread/.
+
+         1. The OS is notified that ~t~ must start executing.
+
+         2. When the OS decides to assign the NEW /thread/ to some processor,
+            this is largely out of the programmer's control, but the OS must
+            ensure that this eventually happens.
+
+         3. After the /main thread/ starts the _NEW /thread/ ~t~,_ it calls its
+            ~join~ /method/.
+
+         4. This /method/ halts the execution of the /main thread/ until ~t~
+            completes its execution.
+
+            We say that the ~join~ operation puts the /main thread/ into the
+            waiting state until ~t~ terminates.
+
+            Importantly, the waiting /thread/ relinquishes its control over the
+            processor, and the OS can assign that processor to some other
+            /thread/.
+
+*** TODO Atomic execution - 38
+*** TODO Reordering - 42
+
+** TODO Monitors and synchronization - 45
+*** TODO Deadlocks - 47
+*** TODO Guarded blocks - 50
+*** TODO Interrupting threads and the graceful shutdown - 55
+
+** TODO Volatile variables - 56
+** TODO The Java Memory Model - 58
+*** TODO Immutable objects and final fields - 60
+
+** TODO Summary - 62
+** TODO Exercises - 63
+
+* TODO Chapter 3: Traditional Building Blocks of Concurrency - 67
+** The Executor and ExecutionContext objects - 68
+** Atomic primitives - 72
+*** Atomic variables - 73
+*** Lock-free programming - 76
+*** Implementing locks explicitly - 78
+*** The ABA problem - 80
+
+** Lazy values - 83
+** Concurrent collections - 88
+*** Concurrent queues - 89
+*** Concurrent sets and maps - 93
+*** Concurrent traversals - 98
+
+** Custom concurrent data structures - 101
+*** Implementing a lock-free concurrent pool - 102
+*** Creating and handling processes - 106
+
+** Summary - 108
+** Exercises - 109
+
+* TODO Chapter 4: Asynchronous Programming with Futures and Promises - 112
+** Futures - 113
+*** Starting future computations - 115
+*** Future callbacks - 117
+*** Futures and exceptions - 120
+*** Using the Try type - 121
+*** Fatal exceptions - 123
+*** Functional composition on futures - 124
+
+** Promises - 132
+*** Converting callback-based APIs - 134
+*** Extending the future API - 137
+*** Cancellation of asynchronous computations - 138
+
+** Futures and blocking - 141
+*** Awaiting futures - 141
+*** Blocking in asynchronous computations - 142
+
+** The Scala Async library - 143
+** Alternative future frameworks - 146
+** Summary - 148
+** Exercises - 148
+
+* TODO Chapter 5: Data-Parallel Collections - 152
+** Scala collections in a nutshell - 153
+** Using parallel collections - 154
+*** Parallel collection class hierarchy - 158
+*** Configuring the parallelism level - 160
+*** Measuring the performance on the JVM - 161
+
+** Caveats with parallel collections - 164
+*** Non-parallelizable collections - 164
+*** Non-parallelizable operations - 165
+*** Side effects in parallel operations - 168
+*** Nondeterministic parallel operations - 169
+*** Commutative and associative operators - 170
+
+** Using parallel and concurrent collections together - 173
+*** Weakly consistent iterators - 174
+
+** Implementing custom parallel collections - 175
+*** Splitters - 176
+*** Combiners - 179
+
+** Summary - 182
+** Exercises - 184
+
+* TODO Chapter 6: Concurrent Programming with Reactive Extensions - 186
+** Creating Observable objects - 188
+*** Observables and exceptions - 190
+*** The Observable contract - 192
+*** Implementing custom Observable objects - 194
+*** Creating Observables from futures - 195
+*** Subscriptions - 196
+
+** Composing Observable objects - 199
+*** Nested Observables - 201
+*** Failure handling in Observables - 206
+
+** Rx schedulers - 209
+*** Using custom schedulers for UI applications - 211
+
+** Subjects and top-down reactive programming - 218
+** Summary - 223
+** Exercises - 223
+
+* TODO Chapter 7: Software Transactional Memory - 227
+** The trouble with atomic variables - 228
+** Using Software Transactional Memory - 232
+*** Transactional references - 235
+*** Using the atomic statement - 236
+
+** Composing transactions - 238
+*** The interaction between transactions and side effects - 238
+*** Single-operation transactions - 243
+*** Nesting transactions - 244
+*** Transactions and exceptions - 247
+
+** Retrying transactions - 252
+*** Retrying with timeouts - 256
+
+** Transactional collections - 258
+*** Transaction-local variables - 258
+*** Transactional arrays - 259
+*** Transactional maps - 261
+
+** Summary - 263
+** Exercises - 264
+
+* TODO Chapter 8: Actors - 267
+** Working with actors - 268
+*** Creating actor systems and actors - 271
+*** Managing unhandled messages - 274
+*** Actor behavior and state - 276
+*** Akka actor hierarchy - 282
+*** Identifying actors - 285
+*** The actor lifecycle - 288
+
+** Communication between actors - 292
+*** The ask pattern - 294
+*** The forward pattern - 297
+*** Stopping actors - 298
+
+** Actor supervision - 300
+** Remote actors - 306
+** Summary - 310
+** Exercises - 310
+
+* TODO Chapter 9: Concurrency in Practice - 313
+** Choosing the right tools for the job - 314
+** Putting it all together – a remote file browser - 319
+*** Modeling the filesystem - 320
+*** The server interface - 324
+*** Client navigation API - 326
+*** The client user interface - 330
+*** Implementing the client logic - 334
+*** Improving the remote file browser - 339
+
+** Debugging concurrent programs - 340
+*** Deadlocks and lack of progress - 341
+*** Debugging incorrect program outputs - 346
+*** Performance debugging - 351
+
+** Summary - 358
+** Exercises - 359
+
+* TODO Chapter 10: Reactors - 361
+** The need for reactors - 362
+** Getting started with Reactors - 364
+** The “Hello World” program - 364
+** Event streams - 366
+*** Lifecycle of an event stream - 367
+*** Functional composition of event streams - 369
+
+** Reactors - 371
+*** Defining and configuring reactors - 373
+*** Using channels - 374
+
+** Schedulers - 377
+** Reactor lifecycle - 378
+** Reactor system services - 381
+*** The logging service - 381
+*** The clock service - 382
+*** The channels service - 383
+*** Custom services - 384
+
+** Protocols - 387
+*** Custom server-client protocol - 387
+*** Standard server-client protocol - 390
+**** Using an existing connector - 391
+**** Creating a new connector - 391
+**** Creating a protocol-specific reactor prototype - 392
+**** Spawning a protocol-specific reactor directly - 393
+
+*** Router protocol - 393
+*** Two-way protocol - 395
+** Summary - 399
+** Exercises - 399
+
+* Index - 402

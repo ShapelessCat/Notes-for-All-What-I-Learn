@@ -1,0 +1,2951 @@
+#+TITLE: Fluent Python
+#+SUBTITLE: Clear, Concise, and Effective Programming
+#+AUTHOR: Luciano Ramalho
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface - xv
+* DONE Part I. Prologue
+  CLOSED: [2017-09-07 Thu 21:14]
+** DONE 1. The Python Data Model - 3
+   CLOSED: [2017-09-07 Thu 21:14]
+   - One of the best quanlities of Python is its *consistency*.
+     * However, you may find it stange to use ~len(collection)~ instad of
+       ~collection.len()~. To understand this, you need to learn /Python Data
+       Model/.
+   
+   - Python Data Model ::
+     describes the API that if you use it properly you can use to make your own
+     objects play well with the most idiomatic language features.
+
+   - /Python data model/ can be considered as a description of Python as a
+     framework.
+       It *formalizes* the interfaces of the building blocks of the language itself,
+     such as /sequences/, /iterators/, /functions/, /classes/, /context managers/,
+     and so on.
+
+   - While coding with any framework, you spend a lot of time implementing
+     methods that are called by the framework. The same happens when you
+     leverage the /Python data model/.
+
+   - =IMPORTANT=
+     JARGON:
+     ~__getitem__~ is called as ~dunder-getitem~ (a shortcut for
+     "under-under-getitem-under-under" invented by Steve Holden).
+     * Call this kind of methods "dunder methods".
+
+*** DONE A Pythonic Card Deck - 4
+    CLOSED: [2017-09-07 Thu 16:20]
+    #+BEGIN_SRC python
+      import collections
+
+      Card = collections.namedtuple('Card', ['rank', 'suit'])
+
+      class FrenchDeck:
+          ranks = tuple([str(n) for n in range(2, 11)] + ['J', 'K', 'Q', 'A'])
+          suits = ('spades', 'diamonds', 'clubs', 'hearts')
+
+          def __init__(self):
+              # TODO: TUPLE ???
+              self._cards = [Card(rank, suit)
+                             for suit in self.suits
+                             for rank in self.ranks]
+
+          def __len__(self):
+              return len(self._cards)
+
+          def __getitem__(self, position):
+              return self._cards[position]
+    #+END_SRC
+
+    - Usage:
+      #+BEGIN_SRC python
+        ## Create a card through the `Card` namedtuple
+        ## TODO: Be lack of validity check
+        beer_card = Card('7', 'diamonds')
+        beer_card
+        # Card(rank='7', suit='diamonds')
+
+        ## Instance creation, and use `len`
+        deck = FrenchDeck()
+        len(deck)
+        # 52
+
+        ## Indexing
+        deck[0]
+        # Card(rank='2', suit='spades')
+        deck[-1]
+        # Card(rank='A', suit='hearts')
+
+        ## Pick a random card
+        from random import choice
+        choice(deck)
+        # Card(rank='3', suit='hearts')
+        choice(deck)
+        # Card(rank='K', suit='spades')
+      #+END_SRC
+
+    - Two advantages:
+      + NO need to memorize arbitrary method names for standard operations with
+        the help of the ~__len__~ method and the ~len~ function pair (rather than
+        guess what to use: ~.size()~, ~.length()~, etc.).
+
+      + Benifit from the rich Python standard library and avoid reinventing the
+        wheel (Here the ~random.choice~).
+
+    - slicing:
+      #+BEGIN_SRC python
+        deck[:3]
+        # [Card(rank='2', suit='spades'), Card(rank='3', suit='spades'),
+        #  Card(rank='4', suit='spades')]
+
+        deck[12::13]
+        # [Card(rank='A', suit='spades'), Card(rank='A', suit='diamonds'),
+        #  Card(rank='A', suit='clubs'), Card(rank='A', suit='hearts')]
+      #+END_SRC
+
+    - Just by implementing the ~__getitem__~ /special method/, our deck is also
+      iterable (then the ~reverse~ function can be applied).
+
+    - /Iteration/ is often _implicit_.
+      If a collection has *NO* ~__contains__~ method, the ~in~ operator does a
+      sequential scan.
+
+      Case in point: in works with our ~FrenchDeck~ class because it is
+      /iterable/ (implemented ~__getitem__~).
+
+    - *How About Shuffling?*
+      By convention, a single underscore prefixed attribute is private -- cannot
+      be accessed outside, and therefore de facto immutable (ONLY be convention).
+
+      We can't do shuffling now.
+
+      =TODO= Chapter 11
+      Use ~__setitem__~ to make shuffling available.
+
+*** DONE How Special Methods Are Used - 8
+    CLOSED: [2017-09-07 Thu 20:09]
+    - /Special methods/ should always be called by the Python interpreter, and
+      NOT by you.
+
+    - When measure the size, ~__len__~ is _NOT always_ used by the interpreter.
+
+      For built-in types like ~list~, ~str~, ~bytearray~, and so on, the
+      interpreter takes a shortcut:
+        The /CPython/ implementation of ~len()~ actually returns the value of the
+      ~ob_size~ field in the ~PyVarObject~ C struct that represents any
+      _variable-sized built-in object_ in memory. This is _much faster_ than
+      calling a method.
+
+    - Unless you are doing a lot of /metaprogramming/, you should be implementing
+      /special methods/ more often than invoking them explicitly.
+
+    - The _ONLY_ /special method/ that is frequently called by user code directly
+      is ~__init__~, to invoke the initializer of the superclass in your own
+      ~__init__~ implementation.
+
+    - _CONCLUSION_:
+      If you need to invoke a /special method/,
+      it is usually BETTER to call the related built-in function (e.g., ~len~,
+      ~iter~, ~str~, etc).
+
+      These built-ins call the corresponding /special method/, but often provide
+      other services and -- for built-in types -- are faster than method calls.
+
+      =TODO= See, for example, “A Closer Look at the iter Function” on page 436
+      in Chapter 14.
+
+    - _NEVER_ create a dunder identifier to your own use -- they can be
+      /special methods/ in the future, even if they are not today; consider them
+      as reserved names for the future /special methods/.
+
+**** DONE Emulating Numeric Types - 9
+     CLOSED: [2017-09-07 Thu 19:02]
+     =TODO= More details in Chapter 13
+
+     - What we want is
+       #+BEGIN_SRC python
+         v1 = Vector(2, 4)
+         v2 = Vector(2, 1)
+         v1 + v2              # Vector(4, 5)
+
+         v = Vector(3, 4)
+         abs(v)               # 5.0
+
+         v * 3                # Vector(9, 12)
+
+
+       #+END_SRC
+
+     - Implementation (with ~__repr__~, ~__abs__~, ~__add__~, and ~__mul__~):
+       #+BEGIN_SRC python
+         from math import hypot
+         # TODO: ???
+
+
+         class Vector:
+             def __init__(self, x=0, y=0):
+                 self.x = x
+                 self.y = y
+
+             def __repr__(self):
+                 return 'Vector({!r}, {!r})'.format(self.x, self.y)
+
+             def __abs__(self):
+                 return hypot(self.x, self.y)
+
+             def __bool__(self):
+                 return bool(abs(self))
+
+             def __add__(self, other):
+                 x = self.x + other.x
+                 y = self.y + other.y
+                 return Vector(x, y)
+
+             def __mul__(self, scalar):
+                 return Vector(self.x * scalar, self.y * scalar)
+       #+END_SRC
+
+**** DONE String Representation - 11
+     CLOSED: [2017-09-07 Thu 19:54]
+     - The ~__repr__~ /special method/ is called by the ~repr~ built-in.
+
+     - If it wasn't implemented in the example of the last subsection, the
+       printed out is like =<Vector object at 0x10e100070>=
+
+     - The interactive console and debugger call repr on the results of the
+       expressions evaluated. When print, use ~%r~ for ~%~ operator, and use
+       ~!r~ for the ~format~ method or function.
+
+     - The string returned by ~__repr__~ should be unambiguous and, if possible,
+       match the source code necessary to re-create the object being represented
+       (when use built-in ~eval~).
+       #+BEGIN_SRC python
+         repr(3)  # '3'
+         repr('3')  # '"3"'
+       #+END_SRC
+
+     - If no ~__str__~ is implemented, ~__repr__~ will be the fallback.
+
+     - StackOverflow Question:
+       "Difference between ~__str__~ and ~__repr__~ in Python"
+       Answers from Alex Martelli and Martijn Pieters
+
+**** DONE Arithmetic Operators - 12
+     CLOSED: [2017-09-07 Thu 20:02]
+     - ~__add__~ and ~__mul__~ return new instances.
+       (=From Jian=: there are also in-place versions of /special methods/
+       corresponding operators)
+
+     - =TODO= Chapter 13
+       Use ~__rmul__~ to fix the commutative problem of Vectors:
+       Suppose there are a scalar ~s~ and a Vector (of our created) ~v~,
+       currently our ~Vector~ only support ~v~ * ~s~, and it doesn't support
+       ~s~ * ~v~, which should be supported and its result should the same as
+       ~v~ * ~s~.
+
+**** DONE Boolean Value of a Custom Type - 12
+     CLOSED: [2017-09-07 Thu 20:09]
+     - By default, instances of user-defined classes are considered truthy, unless
+       either ~__bool__~ or ~__len__~ is implemented.
+
+       Basically, ~bool(x)~ calls ~x.__bool__()~ and uses the result.
+       If ~__bool__~ is not implemented, Python will try to invoke ~x.__len__()~,
+       which returns ~True~ if it is non-zero.
+
+     - The ~__bool__~ method should always do ~return bool(something)~
+       If not, when you use built-in ~bool~, the result can be a non-boolean
+       variable, even though, as in Python, it always has a boolean value.
+       =IMPORTANT=
+
+     - A faster ~__bool__~ implementation for our version of ~Vector~ (avoid
+       using ~abs~):
+       #+BEGIN_SRC python
+         def __bool__(self):
+             return bool(self.x or self.y)
+       #+END_SRC
+
+*** DONE Overview of Special Methods - 13
+    CLOSED: [2017-09-07 Thu 21:07]
+    The “Data Model” chapter of The Python Language Reference lists 83 special
+    method names, 47 of which are used to implement arithmetic, bitwise, and
+    comparison operators
+
+    - Table 1-1. Special method names (operators excluded)
+      _READ THE BOOK_
+
+    - Table 1-2. Special method names for operators
+      _READ THE BOOK_
+
+*** DONE Why len Is Not a Method - 14
+    CLOSED: [2017-09-07 Thu 21:07]
+    I (Luciano Ramalho) asked this question to core developer Raymond Hettinger
+    in 2013 and the key to his answer was a quote from *The Zen of Python*:
+    "practicality beats purity."
+
+    Sometimes ~__len__~ considered too slow (usually for some built-in types),
+    thus Python doesn't always get the length of an object through calling
+    ~__len__~. Use the built-in function ~len~ as the public API, Python can
+    hide this details from the end users.
+
+*** DONE Chapter Summary - 14
+    CLOSED: [2017-09-07 Thu 21:07]
+
+*** TODO Further Reading - 15
+
+* TODO Part II. Data Structures
+** TODO 2. An Array of Sequences - 19
+*** TODO Overview of Built-In Sequences - 20
+    - The standard library offers a rich selection of sequence types implemented
+      in C:
+      + Container sequences :: ~list~, ~tuple~, and ~collections.deque~ can hold
+           items of different types.
+
+      + Flat sequences :: ~str~, ~bytes~, ~bytearray~, ~memoryview~, and
+                          ~array.array~ hold items of one type.
+
+    - Another way of grouping sequence types is by mutability:
+      + Mutable sequences :: ~list~, ~bytearray~, ~array.array~,
+           ~collections.deque~, and ~memoryview~
+
+      + Immutable sequences :: ~tuple~, ~str~, and ~bytes~
+
+    - Figure 2-1. UML class diagram for some classes from ~collectior.abc~
+      =TODO=
+
+    - Refer to /list comprehensions/ as /listcomps/;
+      Refer to /generator/as /genexps/.
+
+*** DONE List Comprehensions and Generator Expressions - 21
+    CLOSED: [2017-09-07 Thu 21:39]
+**** DONE List Comprehensions and Readability - 21
+     CLOSED: [2017-09-07 Thu 21:34]
+    - For readability: /listcomps/ should be short and no side-effect.
+
+    - *Listcomps No Longer Leak Their Variables* in Python 3.
+
+**** DONE Listcomps Versus map and filter - 23
+     CLOSED: [2017-09-07 Thu 21:37]
+**** DONE Cartesian Products - 23
+     CLOSED: [2017-09-07 Thu 21:37]
+     #+BEGIN_SRC python
+       tshirts = [(color, size) for size in sizes
+                                for color in colors]
+     #+END_SRC
+**** DONE Generator Expressions - 25
+     CLOSED: [2017-09-07 Thu 21:39]
+
+*** DONE Tuples Are Not Just Immutable Lists - 26
+    CLOSED: [2017-09-07 Thu 22:07]
+    Tuples do _double_ duty: they can be used
+    + as immutable lists
+    + as records with no field names.
+
+    The second use is sometimes overlooked, so we will start with that.
+
+**** DONE Tuples as Records - 26
+     CLOSED: [2017-09-07 Thu 21:47]
+     - Tuples hold records:
+       each item in the tuple holds the data for one field and the position of
+       the item gives its meaning.
+
+     - Tuples work well as records because of the /tuple unpacking/ mechanism.
+
+**** DONE Tuple Unpacking - 27
+     CLOSED: [2017-09-07 Thu 21:55]
+     - The term /tuple unpacking/ is widely used by Pythonistas,
+
+       BUT /iterable unpacking/ is gaining traction, as in the title of
+       PEP 3132 — Extended Iterable Unpacking.
+
+     - Trap: =TODO=
+       If you write _internationalized_ software,
+       ~_~ is NOT a good dummy variable because it is traditionally used as an
+       alias to the ~gettext.gettext~ function, as recommended in the gettext
+       module documentation.
+
+       _Otherwise_, it's a nice name for placeholder variable.
+
+***** DONE Using ~*~ to grab excess items
+      CLOSED: [2017-09-07 Thu 21:55]
+      It Works in Python 3
+      #+BEGIN_SRC python
+        a, b, *rest = range(5)
+        a, b, rest
+        # (0, 1, [2, 3, 4])
+
+
+        a, b, *rest = range(3)
+        a, b, rest
+        # (0, 1, [2])
+
+
+        a, b, *rest = range(2)
+        a, b, rest
+        # (0, 1, [])
+
+
+        a, *body, c, d = range(5)
+        a, body, c, d
+        # (0, [1, 2], 3, 4)
+
+
+        ,*head, b, c, d = range(5)
+        head, b, c, d
+        # ([0, 1], 2, 3, 4)
+      #+END_SRC
+
+**** DONE Nested Tuple Unpacking - 29
+     CLOSED: [2017-09-07 Thu 21:59]
+     - Definition header like ~def fn(a, (b, c), d):~ is legal before Python 3,
+       which is disabled, and the reasons are explained in _PEP 3113 -- Removal
+       of Tuple parameter Unpacking_.
+
+**** DONE Named Tuples - 30
+     CLOSED: [2017-09-07 Thu 22:07]
+     - ~collections.namedtuple~ function is a factory that produce subclasses of
+       tuple enhanced with field names and a class name -- _which helps debugging_.
+
+     - Instances of a class that you build with /namedtuple/ take _exactly the
+       same amount of memory as_ /tuples/
+
+       _BECAUSE_ the field names are _stored in the class_. They use less memory
+       than a regular object because they don't store attributes in a
+       per-instance ~__dict__~.
+
+     - Namedtuple elements can be accessed through name or index.
+
+     - ~_fields~ is a tuple with the field names of the class.
+       ~_make()~ allow you to instantiate a named tuple from an iterable; City(*del hi_data) would do the same.
+       ~_asdict()~ returns a collections.OrderedDict built from the named tuple instance. That can be used to produce a nice display of city data.
+       #+BEGIN_SRC python
+         City._fields
+         # ('name', 'country', 'population', 'coordinates')
+
+
+         LatLong = namedtuple('LatLong', 'lat long')
+         delhi_data = ('Delhi NCR', 'IN', 21.935, LatLong(28.613889, 77.208889))
+         delhi = City._make(delhi_data)
+
+
+         delhi._asdict()
+         # OrderedDict([('name', 'Delhi NCR'), ('country', 'IN'), ('population', 21.935),
+         #              ('coordinates', LatLong(lat=28.613889, long=77.208889))])
+
+         for key, value in delhi._asdict().items():
+             print(key + ':', value)
+         # name: Delhi NCR
+         # country: IN
+         # population: 21.935
+       #+END_SRC
+
+**** DONE Tuples as Immutable Lists - 32
+     CLOSED: [2017-09-07 Thu 22:13]
+     - Table 2-1. Methods and attributes found in list or tuple (methods
+       implemented by object are omitted for brevity)
+
+     - /tuple/ supports _all_ list methods _that do NOT involve_ *adding* or
+       *removing* items (of course, here only in-place operations cannot be
+       involved),
+
+       with _ONE exception_ -- tuple lacks the ~__reversed__~ method, which is
+       reasonable -- it's used for in-place reverse (should always have no return
+       value). Since we cannot do in-place operations to /tuples/, this is just
+       an optimization -- eliminate might-be-confusing /special method/;
+
+       For /tuples/, ~reversed(my_tuple)~ works, and it works without
+       ~__reversed__~.
+
+       (=From Jian= from table, there is one method that /list/ doesn't implement
+
+        ~s.__getnewargs__()~ that Support for optimized serialization with
+        ~pickle~)
+        =TODO=
+
+*** DONE Slicing - 33
+    CLOSED: [2017-09-07 Thu 22:47]
+    - =TODO= Implement a user-defined class with slicing will be covered in
+      Chapter 10,
+
+**** DONE Why Slices and Range Exclude the Last Item - 33
+     CLOSED: [2017-09-07 Thu 22:27]
+     - This convetion works well with zero-based indexing languages.
+
+     - Some convenient features of the convention are:
+       + It's easy to see the length of a /slice/ or /range/ when only the stop
+         position is given:
+         ~range(3)~ and ~my_list[:3]~ both produce _three_ items.
+
+       + It's easy to compute the length of a /slice/ or /range/ when _start_ and
+         _stop_ are given:
+         just subtract _stop - start_.
+
+       + It's easy to *split* a sequence in two parts at any index ~x~, without
+         overlapping: simply get ~my_list[:x]~ and ~my_list[x:]~.
+
+     - =TODO=
+       But the best arguments for this convention were written by the Dutch
+       computer scientist Edsger W. Dijkstra (see the last reference in “Further
+       Reading” on page 59).
+
+**** DONE Slice Objects - 34
+     CLOSED: [2017-09-07 Thu 22:37]
+     - =TODO= As we will see in “How Slicing Works” on page 281, to evaluate the
+       expression ~seq[start:stop:step]~, Python calls
+       ~seq.__getitem__(slice(start, stop, step))~.
+
+     - Even if you are not implementing your own sequence types,
+       knowing about /slice objects/ is useful
+       because it lets you assign names to slices.
+
+     - Example:
+       #+BEGIN_SRC python
+         invoice = """
+         0.....6.................................40........52...55........
+         1909  Pimoroni PiBrella                     $17.50    3    $52.50
+         1489  6mm Tactile Switch x20                 $4.95    2    $9.90
+         1510  Panavise Jr. - PV-201                 $28.00    1    $28.00
+         1601  PiTFT Mini Kit 320x240                $34.95    1    $34.95
+         """
+
+         SKU = slice(0, 6)
+         DESCRIPTION = slice(6, 40)
+         UNIT_PRICE = slice(40, 52)
+         QUANTITY = slice(52, 55)
+         ITEM_TOTAL = slice(55, None)
+
+         line_items = invoice.split('\n')[2:]
+
+         for item in line_items:
+             print(item[UNIT_PRICE], item[DESCRIPTION])
+
+         # $17.50 Pimoroni PiBrella
+         # $4.95 6mm Tactile Switch x20
+         # $28.00 Panavise Jr. - PV-201
+         # $34.95 PiTFT Mini Kit 320x240
+       #+END_SRC
+
+     - =TODO= We’ll come back to slice objects when we discuss creating your own
+       collections in “Vector Take #2: A Sliceable Sequence” on page 280.
+
+**** TODO Multidimensional Slicing and ~Ellipsis~ - 35
+     - =TODO= =RE-READ=
+
+     - Slices are not just useful to extract information from sequences;
+
+       they can also be used to change mutable sequences in place -- that is,
+       without rebuilding them from scratch.
+
+**** DONE Assigning to Slices - 36
+     CLOSED: [2017-09-07 Thu 22:47]
+     - Mutable sequences can be grafted, excised, and otherwise modified in place
+       using slice notation on the left side of an assignment statement or as
+       the target of a del statement.
+
+     - Example:
+       #+BEGIN_SRC python
+         l = list(range(10))
+
+         l[2:5] = [20, 30]
+         l
+         # [0, 1, 20, 30, 5, 6, 7, 8, 9]
+
+         del l[5:7]
+         l
+         # [0, 1, 20, 30, 5, 8, 9]
+
+         l[3::2] = [11, 22]
+         l
+         # [0, 1, 20, 11, 5, 22, 9]
+
+         l[2:5] = 100
+         l
+         # TypeError: can only assign an iterable
+
+         l[2:5] = [100]
+         l
+         # [0, 1, 100, 22, 9]
+       #+END_SRC
+
+*** DONE Using ~+~ and ~*~ with Sequences - 36
+    CLOSED: [2017-09-07 Thu 22:56]
+    - Trap:
+      Suppose ~a~ is a sequence containing _mutable items_, and ~n~ is greater
+      than 1.
+
+      The result will contain n reference to the _mutable items_, and the
+      consequence is: when you mutate one of this kind of item, the ones refer to
+      it will also change -- acutally, the are just images to the mutated item.
+
+**** DONE Building Lists of Lists - 37
+     CLOSED: [2017-09-07 Thu 22:56]
+     Use the /list comprehension/.
+     #+BEGIN_SRC python
+       board = [['_'] * 3 for i in range(3)]
+       board
+       # [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+
+       board[1][2] = 'X'
+       board
+       # [['_', '_', '_'], ['_', '_', 'X'], ['_', '_', '_']]
+     #+END_SRC
+
+     - =TODO= next subsection
+       The ~+=~ and ~*=~ operators produce very different results depending on the
+       _mutability_ of the target sequence.
+
+*** DONE Augmented Assignment with Sequences - 38
+    CLOSED: [2017-09-10 Sun 01:34]
+    The /augmented assignment/ operators ~+=~ and ~*=~ behave VERY DIFFERENTLY
+    depending on _the FIRST operand_.
+
+    To simplify the discussion, we will focus on augmented addition first (~+=~),
+    but the concepts also apply to ~*=~ and to other augmented assignment
+    operators.
+
+    - =Important=
+      =FROM JIAN= I THINK THIS IS A EXTREMELY BAD DESIGN!!!
+      _MY REASONS_?????????? =TODO=
+      The fallback of ~__iadd__~ (~__imul__~) is ~__add__~ (~__mul__~)!!!
+      #+BEGIN_SRC python
+        ## a mutable object
+        l = [1, 2, 3]
+        id(l)
+        # 4311953800
+
+        l *= 2
+        l
+        # [1, 2, 3, 1, 2, 3]
+
+        id(l)
+        # 4311953800
+        ### Unchanged
+
+        ## a immutable object, no in-place operation implemented, fallback to
+        ## non-in-place operations.
+        t = (1, 2, 3)
+        id(t)
+        # 4312681568
+
+        t *= 2
+        id(t)
+        # 4301348296
+        ### changed
+      #+END_SRC
+
+    - Repeated concatenation of immutable sequences is inefficient, because
+      instead of just appending new items, the interpreter has to copy the whole
+      target sequence to create a new one with the new items concatenated.3
+
+      =FROM JIAN= WHY NOT USE implement with /persistence/ as Scala???
+
+      - footnote:
+        ~str~ is an exception to this description.
+        Because string building with ~+=~ in loops is so common in the wild,
+        CPython is optimized for this use case. ~str~ instances are allocated in
+        memory with room to spare, so that concatenation does NOT require
+        copying the whole string every time.
+
+**** DONE A ~+=~ Assignment Puzzler - 40
+     CLOSED: [2017-09-10 Sun 01:34]
+     #+BEGIN_SRC python
+       t = (1, 2, [30, 40])
+       t[2] += [50, 60]
+
+       # Traceback (most recent call last):
+       #   File "<stdin>", line 1, in <module>
+       # TypeError: 'tuple' object does not support item assignment
+
+       t
+       # (1, 2, [30, 40, 50, 60])
+     #+END_SRC
+
+     - Details ...... (disassemble the Python bytecode)
+
+     - Conclusion:
+       + Putting mutable items into a supposed immutable objects (e.g. tuple), is
+         _NOT_ a good idea.
+
+       + /Augmented assignment/ is _NOT_ an /atomic operation/ -- we just saw it
+         throwing an exception after doing part of its job.
+
+       + Inspecting Python bytecode is NOT too DIFFICULT, and is often helpful to
+         see what is going on under the hood.
+
+*** DONE ~list.sort~ and the ~sorted~ Built-In Function - 42
+    CLOSED: [2017-09-10 Sun 00:25]
+    - Python API convention: the value a in-place operation returns should be
+      ~None~. For example, ~list.sort~ and ~random.shuffle~.
+
+    - In-palce operation returns ~None~, and thus cascade calls can be applied
+      any more.
+
+    - Read "Fluent interface" entry in wiki. =TODO=
+
+    - ~sorted~ accepts any iterable object as an argument, including generators
+      (see Chapter 14). =TODO=
+
+    - Both list.sort and sorted take two optional, keyword-only arguments:
+      + ~reverse~: The default is ~False~.
+      + ~key~: ......
+
+    - The _standard binary search algorithm_ is already provided in the ~bisect~
+      module of the Python standard library.
+      =IMPORTANT=
+
+    - ~bisect.insort~: use it to make sure that your sorted sequences stay
+      sorted.
+      =TODO= =???=
+
+*** DONE Managing Ordered Sequences with ~bisect~ - 44
+    CLOSED: [2020-04-22 Wed 01:21]
+    - The ~bisect~ module offers two main functions that exploit the /binary
+      search algorithm/:
+      + ~bisect~
+      + ~insort~
+
+**** DONE Searching with ~bisect~ - 44
+     CLOSED: [2020-04-22 Wed 01:21]
+     - ~bisect(haystack, needle)~
+       returns the index that all the elements include the one at the returned
+       index are less than or equal to the ~needle~.
+
+     - TODO =TRY it= TODO
+       Raymond Hettinger -- a prolific Python contributor -- has a
+       _Sorted Collection recipe_ that leverages the ~bisect~ module
+       BUT is _easier_ to use than these standalone functions.
+
+     - The ~bisect~ function is an alias of ~bisect_right~.
+       There is also an ~bisect_left~.
+       + The difference between them is when the ~needle~ equals a value in haystack,
+         * When using ~bisect~ / ~bisect_right~, insert it to the _right_.
+         * When using ~bisect_left~, insert it to the _left_.
+
+     - Read
+       _Example 2-17. bisect finds insertion points for items in a sorted sequence_
+
+     - Interesting example (Example 2-18) from _the ~bisect~ module documentation_.
+       #+begin_src python
+         def grade(score, breakpoints=[60, 70, 80, 90], grades='FDCBA'):
+             i = bisect.bisect(breakpoints, score)
+             return grades[i]
+
+         [grade(score) for score in [33, 99, 77, 70, 89, 90, 100]]
+         # ['F', 'A', 'C', 'C', 'B', 'A', 'A']
+       #+end_src
+
+**** DONE Inserting with ~bisect.insort~ - 47
+     CLOSED: [2020-04-22 Wed 01:21]
+     ~insort(seq, item)~ inserts ~item~ into seq so as to keep ~seq~ in _ascending
+     order_.
+
+     - Example 2-19. Insort keeps a sorted sequence always sorted.
+       #+begin_src python
+         import bisect
+         import random
+
+         SIZE = 7
+
+         random.seed(1729)
+
+         my_list = []
+         for i in range(SIZE):
+             new_item = random.randrange(SIZE * 2)
+             bisect.insort(my_list, new_item)
+             print(f'{new_item:>2d} -> {my_list}')
+       #+end_src
+
+     - Like ~bisect~, ~insort~ takes _optional_ ~lo~, ~hi~ arguments to _LIMIT
+       the search to a subsequence_.
+
+     - There is also an ~insort_left~ variation that uses ~bisect_left~ to find
+       insertion points.
+
+     - Python programmers sometimes overuse the ~list~ type because it is so handy
+       -- I know I’ve done it.
+       TODO next section TODO
+         If you are handling _lists of numbers_, /arrays/ are the way to go. The
+       remainder of the chapter is devoted to them.
+
+*** TODO When a List Is Not the Answer - 48
+    - For specific requirements, there are better options than ~list~:
+      + Store 10 million floating-point values, an ~array~ is much more efficient.
+          Just like the /array/ in Python's host language C, Python's ~array~ is
+        very compact in memory.
+
+      + For a sequence that need to operate its two ends frequently, use ~deque~.
+
+**** DONE Arrays - 48
+     CLOSED: [2020-04-22 Wed 01:55]
+     - ~array.array~ supports
+       + all mutable sequence operations (including ~.pop~, ~.insert~, and ~.extend~)
+       + Fast loading and saving such as ~.frombytes~ and ~.tofile~
+
+     - Create an array with typecode like:
+       ~array('b')~, where ~'b'~ is the typecode for *signed char*. Each item must
+       be a single byte (from -128 to 127).
+
+     - Example 2-20. Creating, saving, and loading a large array of floats
+       #+begin_src python
+         from array import array
+         from random import random
+
+         floats = array('d', (random() for i in range(10**7)))
+         floats[-1]  # 0.07802343889111107
+         floats.tofile(open('floats.bin', 'wb'))
+
+         floats2 = array('d')
+         floats.fromfile(open('floats.bin', 'rb'), 10**7)
+         floats2[-1]  # 0.07802343889111107
+
+         floats2 == floats  # True
+       #+end_src
+
+     - ~pickle.dump(array)~ is almost as fast as with ~array.tofile~.
+         However, the difference is ~pickle.dump~ can also handle almost all
+       built-in types automatically.
+
+     - TODO CHAPTER 4 TODO
+       For the specific case of numeric arrays representing binary data, such as
+       raster images, Python has the bytes and bytearray types discussed in
+       Chapter 4.
+
+     - Table 2-2. Methods and attributes found in list or array (deprecated array
+       methods and those also implemented by object were omitted for brevity)
+       TODO =RE-READ=
+
+     - As of Python 3.4, ~array~ doesn't have in place sort method.
+       Use ~a = array.array(a.typecode, sorted(a))~
+
+**** TODO Memory Views - 51
+**** TODO NumPy and SciPy - 52
+**** TODO Deques and Other Queues - 55
+
+*** TODO Chapter Summary - 57
+*** TODO Further Reading - 59
+
+** TODO 3. Dictionaries and Sets - 63
+*** TODO Generic Mapping Types - 64
+*** TODO ~dict~ Comprehensions - 66
+*** TODO Overview of Common Mapping Methods - 66
+**** Handling Missing Keys with setdefault - 68
+
+*** TODO Mappings with Flexible Key Lookup - 70
+**** defaultdict: Another Take on Missing Keys - 70
+**** The __missing__ Method - 72
+
+*** TODO Variations of ~dict~ - 75
+*** TODO Subclassing ~UserDict~ - 76
+*** DONE Immutable Mappings - 77
+    CLOSED: [2017-09-08 Fri 20:16]
+    Since Python 3.3, the ~types~ module provides a wrapper class called
+    ~MappingProxyType~, which, given a mapping, returns a ~mappingproxy~ instance
+    that is a _read-only_ but _dynamic view_ of the original mapping -- updates
+    to the original mapping can be seen in the ~mappingproxy~, but changes CANNOT
+    be made through it. (=FROM JIAN= Consider this as a immutable reference to
+    the original map)
+    #+BEGIN_SRC python
+      from types import MappingProxyType
+      d = {'one': 'A'}
+      d_proxy = MappingProxyType(d)
+
+      d_proxy
+      # mappingproxy({'one': 'A'})
+
+      d_proxy['one']
+      # 'A'
+
+      d_proxy['two'] = 'B'
+      ## TypeError: ...
+
+      d['two'] = 'B'
+      d_proxy
+      # mappingproxy({'one': 'A', 'two': 'B'})
+
+      d_proxy['two']
+      # 'B'
+    #+END_SRC
+
+*** TODO Set Theory - 79
+**** set Literals - 80
+**** Set Comprehensions - 81
+**** Set Operations - 82
+
+*** TODO ~dict~ and ~set~ Under the Hood - 85
+**** A Performance Experiment - 85
+**** Hash Tables in Dictionaries - 87
+**** Practical Consequences of How dict Works - 90
+**** How Sets Work—Practical Consequences - 93
+
+*** TODO Chapter Summary - 93
+*** TODO Further Reading - 94
+
+** TODO 4. Text versus Bytes - 97
+*** TODO Character Issues - 98
+*** TODO Byte Essentials - 99
+**** Structs and Memory Views - 102
+
+*** TODO Basic Encoders/Decoders 103
+*** TODO Understanding Encode/Decode Problems - 105
+**** Coping with ~UnicodeEncodeError~ - 105
+**** Coping with ~UnicodeDecodeError~ - 106
+**** SyntaxError When Loading Modules with Unexpected Encoding - 108
+**** How to Discover the Encoding of a Byte Sequence - 109
+**** BOM: A Useful Gremlin - 110
+
+*** TODO Handling Text Files - 111
+**** Encoding Defaults: A Madhouse - 114
+
+*** TODO Normalizing Unicode for Saner Comparisons - 117
+**** Case Folding - 119
+**** Utility Functions for Normalized Text Matching - 120
+**** Extreme “Normalization”: Taking Out Diacritics - 121
+
+*** TODO Sorting Unicode Text - 124
+**** Sorting with the Unicode Collation Algorithm - 126
+
+*** TODO The Unicode Database - 127
+*** TODO Dual-Mode ~str~ and ~bytes~ APIs - 129
+**** str Versus bytes in Regular Expressions - 129
+**** str Versus bytes on os Functions - 130
+
+*** TODO Chapter Summary - 132
+*** TODO Further Reading - 133
+
+* DONE Part III. Functions as Objects
+  CLOSED: [2017-09-11 Mon 16:41]
+** DONE 5. First-Class Functions - 139
+   CLOSED: [2017-09-08 Fri 19:36]
+   - Functions in Python are /first-class objects/.
+
+   - /first-class objects/ _can be_ (NOT must be)
+     + Created at runtime
+     + Assigned to a variable or element in a data structure
+     + Passed as an argument to a function
+     + Returned as the result of a function
+
+   - The term "first-class functions" is widely used as shorthand for
+     "functions as first-class objects."
+
+     It's _NOT_ perfect because it seems to imply an "elite" among functions.
+     In Python, all functions are first-class.
+
+*** DONE Treating a Function Like an Object 140
+    CLOSED: [2017-09-08 Fri 11:22]
+    #+BEGIN_SRC python
+      def factorial(n):
+          """returns n!"""
+          # not a good implementation in Python
+          return 1 if n < 2 else n * factorial(n-1)
+
+
+      factorial(42)
+      # 1405006117752879898543142606244511569936384000000000
+
+
+      factorial.__doc__
+      # 'returns n!'
+
+
+      type(factorial)
+      # <class 'function'>
+    #+END_SRC
+
+    YES! ~factorial~ above is an instance of the ~function~ class in Python.
+
+*** DONE Higher-Order Functions 141
+    CLOSED: [2017-09-08 Fri 11:23]
+**** Modern Replacements for map, filter, and reduce 142
+     - ~map~ and ~filter~ can be replaced with listcomp and genexp.
+       + listcomp in Python 2
+       + genexp in Python 3
+
+     - Starting with Python 3.0, ~reduce~ is NOT a built-in.
+       You can find it in ~functools~.
+
+     - There is no single alternative in general for ~reduce~.
+
+     - built-ins that have ~reduce~ features (with specific reduction functions):
+       ~sum~, ~all~, and ~any~. They all require an iterable as the parameter.
+
+*** DONE Anonymous Functions 143
+    CLOSED: [2017-09-08 Fri 11:36]
+    Due to the limitation of the syntax of /anonymous functions/ of Python,
+    /anonymous functions/ should only be used as a parameter to a
+    /higher-order fucntion/.
+
+*** DONE The Seven Flavors of Callable Objects 144
+    CLOSED: [2017-09-08 Fri 11:44]
+    - The Python Data Model documentation lists _7_ /callable types/:
+      + User-defined functions ::
+           Created with ~def~ statements or ~lambda~ expressions.
+
+      + Built-in functions ::
+           A function implemented in C (for CPython), like ~len~ or
+           ~time.strftime~.
+
+      + Built-in methods ::
+           Methods implemented in C, like ~dict.get~.
+
+      + Methods ::
+                   Functions defined in the body of a /class/.
+
+      + Classes ::
+                   When invoked, a class runs its ~__new__~ method to create an
+                   instance, then ~__init__~ to initialize it, and finally the
+                   instance is returned to the caller. Because there is no new
+                   operator in Python, calling a class is like calling a
+                   function. (Usually calling a class creates an instance of the
+                   same class, but other behaviors are possible by overriding
+                   ~__new__~.
+
+                   =TODO= We'll see an example of this in “Flexible Object
+                   Creation with ~__new__~ ” on page 592.)
+
+      + Class instances ::
+           If a class defines a ~__call__~ method, then its instances may be
+           invoked as functions.
+
+           =TODO= See “User-Defined Callable Types” on page 145.
+
+      + Generator functions ::
+           Functions or methods that use the ~yield~ keyword. When called,
+           generator functions return a generator object
+
+    - =IMPORATN=
+      Use the ~callable()~ built-in function to test if one object is a callable.
+
+*** DONE User-Defined Callable Types 145
+    CLOSED: [2017-09-08 Fri 11:53]
+    #+BEGIN_SRC python
+      import random
+
+      class BingoCage:
+          def __init__(self, items):
+              self._items = list(items)
+              random.shuffle(self._items)
+
+          def pick(self):
+              try:
+                  return self._items.pop()
+              except IndexError:
+                  raise LookupError('pick from empty BingoCage')
+
+          def __call__(self):
+              return self.pick()
+
+
+      bingo = BingoCage(range(3))
+
+      bingo.pick()
+      # 1
+
+
+      bingo()
+      # 0
+
+      callable(bingo)
+      # True
+    #+END_SRC
+
+    - Decorators must be functions, but it is sometimes convenient to be able to
+      “remember” something between calls of the decorator (e.g., for memoization
+      -- caching the results of expensive computations for later use).
+
+    - =TODO=
+      A totally different approach to creating functions with internal state is
+      to use /closures/. /Closures/, as well as /decorators/, are the subject of
+      Chapter 7.
+
+*** DONE Function Introspection 146
+    CLOSED: [2017-09-08 Fri 12:04]
+    - ~__dir__(an_object)~ lists all the attributes of the ~an_object~.
+
+    - ~__dict__~ :: Like the instances of a plain user-defined class, a function
+                    uses the ~__dict__~ attribute to store user attributes
+                    assigned to it.
+
+    - Assigning arbitrary attributes to functions is not a very common practice
+      in general, but Django is one framework that uses it.
+      #+BEGIN_SRC python
+        def upper_case_name(obj):
+            return ("%s %s" % (obj.first_name, obj.last_name)).upper()
+
+        upper_case_name.short_description = 'Customer name'
+      #+END_SRC
+
+    - List the attributes of functions that do NOT exist in plain instances.
+      #+BEGIN_SRC python
+        class C: pass
+
+        obj = C()
+
+        def func(): pass
+
+        sorted(set(dir(func)) - set(dir(obj)))
+        # ['__annotations__', '__call__', '__closure__', '__code__', '__defaults__',
+           '__get__', '__globals__', '__kwdefaults__', '__name__', '__qualname__']
+      #+END_SRC
+
+    - Table 5-1. Attributes of user-defined functions
+      =TODO=
+
+    - =TODO=
+      We will discuss the ~__defaults__~, ~__code__~, and ~__annotations__~
+      functions, used by IDEs and frameworks to extract information about
+      function signatures, in later sections.
+
+*** DONE From Positional to Keyword-Only Parameters 148
+    CLOSED: [2017-09-08 Fri 17:31]
+    To specify keyword-only arguments when defining a function, name them after
+    the argument prefixed with ~*~. If you don't want to support variable
+    positional arguments but still want keyword-only arguments, put a ~*~ by
+    itself in the signature, like this:
+    #+BEGIN_SRC python
+      def f(a, *, b):
+          return a, b
+
+      f(1, b=2)
+      # (1, 2)
+    #+END_SRC
+
+    - The book doesn't mention that you can also only allow keyword-only arguments
+      #+BEGIN_SRC python
+        def g(*, b):
+            return b
+
+        f(b=2)
+        # 2
+
+        f(2)
+        ## TypeError
+      #+END_SRC
+
+    - Note:
+      /keyword-only arguments/ _do NOT need to have a default value_: they can be
+      mandatory, like ~b~ in the preceding example.
+
+*** TODO =Re-READ= Retrieving Information About Parameters 150
+    The ~inspect~ mdoule
+    =TODO=
+
+*** DONE =OLD= Function Annotations 154
+    CLOSED: [2017-09-08 Fri 18:20]
+    =From Jian= Use the ~typing~ module (Python 3.5+), static check can be applied.
+    However, the info in this book is about Python 3.4 or less.
+
+    - Example (=Jian has submitted an errata to this code=):
+      #+BEGIN_SRC python
+        def clip(text:str, max_len:'int > 0'=80) -> str:
+            """Return text clipped at the last space before or after max_len
+            """
+            end = None
+
+            # Distinguish the cases of before or after `max_len` in this code is not
+            # useful.
+            if len(text) > max_len:
+                space_before = text.rfind(' ', 0, max_len)
+                if space_before >= 0:
+                    end = space_before
+                else:
+                    # Jian has submitted an errata to the line below, which use the
+                    # `rfind` method in the book, with which this code CANNOT achieve
+                    # its purpose.
+                    space_after = text.find(' ', max_len)
+                    if space_after >= 0:
+                        end = space_after
+
+            if end is None:  # no spaces were found
+                end = len(text)
+
+            return text[:end].rstrip()
+      #+END_SRC
+
+*** DONE Packages for Functional Programming 156
+    CLOSED: [2017-09-08 Fri 19:07]
+**** DONE The ~operator~ Module 156
+     CLOSED: [2017-09-08 Fri 18:55]
+     With this module
+     - ~lambda a, b: a*b~ can be simplified to ~operator.mul~;
+
+     - ~lambda fields: fields[1]~ can be simplified to ~itemgetter(1)~.
+       #+BEGIN_SRC python
+         metro_data = [
+             ('Tokyo', 'JP', 36.933, (35.689722, 139.691667)),
+             ('Delhi NCR', 'IN', 21.935, (28.613889, 77.208889)),
+             ('Mexico City', 'MX', 20.142, (19.433333, -99.133333)),
+             ('New York-Newark', 'US', 20.104, (40.808611, -74.020386)),
+             ('Sao Paulo', 'BR', 19.649, (-23.547778, -46.635833)),
+         ]
+
+         for city in sorted(metro_data, key=operator.itemgetter(1)):
+             print(city)
+
+         # ('Sao Paulo', 'BR', 19.649, (-23.547778, -46.635833))
+         # ('Delhi NCR', 'IN', 21.935, (28.613889, 77.208889))
+         # ('Tokyo', 'JP', 36.933, (35.689722, 139.691667))
+         # ('Mexico City', 'MX', 20.142, (19.433333, -99.133333))
+         # ('New York-Newark', 'US', 20.104, (40.808611, -74.020386))
+       #+END_SRC
+
+       If you pass multiple index arguments to ~itemgetter~, the function it
+       builds will return tuples with the extracted values:
+       #+BEGIN_SRC python
+         cc_name = itemgetter(1, 0)
+
+         for city in metro_data:
+             print(cc_name(city))
+
+         # ('JP', 'Tokyo')
+         # ('IN', 'Delhi NCR')
+         # ('MX', 'Mexico City')
+         # ('US', 'New York-Newark')
+         # ('BR', 'Sao Paulo')
+       #+END_SRC
+
+       Because use ~itemgetter~ is equivalent to uses the ~[]~ operator, it
+       supports
+       + NOT ONLY sequences
+       + BUT ALSO
+         * mappings
+         * any class that implements ~__getitem__~.
+
+     - If you pass ~attrgetter~ several attribute names as arguments, it also
+       returns a tuple of values.
+
+       In addition, if any argument name contains a ~.~ (dot), ~attrgetter~
+       navigates through nested objects to retrieve the attribute.
+       #+BEGIN_SRC python
+         from collections import namedtuple
+         from operator import attrgetter
+
+
+         LatLong = namedtuple('LatLong', 'lat long')
+         Metropolis = namedtuple('Metropolis', 'name cc pop coord')
+         metro_areas = [Metropolis(name, cc, pop, LatLong(lat, long))
+                        for name, cc, pop, (lat, long) in metro_data]
+
+         metro_areas[0]
+         # Metropolis(name='Tokyo', cc='JP', pop=36.933,
+         #            coord=LatLong(lat=35.689722, long=139.691667))
+
+         metro_areas[0].coord.lat
+         # 35.689722
+
+         name_lat = attrgetter('name', 'coord.lat')
+
+         for city in sorted(metro_areas, key=attrgetter('coord.lat')):
+             print(name_lat(city))
+         # ('Sao Paulo', -23.547778)
+         # ('Mexico City', 19.433333)
+         # ('Delhi NCR', 28.613889)
+         # ('Tokyo', 35.689722)
+         # ('New York-Newark', 40.808611)
+       #+END_SRC
+
+     - ~i~ prefixed function in ~operator~ change their first argument in
+       place, which is the same as ~+=~, ~&=~, etc., _if it is mutable_.
+
+       _if not mutable_, the function works like the one without the ~i~ prefix:
+       it simply returns the result of the operation.
+
+     - ~methodcaller~
+       #+BEGIN_SRC python
+         from operator import methodcaller
+
+         s = 'The time has come'
+         upcase = methodcaller('upper')
+         upcase(s)  # `upcase` has the same functionality as `str.upper`
+         # 'THE TIME HAS COME'
+
+         ### This is like the `functools.partial`
+         hiphenate = methodcaller('replace', ' ', '-')
+         hiphenate(s)
+         # The-time-has-come'
+       #+END_SRC
+
+**** DONE Freezing Arguments with ~functools.partial~ 159
+     CLOSED: [2017-09-08 Fri 19:07]
+    - Example 5-27. Building a convenient Unicode normalizing function with partial
+      #+BEGIN_SRC python
+        import unicodedata, functools
+
+
+        nfc = functools.partial(unicodedata.normalize, 'NFC')
+        s1 = 'café'
+        s2 = 'cafe\u0301'
+
+        s1, s2
+        # ('café', 'café')
+
+        s1 == s2
+        False
+
+        nfc(s1) == nfc(s2)
+        # True
+      #+END_SRC
+
+    - Example 5-28. Demo of partial applied to the function tag from Example 5-10
+      #+BEGIN_SRC python
+        from tagger import tag
+        from functools import partial
+
+        tag
+        # <function tag at 0x10206d1e0>
+
+        picture = partial(tag, 'img', cls='pic-frame')
+        picture(src='wumpus.jpeg')
+        # '<img class="pic-frame" src="wumpus.jpeg" />'
+
+        picture
+        # functools.partial(<function tag at 0x10206d1e0>, 'img', cls='pic-frame')
+
+        ### From Jian:
+        ### The attributes below are all belongs to
+        ### `functools.partial...`.
+        ###
+        ### `function` class instances do NOT have those attributes.
+        picture.func
+        # <function tag at 0x10206d1e0>
+
+        picture.args
+        # ('img',)
+
+        picture.keywords
+        # {'cls': 'pic-frame'}
+      #+END_SRC
+
+    - There is ~functools.partialmethod~ for Python 3.4+
+
+    - =TODO= ~functools.lru_cache~ in Chapter 7
+
+*** DONE Chapter Summary 161
+    CLOSED: [2017-09-08 Fri 19:36]
+*** TODO Further Reading 162
+
+** DONE 6. Design Patterns with First-Class Functions - 167
+   CLOSED: [2017-09-09 Sat 23:07]
+   - _Although design patterns are language-independent, that does not mean every
+     pattern applies to every language._
+
+   - "Design Patterns in Dynamic Languages" (1996) by Peter Norvig:
+     _16 out of the 23_ patterns in the original Design Patterns book by Gamma
+     et al. become either “invisible or simpler” in a dynamic language (slide 9).
+
+   - In particular, in the context of languages with /first-class functions/,
+     Norvig suggests rethinking the *Strategy*, *Command*, *Template Method*, and
+     *Visitor* patterns. =TODO=
+
+   - In this chapter, we will refactor *Strategy* using /function objects/, and
+     discuss a similar approach to simplifying the *Command* pattern.
+
+*** DONE Case Study: Refactoring Strategy - 168
+    CLOSED: [2017-09-09 Sat 21:50]
+**** DONE Classic Strategy - 168
+     CLOSED: [2017-09-09 Sat 17:00]
+     - Figure 6-1. UML class diagram for order discount processing implemented
+       with the Strategy design pattern
+
+     - The Strategy pattern:
+       * Define a family of algorithms (of course, can be in the form of
+         functions or class methods),
+
+       * encapsulate each one, and make them interchangeable (if no
+         "functions as first class objects", they must be the other kind of
+         objects. For example, defined as /classes/ and use their instances).
+
+       * *Strategy* lets the algorithm vary independently from clients that use it.
+
+     - Concepts in a *Stragety* pattern:
+       + Context ::
+                    Provides a service by delegating some computation to
+                    interchangeable components that implement alternative
+                    algorithms. In the ecommerce example, the /context/ is an
+                    ~Order~, which is configured to apply a promotional discount
+                    according to one of several algorithms.
+
+       + Strategy ::
+                     The interface common to the components that implement the
+                     different algorithms. In our example, this role is played
+                     by an _abstract class_ called ~Promotion~.
+
+       + Concrete Strategy ::
+            One of the concrete subclasses of Strategy. ~FidelityPromo~,
+            ~BulkPromo~, and ~LargeOrderPromo~ are the three concrete strategies.
+            implemented.
+
+     - Example 6-1. Implementation Order class with pluggable discount strategies
+       #+BEGIN_SRC python
+         from abc import ABC, abstractmethod
+         from collections import namedtuple
+
+
+         Customer = namedtuple('Customer', 'name fidelity')
+
+         class LineItem:
+             def __init__(self, product, quantity, price):
+                 self.product = product
+                 self.quantity = quantity
+                 self.price = price
+
+             def total(self):
+                 return self.price * self.quantity
+
+
+         class Order: # the Context
+             def __init__(self, customer, cart, promotion=None):
+                 self.customer = customer
+                 self.cart = list(cart)
+                 self.promotion = promotion
+
+             def total(self):
+                 if not hasattr(self, '__total'):
+                     self.__total = sum(item.total() for item in self.cart)
+                     return self.__total
+
+             def due(self):
+                 if self.promotion is None:
+                     discount = 0
+                 else:
+                     discount = self.promotion.discount(self)
+                     return self.total() - discount
+
+             def __repr__(self):
+                 fmt = '<Order total: {:.2f} due: {:.2f}>'
+                 return fmt.format(self.total(), self.due())
+
+
+         class Promotion(ABC): # the Strategy: an abstract base class
+             @abstractmethod
+             def discount(self, order):
+                 """Return discount as a positive dollar amount"""
+
+
+         class FidelityPromo(Promotion): # first Concrete Strategy
+             """5% discount for customers with 1000 or more fidelity points"""
+             def discount(self, order):
+                 return order.total() * .05 if order.customer.fidelity >= 1000 else 0
+
+
+         class BulkItemPromo(Promotion): # second Concrete Strategy
+             """10% discount for each LineItem with 20 or more units"""
+             def discount(self, order):
+                 discount = 0
+                 for item in order.cart:
+                     if item.quantity >= 20:
+                         discount += item.total() * .1
+                 return discount
+
+
+         class LargeOrderPromo(Promotion): # third Concrete Strategy
+             """7% discount for orders with 10 or more distinct items"""
+             def discount(self, order):
+                 distinct_items = {item.product for item in order.cart}
+                 if len(distinct_items) >= 10:
+                     return order.total() * .07
+                 return 0
+       #+END_SRC
+
+**** DONE Function-Oriented Strategy - 172
+     CLOSED: [2017-09-09 Sat 21:16]
+     - Define and use functions ~fidelity_promo~, ~bulk_item_promo~, and
+       ~large_order_promo~.
+
+       Then the *Strategy* (the abstract class ~Promotion~) is useless, and
+       delete it.
+
+       Modify ~Order~ a little bit (the 3rd parameter will no longer be a class
+       instance).
+
+     - For the old "Classic Strategy" pattern, create new instances when creating
+       a new ~Order~ will be a runtime cost. This is the usual drawback of the
+       *Strategy* pattern.
+
+       If it is available, *Flyweight* should be implemented.
+
+       “A /flyweight/ is a shared object that can be used in multiple contexts
+       simultaneously.”
+
+       However, since a function is a kind of flyweight object -- no matter how
+       many times you use it, you don't need to recreate it.
+         Thus, the Function-Oriented Strategy has two good points:
+       + concise
+       + some runtime costs are elimitnated
+
+**** DONE Choosing the Best Strategy: Simple Approach - 175
+     CLOSED: [2017-09-09 Sat 21:22]
+     #+BEGIN_SRC python
+       promos = [fidelity_promo, bulk_item_promo, large_order_promo]
+
+       def best_promo(order):
+           """Select best discount availarb"""
+           return max(promo(order) for promo in promos)
+
+     #+END_SRC
+
+     A potential subtle bug: to add a new promotion strategy, we need to code the
+     function and remember to add it to the ~promos~ list, or else the new
+     promotion will work when explicitly passed as an argument to ~Order~, but
+     will NOT be considered by ~best_promotion.~
+
+     (=From Jian= use /decorator/ to solve this in the future).
+
+**** DONE Finding Strategies in a Module - 176
+     CLOSED: [2017-09-09 Sat 21:50]
+     - /Modules/ in Python are also first-class objects, and the standard library
+       provides several functions to handle them.
+
+     - ~globals()~ (built-in) ::
+          Return a dictionary representing the current global symbol table.
+
+          This is always the dictionary of the _current module_ (inside a function
+          or method, this is the module where it is defined, not the module from
+          which it is called).
+
+     - =TODO= =From Jian= Learn more about ~globals()~
+
+     - Example 6-7. The ~promos~ list is built by introspection of the module
+       global namespace
+       #+BEGIN_SRC python
+         promos = [globals()[name] for name in globals()
+                   if name.endswith('_promo') and name != 'best_promo']
+       #+END_SRC
+
+     - Another way of collecting the available promotions would be
+       to create a module and put all the strategy functions there, except for
+       ~best_promo~.
+
+       Example 6-8. The ~promos~ list is built by introspection of a new
+       promotions module
+       #+BEGIN_SRC python
+         promos = [func for name, func in
+                   inspect.getmembers(promotions, inspect.isfunction)]
+
+         def best_promo(order):
+             """Select best discount available"""
+             return max(promo(order) for promo in promos)
+       #+END_SRC
+
+       All that matters is that the promotions module contains only functions
+       that calculate discounts given orders. This is a _implicit assumption_ of
+       the code, which is is not strict.
+
+     - The point of Example 6-8 is _NOT_ to offer a _complete_ solution,
+       but to highlight one _possible use_ of /module introspection/.
+
+
+     - =TODO= In the next section, we discuss *Command* pattern — another design
+       pattern that is sometimes implemented via _single-method classes_ when
+       plain functions would do.
+
+*** DONE Command - 177
+    CLOSED: [2017-09-09 Sat 22:17]
+    Example 6-9. Each instance of MacroCommand has an internal list of commands
+    #+BEGIN_SRC python
+      class MacroCommand:
+          """A command that executes a list of commands"""
+          def __init__(self, commands):
+              self.commands = list(commands)
+
+          def __call__(self):
+              for command in self.commands:
+                  command()
+    #+END_SRC
+
+    =TODO=
+    More advanced uses of the *Command* pattern -- to support undo, for example
+    -- may require more than a simple callback function. Even then, Python
+    provides a couple of alternatives that deserve consideration:
+    - A callable instance like MacroCommand in Example 6-9 can keep whatever
+      state is necessary, and provide extra methods in addition to ~__call__~.
+      =TODO=
+
+    - A closure can be used to hold the internal state of a function between
+      calls. =TODO=
+
+*** DONE Chapter Summary - 179
+    CLOSED: [2017-09-09 Sat 22:23]
+    If an API requires thant components implement an interface with a _single_
+    method, and that method has a generic-sounding name such as "execute", "run",
+    or "doIt". Such patterns or APIs often can be implemented with less
+    boilerplate code in Python using first-class functions or other callables.
+
+*** TODO Further Reading - 180
+
+** DONE 7. Function Decorators and Closures - 183
+   CLOSED: [2017-09-11 Mon 16:41]
+   - The meaning of "decorator" in Python is NOT consistant with it in the GoF
+     book.
+
+     It probably owes more to its use in the compiler area -- a syntax tree is
+     walked and annotated. =TODO=
+
+   - =TODO=
+
+   - =TODO=
+
+*** DONE Decorators 101 - 184
+    CLOSED: [2017-09-08 Fri 20:28]
+    #+BEGIN_SRC python
+      def deco(func):
+          def inner():
+              print('running inner()')
+          return inner
+
+      @deco
+      def target():
+          print('running target()')
+
+      target()
+      # running inner()
+
+      targe
+      # <function deco.<locals>.inner at 0x10063b598>
+
+    #+END_SRC
+
+    - metaprogramming :: changing program behavior at runtime.
+
+    - To summarize to two crucial facts about decorators:
+      + they have the power to replace the decorated function with a different one.
+
+      + they are executed _immediately when a module is loaded_.
+        =TODO= This is explained next.
+
+*** DONE When Python Executes Decorators - 185
+    CLOSED: [2017-09-08 Fri 20:35]
+    - Example 7-2. The registration.py module
+      #+BEGIN_SRC python
+        registry = []
+
+        def register(func):
+            print('running register(%s)' % func)
+            registry.append(func)
+            return func
+
+        @register
+        def f1():
+            print('running f1()')
+
+        @register
+        def f2():
+            print('running f2()')
+
+        def f3():
+            print('running f3()')
+
+        def main():
+            print('running main()')
+            print('registry ->', registry)
+            f1()
+            f2()
+            f3()
+
+        if __name__=='__main__':
+            main()
+
+        ### $ python3 registration.py
+        # running register(<function f1 at 0x100631bf8>)
+        # running register(<function f2 at 0x100631c80>)
+        # running main()
+        # registry -> [<function f1 at 0x100631bf8>, <function f2 at 0x100631c80>]
+        # running f1()
+        # running f2()
+        # running f3()
+      #+END_SRC
+
+    - /function decorators/ are executed _as soon as_ the module is imported, but
+      the decorated functions only run when they are explicitly invoked.
+
+      This highlights the difference between what Pythonistas call /import time/
+      and /runtime/.
+*** DONE Decorator-Enhanced Strategy Pattern - 187
+    CLOSED: [2017-09-08 Fri 20:53]
+    Refactor the code in “Case Study: Refactoring Strategy” on page 168. with
+    a /decorator/.
+
+    Example 7-3. The promos list is filled by the promotion decorator
+    #+BEGIN_SRC python
+      promos = []
+
+      def promotion(promo_func):
+          promos.append(promo_func)
+          return promo_func
+
+      @promotion
+      def fidelity(order):
+          """5% discount for customers with 1000 or more fidelity points"""
+          return order.total() * .05 if order.customer.fidelity >= 1000 else 0
+
+      @promotion
+      def bulk_item(order):
+          """10% discount for each LineItem with 20 or more units"""
+          qualified_total = sum(item.total()
+                                for item in order.cart
+                                if item.quantity >= 20)
+
+          return quantity_total * .1
+
+      @promotion
+      def large_order(order):
+          """7% discount for orders with 10 or more distinct items"""
+          distinct_items = {item.product for item in order.cart}
+          return 0 if len(distinct_items) < 10 else order.total() * .07:
+
+      def best_promo(order):
+          """Select best discount available"""
+          return max(promo(order) for promo in promos)
+    #+END_SRC
+
+    With the ~@promotion~ decorator, manually create the ~promos~ list is no
+    longer needed, then it is much convinient to add functions to ~promos~.
+    Even if we first forget, add a ~@promotion~, and then it's DONE.
+
+*** DONE Variable Scope Rules - 189
+    CLOSED: [2017-09-09 Sat 23:23]
+    - A design choice:
+      #+BEGIN_SRC python
+        b = 6
+        def f2(a):
+            print(a)
+            print(b)
+            b = 9
+
+        f2(3)
+        # 3
+        # Traceback (most recent call last):
+        #   File "<stdin>", line 1, in <module>
+        #   File "<stdin>", line 3, in f2
+        # UnboundLocalError: local variable 'b' referenced before assignment
+      #+END_SRC
+
+    - If we want the interpreter to treat ~b~ as a /global variable/ in spite of
+      the assignment within the function, we use the ~global~ declaration:
+      #+BEGIN_SRC python
+        def f3(a):
+            global b
+            print(a)
+            print(b)
+            b = 9
+
+        f3(3)
+        # 3
+        # 6
+
+        b  ## Everytime `f3` is called, `b` value would be reset to 9
+        # 9
+      #+END_SRC
+
+    - *Comparing Bytecodes*
+      =TODO= =RE-DO=
+
+*** DONE Closures - 192
+    CLOSED: [2017-09-10 Sun 00:07]
+    - Example 7-8. average_oo.py: A class to calculate a running average
+      #+BEGIN_SRC python
+        class Averager():
+            def __init__(self):
+                self.series = []
+
+            def __call__(self, new_value):
+                self.series.append(new_value)
+                total = sum(self.series)
+                return total/len(self.series)
+
+        ## The Averager class creates instances that are callable:
+        avg = Averager()
+        avg(10)
+        # 10.0
+
+        avg(11)
+        # 10.5
+
+        avg(12)
+        # 11.0
+      #+END_SRC
+
+    - Example 7-9. average.py: A higher-order function to calculate a running
+      average
+      #+BEGIN_SRC python
+        def make_averager():
+            series = []
+
+            def averager(new_value):
+                series.append(new_value)
+                total = sum(series)
+                return total/len(series)
+
+            return averager
+      #+END_SRC
+
+    - Figure 7-1. The /closure/ for ~averager~ extends the scope of that function
+      to include the binding for the /free variable/ series.
+
+    - ~__code__~ :: that represents the compiled body of the /function/.
+
+      The binding for ~series~ is kept in the ~__closure__~ attribute of the
+      returned function ~avg~. Each item in ~avg.__closure__~ corresponds to a
+      name in ~avg.__code__.co_free~ vars.
+
+    - Inspectation to the ~avg~
+      #+BEGIN_SRC python
+        avg.__code__.co_varnames
+        # ('new_value', 'total')
+
+        avg.__code__.co_freevars
+        # ('series',)
+
+        avg.__code__.co_freevars
+        # ('series',)
+
+        avg.__closure__
+        # (<cell at 0x107a44f78: list object at 0x107a91a48>,)
+
+        avg.__closure__[0].cell_contents
+        # [10, 11, 12]
+      #+END_SRC
+
+    - To summarize:
+      a /closure/ is a function that _retains_ the bindings of the
+      /free variables/ that exist when the function is defined, so that they can
+      be used later when the function is invoked and the defining scope is no
+      longer available.
+
+*** DONE The ~nonlocal~ Declaration - 195
+    CLOSED: [2017-09-09 Sat 23:36]
+    The implementation in the last section is not efficient, let refactor it:
+
+    - Example 7-14. Calculate a running average without keeping all history
+      (fixed with the use of ~nonlocal~)
+      #+BEGIN_SRC python
+        def make_averager():
+            count = 0
+            total = 0
+
+            def averager(new_value):
+                nonlocal count, total  # `nonlocal` here is important
+                count += 1
+                total += new_value
+                return total / count
+
+            return averager
+      #+END_SRC
+
+    - Before Python 3
+      #+BEGIN_SRC python
+        def make_averager():
+            count = [0]
+            total = [0]
+
+            def averager(new_value):
+                count, total  # `nonlocal` here is important
+                count[0] += 1
+                total[0] += new_value
+                return total / count
+
+            return averager
+      #+END_SRC
+
+*** DONE Implementing a Simple Decorator - 196
+    CLOSED: [2017-09-11 Mon 05:12]
+**** DONE How It Works 198
+     CLOSED: [2017-09-11 Mon 05:12]
+     - The naive implementation of the ~clock~ decorator masks the ~__name__~ and
+       ~__doc__~ of the decorated function:
+       #+BEGIN_SRC python
+         import clockdeco_demo
+
+         ### Here `factorial` is a decored (by `clocked`) function.
+         clockedeco_demo.factorial.__name__
+         # 'clocked'
+       #+END_SRC
+
+     - Non-masked and keyword arguments accepted version (use ~functools.wraps~):
+       #+BEGIN_SRC python
+         import time
+         import functools
+
+         def clock(func):
+             @functools.wraps(func)
+             def clocked(*args, **kwargs):
+                 t0 = time.time()
+                 result = func(*args, **kwargs)
+                 elapsed = time.time() - t0
+                 name = func.__name__
+                 arg_lst = []
+
+                 if args:
+                     arg_lst.append(', '.join(repr(arg) for arg in args))
+
+                 if kwargs:
+                     pairs = ["{!s}={!r}".(k, w) for k, w in sorted(kwargs.items())]
+                     arg_lst.append(', '.join(pairs))
+
+                 arg_str = ', '.join(arg_lst)
+                 print('[%0.8fs] %s(%s) -> %r ' % (elapsed, name, arg_str, result))
+                 return result
+             return clocked
+       #+END_SRC
+
+       =TODO= Understand WHY this can be non-masked
+
+*** DONE Decorators in the Standard Library - 199
+    CLOSED: [2017-09-11 Mon 15:59]
+    - =TODO= LATER
+      + ~property~ (p604)
+      + ~classmethod~ and ~staticmethod~ (p252)
+
+**** DONE Memoization with ~functools.lru_cache~ - 200
+     CLOSED: [2017-09-11 Mon 06:00]
+     - Example:
+       + Without /memoization/:
+         #+BEGIN_SRC python
+           from clockdeco import clock
+
+           @clock
+           def fibonacci(n):
+               if n < 2:
+                   return n
+               else:
+                   return fibonacci(n-2) + fibonacci(n-1)
+
+           if __name__ == '__main__':
+               print(fibonacci(6))
+         #+END_SRC
+
+       + With /memoization/:
+         #+BEGIN_SRC python
+           import functools
+
+           from clockdeco import clock
+
+           @functools.lru_cache()
+           @clock
+           def fibonacci(n):
+               if n < 2:
+                   return n
+               else:
+                   return fibonacci(n-2) + fibonacci(n-1)
+         #+END_SRC
+         * ~lru_cache~ MUST be invoked as a regular function.
+           The reason is that it accepts configuration parameters, as we'll see
+           shortly. =TODO=
+
+     - It's IMPORTANT to note that ~lru_cache~ can be tuned by passing
+       _TWO optional arguments_. Its full signature is:
+       ~functools.lru_cache(maxsize=128, typed=False)~
+
+       + The ~maxsize~ argument determines how many call results are stored.
+         For optimal performance, maxsize should be a power of 2.
+
+       + The typed argument, if set to ~True~, stores results of different
+         argument types separately. By the way, because ~lru_cache~ uses
+         * a ~dict~ to store the results, and
+         * the keys are made from the positional and keyword arguments used in
+           the calls,
+         * all the arguments taken by the decorated function _MUST be hashable_.
+
+**** DONE Generic Functions with Single Dispatch - 202
+     CLOSED: [2017-09-11 Mon 15:59]
+     Example 7-21. singledispatch creates a custom htmlize.register to bundle several functions
+     into a generic function
+     #+BEGIN_SRC python
+       from functools import singledispatch
+       from collections import abc
+       import numbers
+       import html
+
+
+       @singledispatch
+       def htmlize(obj):
+           content = html.escape(repr(obj))
+           return '<pre>{}</pre>'.format(content)
+
+       @htmlize.register(str)
+       def _(text):
+           content = html.escape(text).replace('\n', '<br>\n')
+           return '<p>{0}</p>'.format(content)
+
+       @htmlize.register(numbers.Integral)
+       def _(n):
+           return '<pre>{0} (0x{0:x})</pre>'.format(n)
+
+       @htmlize.register(tuple)
+       @htmlize.register(abc.MutableSequence)
+       def _(seq):
+           inner = '</li>\n<li>'.join(htmlize(item) for item in seq)
+           return '<ul>\n<li>' + inner + '</li>\n</ul>'
+     #+END_SRC
+
+*** DONE Stacked Decorators - 205
+    CLOSED: [2017-09-11 Mon 16:00]
+    The order matters.
+*** DONE Parameterized Decorators - 206
+    CLOSED: [2017-09-11 Mon 16:30]
+    - When parsing a /decorator/ in source code, Python takes the decorated
+      function and passes it _as the first argument_ to the /decorator/ function.
+
+      So how do you make a /decorator/ accept other arguments? The answer is:
+      make a /decorator factory/ that
+      + takes those arguments
+
+      + _returns_ a /decorator/, which is then applied to the function to be
+        /decorated/.
+        =From Jian= This means the precedence of function applications (call
+        functions with parameter(s)) is higher than the precedence of decorator
+        application (apply ~@~).
+
+    - Example 7-22. Abridged registration.py module from Example 7-2, repeated
+      here for convenience
+      #+BEGIN_SRC python
+        registry = []
+
+        def register(func):
+            print('running register(%s)' % func)
+            registry.append(func)
+            return func
+
+        @register
+        def f1():
+            print('running f1()')
+
+        print('running main()')
+        print('registry ->', registry)
+        f1()
+      #+END_SRC
+
+      =IMPORTANT=
+      In the subsections below, we'll change ~register~ from a /decorator/ to
+      a /decorator factory/ (or called /parameterized decorator/).
+
+**** DONE A Parameterized Registration Decorator 206
+     CLOSED: [2017-09-11 Mon 16:27]
+     Example 7-23. To accept parameters, the new register decorator must be
+     called as a function
+     #+BEGIN_SRC python
+       registry = set()
+
+       def register(active=True):
+           def decorate(func):
+               print('running register(active=%s)->decorate(%s)' % (active, func))
+               if active:
+                   registry.add(func)
+               else:
+                   registry.discard(func)
+
+               return func
+           return decorate
+
+       @register(active=False)
+       def f1():
+           print('running f1()')
+
+       @register()
+       def f2():
+           print('running f2()')
+
+       def f3():
+           print('running f3()')
+
+
+       ### =======================================
+       ### Run it in REPL - 1
+       import registration_param
+       ## running register(active=False)->decorate(<function f1 at 0x10063c1e0>)
+       ## running register(active=True)->decorate(<function f2 at 0x10063c268>)
+
+       registration_param.registry
+       # [<function f2 at 0x10063c268>]
+
+
+       ### =======================================
+       ### Run it in REPL - 2
+       from registration_param import *
+       ## running register(active=False)->decorate(<function f1 at 0x10073c1e0>)
+       ## running register(active=True)->decorate(<function f2 at 0x10073c268>)
+
+       registry
+       # {<function f2 at 0x10073c268>}
+
+       register()(f3)
+       ## running register(active=True)->decorate(<function f3 at 0x10073c158>)
+       # <function f3 at 0x10073c158>
+
+       registry
+       # {<function f3 at 0x10073c158>, <function f2 at 0x10073c268>}
+
+       register(active=False)(f2)
+       ## running register(active=False)->decorate(<function f2 at 0x10073c268>)
+       # <function f2 at 0x10073c268>
+
+       registry
+       # {<function f3 at 0x10073c158>}
+     #+END_SRC
+
+**** DONE The Parameterized Clock Decorator 209
+     CLOSED: [2017-09-11 Mon 16:30]
+     Example 7-25. Module ~clockdeco_param.py~: the parameterized clock
+     /decorator/ (For simplicity, not use the version with ~@functools.wraps~)
+     #+BEGIN_SRC python
+       import time
+
+       DEFAULT_FMT = '[{elapsed:0.8f}s] {name}({args}) -> {result}'
+
+       def clock(fmt=DEFAULT_FMT):
+           def decorate(func):
+               def clocked(*_args):
+                   t0 = time.time()
+                   _result = func(*_args)
+                   elapsed = time.time() - t0
+                   name = func.__name__
+                   args = ', '.join(repr(arg) for arg in _args)
+                   result = repr(_result)
+                   print(fmt.format(**locals()))
+                   return _result
+               return clocked
+           return decorate
+
+       if __name__ == '__main__':
+           @clock()
+           def snooze(seconds):
+               time.sleep(seconds)
+
+           for i in range(3):
+               snooze(.123)
+     #+END_SRC
+
+*** DONE Chapter Summary - 211
+    CLOSED: [2017-09-11 Mon 16:40]
+*** TODO Further Reading - 212
+
+* TODO Part IV. Object-Oriented Idioms
+** DONE 8. =Re-Read= Object References, Mutability, and Recycling - 219
+   CLOSED: [2017-09-14 Thu 18:59]
+*** DONE Variables Are Not Boxes 220
+    CLOSED: [2017-09-13 Wed 14:18]
+    - With /reference variables/, it makes much more sense to say that the
+      variable is assigned to an object, and not the other way around.
+      After all, the object is created before the assignment.
+
+    - Because variables are mere labels,
+      nothing prevents an object from having several labels assigned to it.
+
+      This is called /aliasing/.
+
+*** DONE Identity, Equality, and Aliases 221
+    CLOSED: [2017-09-13 Wed 15:22]
+    - The ~is~ operator compares the identity of two objects; the ~id()~ function
+      returns an integer representing its identity.
+
+    - The real meaning of an object's ID is implementation-dependent.
+      + In CPython, ~id()~ returns the _memory address of the object_,
+      + but it may be something else in another Python interpreter.
+
+    - The key point is that the ID is guaranteed to be _a unique numeric label_,
+      and it will _never change_ during the life of the object.
+
+    - ~id()~ function is rarely used in practice. Use ~is~.
+
+**** DONE Choosing Between ~==~ and ~is~ 223
+     CLOSED: [2017-09-13 Wed 15:29]
+     - We often care about values and not identities, so ~==~ appears more
+       frequently than is in Python code.
+
+       However, if you are comparing a variable to a singlws/eton, then it makes
+       sense to use ~is~.
+
+     - ~is~ is faster than ~==~, because it cannot be overloaded.
+
+**** DONE The Relative Immutability of Tuples 224
+     CLOSED: [2017-09-13 Wed 15:49]
+     - Tuples, like most Python collections—lists, dicts, sets, etc.-- hold
+       references to objects.
+         If the referenced items are mutable, they may change even if the tuple
+       itself does not.
+
+       In other words, the immutability of tuples really refers to the physical
+       contents of the tuple data structure (i.e., the references it holds), and
+       does not extend to the referenced objects.
+
+     - Example:
+       #+BEGIN_SRC python
+         t1 = (1, 2, [30, 40])
+         t2 = (1, 2, [30, 40])
+
+         t1 == t2
+         # True
+
+         id(t1[-1])
+         # 4302515784
+
+         t1[-1].append(99)
+         t1
+         # (1, 2, [30, 40, 99])
+
+         id(t1[-1])
+         # 4302515784
+
+         t1 == 52
+         False
+       #+END_SRC
+
+       =TODO= Compare this byte code with the ~+=~ related byte code (section
+       "What Is Hashable?" on page 65)
+
+*** DONE Copies Are Shallow by Default 225
+    CLOSED: [2017-09-13 Wed 16:05]
+    Type the code below into http://www.pythontutor.com/live.html#mode=edit to
+    visualize it for you (Try it! It's interesting!!!):
+    #+BEGIN_SRC python
+      l1 = [3, [66, 55, 44] (7, 8, 9)]
+      l2 = list(l1)
+      l1.append(100)
+      l1[1].remove(55)
+      print('l1:', l1)
+      print('l2:', l2)
+      l2[1] += [33, 22]
+      l2[2] += (10, 11)
+      print('l1:', l1)
+      print('l2:', l2)
+    #+END_SRC
+
+**** DONE Deep and Shallow Copies of Arbitrary Objects 228
+     CLOSED: [2017-09-13 Wed 16:05]
+     - Note that making deep copies is not a simple matter in the general case.
+       Objects may have cyclic references that would cause a naïve algorithm to
+       enter an infinite loop.
+
+       The ~deepcopy~ (from the ~copy~ module) function remembers the objects
+       already copied to handle cyclic references gracefully.
+
+     - Sometimes ~copy~ result is NOT what you want.
+       Sometimes ~deepcopy~ can be too deep for your specific cases.
+
+       Implement ~__copy__()~ or ~__deepcopy()__~ to manage them.
+
+*** TODO Function Parameters as References 229
+    - The only mode of parameter passing in Python is /call by sharing/.
+
+      That is the same mode used in most OO languages, including Ruby, SmallTalk,
+      and Java (this applies to Java reference types; primitive types use call by
+      value).
+
+    - The result of this
+      + scheme is that a function may change any mutable object passed as a
+        parameter,
+      + but it cannot change the identity of those objects (i.e., it cannot
+        altogether replace an object with another).
+
+    - =TODO=
+
+**** TODO Mutable Types as Parameter Defaults: Bad Idea 230
+     - =IMPORTANT=
+       Avoid mutable objects as default values for parameters.
+
+**** TODO Defensive Programming with Mutable Parameters 232
+
+*** TODO ~del~ and Garbage Collection 234
+*** TODO Weak References 236
+    - Sometimes it is useful to have a reference to an object that does NOT keep
+      it around longer than necessary. _A common use case is a cache_.
+
+    - weak references :: a kind of references that do NOT increase the reference
+         count of their targets.
+
+    - referent :: The object that is the target of a reference.
+
+    - A /weak reference/ does NOT prevent the referent from being garbage
+      collected.
+
+    - /Weak references/ are useful in caching applications because you don't want
+      the cached objects to be kept alive just because they are referenced by
+      the cache.
+
+    - If the object is alive, calling the weak reference returns it,
+      otherwise ~None~ is returned.
+
+    - Example 8-17 =TODO= =IMPORTANT=
+
+    - The ~weakref.ref~ class is actually a low-level interface _intended for
+      advanced uses_, and that MOST programs are better served by the use of the
+      /weakref collections/ and ~finalize~. In other words, consider using
+      ~WeakKeyDictionary~, ~WeakValueDictionary~, ~WeakSet~, and ~finalize~
+      (which use /weak references/ internally) instead of creating and handling
+      your own ~weakref.ref~ instances by hand.
+
+**** DONE The WeakValueDictionary Skit 237
+     CLOSED: [2017-09-14 Thu 17:31]
+     - Example (~WeakValueDictionary~):
+       #+BEGIN_SRC  python
+         class Cheese:
+             def __init__(self, kind):
+                 self.kind = kind
+
+             def __repr__(self):
+                 return 'Cheese({!r})'.format(self.kind)
+
+         import weakref
+
+         stock = weakref.WeakValueDictionary()
+         catalog = [Cheese('Red Leicester'),
+                    Cheese('Tilsit'),
+                    Cheese('Brie'),
+                    Cheese('Parmesan')]
+
+         for cheese in catalog:
+             stock[cheese.kind] = cheese
+
+         sorted(stock.keys())
+         # ['Brie', 'Parmesan', 'Red Leicester', 'Tilsit']
+
+         del catalog
+
+         sorted(stock.keys())
+         # ['Parmesan']
+
+         del cheese
+         sorted(stock.keys())
+         # []
+       #+END_SRC
+
+       =IMPORTANT=
+       + ~Cheese('Parmesan')~ lives longer.
+         It has a /strong reference/ -- ~cheese~ (Python's iteration variable in
+         ~for~ syntax is not local! =IMPORTANT=).
+
+     - A counterpart to the ~WeakValueDictionary~ -- ~WeakKeyDictionary~.
+       For its official documentation we know its design purpose:
+       #+BEGIN_QUOTE
+       [It] can be used to associate additional data with an object owned by
+       other parts of an application without adding attributes to those objects.
+       This can be especially useful with objects that override attribute
+       accesses.
+       #+END_QUOTE
+       =TODO= =????????=
+
+     - ~WeakSet~
+       If you need to build a class that is aware of every one of its instances,
+
+       + a good solution is to create a class attribute with a ~WeakSet~ to hold
+         the references to the instances.
+
+       + Otherwise, if a regular set was used, the instances would never be
+         garbage collected, because the class itself would have strong references
+         to them, and classes live as long as the Python process unless you
+         deliberately delete them.
+
+**** TODO Limitations of Weak References 239
+     - =TODO=
+
+*** DONE Tricks Python Plays with Immutables 240
+    CLOSED: [2017-09-14 Thu 18:12]
+    The discussion of this section is about the optimizations done by the
+    CPython, and they may not appli to other Python implementations or even
+    future versions of CPython.
+
+    (=From Jian= If you can always express what you mean through exact semantics,
+     I think you can avoid most of the traps.)
+
+    - Here ~t~ is a tuple. ~t[:]~ and ~tuple(t)~ do NOT make a copy, they just
+      return a reference.
+      #+BEGIN_SRC python
+        t1 = (1, 2, 3)
+        t2 = tuple(t1)
+        t2 is t1
+        # True
+
+        t3 = t1[:]
+        t3 is t1
+        # True
+      #+END_SRC
+
+      The same behavior can be observed with instances of ~str~, ~bytes~, and
+      ~frozenset~.
+
+      However, note that a ~frozenset~ is NOT a sequence, so ~fs[:]~ does NOT
+      work if ~fs~ is a ~frozenset~. But ~fs.copy()~ has the same effect: it
+      cheats and returns a reference to the same object, and NOT a copy at all.
+
+    - The sharing of string literals is an _optimization technique_ called
+      /interning/.
+      #+BEGIN_SRC python
+        t1 = (1, 2, 3)
+        t2 = (1, 2, 3)
+
+        t2 is t1
+        # False
+
+
+        s1 = 'ABC'
+        s2 = 'ABC'
+        s2 is s1
+        # True
+      #+END_SRC
+
+    - CPython uses the same technique with _SMALL integers_ to avoid unnecessary
+      duplication of "popular" numbers like 0, –1, and 42.
+
+      =IMPORTANT=
+      _Note_ that CPython does NOT /intern/ ALL strings or integers, and
+      _the criteria it uses to do so is an UNDOCUMENTED implementation detail_.
+
+    - _NEVER depend on_ ~str~ or ~int~ interning! =IMPORTANT=
+      Always use ~==~, rather than ~is~, to compare them for equality.
+
+      /Interning/ is a feature for internal use of the Python interpreter.
+
+*** TODO Chapter Summary 242
+    - Every Python object has an /identity/, a /type/, and a /value/.
+      Only the value of an object changes over time.
+
+*** TODO Further Reading 243
+    - [[https://docs.python.org/3/reference/index.html][The Python Language Reference]]
+    -
+** TODO 9. A Pythonic Object - 247
+*** DONE Object Representations - 248
+    CLOSED: [2017-09-14 Thu 19:10]
+    - Python has two ways of getting a string representation from any object (NOT
+      like most of the other oo languages, they usually only have one):
+      + ~repr()~ ::
+                    Return a string representing the object as the developer
+                    wants to see (mostly, you can use ~eval()~ to get this object
+                    back).
+
+                    It corresponds to ~__repr__~.
+
+      + ~str()~ ::
+                   Return a string representation the object as the user wants to
+                   see.
+
+                   It corresponds to ~__str__~.
+
+    - Two additiona special methods to support alternative representations of
+      objects:
+      + ~__bytes__~ ::
+                       it is called by ~bytes()~ to get the object represented as
+                       a byte sequence.
+
+      + ~__format__~ ::
+                        it is called by ~format()~ and ~str.format()~ method to
+                        get string displays of objects using special formatting
+                        codes.
+
+    - In Python 3,
+      + ~__repr__~, ~__str__~, and ~__format__~ must always return Unicode
+        strings (type ~str~).
+
+      + Only ~__bytes__~ is supposed to return a byte sequence (type ~bytes~).
+
+*** TODO Vector Class Redux - 248
+    Example 9-1. ~Vector2d~ instances have several representations
+    #+BEGIN_SRC python
+      v1 = Vector2d(3, 4)
+      print(v1.x, v2.y)
+      # 3.0 4.0
+
+      x, y = v1
+      x, y
+      # (3.0, 4.0)
+
+      v1
+      # Vector2d(3.0, 4.0)
+
+      v1_clone = eval(repr(v1))
+      v1 == v1_clone
+      # True
+
+      print(v1)
+      ## (3.0, 4.0)
+
+      octets == bytes(v1)
+      octets
+      # b'd\\x00\\x00\\x00\\x00\\x00\\x00\\x08@\\x00\\x00\\x00\\x00\\x00\\x00\\x10@'
+
+      abs(v1)
+      # 5.0
+
+      bool(v1), bool(Vector2d(0, 0))
+      # (True, False)
+    #+END_SRC
+
+    Example 9-2. ~vector2d_v0.py~: methods so far are all special methods
+    #+BEGIN_SRC python
+      from array import array
+      import math
+
+
+      class Vector2d:
+          typecode = 'd'  #1
+
+          def __init__(self, x, y):
+              self.x = float(x)    #2
+              self.y = float(y)
+
+          def __iter__(self):
+              return (i for i in (self.x, self.y))   #3
+
+          def __repr__(self):
+              class_name = type(self).__name__
+              return '{}({!r}, {!r})'.format(class_name, *self)   #4
+
+          def __str__(self):
+              return str(tuple(self))   #5
+
+          # TODO: `bytes()` usage
+          def __bytes__(self):
+              return (bytes([ord(self.typecode)]) +   #6
+                      bytes(array(self.typecode, self)))   #7
+
+          def __eq__(self, other):
+              # Currently, `Vector(3, 4) == [3, 4]` is `True`
+              # This can be a feature or a bug, it depends.
+              # TODO: Solve this in Chapter 13
+              return tuple(self) == tuple(other)  #8
+
+          def __abs__(self):
+              return math.hypot(self.x, self.y)   #9
+
+          def __bool__(self):
+              return bool(abs(self))  #10
+    #+END_SRC
+    1. ~typecode~ is a class attribute we’ll use when converting ~Vector2d~
+       instances to/from bytes.
+
+    2. Converting ~x~ and ~y~ to ~float~ in ~__init__~ catches errors early,
+       which is helpful in case ~Vector2d~ is called with unsuitable arguments.
+
+    3. ~__iter__~ makes a ~Vector2d~ iterable; this is what makes unpacking work
+       (e.g, ~x, y = my_vector~).
+       We implement it simply by using a generator expression to yield the
+       components one after the other.
+
+    4. ~__repr__~ builds a string by interpolating the components with ~{!r}~ to
+       get their repr; because ~Vector2d~ is iterable (because ~Vector2d~ has
+       ~__iter__()~), ~*self~ feeds the ~x~ and ~y~ components to format.
+
+    5. From an iterable ~Vector2d~, it's easy to build a tuple for display as an
+       ordered pair.
+
+    6. To generate ~bytes~, we convert the ~typecode~ to ~bytes~ and concatenate
+       ...
+
+    7. ~bytes~ converted from an ~array~ built by iterating over the instance.
+
+    8. To quickly compare all components, build tuples out of the operands. This
+       works for operands that are instances of ~Vector2d~, but has issues. See
+       the following warning.
+
+    9. The magnitude is the length of the hypotenuse of the triangle formed by
+       the ~x~ and ~y~ components.
+
+    10. ~__bool__~ uses ~abs(self)~ to compute the magnitude, then converts it to
+        ~bool~, so ~0.0~ becomes ~False~, nonzero is ~True~.
+
+*** TODO An Alternative Constructor - 251
+*** TODO classmethod Versus staticmethod - 252
+*** TODO Formatted Displays - 253
+*** TODO A Hashable ~Vector2d~ - 257
+*** DONE Private and "Protected" Attributes in Python - 262
+    CLOSED: [2017-09-10 Sun 00:10]
+    - name mangling :: ~__name~ （"name" here can include at most one suffix
+                       underscore) is saved into the instance ~__dict__~ as
+                       ~_classname__name~.
+
+      + The result of /name mangling/ is that you can't access the variable
+        through ~__name~. If you want to do that (a *BAD* idea if in a code for
+        publishing), use the mangled name ~classname__name~.
+
+      + /name mangling/ is designed for safety, not for security: it doesn't try
+        to prevent intentional wrongdoing.
+
+      + A lot people don't like /name mangling/. They suggest use the mangled
+        name _directly_, and don't let Python to help you do this.
+
+    - Another suggestion from some people in the community:
+      Stop using /name mangling/, use single underscore prefixed name instead.
+
+      The single underscore prefix has NO special meaning to the Python
+      interpreter -- just a strong convention.
+
+*** TODO Saving Space with the ~__slots__~ Class Attribute - 264
+    - By default, Python stores instance attributes in a per-instance dict named
+      ~__dict__~.
+
+    -
+
+**** The Problems with __slots__ 267
+
+*** TODO Overriding Class Attributes - 267
+*** TODO Chapter Summary - 269
+*** TODO Further Reading - 271
+
+** TODO 10. Sequence Hacking, Hashing, and Slicing - 275
+*** TODO Vector: A User-Defined Sequence Type - 276
+*** TODO Vector Take #1: Vector2d Compatible - 276
+*** TODO Protocols and Duck Typing - 279
+*** TODO Vector Take #2: A Sliceable Sequence - 280
+**** How Slicing Works 281
+**** A Slice-Aware ~__getitem__~ 283
+
+*** TODO Vector Take #3: Dynamic Attribute Access - 284
+*** TODO Vector Take #4: Hashing and a Faster ~==~ - 288
+*** TODO Vector Take #5: Formatting - 294
+*** TODO Chapter Summary - 301
+*** TODO Further Reading - 302
+
+** TODO 11. Interfaces: From Protocols to ABCs - 307
+*** TODO Interfaces and Protocols in Python Culture - 308
+*** TODO Python Digs Sequences - 310
+*** TODO Monkey-Patching to Implement a Protocol at Runtime - 312
+*** TODO Alex Martelli's Waterfowl - 314
+*** TODO Subclassing an ~ABC~ - 319
+*** TODO ABCs in the Standard Library - 321
+**** ABCs in ~collections.abc~ - 321
+**** The Numbers Tower of ABCs - 323
+
+*** TODO Defining and Using an ~ABC~ - 324
+**** ~ABC~ Syntax Details - 328
+     - The best way to declare an /ABC/ is to subclass ~abc.ABC~ or any other
+       /ABC/. However, there are version problems:
+       + For Python 3
+         * (>= 3.4) if create /ABC/ directly from ~abc.ABC~ use syntax
+           ~class Tombola(abc.ABC)~
+
+         * (== 3.x) ~class Tombola(metaclass=abc.ABCMeta)~.
+
+       + For Python 2
+         #+BEGIN_SRC python
+           class Tombola(object):
+               __metaclass__ = abc.ABCMeta
+         #+END_SRC
+
+     - Use ~@abstractmethod~
+
+       DO NOT use ~@abstractclassmethod~, ~@abstractstaticmethod~, and
+       ~@abstractproperty~ for the reason that the are DEPRECATED since
+       Python 3.3, when it became possible to _stack decorators_ on top of
+       ~@abstractmethod~.
+
+     - _TIPS_:
+       The ORDER of stacked function decorators usually matters, and in the case
+       of ~@abstractmethod~, the documentation is explict:
+       #+BEGIN_QUOTE
+       When ~abstractmethod()~ is applied in combination with other method
+       descriptors, it should be applied as the _innermost_ decorator, ...
+       #+END_QUOTE
+
+**** Subclassing the Tombola ~ABC~ - 329
+**** A Virtual Subclass of Tombola - 332
+
+*** TODO How the Tombola Subclasses Were Tested - 335
+*** TODO Usage of register in Practice - 338
+*** TODO Geese Can Behave as Ducks - 338
+*** TODO Chapter Summary - 340
+*** TODO Further Reading -= 342
+
+** TODO 12. Inheritance: For Good or For Worse - 347
+*** Subclassing Built-In Types Is Tricky 348
+*** Multiple Inheritance and Method Resolution Order 351
+*** Multiple Inheritance in the Real World 356
+*** Coping with Multiple Inheritance 358
+**** 1. Distinguish Interface Inheritance from Implementation Inheritance 359
+**** 2. Make Interfaces Explicit with ABCs 359
+**** 3. Use Mixins for Code Reuse 359
+**** 4. Make Mixins Explicit by Naming 359
+**** 5. An ABC May Also Be a Mixin; The Reverse Is Not True 360
+**** 6. Don’t Subclass from More Than One Concrete Class 360
+**** 7. Provide Aggregate Classes to Users 360
+**** 8. “Favor Object Composition Over Class Inheritance.” 361
+**** Tkinter: The Good, the Bad, and the Ugly 361
+
+*** A Modern Example: Mixins in Django Generic Views 362
+*** Chapter Summary 366
+*** Further Reading 367
+
+** TODO 13. Operator Overloading: Doing It Right - 371
+*** Operator Overloading 101 372
+*** Unary Operators 372
+*** Overloading ~+~ for Vector Addition 375
+*** Overloading ~*~ for Scalar Multiplication 380
+*** Rich Comparison Operators 384
+*** Augmented Assignment Operators 388
+*** Chapter Summary 392
+*** Further Reading 393
+
+* TODO Part V. Control Flow
+** TODO 14. Iterables, Iterators, and Generators - 401
+   This chapter shows
+   HOW the /Iterator pattern/ is built into the Python language so you never
+   need to implement it by hand.
+
+   - /Iterator pattern/ and WHY do we need it:
+     Iteration is fundamental to data processing.
+       And when scanning datasets that don't fit in memory, we need a way to
+     fetch the items lazily, that is, one at a time and on demand.
+
+   - /Generator/:
+     + In Python, /generator/ is its /iterator/.
+       /generator/ need the keyword ~yield~.
+
+     + ~yield~ is introduced in Python 2.2 (2001):
+       ~from __future__ import generators~.
+
+     + ~yiled~ becomes available by default in Python 2.3.
+
+   - The Python community treats /iterator/ and /generator/ as _SYNONYMS_ most of
+     the time, though they are not equivalent.
+     + Every /generator/ is an /iterator/ by implement the iterator interface.
+
+     + An /iterator/, as defined in the GoF, RETRIEVES items from a _collection_.
+       However, /generator/ doesn't need the _collection_ in background.
+       For example, it is easy to write a Fibonacci sequence /generator/.
+
+   - *EVERY /collection/ in Python is /iterator/.*
+
+   - /Iterators/ are used internally to support: TODO TODO TODO
+     + ~for~ loops
+     + Collection types construction and extension
+     + Looping over text files line by line
+     + Comprehensions
+     + Tuple unpacking
+     + Unpacking actual parameters with * in function calls
+
+   - This chapter covers the following topics:
+     + HOW the ~iter(...)~ /built-in function/ is used _INTERNALLY_ to handle
+       iterable objects
+
+     + HOW to implement the /classic Iterator pattern/ in Python
+
+     + HOW a /generator function/ works in detail, with line-by-line descriptions
+
+     + HOW the /classic Iterator/ can be replaced by a /generator function/ or
+       /generator expression/
+
+     + Leveraging the /general-purpose generator functions/ _in the standard library_
+
+     + Using the new ~yield from~ STATEMENT to *combine* /generators/
+
+     + A case study:
+       using generator functions in a database conversion utility designed to
+       work with large datasets
+
+     + Why /generators/ and /coroutines/ look alike but are actually very different
+       and should not be mixed TODO TODO
+
+*** DONE Sentence Take #1: A Sequence of Words - 402
+    CLOSED: [2020-04-22 Wed 00:10]
+    - Example 14-1. sentence.py: A Sentence as a sequence of words
+      #+begin_src python
+        import re
+        import reprlib
+
+
+        RE_WORD = re.compile('\w+')
+
+
+        class Sentence:
+            def __init__(self, text):
+                self.text = text
+                self.words = RE_WORD.findall(text)
+
+            def __getitem__(self, index):
+                return self.words[index]
+
+            def __len__(self):
+                return len(self.words)
+
+            def __repr__(self):
+                return f'Sentence({reprlib.repr(self.text)})'
+      #+end_src
+      + To complete /the sequence protocol/, we implement ~__len__~.
+        However, it is not needed to make an /iterable/ object.
+
+      + ~reprlib.repr~, by default, limits the generated string to 30 chars.
+
+    - Every Python programmer knows that *SEQUENCES are ITERABLE.*
+      New section will precisely show why!
+
+**** Why Sequences Are Iterable: The iter Function - 404
+     Whenever the interpreter needs to iterate over an object x, it
+     *AUTOMATICALLY* calls ~iter(x)~.
+
+     - What will the ~iter~ built-in function do:
+       1. Call ~__iter__~ if it can be found
+
+       2. If no ~__iter__~ but ~__getitem__~ exists,
+          Python creates an iterator that attempts to fetch item in order, starting
+          from index 0 (zero).
+
+       3. If that fails, Python raises ~TypeError~, usually saying "C object is
+          not iterable," where C is the class of the target object.
+
+     - Now you know _WHY_ a /sequence/ is always a /iterable/:
+       All /sequences/ implement ~__getitem__~.
+         In fact, *the standard /sequences/ also implement ~__iter__~, and yours
+       should too,* because *the special handling of ~__getitem__~ exists for
+       backward compatibility reasons and may be gone in the future.*
+
+     - This is an extreme form of /duck typing/:
+       TODO (See "Python Digs Sequences" on page 310) TODO
+       an object is considered /iterable/
+       + not only when it implements the special method ~__iter__~,
+
+       + but also when it implements ~__getitem__~,
+         _as long as ~__getitem__~ accepts ~int~ keys starting from ~0~._
+
+     - If only consider _inheritence relation_, we can use ~issubclass~ and
+       ~isinstance~ to check a class or object is a ~collections.abc.Iterable~
+       -- these two built-in functions do not check ~__getitem__~.
+
+         However, to check the /iterable in practice/, we have to use ~iter(x)~
+       and try/catch block to see if there is a ~TypeError~ or not.
+
+*** TODO Iterables Versus Iterators - 405
+*** TODO Sentence Take #2: A Classic Iterator - 409
+**** Making Sentence an Iterator: Bad Idea - 411
+
+*** Sentence Take #3: A Generator Function - 412
+**** How a Generator Function Works - 413
+
+*** Sentence Take #4: A Lazy Implementation - 416
+*** Sentence Take #5: A Generator Expression - 417
+*** Generator Expressions: When to Use Them - 419
+*** Another Example: Arithmetic Progression Generator - 420
+**** Arithmetic Progression with itertools - 423
+
+*** Generator Functions in the Standard Library - 424
+*** New Syntax in Python 3.3: ~yield from~ - 433
+*** Iterable Reducing Functions - 434
+*** A Closer Look at the iter Function - 436
+*** Case Study: Generators in a Database Conversion Utility - 437
+*** Generators as Coroutines - 439
+*** Chapter Summary - 439
+*** Further Reading - 440
+
+** TODO 15. Context Managers and else Blocks - 447
+*** Do This, Then That: else Blocks Beyond if 448
+*** Context Managers and with Blocks 450
+*** The contextlib Utilities 454
+*** Using @contextmanager 455
+*** Chapter Summary 459
+*** Further Reading 459
+
+** TODO 16. Coroutines - 463
+*** How Coroutines Evolved from Generators 464
+*** Basic Behavior of a Generator Used as a Coroutine 465
+*** Example: Coroutine to Compute a Running Average 468
+*** Decorators for Coroutine Priming 469
+*** Coroutine Termination and Exception Handling 471
+*** Returning a Value from a Coroutine 475
+*** Using yield from 477
+*** The Meaning of yield from 483
+*** Use Case: Coroutines for Discrete Event Simulation 489
+**** About Discrete Event Simulations 489
+**** The Taxi Fleet Simulation 490
+
+*** Chapter Summary 498
+*** Further Reading 500
+
+** TODO 17. Concurrency with Futures
+*** Example: Web Downloads in Three Styles 505
+**** A Sequential Download Script 507
+**** Downloading with concurrent.futures 509
+**** Where Are the Futures? 511
+
+*** Blocking I/O and the GIL 515
+*** Launching Processes with concurrent.futures 515
+*** Experimenting with Executor.map 517
+*** Downloads with Progress Display and Error Handling 520
+**** Error Handling in the flags2 Examples 525
+**** Using futures.as_completed 527
+**** Threading and Multiprocessing Alternatives 530
+
+*** Chapter Summary 530
+*** Further Reading 531
+
+** TODO 18. Concurrency with ~asyncio~ - 537
+*** Thread Versus Coroutine: A Comparison 539
+**** asyncio.Future: Nonblocking by Design 545
+**** Yielding from Futures, Tasks, and Coroutines 546
+
+*** Downloading with asyncio and aiohttp 548
+*** Running Circling Around Blocking Calls 552
+*** Enhancing the asyncio downloader Script 554
+**** Using asyncio.as_completed 555
+**** Using an Executor to Avoid Blocking the Event Loop 560
+
+*** From Callbacks to Futures and Coroutines 562
+**** Doing Multiple Requests for Each Download 564
+
+*** Writing asyncio Servers 567
+**** An asyncio TCP Server 568
+**** An aiohttp Web Server 573
+**** Smarter Clients for Better Concurrency 576
+
+*** Chapter Summary 577
+*** Further Reading 579
+
+* TODO Part VI. Metaprogramming
+** TODO 19. Dynamic Attributes and Properties - 585
+*** Data Wrangling with Dynamic Attributes 586
+**** Exploring JSON-Like Data with Dynamic Attributes 588
+**** The Invalid Attribute Name Problem 591
+**** Flexible Object Creation with ~__new__~ 592
+**** Restructuring the OSCON Feed with shelve 594
+**** Linked Record Retrieval with Properties 598
+
+*** Using a Property for Attribute Validation 604
+**** LineItem Take #1: Class for an Item in an Order 604
+**** LineItem Take #2: A Validating Property 605
+
+*** A Proper Look at Properties 606
+**** Properties Override Instance Attributes 608
+**** Property Documentation 610
+
+*** Coding a Property Factory 611
+*** Handling Attribute Deletion 614
+*** Essential Attributes and Functions for Attribute Handling 616
+**** Special Attributes that Affect Attribute Handling 616
+**** Built-In Functions for Attribute Handling 616
+**** Special Methods for Attribute Handling 617
+
+*** Chapter Summary 619
+*** Further Reading 619
+
+** TODO 20. Attribute Descriptors - 625
+*** Descriptor Example: Attribute Validation 625
+**** LineItem Take #3: A Simple Descriptor 626
+**** LineItem Take #4: Automatic Storage Attribute Names 631
+**** LineItem Take #5: A New Descriptor Type 637
+
+*** Overriding Versus Nonoverriding Descriptors 640
+**** Overriding Descriptor 642
+**** Overriding Descriptor Without ~__get__~ 643
+**** Nonoverriding Descriptor 644
+**** Overwriting a Descriptor in the Class 645
+
+*** Methods Are Descriptors 646
+**** Descriptor Usage Tips 648
+**** Descriptor docstring and Overriding Deletion 650
+**** Chapter Summary 651
+**** Further Reading 651
+
+** TODO 21. Class Metaprogramming - 655
+*** A Class Factory 656
+*** A Class Decorator for Customizing Descriptors 659
+*** What Happens When: Import Time Versus Runtime 661
+**** The Evaluation Time Exercises 662
+
+*** Metaclasses 101 666
+**** The Metaclass Evaluation Time Exercise 669
+
+*** A Metaclass for Customizing Descriptors 673
+*** The Metaclass ~__prepare__~ Special Method 675
+*** Classes as Objects 677
+*** Chapter Summary 678
+*** Further Reading 679
+
+* Afterword - 683
+* A. Support Scripts - 687
+* Python Jargon - 715
+* Index - 725

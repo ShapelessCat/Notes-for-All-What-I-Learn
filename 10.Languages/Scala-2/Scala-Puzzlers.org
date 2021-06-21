@@ -1,0 +1,1058 @@
+#+TITLE: Scala Puzzlers
+#+SUBTITLE: The fun path to deeper understanding
+#+VERSION: 2014
+#+UPDATE: http://scalapuzzlers.com/
+#+AUTHOR: Andrew Phillips, Nermin Šerifović
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Contents - vii
+* Foreword - xii
+* Preface - xiii
+* Acknowledgments - xiv
+* DONE Introduction - xv
+  CLOSED: [2017-09-28 Thu 22:46]
+  - This book will help you recognize many counter-intuitive traps and
+    pitfalls and prevent them from biting you in production.
+
+** DONE How to read this book
+   CLOSED: [2017-09-28 Thu 22:45]
+
+   - The puzzlers in this book are _NOT_ listed in any specific order.
+
+   - If you find a specific area of the Scala language interesting and are looking
+     for related puzzlers, the Subject Index at the end of this book is for you.
+
+   - This book use Scala 2.11
+
+   - http://booksites.artima.com/scala_puzzlers/errata.
+
+** DONE EBook features
+   CLOSED: [2017-09-28 Thu 22:46]
+** DONE Typographic conventions
+   CLOSED: [2017-09-28 Thu 22:46]
+
+   - 
+
+* DONE 1. Hi There! - 18
+  CLOSED: [2018-02-08 Thu 23:18]
+  - block expression :: one or multiple statements inside ~{}~, _with the LAST
+       determining the RESULT of the block_.
+
+  - /block expressions/ are *NOT* /anonymous function/.
+
+  - Assume ~val lst = List(1, 2)~,
+    + ~lst.map(i => println("Hi"); i + 1)~ CANNOT compiled.
+
+      The body of an /anonymous function/ can ONLY be ONE experssion. For
+      example, ONLY ~i + 1~ is OK; a /block expression/ that contains multiple
+      expressions is OK. However, not the code above.
+
+    + ~lst.map(i \equal{}> { println("Hi"); i + 1 })~ will print *TWO* =Hi='s, and
+      return ~List(2, 3)~.
+
+      The /block expression/ is the body of this /anonymous function/.
+      The body will be evaluated everytime its /anonymous function/ is called.
+      For this example, it is evaluated two times.
+
+    + Both ~lst.map { println("Hi"); _ + 1 }~ and ~lst.map({ println("Hi"); _ + 1 })~
+      will print *ONE* =Hi=, and return ~List(2, 3)~.
+  
+      The /block expression/ is evaluated first, and then its *LAST* expression is
+      returned as an /anonymous function/ passed to ~map~. Therefore, ONLY *one*
+      =Hi= -- the ~println("Hi");~ as a part of this /block expression/ is
+      evaluated once.
+
+  - The scope of the /placeholder/ ~_~ is the exact expression that includes the
+    /placeholder/. All the other parts are NOT considered as the body of an
+    /anonymous function/ related to the ~_~.
+
+* DONE 2. UPSTAIRS downstairs - 23
+  CLOSED: [2017-09-28 Thu 23:37]
+  - Q :: What is the result of executing the following code in the REPL?
+    #+BEGIN_SRC scala
+      var MONTH = 12; var DAY = 24
+      var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+    #+END_SRC
+
+  - A :: The first line compiles, and the second fails to compile.
+
+** DONE Explanation
+   CLOSED: [2017-09-28 Thu 23:05]
+   #+BEGIN_SRC scala
+     var MONTH = 12; var DAY = 24
+     // MONTH: Int = 12
+     // DAY: Int = 24
+
+     var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+     // <console>:11: error: not found: value HOUR
+     //        var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+     //             ˆ
+     // <console>:11: error: not found: value MINUTE
+     //        var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+     //                   ˆ
+     // <console>:11: error: not found: value SECOND
+     //        var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+     //                           ˆ
+   #+END_SRC
+
+   - /Uppercase variable names/ can be used for plain, single-value assignments
+     of ~val~'s and ~var~'s, as in the case of ~MONTH~ and ~DAY~.
+
+   - Some *trickiness* arises in /pattern matching/ -- multiple-variable assignments,
+     NOT LIKE single-variable assignment, are /paatern matching/.
+
+     In /pattern matching/,
+
+     + Variables _STARTING WITH an UPPERCASE letter_ are /stable identifiers/.
+       They are intended for matching against _constants_.
+       #+BEGIN_SRC scala
+         final val TheAnswer = 42
+
+         def checkGuess(guess: Int) = guess match {
+           case TheAnswer => "Your guess is correct"
+           case _ => "Try again"
+         }
+
+         checkGuess(21)
+         // res0: String = Try again
+
+         checkGuess(42)
+         // res1: String = Your guess is correct
+       #+END_SRC
+
+     + Variables _STARTING WITH an LOWERCASE letter_, by contrast, define
+       /variable patterns/, which cause values to be *assigned*:
+       ~var (hour, minute, second) = (12, 0, 0)~
+
+** DONE Discussion
+   CLOSED: [2017-09-28 Thu 23:37]
+   - If, by extreme *coincidence*, the required /stable identifiers/ are
+     *in scope* the pattern matching part will compile successfully.
+
+     At runtime, ~MatchError~ may happen is the given value of the /stable
+     identifiers/ can't match the RHS value of pattern matching.
+     
+     #+BEGIN_SRC scala
+       val HOUR = 12; val MINUTE, SECOND = 0;
+       var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+       // Even if it compiles successfully, NO assignment happen.
+
+
+       val HOUR = 13; val MINUTE, SECOND = 0;
+       var (HOUR, MINUTE, SECOND) = (12, 0, 0)
+       // scala.MatchError: (12,0,0) (of class scala.Tuple3)
+       //  ...
+     #+END_SRC
+
+   - *Enclosing lowercase variables in backticks*, and then you get /stable
+     identifiers/
+
+     #+BEGIN_SRC scala
+       final val theAnswer = 42
+
+       def checkGuess(guess: Int) = guess match {
+         case `theAnswer` => "Your guess is correct"
+         case _ => "Try again"
+       }
+
+       checkGuess(42)
+       // res0: String = Your guess is correct
+     #+END_SRC
+
+     #+BEGIN_SRC scala
+       // not a `val` (should be), and not `final` either
+       var theAnswer: Int = 42
+
+       def checkGuess(guess: Int) = guess match {
+         case `theAnswer` => "Your guess is correct"
+         case _ => "Try again"
+       }
+
+       // <console>:9: error: stable identifier required, but
+       //   theAnswer found.
+       //          case `theAnswer` => "Your guess is correct"
+     #+END_SRC
+
+   - You can also use the *enclosing with backticks* way to convert keywords to
+     variable names. For example, you can use ~`val`~ as a variable name.
+
+
+   - We should keep the convention in other languages -- use /lowercase name/
+     for ~var~'s (better still, avoid ~var~'s completely!), and /uppercase names/
+     for /constants/.
+
+     + constants (in Scala) :: variables declared as ~final val~
+
+     =Comment from Jian=
+     A example to distinguish /constant/ and /immutable quantity/:
+       Suppose there are two universe follow the same physics rules (same form
+     formula), and the ONLY difference is some /physics constants/. These
+     /physics constants/ are actully /immutable quantities/ in each universe, not
+     /constant/ in our context of discussion. A /constant/, rather than
+     /immutable quantity/, should be a fixed value defined the template of these
+     two universes -- the universe class. Therefore, for this example, a good
+     choice is the ~static final val~.
+
+     Declared as ~final~ _PREVENTS subclasses from overriding them_, and has an
+     additional performance benefit in that the compiler can /inline/ them.
+
+   - _SUMMARY_
+     Use *uppercase* variable names ONLY for /constants/.
+
+* TODO 3. Location, Location, Location - 27
+* TODO 4. Now You See Me, Now You Don't - 33
+  Q: What does the following program print?
+  #+BEGIN_SRC scala
+    trait A {
+      val foo: Int
+      val bar = 10
+      println("In A: foo: " + foo + ", bar: " + bar)
+    }
+
+    class B extends A {
+      val foo: Int = 25
+      println("In B: foo: " + foo + ", bar: " + bar)
+    }
+
+    class C extends B {
+      override val bar = 99
+      println("In C: foo: " + foo + ", bar: " + bar)
+    }
+
+    new C()
+  #+END_SRC
+
+  A: Prints:
+     In A: foo: 0, bar: 0
+     In B: foo: 25, bar: 0
+     In B: foo: 25, bar: 99
+
+  - ~-Xcheckinit~ Wrap field accersors to throw an exception on uninitialized
+    accesses.
+
+* DONE 5. The Missing List - 41
+  CLOSED: [2017-09-28 Thu 22:38]
+  Q: What does the following program print?
+  #+BEGIN_SRC scala
+    def sumSizes(collections: Iterable[Iterable[_]]): Int =
+      collections.map(_.size).sum
+
+    sumSizes(List(Set(1, 2), List(3, 4)))
+    sumSizes(Set(List(1, 2), Set(3, 4)))
+  #+END_SRC
+
+  A: Prints:
+     Int = 4
+     Int = 2
+
+*** Explanation 
+    - If we create a ~sumSizes~ (with the same type signature as above) function
+      in Java
+      + both the result will be two 4's.
+
+      + the intermediate result of ~collections.map(_.size)~ (in the body of
+        ~sumSizes~ definition) should be ~Iterable[Int]~.
+
+    - In Scala, the intermediate result of ~collections.map(_.size)~ (in the body
+      of ~sumSizes~ definition) should be a more specific result which satisfies
+      ~Iterable[Int]~.
+      + For ~sumSizes(List(Set(1, 2), List(3, 4)))~, it should be ~List[Int]~.
+        ~List(2, 2).sum~  is 4.
+
+      + For ~sumSizes(Set(List(1, 2), Set(3, 4)))~, it should be ~Set[Int]~.
+        ~Set(2, 2).sum~ is actually ~Set(2).sum~, which is 2.
+
+      There is NO warning about the second, which is BAD.
+      This time Java does the right thing.
+      Why Scala make decision to do the calculation in this way?????? =TODO=
+
+*** Discussion
+    Solutions:
+    - Convert the outer collection to a known type, e.g., using ~toSeq~:
+      #+BEGIN_SRC scala
+        def sumSizes(collections: Iterable[Iterable[_]]): Int =
+          collections.toSeq.map(_.size).sum
+      #+END_SRC
+
+    - Even better, implement ~sumSizes~ with ~fold~ rather than ~map~, then you
+      can avoid the problem and eliminate one of the iterations through the outer
+      collection (use ~map~, we need ~sum~ that follows it; with ~fold~, we get
+      the result directly):
+      #+BEGIN_SRC scala
+        def sumSizes(collections: Iterable[Iterable[_]]): Int =
+          collections.foldLeft(0) {
+            (sumOfSizes, collection) => sumOfSizes + collection.size
+        }
+      #+END_SRC
+
+    - SUMMARY:
+      Pay close attention to the possible input types to your methods that
+      operate on collections.
+        If you do not need to preserve the input type, consider constructing
+      your own intermediate types with known characteristics.
+
+* TODO 6. Arg Arrgh! - 45
+* TODO 7. Caught Up in Closures - 50
+* TODO 8. Map Comprehension - 55
+* TODO 9. Init You, Init Me - 59
+* TODO 10. A Case of Equality - 67
+* DONE 11. If at First You Don't Succeed... - 74
+  CLOSED: [2018-07-19 Thu 20:51]
+  _Evaluation of expressions_, /strict/ or /non-strict/, may result in an /exception/,
+  which can cause SOME INTERESTING BEHAVIOR.
+  #+BEGIN_SRC scala
+    var x = 0
+    lazy val y = 1 / x
+
+    try {
+      println(y)
+    } catch {
+      case _: Exception =>
+        x = 1
+        println(y)
+    }
+  #+END_SRC
+
+** Possibilities - 74
+** Explanation - 75
+   The answer is 2:
+   #+BEGIN_QUOTE
+   Prints:
+   1
+   #+END_QUOTE
+
+   - IN ADDITION TO a _postponed evaluation_,
+     /lazy values/ have the interesting property that _if an /exception/ is thrown
+     *during their initialization*, they will be *recomputed* when accessed again._
+
+** Discussion - 76
+   - Another example about the property of exception thrown during the initialization
+     of a /lazy value/.
+     #+BEGIN_SRC scala
+       import io.Source
+
+       lazy val res = Source.fromFile("./processing-result.txt").
+         getLines.filter(_.contains("quux"))
+     #+END_SRC
+
+     If ~res~ is referenced before the file is available, it will throw an
+     exception during initialization and signal to the calling code that the
+     collection of data has not been completed.
+       Once the result file is written, ~res~ will be properly initialized and
+     will then hold the expected value.
+
+   - *SUMMARY*
+     Scala will *reattempt* to initialize ~lazy val~'s on each access *until
+     initialization succeeds*.
+
+     This makes them a useful option for _postponed resource initialization_.
+
+* DONE 12. To Map, or Not to Map - 78
+  CLOSED: [2018-07-19 Thu 20:28]
+  #+BEGIN_SRC scala
+    case class RomanNumeral(symbol: String, value: Int)
+
+    implicit object RomanOrdering extends Ordering[RomanNumeral] {
+      def compare(a: RomanNumeral, b: RomanNumeral) =
+        a.value compare b.value
+    }
+
+    import collection.immutable.SortedSet
+
+    val numerals = SortedSet(
+      RomanNumeral("M", 1000),
+      RomanNumeral("C", 100),
+      RomanNumeral("X", 10),
+      RomanNumeral("I", 1),
+      RomanNumeral("D", 500),
+      RomanNumeral("L", 50),
+      RomanNumeral("V", 5)
+    )
+
+    println("Roman numeral symbols for 1 5 10 50 100 500 1000:")
+
+    for (num <- numerals; sym = num.symbol) { print(s"${sym} ") }
+    numerals map { _.symbol } foreach { sym => print(s"${sym} ") }
+  #+END_SRC
+  
+** Possibilities - 79
+** Explanation - 79
+   The answer 1
+   #+BEGIN_QUOTE
+   Roman numeral symbols for 1 5 10 50 100 500 1000:
+   I V X L C D M
+   C D I L M V X
+   #+END_QUOTE
+
+   - ~SortedSet~ is ordered with the help of the ~compare~ /method/ of the ~Ordering~
+     /class/. _It doesn't keep the insertion order!!!_
+
+   - On of the main features of Scala collections is that transformations, such
+     as ~map~, *preserve the type of the collection*.
+
+     In this case, ~map~ generate a value of ~SortedSet[String]~, whoes elements
+     have a different order from the input ~SortedSet[RomanNumeral]~.
+       This is why the two output are different.
+
+   - According to _The Scala Language Specification_, the ~for (i - expr) { fun(i) }~
+     loop is *desugared* to an invocation of the ~foreach~ /method/:
+     ~expr foreach { i => fun(i) }.~
+
+     In our case, this conversion is more complicated:
+     #+BEGIN_SRC scala
+       numerals map { num =>
+         val sym = num.symbol
+         (num, sym)
+       } foreach { case (num, sym) =>
+           println(sym)
+       }
+     #+END_SRC
+     Here after the ~map~ operation, a value of ~SortedSet[(RomanNumeral, String)]~
+     is generated, and, according to the order of tuples, we know the new generated
+     ~SortedSet~ keep the order of the input.
+
+** Discussion - 81
+   - You can use create a ~view~ from the input and ~map~, the /view/ does NOT
+     create an intermediate ~SortedSet~. Instead, the ~num => num.symbol~
+     operation is applied *lazily*, only when the next element of the
+     transformed ~numerals~ collection is retrieved and printed in the ~foreach~
+     loop.
+     ~numerals.view map { _.symbol } foreach { sym => print(s"${sym} ") }~
+
+   - As of Scala 2.11, however, there is *still significant debate regarding the
+     usability of /views/.*
+     =From Jian=  I guess now this debate already has a result:
+     Scala 2.13 new collection library introduce ~View~.
+
+     + _A simple ALTERNATIVE_ is to start with a collection type whose _iteration
+       order_ is *NOT affected by* /transformations/, such as ~Seq~:
+       ~numerals.toSeq map { _.symbol } foreach { sym => print(s"${sym} ") }~
+
+       * cons:
+         This usually comes at _the *cost* of an additional iteration_ over the
+         original collection,
+
+       * pros: 
+         It's _easy_ and _straightforward_ to use.
+
+   - *SUMMARY*
+     If you are carrying out transformations on a collection, especially when
+     chaining multiple operations, note that the iteration order of the original
+     collection is *not automatically preserved*.
+
+     Convert the original to a sequence if stable iteration order is required.
+
+* TODO 13. Self: See Self - 83
+  Recursive variable definitions are a tricky problem in many languages. The
+  simplest such definition is a variable that refers to itself.
+
+  - Scala allow /recursive definition/ (with /self reference/) even for values.
+
+  - Question: 
+    #+BEGIN_SRC scala
+      val s1: String = s1
+      val s2: String = s2 + s2
+      println(s1.length)
+      println(s2.length)
+    #+END_SRC
+
+** DONE Possibilities
+   CLOSED: [2018-07-20 Fri 10:01]
+** DONE Explanation
+   CLOSED: [2018-07-20 Fri 10:01]
+   The answer is 3:
+   The first ~println~ statement throws a ~NullPointerException~, and the second
+   prints: ~8~
+
+   - The /default value/ of ~String~ is ~null~.
+     #+BEGIN_SRC scala
+       // scala>
+       val s1: String = s1
+       // <console>:7: warning: value s1 does nothing other than call
+       //   itself recursively
+       //        val s1: String = s1
+       //                         ˆ
+       // s1: String = null
+     #+END_SRC
+
+     This can explain the result of ~println(s1.length)~.
+
+   - _BAD_:
+     In scala, you can use a variable before declaration like in Javascript.
+     though you will see a *warning message*.
+     #+BEGIN_SRC scala
+       // scala>
+       val x = y; val y = 10
+       //  <console>:7: warning: Reference to uninitialized value y
+       //         val x = y; val y = 10
+       // ˆ
+       //  x: Int = 0
+       //  y: Int = 10
+     #+END_SRC
+
+   - The Scala compiler *converts*
+     _the concatenation of two string constants_ (here ~s2 + s2~ is equivalent
+     to the source code ~(null: String) + (null: String)~)
+     *into* bytecode equivalent to:
+     #+BEGIN_SRC scala
+       String s2 = StringBuilder.newBuilder.append(null: String)
+         .append(null: String).toString
+     #+END_SRC
+     + =From Jian=
+       I add the ~:String~ part, and since the corresponding bytecodes does NOT
+       have type info, they does NOT include the ~:String~ part. However, since
+       we convert it to Scala source code, we need to modify it to fit the
+       requirement of Scala compiler.
+
+** TODO Discussion
+   - *SUMMARY*
+
+* DONE 14. Return to Me! - 87
+  CLOSED: [2018-08-18 Sat 17:45]
+  #+BEGIN_SRC scala
+    def sumItUp: Int = {
+      def one(x: Int): Int = { return x; 1 }
+      val two = (x: Int) => { return x; 2 }
+      1 + one(2) + two(3)
+    }
+
+    println(sumItUp)
+  #+END_SRC
+
+** Possibilities
+   - Q :: What is the result of the code?
+
+   - A :: The answer 1, =3=
+
+** Explanation
+   - The /TSLS/ Section 6.20,  stipulates that anything following a /return
+     expression/ is NOT evaluated, i.e., *simply ignored*.
+
+   - In the REPL, try to evaluate ~val two = (x: Int) => { return x; 2 }~, and
+     you will get an error message that:
+     =<console>:7: error: return outside method definition=
+
+** Discussion
+   - Use the option ~-Ywarn-dead-code~ to warn you the /dead code/, which is NOT
+     warned BY DEFAULT.
+
+     + Take it one step further:
+       use the ~-Xfatal-warnings~ flag, which will cause compilation to *fail* if
+       there are any warnings.
+
+   - *SUMMARY*
+     IF POSSIBLE, you should *avoid* using _explicit return statements_.
+
+     + If you need to use them, be conscious of the context and ensure the
+       execution will resume where you intend.
+
+     + Be aware that /return statements/ return
+       * only from /methods/ and /local functions/
+       * *NOT* from /function values/ that may be defined within them.
+
+* TODO 15. Count Me Now, Count Me Later - 93
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* DONE 16. One Bound, Two to Go - 100
+  CLOSED: [2018-08-19 Sun 02:35]
+  #+BEGIN_SRC scala
+    def invert(v3: Int)(v2: Int = 2, v1: Int = 1) {
+      println(v1 + ", " + v2 + ", " + v3)
+    }
+
+    val invert3 = invert(3) _
+    invert3(v1 = 2)
+    invert3(v1 = 2, v2 = 1)
+  #+END_SRC
+
+** Possibilities
+   - Answer:
+     The first invocation of invert3 fails to compile, and the second one
+     prints:
+     1, 2, 3
+
+** Explanation
+   It is very tricky!!!
+
+   - The ~invert3~ definition will be converted to:
+     #+BEGIN_SRC scala
+       def invert3 = new Function2[Int, Int, Unit] {
+         def apply(v1: Int, v2: Int): Unit = invert(3)(v1, v2)
+       }
+
+       invert3.apply(v1 = 2) // Error
+       invert3.apply(v1 = 2, v2 = 1)
+     #+END_SRC
+
+     =From Jian= The book is NOT clear!
+     My understanding:
+     1. According to the expanded version of the definition of ~invert3~,
+        ~invert3.apply(v1 = 2, v2 = 1)~ is acutally ~invert(3)(2, 1)~.
+
+     2. According to the definition of ~invert~, ~invert(3)(2, 1)~ is
+        equivalent to ~invert(3)(v2 = 2, v1 = 1)~, where the order of ~v1~ and ~v2~
+        is different from the ~v1~ and ~v2~ in ~invert3.apply(v1 = 2, v2 = 1)~.
+
+        The two sets of ~v1~ and ~v2~ are differnnt, just an accident, though
+        it leads to the wierd result. For ~Function2~, the parameters of its
+        ~apply~ method is always ~v1~ and ~v2~ in order. Even if you use the other
+        names in the definition of ~invert~, nothing will change!
+
+        NO link between the names of the parameters of the definition of ~invert~,
+        and the names of the parameters of the ~apply~ method.
+
+** Discussion
+   - Q :: Why do we need /curring/?
+
+   - A :: 
+     + Use the parameter(s) of a previous parameter list when defining /default
+       arguments/:
+       ~def area(x: Int)(y: Int = x) = x * y~
+
+       =From Jian=
+       According to this puzzler, I don't think this can be used?
+       =I need Example= =TODO= =???= =!!!=
+
+     + Facilitate type inference. =TODO= =Learn More=
+       For example,
+       #+BEGIN_SRC scala
+         def foldLeft[B](z: B)(op: (B, A) => B): B
+         // no need to specify `Int` for `B`
+         Seq("I", "II", "III").foldLeft(0)(_ + _.length)
+       #+END_SRC
+
+     + Multiple parameter lists allow you to have *both* /implicit and non-implicit
+       parameters/:
+       ~def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): A~
+
+     + Simple DSL
+       (use /curring/, /lazy parameter(s)/, and replace _parentheses_ with
+       _curly braces_):
+       #+BEGIN_SRC scala
+         def benchmark(times: Int)(block: => Unit): Unit = ???
+
+         benchmark(10000)  {
+           // ...
+         }
+       #+END_SRC
+
+     + Allow /partially applied functions/ to be expressed *concisely*.
+       For example, if you define ~invert~ without /currying/, you *cannot*
+       define ~invert3~ as ~def invert3 = invert(3) _~, and you must do
+       ~def invert3 = invert(3, _: Int, _: Int)~.
+
+       * You can also see the non-currying version *cannot* must be manually
+         typed. The ONLY case you don't need the do this is when you pass an
+         underscore for all arguments:
+         ~def invert_ = invert(_, _, _)~
+
+   - *SUMMARY*
+     Bear in mind that when you are invoking a /partially applied function/,
+
+     /named arguments/ do *not* resolve against the original method,
+     *BUT* against a generated function object.
+
+     =IMPORTANT=
+     =From Jian= Anyway, this is a very tricky trap!!!!!!
+
+     You can avoid problems by steering clear of parameter names used by Scala's
+     function traits. =TODO= =How= =Create a sub-trait??? of Function2????=
+
+* TODO 17. Implicitly Surprising - 106
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 18. Information Overload - 112
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 19. What's in a Name? - 118
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 20. ??? Irregular E06
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 18. Information Overload - 112xpressions - 123
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 21. I Can Has Padding? - 127
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 22. Cast Away - 132 - =TODO= _NOTE_
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 23. Adaptive Reasoning - 138
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 24. Double Trouble - 143
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 25. Type Extortion - 148
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 26. Accepts Any Args - 152
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 27. A Case of Strings - 157
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 28. Pick a Value, AnyValue! - 163
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* DONE 29. Implicit Kryptonite - 169
+  CLOSED: [2018-08-18 Sat 20:15]
+  #+BEGIN_SRC scala
+    object Scanner {
+      trait Console { def display(item: String) }
+      trait AlarmHandler extends (() => Unit)
+
+      def scanItem(item: String)(implicit c: Console) {
+        c.display(item)
+      }
+
+      def hitAlarmButton()(implicit ah: AlarmHandler) { ah() }
+    }
+
+    object NormalMode {
+      implicit val ConsoleRenderer = new Scanner.Console {
+        def display(item: String) { println(s"Found a ${item}") }
+      }
+
+      implicit val DefaultAlarmHandler = new Scanner.AlarmHandler {
+        def apply() { println("ALARM! ALARM!") }
+      }
+    }
+
+    object TestMode {
+      implicit val ConsoleRenderer = new Scanner.Console {
+        def display(item: String) { println("Found a detonator") }
+      }
+
+      implicit val TestAlarmHandler = new Scanner.AlarmHandler {
+        def apply() { println("Test successful. Well done!") }
+      }
+    }
+
+    import NormalMode._
+    Scanner scanItem "knife"
+    Scanner.hitAlarmButton()
+
+    import TestMode._
+    Scanner scanItem "shoe"
+    Scanner.hitAlarmButton()
+  #+END_SRC
+
+** Possibilities
+** DONE Explanation
+   CLOSED: [2018-08-18 Sat 20:15]
+   Answer:
+   #+BEGIN_SRC scala
+     // Found a knife
+     // ALARM! ALARM!
+     // Found a detonator
+
+     // Scanner.hitAlarmButton()
+     // <console>:17: error: ambiguous implicit values: both value
+     //  DefaultAlarmHandler in object NormalMode of type
+     //    => Scanner.AlarmHandler
+     //  and value TestAlarmHandler in object TestMode of type
+     //    => Scanner.AlarmHandler
+     //  match expected type Scanner.AlarmHandler
+     //               Scanner.hitAlarmButton()
+     //                                     ˆ
+   #+END_SRC
+
+** DONE Discussion
+   CLOSED: [2018-08-18 Sat 20:10]
+   - Solution 1 (Use the same names):
+     #+BEGIN_SRC scala
+       object TestMode2 {
+         implicit val ConsoleRenderer = new Scanner.Console {
+           def display(item: String) { println("Found a detonator") }
+         }
+
+         // same name as the alarm handler in NormalMode
+         implicit val DefaultAlarmHandler = new Scanner.AlarmHandler {
+           def apply() { println("Test successful. Well done!") }
+         }
+       }
+
+       //  ...
+
+       import TestMode2._
+       Scanner scanItem "shoe"
+       // Found a detonator
+       Scanner.hitAlarmButton()
+       // Test successful. Well done!
+     #+END_SRC
+
+   - Solution 2 (with priority):
+     #+BEGIN_SRC scala
+       class OperatingMode {
+         implicit val ConsoleRenderer = new Scanner.Console {
+           def display(item: String) { println(s"Found a ${item}") }
+         }
+         implicit val DefaultAlarmHandler = new Scanner.AlarmHandler {
+           def apply() { println("ALARM! ALARM!") }
+         }
+       }
+
+       object NormalMode extends OperatingMode
+
+       object TestMode extends OperatingMode {
+         override implicit val ConsoleRenderer = new Scanner.Console {
+           def display(item: String) { println("Found a detonator") }
+         }
+         implicit val TestAlarmHandler = new Scanner.AlarmHandler {
+           def apply() { println("Test successful. Well done!") }
+         }
+       }
+     #+END_SRC
+
+   - *SUMMARY*
+     1. Names of implicits matter!
+        + Importing an /implicit value/ of the *same name and type* as an existing
+          implicit will *remove the existing implicit* from the set of applicable
+          options considered by the compiler.
+
+        + Importing an implicit of the *same type, but with a different name*, can
+          lead to _"AMBIGUOUS implicit values"_ compiler errors.
+
+     2. When defining a set of /implicits/ that are *intended to be overridable*,
+        declare them in a _"default context" class or trait_ that *can be extended*.
+
+        *Define overriding implicits in a subclass or subtrait of the default
+        context.* In this case, higher priority implicits do not need to have
+        the same name as the implicits they are intended to replace.
+
+* TODO 30. Quite the Outspoken Type - 176
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 31. A View to a Shill - 181
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 32. Set the Record Straight - 185
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 33. The Devil Is in the Defaults - 192
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* TODO 34. The Main Thing - 198
+** Possibilities
+** Explanation
+** Discussion
+   - *SUMMARY*
+
+* DONE 35. A Listful of Dollars - 205
+  CLOSED: [2018-08-24 Fri 20:01]
+  The following program uses both of these features. What does it do?
+  #+BEGIN_SRC scala
+    type Dollar = Int
+    final val Dollar: Dollar = 1
+    val x: List[Dollar] = List(1, 2, 3)
+
+    println(x map { x: Int => Dollar })
+    println(x.map(x: Int => Dollar))
+  #+END_SRC
+
+** Possibilities
+   The first ~println~ statement prints:
+   ~List(1, 1, 1)~
+   and the second one throws
+
+** Explanation
+   For an anonymous function, The /block expression/ can be parsed differently,
+   as opposed to being passed directly!
+
+   - ~println(x map { x: Int => Dollar })~:
+     it is equivalent to ~println(x map((x: Int) => Dollar))~. and its result is
+     ~List(1, 1, 1)~, as expected.
+
+   - ~println(x map(x: Int => Dollar))~:
+     This can compile, but it has a run time error:
+     ~java.lang.IndexOutOfBoundsException: 3~
+
+     This error message is a little tricky, but from it you know the ~x~ in
+     ~x: Int => Dollar~ is NOT a /free variable/ that will be bound to ~List(1,
+     2, 3)~'s elements. It is acutally the ~List(1, 2, 3)~.
+
+     How this can happen?
+
+     + ~List~'s in Scala are functions, which have non-static ~apply~ /method/.
+
+     + Accidently, the ~apply~ /method/ of this list ~x~ is ~Int => Dollar~.
+       By default, in the ~x.map(x: Int => Dollar)~, the ~x: Int => Dollar~ is
+       interpreted as ~x: (Int => Dollar)~, rather than ~(x: Int) => Dollar~.
+         Then the ~x~ here is considered as the list ~x~ (if you use other
+       variable name, like ~y~, there will be a /compilation error/ of =not
+       found: value y=), rather than a /free variable/.
+
+       This is also why the ~IndexOutOfBoundsException: 3~ is there. The length
+       of ~x~ is 3, and it doesn't have the 4th element, which index is ~3~.
+
+** Discussion
+   - You need parentheses if you doesn't mean ~x: (Int => Dollar)~.
+     Use ~(x: Int) => Dollar~ or ~x => Dollar~, and here you can use other
+     variable name besides ~x~.
+
+   - *SUMMARY*
+     - Be aware that
+       passing an /anonymous function/ *in curly braces* actually creates a
+       /block/.
+
+     - /Anonymous functions/
+       passed in a /block/
+       *can be parsed differently* than when
+       passed directly.
+
+     - If you are passing an /anonymous, single-parameter function/ _in parentheses_,
+       *make sure you enclose the parameter in parentheses if it has a type
+       annotation.*
+
+* DONE 36. Size It Up - 210
+  CLOSED: [2018-08-18 Sat 21:09]
+** Possibilities
+** Explanation
+   - ~Iterable~ does NOT have ~+~ /method/.
+     When it is added to a string, the ~implicit final class any2stringadd[A] extends AnyVal~
+     from ~Predef~ is applied.
+
+** Discussion
+   - Many want to remove ~any2stringadd~.
+     This is likely to happen in future, although NOT necessarily in the short term.
+
+   - Ways to solve this kind of problems:
+     + /import selector/
+       In the REPL, use ~:paste -raw~ (Entering past mode (ctrl-D to finish),
+       and then the REPL will treats the subsequent input as a Scala file,
+       rather than a script. Then use ~import Predef.{any2stringadd => _, _}~ --
+       this means import all all the other things (the last ~_~), except
+       ~any2stringadd~.
+
+     + Create "ambiguous implicit values".
+       In order for this to work, you need to introduce *not one, but TWO* new
+       conversions.
+         If you define only one implicit, it will be more specific than the
+       conversion in ~Predef~ you want to disable and will be chosen instead,
+       rather than producing the intended conflict:
+       #+BEGIN_SRC scala
+         object NoAny2StringAdd {
+           implicit val disableAny2stringadd1 = (_: Any) => ""
+           implicit val disableAny2stringadd2 = (_: Any) => ""
+         }
+
+         import NoAny2StringAdd._
+       #+END_SRC
+       Then if a implicit conversion from ~Any~ to ~String~ is required, then
+       the compiler will report the error!
+
+     + The most straightforward way (!!!):
+       specify the type *explicitly*.
+
+       For example,
+       #+BEGIN_SRC scala
+         val healthierLunchbox: mutable.Iterable[String] =
+           lunchbox + itemToAdd
+
+         // error: type mismatch;
+         //  found   : String
+         //  required: scala.collection.mutable.Iterable[String]
+         //            lunchbox + itemToAdd
+         //                     ˆ
+       #+END_SRC
+
+
+
+   - *SUMMARY*
+     Be aware that the Scala compiler can always fall back to treating the +
+     operator as string concatenation if the argument is a string. If the
+     expression is not intended to return a String , specify the expected result
+     type explicitly. You can disable Predef.any2stringadd in your program to
+     prevent the implicit conversion of any object to a string.
+
+
+* Updates from http://scalapuzzlers.com/
+** . Private Lives  
+** . One Egg or Two..?
+** . Views from the Top
+** . All's Well that Folds Well
+** . Signs of Trouble
+** . Market Precedence
+** . Float or Sink
+** . Stringy Conversions
+** One, Two, Skip a Few
+** Oddly Enough
+** Well, In This Case...
+** Trial and Error
+** Think of 1 Card
+** Splitting Headache
+** An Exceptional Future
+** Applied Values
+** The Branch Not Taken
+** A Result, Finally!
+** Unary Quandary
+** Heads You Win...
+** (Ex)Stream Surprise
+** A Matter of Context
+** Inference Hindrance
+** Inconstant Constants
+** For Each Step...
+** Beep Beep...Reversing
+** Reductio Ad Absurdum
+
+* Bibliography 216
+* About the Authors 219
+* Subject Index 220

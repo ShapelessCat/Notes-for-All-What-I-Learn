@@ -1,0 +1,312 @@
+#+TITLE: Basic Tutorial
+#+VERSION: 0.6.25 (lastest stable version)
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Step 0: Prerequisites
+* DONE Step 1: Setup
+  CLOSED: [2018-11-12 Mon 23:54]
+** DONE sbt Setup
+   CLOSED: [2018-11-12 Mon 23:54]
+   - =project/plugins.sbt=
+     #+BEGIN_SRC scala
+       addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.25")
+     #+END_SRC
+
+   - =build.sbt=
+     #+BEGIN_SRC scala
+       enablePlugins(ScalaJSPlugin)
+
+       name := "Scala.js Tutorial"
+       scalaVersion := "2.12.6" // or any other Scala version >= 2.10.2
+
+       // This is an application with a main method
+       scalaJSUseMainModuleInitializer := true
+     #+END_SRC
+
+   - =project/build.properties=
+     Should >= 0.13.17
+     #+BEGIN_SRC scala
+       sbt.version=0.13.17
+     #+END_SRC
+
+   - If you prefer to use Eclipse of IDEA as you IDE,
+     you may use ~sbteclipse~ to generate an /Eclipse project/ =???= =TODO=,
+     or _import the sbt build from IDEA_ =???= =TODO=.
+
+** DONE HelloWorld application
+   CLOSED: [2018-11-12 Mon 23:57]
+   - =src/main/scala/tutorial/webapp/TutorialApp.scala=
+     #+BEGIN_SRC scala
+       package tutorial.webapp
+
+       object TutorialApp {
+         def main(args: Array[String]): Unit = {
+           println("Hello world!")
+         }
+       }
+     #+END_SRC
+
+   - Use the ~run~ task run your application.
+
+   - Use the ~last~ command to see more info:
+     + it tells you you acutally use ~Node.js~ to run your application
+
+     + it shows you the /stack traces/ if you installed the ~source-map-support~.
+       * Installation:
+         ~npm install source-map-support~
+
+* DONE Step 2: Integrating with HTML
+  CLOSED: [2018-11-12 Mon 23:20]
+  You would like to use the JavaScript application that implemented originally
+  in Scala.js in an HTML page. To do this, we need _TWO steps_:
+  1. Generate a single .js file out of our compiled code
+  2. Create an HTML page which includes that file
+
+** DONE Generate JavaScript
+   CLOSED: [2018-11-12 Mon 23:20]
+   Use the ~fastOptJS~ /sbt task/ to generate a single JavaScript file.
+   #+BEGIN_SRC text
+     > fastOptJS
+     [info] Fast optimizing (...)/scala-js-tutorial/target/scala-2.12/scala-js-tutorial-fastopt.js
+     [success] (...)
+   #+END_SRC
+
+   This will
+   - Perform some fast optimization
+
+   - Generate the =target/scala-2.12/scala-js-tutorial-fastopt.js= file
+     containing the JavaScript code.
+
+** DONE Create the HTML Page
+   CLOSED: [2018-11-12 Mon 23:19]
+   Details in later sections.
+   #+BEGIN_SRC html
+     <!DOCTYPE html>
+     <html>
+       <head>
+         <meta charset="UTF-8">
+         <title>The Scala.js Tutorial</title>
+       </head>
+       <body>
+         <!-- Include Scala.js compiled code -->
+         <script type="text/javascript" src="./target/scala-2.12/scala-js-tutorial-fastopt.js"></script>
+       </body>
+     </html>
+   #+END_SRC
+
+   - Since we have set ~scalaJSUseMainModuleInitializer := true~ in the build,
+     the ~TutorialApp.main(args: Array[String])~ /method/ is automatically
+     called at the end of the =scala-js-tutorial-fastopt.js= file (with an empty
+     array as argument)
+
+   - Of course, because the application you make only print ="Hello world"=,
+     you'll see nothing in the browser. However, if you open the console, you'll
+     see the output ="Hello world"=.
+
+* DONE Step 3: Using the DOM
+  CLOSED: [2018-11-12 Mon 23:59]
+  You often want to interact with the page.
+  That's what the DOM API is for.
+
+** DONE Adding the DOM Library
+   CLOSED: [2018-11-12 Mon 23:27]
+   Add a dependency to the =build.sbt=
+   ~libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.6"~
+
+   - Here ~%%%~ means use a Scala.js library and NOT a normal Scala library.
+     =TODO= Read the [[http://www.scala-js.org/doc/project/dependencies.html][Dependencies]] for more info.
+
+   - Do NOT forget to *reload* the /build file/ to enable the new added dependency.
+     =TODO= =???=
+     If you are using an IDE plugin, you will also have to regenerate the
+     project files for autocompletion to work.
+
+** DONE Using the DOM Library
+   CLOSED: [2018-11-12 Mon 23:35]
+   Modify our HelloWorld example to add a ~<p>~ tag to the body of the page,
+   rather than printing to the console.
+
+   1. Import
+      #+BEGIN_SRC scala
+        import org.scalajs.dom
+        import dom.document
+      #+END_SRC
+      + ~dom~ is the _root_ of the /JavaScript DOM/ and corresponds to the /global
+        scope of JavaScript/ (aka the ~window~ object).
+
+      + We additionally import ~document~ (which corresponds to ~document~ in
+        JavaScript) for convenience.
+
+   2. Create a /method/ that allows us to append a ~<p>~ tag with a given text to
+      a given /node/:
+      #+BEGIN_SRC scala
+        def appendPar(targetNode: dom.Node, text: String): Unit = {
+          val parNode = document.createElement("p")
+          val textNode = document.createTextNode(text)
+          parNode.appendChild(textNode)
+          targetNode.appendChild(parNode)
+        }
+      #+END_SRC
+
+   3. Modify the ~main~ function:
+      #+BEGIN_SRC scala
+        def main(args: Array[String]): Unit = {
+          appendPar(document.body, "Hello World")
+        }
+      #+END_SRC
+
+** DONE Rebuild the JavaScript
+   CLOSED: [2018-11-12 Mon 23:59]
+   Re-fun the ~fastOptJS~ /sbt task/.
+
+   - If you want, try the
+     #+BEGIN_SRC sbt
+       ~fastOptJS
+     #+END_SRC
+     From this point in the tutorial
+     we ASSUME you have an sbt with this command running, so we don't need to
+     bother with rebuilding each time.
+
+* DONE Step 4: Reacting on User Input
+  CLOSED: [2018-11-13 Tue 21:26]
+  _Add a button and react to events_ on it by still just using the DOM (we will
+  use jQuery in the next step =TODO=). We want to add a button that adds another
+  ~<p>~ tag to the body when it is clicked.
+
+  1. Add a /method/ to ~TutorialApp~.
+     #+BEGIN_SRC scala
+       import scala.scalajs.js.annotation.JSExportTopLevel
+
+       @JSExportTopLevel("addClickedMessage")
+       def addClickedMessage(): Unit =
+         appendPar(document.body, "You clicked the button!")
+     #+END_SRC
+     This /method/ is called when the button is clicked.
+
+  2. ~@JSExportTopLevel~ tells the _Scala.js compiler_ to *make the annotated
+     method callable from JavaScript*
+
+     =TODO= =TODO= =TODO=
+     To find out _more about how to call Scala.js methods from JavaScript_,
+     have a look at the [[https://www.scala-js.org/doc/interoperability/export-to-javascript.html][Export Scala.js API to JavaScript]] guide.
+
+  3. Add the function call to our HTML and set its ~onclick~ attribute (make sure
+     to add the button *before* the ~<script>~ tags):
+     #+BEGIN_SRC scala
+       <button id="click-me-button" type="button" onclick="addClickedMessage()">
+         Click me!
+       </button>
+     #+END_SRC
+
+  4. =TODO= =from Jian=
+     Error message when do ~sbt run~.
+     However, in browsers, this app works well?
+     =TODO= Try to understand the error message!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+* TODO Step 5: Using jQuery
+  Larger web applications have a tendency to *set up reactions to events in
+  JavaScript rather than specifying attributes*.
+
+  We will
+  - _TRANSFORM_ our current mini-application _TO_ use this paradigm with
+    the help of jQuery.
+
+  - _REPLACE_ all usages of the DOM API _WITH_ jQuery.
+
+** DONE Depending on jQuery
+   CLOSED: [2018-11-13 Tue 21:42]
+   Just like for the DOM, there is a _TYPED library_ for JQuery available in
+   Scala.js: ~jquery-facade~.
+
+   1. Add the following line in your =build.sbtl=:
+      #+BEGIN_SRC scala
+        libraryDependencies += "org.querki" %%% "jquery-facade" % "1.2"
+      #+END_SRC
+
+   2. Don't forget to *reload* the /sbt configuration/:
+      1. Hit enter to abort the =~fastOptJS= command
+
+      2. Type ~reload~
+
+      3. Start =~fastOptJS= again
+
+   3. Again make sure to update your IDE project files if you are using a plugin.
+      =TODO= =???= =???=
+
+** DONE Using jQuery
+   CLOSED: [2018-11-13 Tue 21:51]
+   From the =TutorialApp.scala=, remove the imports for the DOM, and add the
+   import for jQuery:
+   
+   1. ~import org.querki.jquery._~
+
+   2. Remove ~appendPar~ and replace all calls to it by the simple:
+      ~$("body").append("<p>[message]</p>")~
+      , where ~[message]~ is the string originally passed to ~appendPar~, for
+      example: ~$("body").append("<p>Hello World</p>")~
+
+   3. If you try to relad your webpage now, you'll see ~TypeError~.
+      Reason: we have NOT included the jQuery library itself, which is a plain
+      JavaScript library.
+
+      =TODO= Next section!
+
+** TODO Adding JavaScript libraries
+** TODO Setup UI in Scala.js
+
+* TODO Step 6: Testing
+** Supporting the DOM
+** Adding uTest
+** A more complex test
+
+* DONE Step 7: Optimizing for Production
+  CLOSED: [2018-11-12 Mon 23:50]
+  Here we show a couple of things you might want to do _when you promote your
+  application to production_.
+
+** DONE Full Optimization
+   CLOSED: [2018-11-12 Mon 23:49]
+   *SIZE is critical for JavaScript code on the web.*
+
+   - To _compress the compiled code even further_, the /Scala.js sbt plugin/ uses
+     the ADVANCED OPTIMIZATIONS of the *Google Closure Compiler*.
+
+     To run full optimizations, simply use the ~fullOptJS~ /sbt task/.
+
+   - Usually we don't use ~fullOptJS~ during development.
+
+     If you want to use ~fullOptJs~ in the /sbt task/ ~run~ and ~test~, you need
+     to _change_ the /stage/ using the following /sbt settings/:
+     ~> set scalaJSStage in Global := FullOptStage~
+     By default, this is ~FastOptStage~.
+
+   - The last step, create our final production HTML file =scalajs-tutorial.html=
+     that include the fully optimized code:
+     #+BEGIN_SRC html
+       <!DOCTYPE html>
+       <html>
+         <head>
+           <meta charset="UTF-8">
+           <title>The Scala.js Tutorial</title>
+         </head>
+         <body>
+           <!-- Include JavaScript dependencies -->
+           <script type="text/javascript" src="./target/scala-2.12/scala-js-tutorial-jsdeps.js"></script>
+           <!-- Include Scala.js compiled code -->
+           <script type="text/javascript" src="./target/scala-2.12/scala-js-tutorial-opt.js"></script>
+         </body>
+       </html>
+     #+END_SRC
+
+** DONE Compression
+   CLOSED: [2018-11-12 Mon 23:50]
+   If you serve your Scala.js application from a web server, you should additionally
+   *gzip the resulting =.js= files*.
+   This step MIGHT _reduce_ the size of your application _down to 20%_ of its
+   original size.
+
+   - *The setup depends on your server stack.*
+     =TODO= =TODO= =TODO= =Details=
+     A common option is to use ~sbt-web~, ~sbt-web-scalajs~ and ~sbt-gzip~ if
+     you have a Play or Akka-http server.

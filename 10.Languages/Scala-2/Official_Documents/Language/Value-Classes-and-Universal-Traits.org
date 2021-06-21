@@ -1,0 +1,333 @@
+#+TITLE: Value Classes and Universal Traits
+#+AUTHOR: Mark Harrah
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Introduction
+  CLOSED: [2019-06-09 Sun 22:59]
+  - /Value classes/ are a new mechanism in Scala to *avoid* _allocating runtime
+    objects_.
+    + This is accomplished through the definition of new ~AnyVal~ /subclasses/.
+      They were proposed in SIP-15.
+
+  - The following shows a VERY MINIMAL /value class/ definition:
+    #+begin_src scala
+      class Wrapper(val underlying: Int) extends AnyVal
+    #+end_src
+    + A /value class/ has a _single_, public _val parameter_ that is the
+      _underlying runtime representation._
+
+    + The /type/ at /compile time/ is ~Wrapper~,
+      but at /runtime/, the _representation_ is an ~Int~.
+
+  - A /value class/
+    #+begin_src scala
+      class Wrapper(val underlying: Int) extends AnyVal {
+        def foo: Wrapper = new Wrapper(underlying * 19)
+      }
+    #+end_src
+    + *can define* ~def~'s
+    + *no* ~val~'s, ~var~'s, or _nested_ /traits/, /classes/ or /objects/:
+
+  - A /value class/
+    + *can only extend* /universal traits/
+      and
+
+    + *cannot be extended itself*.
+
+  - universal trait :: a /trait/ that extends ~Any~, only has ~def~'s as members,
+       and _does no initialization_.
+
+  - /Universal traits/ allow basic inheritance of /methods/ for /value classes/,
+    *BUT they incur the _overhead of allocation_.* For example,
+    #+begin_src scala
+      trait Printable extends Any {
+        def print(): Unit = println(this)
+      }
+
+      class Wrapper(val underlying: Int) extends AnyVal with Printable
+
+      val w = new Wrapper(3)
+      w.print()  // actually requires instantiating a wrapper instance
+    #+end_src
+
+  - The remaining sections of this documentation show
+    + use cases,
+    + details on when /allocations/ do and do not occur,
+    + concrete examples of *limitations* of /value classes/
+
+* DONE Extension methods
+  CLOSED: [2019-06-09 Sun 22:59]
+  - One _use case_ for /value classes/ is to combine them with /implicit classes/
+    (SIP-13) for *allocation-free extension methods.*
+      Using an /implicit class/ provides a more convenient syntax for defining
+    /extension methods/, while /value classes/ remove the *runtime overhead*.
+    A good example is the ~RichInt~ /class/ in the standard library.
+
+  - ~RichInt~ _extends_ the ~Int~ type with several /methods/.
+    Because it is a /value class/, _an /instance/ of ~RichInt~ *does NOT need*
+    to be created when using ~RichInt~ /methods/._
+
+  - The following fragment of ~RichInt~ shows how it extends ~Int~ to allow the
+    expression ~3.toHexString~:
+    #+begin_src scala
+      implicit class RichInt(val self: Int) extends AnyVal {
+        def toHexString: String = java.lang.Integer.toHexString(self)
+      }
+    #+end_src
+
+  - At /runtime/, this expression ~3.toHexString~
+    is optimised to the equivalent of a /method/ call on a /static object/
+    (~RichInt$.MODULE$.extension$toHexString(3)~),
+    *rather than* a /method/ call on a newly instantiated object.
+
+* DONE Correctness
+  CLOSED: [2019-06-09 Sun 22:59]
+  Another use case for /value classes/ is to get the *type safety* of a data
+  type *without* the /runtime allocation overhead/.
+
+  - For example, a fragment of a data type that represents a distance might look
+    like:
+    #+begin_src scala
+      class Meter(val value: Double) extends AnyVal {
+        def +(m: Meter): Meter = new Meter(value + m.value)
+      }
+    #+end_src
+    Code that adds two distances, such as
+    #+begin_src scala
+      val x = new Meter(3.4)
+      val y = new Meter(4.3)
+      val z = x + y
+    #+end_src
+    _will *NOT* actually *ALLOCATE* any ~Meter~ /instances/,_ but will only use
+    _primitive doubles_ at /runtime/.
+
+  - Note:
+    You _CAN_ use /case classes/ and/or /extension methods/ for _cleaner syntax_
+    in practice.
+
+* DONE When Allocation is Necessary
+  CLOSED: [2019-06-09 Sun 22:59]
+  Because the JVM does *NOT* support /value classes/,
+  Scala sometimes needs to actually _instantiate_ a /value class/.
+  Full details may be found in _SIP-15_.
+
+** Allocation Summary
+   A /value class/ is actually _instantiated WHEN_:
+   1. a /value class/ is *treated* _as ANOTHER /type/._
+   2. a /value class/ is *assigned* to an /array/.
+   3. doing /runtime type tests/, such as /pattern matching/.
+
+** Allocation Details
+   - Whenever a /value class/ is treated as _ANOTHER_ /type/, including a /universal
+     trait/, an /instance/ of the actual /value class/ must be _instantiated_.
+     As an example, consider the ~Meter~ /value class/:
+     #+begin_src scala
+       trait Distance extends Any
+       case class Meter(val value: Double) extends AnyVal with Distance
+     #+end_src
+     + /Allocation/ required:
+       #+begin_src scala
+         def add(a: Distance, b: Distance): Distance = // ...
+         add(Meter(3.4), Meter(4.3))
+       #+end_src
+       * The rule above is true even a call to ~identity~:
+         ~def identity[T](t: T): T = t~
+
+     + /Allocation/ NOT required:
+       #+begin_src scala
+         def add(a: Meter, b: Meter): Distance = // ...
+       #+end_src
+
+   - Another situation where an /allocation/ is necessary is when *assigning to
+     an array*, even if it is an /array/ of that /value class/. For example,
+     #+begin_src scala
+       val m = Meter(5.0)
+       val array = Array[Meter](m)
+     #+end_src
+     The /array/ here contains
+     + *ACTUAL* ~Meter~ /instances/
+       and
+     + *NOT* just the underlying /double primitives/.
+
+   - Lastly,
+     /type tests/ such as those done in /pattern matching/ or ~asInstanceOf~
+     require actual /value class/ *instances*:
+     #+begin_src scala
+       case class P(val i: Int) extends AnyVal
+
+       val p = new P(3)
+       p match { // new P instantiated here
+         case P(3) => println("Matched 3")
+         case P(x) => println("Not 3")
+       }
+     #+end_src
+
+* DONE Limitations
+  CLOSED: [2019-06-09 Sun 22:59]
+  /Value classes/ currently have several _limitations_, in part _because the JVM
+  does *NOT natively support* the concept of /value classes/._
+
+  - TODO
+    Full details on the implementation of /value classes/ and their
+    _limitations_ may be found in *SIP-15*.
+
+** Summary of Limitations
+   A /value class/ ...
+   1. must have *ONLY* a /primary constructor/ *with exactly one public (before 2.11.0)
+      or non-public (from 2.11.0), ~val~ parameter whose type is not a /value class/.*
+
+   2. may _NOT_ have /specialized type parameters/.
+      =TODO= ??? What does the _specialized_ here mean???
+
+   3. may _NOT_ have *nested or local* /classes/, /traits/, or /objects/
+
+   4. may _NOT_ define a ~equals~ or ~hashCode~ /method/
+
+   5. _MUST_ be a /top-level class/ or a /member/ of a /statically accessible object/
+
+   6. can _ONLY_ have ~def~'s as /members/.
+      In particular, it _CANNOT_ have ~lazy val~'s, ~var~'s, or ~val~'s as /members/.
+
+   7. _CANNOT be extended_ by another /class/.
+
+** Example of Limitations
+   This section provides many concrete consequences of these limitations not
+   already described in the necessary allocations section.
+
+   - /Multiple constructor parameters/ are *NOT* allowed:
+     #+begin_src scala
+       class Complex(val real: Double, val imag: Double) extends AnyVal
+     #+end_src
+
+     Error message is
+     #+begin_quote
+       // Complex.scala:1: error: value class needs to have exactly one val parameter
+       // class Complex(val real: Double, val imag: Double) extends AnyVal
+       //       ^
+     #+end_quote
+
+   - =from Jian=
+     In the future /multiple constructor parameters/ can be supported in /value
+     classes/. However, this need JVM support.
+
+   - It cannot be *by-name* ~val~
+     #+begin_src scala
+       class NoByName(val x: => Int) extends AnyVal
+       // NoByName.scala:1: error: `val' parameters may not be call-by-name
+       // class NoByName(val x: => Int) extends AnyVal
+       //                       ^
+     #+end_src
+
+   - Scala does *NOT allow* ~lazy val~ /constructor parameters/, so that is *NOT
+     allowed* either. /Multiple constructors/ are *NOT allowed*:
+     #+begin_src scala
+       class Secondary(val x: Int) extends AnyVal {
+         def this(y: Double) = this(y.toInt)
+       }
+       // Secondary.scala:2: error: value class may not have secondary constructors
+       //   def this(y: Double) = this(y.toInt)
+       //       ^
+     #+end_src
+
+   - A /value class/
+     + *CANNOT* have ~lazy val~'s or ~val~'s as /members/
+       and
+     + *CANNOT* have *nested* /classes/, /traits/, or /objects/:
+     #+begin_src scala
+       class NoLazyMember(val evaluate: () => Double) extends AnyVal {
+         val member: Int = 3
+         lazy val x: Double = evaluate()
+         object NestedObject
+         class NestedClass
+       }
+
+       // Invalid.scala:2: error: this statement is not allowed in value class: private[this] val member: Int = 3
+       //   val member: Int = 3
+       //       ^
+       // Invalid.scala:3: error: this statement is not allowed in value class: lazy private[this] var x: Double = NoLazyMember.this.evaluate.apply()
+       //   lazy val x: Double = evaluate()
+       //            ^
+       // Invalid.scala:4: error: value class may not have nested module definitions
+       //   object NestedObject
+       //          ^
+       // Invalid.scala:5: error: value class may not have nested class definitions
+       //   class NestedClass
+       //         ^
+     #+end_src
+
+   - Note that *local* /classes/, /traits/, and /objects/ are *NOT* allowed either,
+     as in the following:
+     #+begin_src scala
+       class NoLocalTemplates(val x: Int) extends AnyVal {
+         def aMethod = {
+           class Local
+           // ...
+         }
+       }
+     #+end_src
+
+   - A current implementation restriction is that value classes cannot be nested:
+     #+begin_src scala
+       class Outer(val inner: Inner) extends AnyVal
+       class Inner(val value: Int)   extends AnyVal
+       // Nested.scala:1: error: value class may not wrap another user-defined value class
+       // class Outer(val inner: Inner) extends AnyVal
+       //                 ^
+     #+end_src
+
+   - Additionally, /structural types/ *CANNOT* use /value classes/
+     in /method parameter/ or /return types/:
+     #+begin_src scala
+       class Value(val x: Int) extends AnyVal
+
+       object Usage {
+         def anyValue(v: { def value: Value }): Value =
+           v.value
+       }
+       // Struct.scala:3: error: Result type in structural refinement may not refer to a user-defined value class
+       // def anyValue(v: { def value: Value }): Value =
+       //                              ^
+     #+end_src
+
+   - A /value class/ *may NOT* extend a /non-universal trait/ and a /value class/
+     *may NOT* itself be extended:
+     #+begin_src scala
+       trait NotUniversal
+       class Value(val x: Int) extends AnyVal with NotUniversal
+       class Extend(x: Int) extends Value(x)
+
+       // Extend.scala:2: error: illegal inheritance; superclass AnyVal
+       //  is not a subclass of the superclass Object
+       //  of the mixin trait NotUniversal
+       // class Value(val x: Int) extends AnyVal with NotUniversal
+       //                                             ^
+       // Extend.scala:3: error: illegal inheritance from final class Value
+       // class Extend(x: Int) extends Value(x)
+       //                              ^
+     #+end_src
+     + Look the second error message,
+       /value classes/ is ALWAYS assumed and must be ~final~.
+
+   - Another limitation that is a result of supporting only one parameter to a
+     class is that a /value class/ must be
+     + *top-level*
+       or
+     + a /member/ of a *statically accessible object*.
+
+     *This is because a _nested_ /value class/ would _require a second parameter_
+     that references the /enclosing class/.* So, this is *NOT allowed*:
+     #+begin_src scala
+       class Outer {
+         class Inner(val x: Int) extends AnyVal
+       }
+       // Outer.scala:2: error: value class may not be a member of another class
+       // class Inner(val x: Int) extends AnyVal
+       //       ^
+     #+end_src
+     but this is allowed because _the enclosing object is *top-level*:_
+     #+begin_src scala
+       object Outer {
+         class Inner(val x: Int) extends AnyVal
+       }
+     #+end_src

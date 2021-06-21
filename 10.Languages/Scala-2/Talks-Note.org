@@ -1,0 +1,120 @@
+#+TITLE: Scala Talks
+#+SUBTITLE: Craft Your Development Environment with Vim 8 and Neovim
+#+AUTHOR: Drew Neil
+#+EDITOR: Katharine Dvorak
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Scala World
+** How to totally fix ~PartialFunction~ - by Dale Wijnand (@dwijnand)
+   2019-09-03
+*** Definitions
+    - ~Function1~
+      #+begin_src scala
+        trait Function1[-A, +B] {
+          def apply(a: A): B
+        }
+
+        // infix type alias
+        type A => B = Function1[A, B]  // =>[A, B]
+      #+end_src
+
+    - ~=>~ is special! It doesn't end with ~:~, but it is right-associative:
+      ~A => B => C~ means ~A => (B => C)~
+
+    - ~PartialFunciton~
+      #+begin_src scala
+        PartialFunciton[-A, +B] extends (A => B) {
+          def isDefinedAt(a: A): Boolean
+        }
+      #+end_src
+      + The speaker like the /type alias/:
+        ~type A ?=> B = PartialFunction[A, B]~
+        The speaker used ~=?>~ before.
+        However, to make is right-associative, he uses ~?=>:~
+
+    - ~Function1~ also have some combinator methods:
+      #+begin_src scala
+        // trait Function1[-A, +B]
+        def andThen[C](g: B => C): A => C = g(apply(a))
+        def compose[R](g: R => A): R => B = apply(g(r))
+      #+end_src
+
+    - ~PartialFunction~ class has a lot more methods:
+      #+begin_src scala
+        // trait PartialFunction[-A, +B]
+        def andThen[C](g: B => C): A ?=>: C
+        def andThen[C](g: B ?=>: C): A ?=>: C
+        def compose[R](g: R ?=>: A): R ?=>: B
+        def orElse[A1 <: A, B1 >: B](g: A1 ?=>: B1): A1 ?=>: B1
+
+        def lift: A => Option[B]  // and `.unlift` to go back
+        def unapply(a: A): Option[B] = lift(a)
+        def elementWise = new ElementWiseExtractor(this)
+
+        def applyOrElse[A1 <: A, B1 >: B](a: A1, default: A1 => B1) = {
+          if (isDefinedAt(a)) apply(a) else default(a)
+        }
+
+        def runWith[U](action: B => U): A => Boolean =
+          (a: A) => {
+            val b: B = applyOrElse(a, checkFallback[B])
+            if (!fallbackOccurred(b)) {
+              action(b)
+              true
+            } else false
+          }
+      #+end_src
+
+    - ~PartialFunction~ object:
+      #+begin_src scala
+        // object PartialFunction
+        def empty[A, B]: A ?=> B
+
+        def fromFunction[A, B](f: A => B): A ?=>: B = { case a => f(a) }
+
+        def cond[A](pf: A ?=>: Boolean): Boolean = pf.applyOrElse(a, constFalse)
+        def condOpt[A, B](a: A)(pf: A ?=>: B): Opiton[B] = pf.lift(a)
+
+        private val fallback_fn: Any => Any  = _ => fallback_fn
+        private def checkFallback[B]: Any => B = fallback_fn.asInstanceOf[Any => B]
+        private def fallbackOccurred[B](b: B): Boolean = fallback_fn.eq(b.asInstanceOf[AnyRef])
+      #+end_src
+
+*** Usage
+    1. When you want to:
+      + operate on only part of the input
+      + without addition runtime costs (~Option~ boxing)
+
+    2. When you want to define INDIVIDUAL /partial functions/ and then combine them
+      with ~orElse~:
+      #+begin_src scala
+        myFuture.recoverWith(
+          onNoUser orElse onNoToken orElse recordIncident
+        )
+      #+end_src
+
+*** Implementation
+    param => selector match { cases }
+
+    The form above will be translated to
+    #+begin_src scala
+      ... extends AbstractPartialFunction[..., ...] {
+        // actually defined in AbstractPartialFunction
+        def apply(x: A): B = applyOrElse(x, PartialFunction.empty)
+
+        def isDefinedAt(a: A): Boolean =
+          $selector match { $caseTrue; case _ => false }
+
+        def applyOrElse[A1 <: A, B1 >: B](a: A1, default: A1 => B1) =
+          $selector match { $cases; case _ => default(x) }
+      }
+    #+end_src
+
+*** Problem
+    
+    - The speak says: I believe ~PartialFunction~ breaks _Liskov Substitution
+      Principle_.
+
+*** Proposal
+*** Summary

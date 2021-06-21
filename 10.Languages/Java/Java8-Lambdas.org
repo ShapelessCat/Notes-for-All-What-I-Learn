@@ -1,0 +1,1884 @@
+#+TITLE: Java 8 Lambdas
+#+SUBTITLE: Functional Programming for The Masses
+#+VERSION: 2014
+#+AUTHOR: Richard Warburton
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Preface - vii
+  CLOSED: [2017-09-20 Wed 20:09]
+  =Useless words=
+** DONE Why Should I Read This Book?
+   CLOSED: [2017-09-20 Wed 19:15]
+   In this book we'll explore:
+   - How to write simpler, cleaner, and easier-to-read code—especially around
+     collections
+
+   - How to easily use parallelism to improve performance
+
+   - How to model your domain more accurately and build better DSLs
+
+   - How to write less error-prone and simpler concurrent code
+
+   - How to test and debug your lambda expressions
+
+** DONE Who Should Read This Book?
+   CLOSED: [2017-09-20 Wed 19:28]
+   =NOTHING=
+
+** DONE How to Read This Book
+   CLOSED: [2017-09-20 Wed 19:28]
+   - Chapters 2 through 6 cover the core language changes and also the improved
+     libraries that JDK 8 brings.
+
+   - The final three chapters are about applying functional programming in the wild.
+     + Chapter 7:
+       talk about a few tricks that make testing and debugging code a bit easier.
+
+     + Chapter 8:
+       explains how existing principles of good software design also apply to
+       lambda expressions.
+
+     + Chapter 9:
+       Then I talk about concurrency and how to use lambda expressions to write
+       concurrent code that's easy to understand and maintain.
+
+     These chapters also introduce _third-party libraries_, where relevant.
+
+** DONE Conventions Used in This Book
+   CLOSED: [2017-09-20 Wed 19:29]
+
+** DONE Using Code Examples
+   CLOSED: [2017-09-20 Wed 20:00]
+
+** DONE How to Contact Us
+   CLOSED: [2017-09-20 Wed 19:14]
+
+** DONE Achknowledgments
+   CLOSED: [2017-09-20 Wed 19:14]
+
+* DONE 1. Introduction - 1
+  CLOSED: [2017-09-20 Wed 20:09]
+  This chapter talks about:
+  - Explain why do /lambda expressions/ exist.
+
+  - Explain the structure and motivation of this book.
+
+** DONE Why Did They Need to Change Java Again? - 1 - =Re-Read=
+   CLOSED: [2017-09-20 Wed 20:07]
+   - =TODO= =???= =???= =!!!=
+     Abstraction is a concept that is familiar to us all from object-oriented
+     programming. The difference is that object-oriented programming is mostly
+     about abstracting over data, while functional programming is mostly about
+     abstracting over behavior. The real world has both of these things, and so
+     do our programs, so we can and should learn from both influences.
+
+   - Parallelism
+
+   - Readability
+
+** DONE What Is Functional Programming? - 2
+   CLOSED: [2017-09-20 Wed 20:07]
+   =USELESS (for me) WORDS=
+
+** DONE Example Domain - 3
+   CLOSED: [2017-09-20 Wed 20:09]
+   Throughout the book, examples are structured around a common _problem domain_:
+   _music_.
+
+   Specifically, the examples represent the kind of information you might see on
+   albums. Here's a brief summary of the terms:
+
+   - ~Artist~ :: An individual or group who creates music
+     + ~name~ :: The name (in ~String~) of the artist (e.g., “The Beatles”).
+
+     + ~members~ :: A set of other ~Artist~'s who comprise this group (e.g.,
+                  “John Lennon”); this field might be empty
+
+     + ~origin~ :: The primary location (in ~String~) of origin of the group (e.g.,
+                   “Liverpool”)
+                   .
+
+   - ~Track~ :: A single piece of music
+     + ~name~ :: The name (in ~String~) of the track (e.g., “Yellow Submarine”) .
+
+   - ~Album~ :: A single release of music, comprising several tracks
+     + ~name~ :: The name (in ~String~) of the album (e.g., “Revolver”)
+     + ~tracks~ :: A list of ~Track~'s
+     + ~musicians~ :: A list of ~Artist~'s who helped create the music on this album.
+
+* DONE 2. Lambda Expressions - 5
+  CLOSED: [2017-09-20 Wed 22:26]
+  /Lambda expressions/ is a compact way of passing around behavior.
+
+** DONE Your First Lambda Expression - 5
+   CLOSED: [2017-09-20 Wed 20:24]
+   - The First Example:
+     + Old style (before Java 8) - REDUNDANT
+       #+BEGIN_SRC java
+         button.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent event) {
+                     System.out.println("button clicked");
+                 }
+             });
+       #+END_SRC
+
+     + New style (from Java 8 on) - CONCISE
+       #+BEGIN_SRC java
+         button.addActionListener(event -> System.out.println("button clicked"));
+       #+END_SRC
+       * HERE ~javac~ *can infer* the type of ~event~.
+
+       * However, ~javac~ *can't always* figure the type(s) out, and sometime you
+         need to provide the type info.
+
+** DONE How to Spot a Lambda in a Haystack - 6
+   CLOSED: [2017-09-20 Wed 20:44]
+   - Example 2-3. Some different ways of writting (*NOT* _in-place_) /lambda
+     expressions/
+     #+BEGIN_SRC java
+       Runnable noArguments = () -> System.out.println("Hello World");
+
+       ActionListener oneArgument = event ->  System.out.println("button clicked");
+
+       Runnable multiStatement = () -> {
+           System.out.print("Hello");
+           System.out.println(" World");
+       };
+
+       BinaryOperator<Long> add = (x, y) -> x + y;
+
+       BinaryOperator<Long> addExplicity = (long x, long y) -> x + y;
+     #+END_SRC
+
+     + One thing should be noticed:
+       When assign a /lambda expression/ to a variable, we annotate this varable
+       * with certain /interface/, which has an /abstact method/ that can be repre-
+         sented by this /lambda expression/.
+
+       * _Rather than_ the /return type/ of the body of this /lambda expression/.
+
+     + If you want to explicitly write the type of a parameter of a /lambda
+       expression/, you need parentheses -- even if you only have one parameter.
+
+   - What is implicit in all these examples is that a lambda expression's type is
+     _context dependent_.
+     =IMPORTANT=
+
+   - This /target typing/ is NOT entirely new, either. For example,
+     + Example 2-4, the types of /array initializers/ in Java have always been
+       inferred from their contexts.
+       ~String[] array = {"hello", "world"};~
+
+     + ~null~
+       You can know what the type of ~null~ is only once you actually assign it
+       to something.
+
+** DONE Using Values - 8 - *IMPORTANT*
+   CLOSED: [2017-09-20 Wed 21:02]
+   - When you've used /anonymous inner classes/ in the past, you've probably
+     encountered a situation in which
+
+     + Question: You wanted to use a variable from the SURROUNDING /method/.
+
+     + Solution: In order to do so, *you had to make the variable ~final~.*
+     #+BEGIN_SRC java
+       // Example 2-5. A final local variable being captured by an anonymous inner class
+
+       final String name = getUserName();
+
+       button.addActionListener(new ActionListener() {
+               public void actionPerformed(ActionEvent event) {
+                   System.out.println("hi " + name);
+               }
+           });
+     #+END_SRC
+
+   - *This restriction is relaxed a bit* in Java 8:
+     It's possible to refer to variables that aren't ~final~;
+     however, they still have to be /effectively final/.
+
+     + =From Jian= Why NOT must be ~final~???
+       =TODO=
+
+     + Although you haven't declared the variable(s) as ~final~, you still *CANNOT*
+       use them as nonfinal variable(s) if they are to be used in /lambda expressions/,
+       or else the compiler will show an error.
+
+       * =From Jian=
+         The /effectively final/ is a *TRAP* in JShell!!!
+         - You can modify so called /effectively final/ after the definition of a
+           /lambda expression/ that use it, and NO warning or error show up!
+
+         - The effect is like the /lambda expressions/ are of /dynamic scope/, though
+           this won't happen in Java programs written in a source file.
+           =IMPORTANT= =!!!=
+
+     + An example with *compling error*.
+       #+BEGIN_SRC java
+         // Example 2-7. Fails to compile due to the use of a not effectively final variable
+         String name = getUserName();
+
+         name = formatUserName(name);
+
+         button.addActionListener(event -> System.out.println("hi " + name));
+       #+END_SRC
+
+   - Consider this /effectively final/ restriction this way:
+     *the lambda capture /values/, not /variables/.*
+
+   - There has been much _DEBATE_ over whether Java really has /closures/,
+     because you can refer to _ONLY_ /effectively final/ variables.
+     =IMPORTANT=
+
+     + =From Jian=
+       =IMPORTANT= =IMPORTANT= =IMPORTANT=
+       If you use JShell, you will find that Java implement its /lambda expressions/
+       with /dynamic scope/. Though, the ~final~ and /effective final/ restrictions
+       won't let the /dynamic scope/ behaviors happen in Java souce file -- if the
+       variable cannot be modified, you can NEVER detect the difference between
+       /lexical scope/ and /dynamic scope/. However, you can detect this in JShell,
+       which doesn't have this restriction!!!
+
+** DONE Functional Interfaces - 9
+   CLOSED: [2017-09-20 Wed 21:45]
+   - functional interface :: an /interface/ with a /SINGLE abstract method/ that
+        is used as the type of a /lambda expression/.
+
+   - Before Java 8, people use /ONE method anonymous class/ /instance/, whose /class/
+     implements the required (NOW called /functional interface/) /interface/. This
+     /instance/ is used to represent an operation that can be reused in the caller.
+
+     Now we use /lambda expression/ which implements the ONLY /method/ of certain
+     /functional interfaces/.
+
+   - Table 2-1. Important /functional interfaces/ in Java
+
+     | Interface name      | Arguments | Returns   | Example                            |
+     |---------------------+-----------+-----------+------------------------------------|
+     | ~Predicate<T>~      | ~T~       | ~boolean~ | Has this album been released yet?  |
+     | ~Consumer<T>~       | ~T~       | ~void~    | Printing out a value               |
+     | ~Function<T,R>~     | ~T~       | ~R~       | Get the name from an Artist object |
+     | ~Supplier<T>~       | None      | ~T~       | A factory method                   |
+     | ~UnaryOperator<T>~  | ~T~       | ~T~       | Logical not (!)                    |
+     | ~BinaryOperator<T>~ | ~(T, T)~  | ~T~       | Multiplying two number (*)         |
+
+** DONE Type Inference - 11
+   CLOSED: [2017-09-20 Wed 22:01]
+   - The /type inference/ used in lambdas is actually an EXTENSION of the
+     /target type inference/ *introduced in Java 7*.
+
+     Java 7 allows you to use a /diamond operator/ that asks ~javac~ to infer the
+     generic arguments for you.
+
+     + Example 2-9. Diamond inference for variables
+       #+BEGIN_SRC java
+         Map<String, Integer> oldWordCounts = new HashMap<String, Integer>();
+         Map<String, Integer> diamondWordCounts = new HashMap<>();
+       #+END_SRC
+       This works in since Java 7.
+
+     + Example 2-10. Diamond inference for methods
+       #+BEGIN_SRC java
+         useHashmap(new HashMap<>());
+         // ..
+         private void useHashmap(Map<String, String> values);
+       #+END_SRC
+       This works in since Java 8. =????= =TODO= =Double Check!!!=
+       =TODO=
+       =TODO=
+
+     + Similarly to the given examples above (they are legal code since Java 7).
+       Java 8 allows you to leave out the /types/ for whole parameters of
+       /lambda expressions/.
+
+   - The inference is smart, but if it doesn't have enough information, it won't
+     be able to make the right decision.
+     #+BEGIN_SRC java
+       // Right
+       BinaryOperator<Long> addLongs = (x, y) -> x + y;
+
+       // Wrong
+       BinaryOperator addLongs = (x, y) -> x + y;
+     #+END_SRC
+
+     The 2nd version has missing generics, and ~javac~ will take the ~Object~ as
+     default, and ~Object~ has NO ~+~ operation. The error message will be:
+     =Operator '&#x002B;' cannot be applied to java.lang.Object, java.lang.Object.=
+
+     =From Jian= Why does ~'&#x002B;'~ here means ~+~???
+     =TODO= =???=
+
+   - =TODO=
+     We will return to the topic of type inference and its interaction with
+     method overloading in *“Overload Resolution” on page 45*, but there’s no
+     need to understand more detail until then.
+
+** DONE Key Points - 13
+   CLOSED: [2017-09-20 Wed 22:02]
+   - A /lambda expression/ is a /method/ without a name that _is used to pass around
+     behavior as if it were data_.
+
+   - /Lambda expressions/ look like this:
+     ~BinaryOperator<Integer> add = (x, y) -> x + y~.
+
+   - A /functional interface/ is an /interface/ with a /single abstract method/
+     that is used as the /type/ of a /lambda expression/.
+
+** DONE Exercises - 14
+   CLOSED: [2017-09-20 Wed 22:26]
+   - Q2. ~ThreadLocal~
+     =TODO= =???= =TODO=
+
+* DONE 3. Streams - 17
+  CLOSED: [2017-09-21 Thu 21:42]
+  The most important core library changes are focused around the _Collections API_
+  and its new addition: /streams/, which allow us to write collections-processing
+  code at a higher level of abstraction.
+
+** DONE From External Iteration to Internal Iteration - 17
+   CLOSED: [2017-09-21 Thu 01:40]
+   An example of the traditional way of writing Java code:
+   #+BEGIN_SRC java
+     int count = 0;
+
+     for (Artist artist : allArtists) {
+         if (artist.isForm("London")) {
+             count++;
+         }
+     }
+   #+END_SRC
+
+   - Traditional iterations -- use ~for~ or /foreach/ (as the above given example)
+     -- has a lot of problems:
+     + *Boilerplate code* that need to be written _every time_ you want to iterate
+       over the collections.
+
+     + It's hard to write a parallel version -- you need to rewrite every ~for~ or
+       /foreach/ iteration individually in order to make them operate in
+       parallel -- NO universal pattern.
+
+     + The code here doesn't fluently convey the intent of the programmer.
+
+   - Looking under the covers a little bit, the ~for~ loop is actually /syntactic
+     sugar/ that wraps up the iteration and hides it:
+     #+BEGIN_SRC java
+       int count = 0;
+       Iteratior<Artist> iterator = allArtists.iterator();
+
+       while(iterator.hashNext()) {
+           Artist artist = iterator.next();
+           if (artist.isFrom("London")) {
+               count++;
+           }
+       }
+     #+END_SRC
+     =IMPORTANT= =CONCEPT=
+     This create an ~Iterator~ object in order to control the iteration process.
+     We call this /external iteration/ -- the iteration then proceeds by explicitly
+     calling the ~hasNext~ and ~next~ /methods/ on this ~Iterator~.
+
+   - /External iteration/ has some negative issues associated with it, too.
+     + it becomes hard to abstract away the different behavioral operations that
+       we'll encounter later in this chapter.
+       =TODO=
+
+     + It is also an approach that is *inherently serial in nature*.
+
+       The big-picture issue here is that using a ~for~ or /foreach/ loop _conflates
+        *what* you are doing with *how* you are doing it_. =This is BAD=
+
+   - An alternative approach is the /internal iteration/.
+     You can do this in Java with the help of ~Stream~.
+     #+BEGIN_SRC java
+       long count = allArtists.stream()
+           .filter(artist -> artist.isFrom("London"))
+           .count();
+     #+END_SRC
+
+   - =From Jian=
+     + /external iteration/:
+       you create ~Iterator~ objects, and you use ~while~ to control the iterations.
+
+     + /internal iteration/:
+       you create ~Stream~'s, and the iterations are controled by the ~Stream~ object
+       internally. What you need to do is pass the operations on each elements to the
+       /stream/'s.
+
+** DONE What's Actually Going On - 20
+   CLOSED: [2017-09-21 Thu 01:56]
+   - In the code mentioned in the last section
+     #+BEGIN_SRC java
+       long count = allArtists.stream()
+           .filter(artist -> artist.isFrom("London"))
+           .count();
+     #+END_SRC
+     + methods like ~filter~ in the middle is /lazy/
+
+     + methods like ~count~ that generate a final value out of the ~Stream~ se-
+       quence are called /eager/.
+
+   - It's very easy to figure out whether an operation is /eager/ or /lazy/:
+     look at what it returns.
+
+     + If it gives you back a ~Stream~, it's /lazy/;
+     + if it gives you back another value or ~void~, then it's /eager/.
+
+   - If these code terminate in the step of ~filter~, since it returns a
+     ~Stream~, nothing will be printed out (the evaluations doesn't happen).
+     #+BEGIN_SRC java
+       // Without being printed out strings
+       long count = allArtists.stream()
+           .filter(artist -> {
+                   system.out.println(artist.getName());
+                   return artistt.isFrom("London");
+               });
+     #+END_SRC
+
+     If you have an /eager/ operation at the end, you can see the printed out
+     lines.
+     #+BEGIN_SRC java
+       // With being printed out strings
+       long count = allArtists.stream()
+           .filter(artist -> {
+                   system.out.println(artist.getName());
+                   return artistt.isFrom("London");
+               })
+           .count();
+     #+END_SRC
+
+   - The whole approach is somewhat similar to the familier /builder pattern/.
+
+** DONE Common Stream Operations - 21
+   CLOSED: [2017-09-21 Thu 18:32]
+   =IMPORTANT= =TODO= Read the javadoc API of the ~Stream~.
+*** DONE ~collect(toList())~ - 22
+    CLOSED: [2017-09-21 Thu 02:04]
+    - /eager/
+
+    - Example:
+      #+BEGIN_SRC java
+        List<String> collected = Stream.of("a", "b", "c")
+            .collect(Collectors.toList());
+
+        assertEquals(Arrays.asList("a", "b", "c"), collected);
+      #+END_SRC
+
+*** DONE ~map~ - 22
+    CLOSED: [2017-09-21 Thu 02:09]
+    #+BEGIN_SRC java
+      List<String> collected = new ArrayList<>();
+
+      for (String string : artist("a", "b", "hello")) {
+          String uppercaseString = string, toUpperCase();
+          collected.add(uppercaseString);
+      }
+
+      assertEquals(asList("A", "B", "HELLO"), collected).
+    #+END_SRC
+
+    #+BEGIN_SRC java
+      // Example 3-9. Converting strings to uppercase equivalents using map
+      List<String> collected = Stream.of("a", "b", "hello")
+          .map(string -> string.toUpperCase())
+          .collect(toList());
+
+      assertEquals(asList("A", "B", "HELLO"), collected);
+    #+END_SRC
+*** DONE ~filter~ - 24
+    CLOSED: [2017-09-21 Thu 17:51]
+    #+BEGIN_SRC java
+      // Example 3-11. Functional style
+
+      List<String> beginningWithNumbers
+          = Stream.of("a", "1abc", "abc1")
+          .filter(value -> isDigit(value.charAt(0)))
+          .collect(toList());
+
+      assertEquals(asList("1abc"), beginningWithNumbers);
+    #+END_SRC
+
+*** DONE ~flatMap~ - 25
+    CLOSED: [2017-09-21 Thu 17:54]
+    #+BEGIN_SRC java
+      // Example 3-12. Stream list
+
+      List<Integer> together = Stream.of(asList(1, 2), asList(3, 4))
+          .flatMap(numbers -> numbers.stream())
+          .collect(toList());
+
+      assertEquals(asList(1, 2, 3, 4), together);
+    #+END_SRC
+
+*** DONE ~max~ and ~min~ - 26
+    CLOSED: [2017-09-21 Thu 17:59]
+    #+BEGIN_SRC java
+      // Example 3-13. Finding the shortest track with streams
+
+      List<Track> tracks = asList(new Track("Bakai", 524),
+                                  new Track("Violets for Your Furs", 378),
+                                  new Track("Time Was", 451));
+
+      Track shortestTrack = tracks.stream()
+          .min(Comparator.comparing(track -> track.getLength()))
+          .get();
+
+      assertEquals(tracks.get(1), shortestTrack);
+    #+END_SRC
+
+    - ~get()~ is a method of ~Optional<T>~
+
+*** DONE A Common Pattern Appears - 27
+    CLOSED: [2017-09-21 Thu 18:01]
+    Use loops to represent some stream operations above.
+    
+*** DONE ~reduce~ - 28
+    CLOSED: [2017-09-21 Thu 18:16]
+    #+BEGIN_SRC java
+      // Example 3-16. Implementing sum using reduce
+      int count = Stream.of(1, 2, 3)
+          .reduce(0, (acc, element) -> acc + element);
+
+      assertEquals(6, count);
+
+
+      // Example 3-17. Expanding the application of reduce
+      BinaryOperator<Integer> accumulator = (acc, element) -> acc + element;
+      int count = accumulator.apply(
+                      accumulator.apply(
+                          accumulator.apply(0, 1),
+                          2),
+                      3);
+    #+END_SRC
+
+*** DONE Putting Operations Together - 30
+    CLOSED: [2017-09-21 Thu 18:32]
+    Now is probably a good time to think about whether you really want to expose
+    ~List~ and ~Set~ objects in your domain model, though.
+      Perhaps a ~Stream~ factory would be a better choice.
+
+    The big win of only exposing collections via ~Stream~ is that it _better
+    encapsulates_ your domain model's data structure. It's IMPOSSIBLE for any use
+    of your domain classes to affect the inner workings of your ~List~ or ~Set~
+    simply by exposing a ~Stream~.
+
+    =TODO= the last paragraph
+    It also encourages users of your domain class to write code in a more modern
+    Java 8 style. It’s possible to incrementally
+
+** DONE Refactoring Legacy Code - 31
+   CLOSED: [2017-09-21 Thu 18:34]
+   #+BEGIN_SRC java
+     public Set<String> findLongTracks(List<Album> albums) {
+         Set<String> trackNames = new HashSet<>();
+         for(Album album : albums) {
+             for (Track track : album.getTrackList()) {
+                 if (track.getLength() > 60) {
+                     String name = track.getName();
+                     trackNames.add(name);
+                 }
+             }
+         }
+         return trackNames;
+     }
+
+
+     public Set<String> findLongTracks(List<Album> albums) {
+         return albums.stream()
+             .flatMap(album -> album.getTracks())
+             .filter(track -> track.getLength() > 60)
+             .map(track -> track.getName())
+             .collect(toSet());
+     }
+   #+END_SRC
+
+** DONE Multiple Stream Calls - 34
+   CLOSED: [2017-09-21 Thu 18:55]
+   Why a chainning stream call is usually much better than multiple stream calls
+   (with intermediate variables):
+   - It's harder to read what's going on because the ratio of boilerplate code to
+     actual business logic is worse (=From Jian= NOT always).
+
+   - It's less efficient because it requires eagerly creating new collection
+     objects at each intermediate step.
+
+   - It clutters your method with meaningless garbage variables that are needed
+     only as intermediate results (=From Jian= if not "ONLY", it's OK).
+
+   - It makes operations harder to automatically parallelize.
+     =TODO=
+
+** DONE Higher-Order Functions - 36
+   CLOSED: [2017-09-21 Thu 18:57]
+** DONE Good Use of Lambda Expressions - 36
+   CLOSED: [2017-09-21 Thu 19:01]
+** DONE Key Points - 37
+   CLOSED: [2018-08-03 Fri 14:08]
+   - /Internal iteration/ is a way of iterating over a collection that *delegates*
+     more control (than /external iteration/) over the iteration *to* the collection.
+
+   - A /Stream/ is the /internal iteration/ analogue of an ~Iterator~.
+
+   - Many common operations on collections can be performed
+     BY *combining* /methods/ on ~Stream~ *with* /lambda expressions/.
+
+** DONE Exercises - 37
+   CLOSED: [2018-08-04 Sat 01:51]
+   1. 
+   2. 
+   3. 
+   4. 
+   5. 
+   6. 
+   7. 
+
+** TODO Advanced Exercises - 39
+   1. 
+   2. 
+
+* DONE 4. Libraries - 41
+  CLOSED: [2017-10-03 Tue 01:22]
+  - We've talked about how to *WRITE* lambda expressions.
+    We'll talk about how to *USE* lambda expressions.
+    =TODO= =???=
+
+  - I'll also fill in some gaps in this chapter, covering topics such as =TODO=
+    + what happens when you overload methods with lambda expressions
+    + how to use primitives.
+
+    These are important things to be aware of when you're writing lambda-enabled
+    code.
+
+** DONE Using Lambda Expressions in Code - 41
+   CLOSED: [2018-08-04 Sat 02:10]
+   Let's look at a concrete example framed in terms of _logging frameworks_.
+
+   - The logger logs when the corresponding log level is set.
+     However, you don't want to write someting like:
+     #+BEGIN_SRC java
+       Logger logger = new Logger();
+
+       if (logger.isDebugEnabled()) {
+           logger.debug("Look at this: " + expensiveOperation());
+       }
+     #+END_SRC
+     I mean you don't want to the check explicitly -- the ~debug~ method name is
+     a clear signal to the code reader about the log level.
+
+   - We can use /lambda expression/ to make this _log level check_ *internally*,
+     and, at the same time, keep the call to the ~expensiveOperation~ function
+     lazy -- only call it when the _log level check_ pass.
+     #+BEGIN_SRC java
+       Logger logger = new Logger();
+       logger.debug(() -> "Look at this: " + expensiveOperation());
+
+       // Inside the `Logger` class
+       public void debug(Supplier<String> message) {
+           if (isDebugEnabled()) {
+               debug(message.get());
+           }
+       }
+     #+END_SRC
+     + The definition of this ~debug~ also works well with the old-style /anonymous
+       inner classes/, and people who can't upgrade to Java 8 can also use this
+       logging framework.
+
+** DONE Primitives - 42
+   CLOSED: [2018-08-04 Sat 02:52]
+   - /boxed type/
+
+   - /boxed types/, comparing to corresponding /primitive types/, have a /memory
+     overhead/ to them.
+
+     For example,
+     + an ~int~ takes 4 bytes, and an ~Integer~ takes 16 bytes.
+
+     + This gets _even worse_ when you start to look at /arrays/ of numbers,
+       as each element of a primitive array is just the size of the primitive,
+       while each element of arrays of a /boxed type/ is actually an /in-memory
+       pointer/ to another object on the Java /heap/.
+
+       In the *worst case*, this might make an ~Integer[]~ take up _nearly six
+       times_ more memory than an ~int[]~ of the same size.
+
+     + =From Jian=
+       I need to LEARN how to estimate _the memory use of objects_.
+
+   - /boxing/
+
+   - /unboxing/
+
+   - In the algorithms that perform _LOTS_ of _numerical operations_, the cost of
+     + /boxing/ and /unboxing/
+       -- Time complexity
+
+       combined with
+
+     + the additional _memory bandwidth_ used by allocated boxed objects
+       -- memory complexity
+
+     can make the code significantly slower.
+
+   - As a consequence of these _performance overheads_, the streams library
+     *differentiates* between the /primitive/ and /boxed/ versions of some library
+     functions.
+
+   - Only the ~int~, ~long~, and ~double~ types have been chosen as the focus of
+     the _primitive specialization implementation_ in Java 8 because the impact is
+     most noticeable in numerical algorithms.
+
+   - The primitive specializations have a very clear-cut _naming convention_:
+     + /Interfaces/
+       * If the _return type_ is a /primitive/, _the /interface/ is *prefixed with*
+         =To= and the /primitive type/,_ as in ~ToLongFunction~ (T -> long)
+
+       * If the _argument type_ is a /primitive type/, _the name *prefix* is just the
+         type name_, as in ~LongFunction~ (long -> T).
+
+     + /Methods/
+       * If the higher-order function uses a /primitive type/, it is suffixed with
+         =To= and the /primitive type/, as in ~mapToLong~, which return a
+         /specialized stream/, rather then the raw ~Stream~.
+
+   - On the /specialized streams/, the ~map~ implementation is also specialized:
+     it takes a function called ~LongUnaryOperator~ (long -> long).
+
+   - Use ~mapToObj~ to go back to ~Stream~ from the /specialized (primitive type)
+     streams/.
+
+   - Use the /primitive specialized functions/ *wherever possible*
+     because of the _performance benefits_.
+
+   - You also get *additional functionality* available on the /specialized streams/.
+
+     This allows you
+     + to avoid having to implement common functionality
+       and
+     + to use code that better conveys the intent of numerical operations.
+
+     You can see an example of how to use this functionality in Example 4-4.
+     #+BEGIN_SRC java
+       public static void printTrackLengthStatistics(Album album) {
+           IntSummaryStatistics trackLengthStats
+               = album.getTracks()
+               .mapToInt(track -> track.getLength())
+               .summaryStatistics();
+
+           System.out.printf("Max: %d, Min: %d, Ave: %f, Sum: %d",
+                             trackLengthStats.getMax(),
+                             trackLengthStats.getMin(),
+                             trackLengthStats.getAverage(),
+                             trackLengthStats.getSum());
+       }
+     #+END_SRC
+     + The ~summaryStatistics~ is a /method/ of ~IntStream~.
+       It does NOT show up in ~Stream~ /class/.
+
+** DONE Overload Resolution - 45
+   CLOSED: [2017-10-03 Tue 01:22]
+   Before the introduction of /lambda expressions/, for /overloadings/ like the
+   code below, we *choose the most specific one.*
+   #+BEGIN_SRC java
+     // overloadedMethod("abc")
+
+     private void overloadedMethod(Object o) {
+         System.out.print("Object");
+     }
+     private void overloadedMethod(String s) {
+         System.out.print("String");
+     }
+   #+END_SRC
+
+   *For /lambda expressions/ we follow similar rules.* 
+   In summary, the /parameter types/ of a lambda are inferred from the /target type/,
+   and the inference follows these rules:
+
+   - If there is a _SINGLE_ possible /target type/, the /lambda expression/ infers
+     the type from the corresponding argument on the /functional interface/.
+
+   - If there are _SEVERAL_ possible /target types/, the _MOST SPECIFIC_ type is
+     inferred.
+
+     =From Jian= _The most specific type_ here means, when it can fit, the
+     subtype wins all its supertypes.
+
+     #+BEGIN_SRC java
+       private interface IntegerBiFunction extends BinaryOperator<Integer> {
+       }
+
+       private void overloadedMethod(BinaryOperator<Integer> lambda) {
+           System.out.print("BinaryOperator");
+       }
+
+       private void overloadedMethod(IntegerBiFunction lambda) {
+           System.out.print("IntegerBinaryOperator");
+       }
+
+       // overloadedMethod((x, y) -> x + y);
+       // // The second one, which has the parameter type `IntegerBiFunction`, will be
+       // // picked.
+     #+END_SRC
+
+   - If there are SEVERAL possible /target types/ and there is *NO* most specific
+     type, you MUST *manually provide a type*.
+     #+BEGIN_SRC java
+       private interface IntPredicate {
+           public boolean test(int value);
+       }
+
+       private void overloadedMethod(Predicate<Integer> predicate) {
+           System.out.print("Predicate");
+       }
+
+       private void overloadedMethod(IntPredicate predicate) {
+           System.out.print("IntPredicate");
+       }
+
+
+       // overloadedMethod((x) -> true);
+       // // `javac` cannot make a choice. There is no `extends` relation between
+       // // `Predicate<Integer>` and `IntPredicate`, and we can NOT say which one is
+       // // more specific.
+     #+END_SRC
+
+** DONE ~@FunctionalInterface~ - 47
+   CLOSED: [2017-10-03 Tue 01:03]
+   - Some _single method interfaces_ are *NOT* designed as /functional interfaces/.
+
+   - Examples of /Non-functional interfaces/: =TODO= =???=
+     Some interfaces that might assume the object has internal state and be
+     interfaces with a single method only coincidentally (~java.lang.Comparable~
+     and ~java.io.Closeable~).
+
+   - Examples of /Functional interfaces/:
+     In contrast to ~Closeable~ and ~Comparable~,
+     all the new interfaces introduced in order to provide ~Stream~ interoperabi-
+     -lity are expected to be implemented by /lambda expressions/ -- they are
+     really there to bundle up blocks of code as data. Consequently, they have
+     the ~@FunctionalInterface~ /annotation/ applied.
+
+   - With the ~@FunctionalInterface~ /annotation/, ~javac~ will help you to check
+     if the annotated interface satisfy the criteria.
+
+     ~javac~ will generate an error message when:
+     + If the /annotation/ is applied to an ~enum~, ~class~, or ~annotation~,
+       or
+     + If the type is an /interface/ with _more than one_ /single abstract method/.
+
+   - 
+
+** DONE Binary Interface Compatibility - 47
+   CLOSED: [2017-10-03 Tue 00:53]
+** DONE Default Methods - 48
+   CLOSED: [2017-10-03 Tue 00:01]
+   - ~Collection~ has a new ~stream~ /default method/.
+
+   - ~Iterable~ has a new ~forEach~ /default method/:
+     #+BEGIN_SRC java
+       default void forEach(Consumer<? super T> action) {
+           for (T t: this) {
+               action.accept(t);
+           }
+       }
+     #+END_SRC
+
+   - Other than the addition of a new keyword, ~default~ methods also have
+     slightly different inheritance rules to regular methods.
+     (=From Jian= Next section)
+
+   - The other big difference is that, UNLIKE classes, /interfaces/ do NOT have
+     instance fields, so /default methods/ can modify their child classes
+     _only by calling methods on them_.
+       This helps you avoid making assumptions about the implementation of their
+     children.
+
+*** DONE Default Methods and Subclassing - 49
+    CLOSED: [2017-10-03 Tue 00:02]
+    There are some subtleties about the way that ~default~ methods override and
+    can be overridden by other methods.
+
+    Put simply: class wins.
+    =IMPORTANT= See the example.
+
+    The motivation for this decision is that ~default~ methods are designed
+    primarily to allow binary compatible API evolution.
+
+    =From Jian=
+    =Quote from the section "Binary Interface Compatibility"=
+    In a new version of Java, we add a new method ~m~ to an existing interface
+    ~I~. For some code written in OLD Java, there are some class ~OC~ that
+    implements OLD ~I~, and not implements method ~m~. If we don't provide
+    /default method/, the binary interface compatibility will be broken.
+
+    Allowing classes to win over ANY /default methods/ simplifies a lot of
+    inheritance scenarios.
+
+** DONE Multiple Inheritance - 52
+   CLOSED: [2017-10-03 Tue 00:53]
+   Example
+   #+BEGIN_SRC java
+     public interface Jukebox {
+         public default String rock() {
+             return "... all over the world!";
+         }
+     }
+
+     public interface Carriage {
+         public default String rock() {
+             return "... from side to side";
+         }
+     }
+
+     public class MusicalCarriage implements Carriage, Jukebox {
+         @Override
+         public String rock() {
+             return Carriage.super.rock();
+         }
+     }
+   #+END_SRC
+   - If there is no implementation for ~rock~, we'll see an compile error:
+     =class MusicalCarriage inherits unrelated defaults for rock() from types
+      Carriage and Jukebox.=
+
+   - The usage of the ~super~ method.
+
+*** The Three Rules - 53
+    1. Any class wins over any interface.
+
+    2. Subtype wins over supertype.
+
+    3. No rule 3.
+       If the previous two rules don't give us the answer, the subclass must
+       either implement the method or declare it abstract.
+
+    _Rule 1 is what brings us compatibility with old code -- ~default~ /methods/
+    will NEVER win their competitors._
+
+** DONE Tradeoffs - 54
+   CLOSED: [2017-10-02 Mon 16:53]
+   - =From Jian=
+     What is the difference between:
+     + /interface/
+     + /trait/ (in other languages)
+     + /abstract class/
+
+   - Distinction between /interfaces/ and /abstract classes/:
+     + interfaces:
+       * multiple implementation
+       * can inherit /default methods/ from MULTIPLE interfaces.
+       * cannot inherit fields
+
+     + abstract classes:
+       * single inherit
+       * can inherit fields
+
+** DONE Static Methods on Interfaces - 54
+   CLOSED: [2017-10-02 Mon 15:36]
+   - Start from Java 8, you can put non-abstract static methods inside interfaces.
+
+   - Sometimes a class can be an appropriate location for utility code, such as
+     the ~Objects~ class introduced in Java 7 that contained functionality that was
+     _NOT specific_ to any particular class.
+
+   - There are often good semantic reasons for a method to relate to a concept,
+     then it should always be put in the same class or interface rather than
+     hidden in a utility class to the side (Before Java 8, people have to do
+     make utility classes due to the syntax requirement that interfaces CANNOT
+     contain concrete code.
+
+** DONE Optional - 55
+   CLOSED: [2017-10-02 Mon 15:35]
+   #+BEGIN_SRC java
+     Optional<String> a = Optional.of("a");
+     assertEquals("a", a.get());
+
+     Optional emptyOptional = Optional.empty();
+     Optional alsoEmpty = Optional.ofNullable(null);
+     assertFalse(emptyOptional.isPresent());
+     assertTrue(a.isPresent());
+
+     assertEquals("b", emptyOptional.orElse("b"));
+     assertEquals("c", emptyOptional.orElseGet(() -> "c"));
+   #+END_SRC
+   
+** DONE Key Points - 56
+   CLOSED: [2017-10-03 Tue 01:06]
+   - A significant _performance advantage_ can be had by using primitive
+     _SPECIALIZED_ lambda expressions and /streams/ such as ~IntStream~.
+
+   - /Default methods/ are methods with bodies on interfaces prefixed with the
+     keyword ~default~.
+
+   - The ~Optional~ class lets you avoid using ~null~ by modeling situations
+     where a value may not be present.
+
+** DONE Exercises - 57
+   CLOSED: [2018-08-08 Wed 12:52]
+** TODO Open Exercises - 58
+
+* TODO 5. Advanced Collections and Collectors - 59
+  - This chapter covers
+    + MORE ADVANCED collections *changes*, including the new ~Collector~ abstraction.
+
+    + /method references/
+
+    + More advanced topics within the collections library will also be covered,
+      such as
+      * element ordering within streams =TODO= =???=
+      * other useful API changes =TODO= =???=
+
+** DONE Method References - 59
+   CLOSED: [2019-12-26 Thu 22:50]
+   - ~artist -> artist.getName()~
+     can be abbreviated as
+     ~Artist::getName~
+
+     =from Jian=
+     From the /lambda expression/ form, you know the passed in is A SPECIFIC
+     ~artist~, this is way ~Artist::getName~ knows on which /instance/ the
+     ~getName~ method should be called.
+
+   - The _standard form_: ~Classname::methodName~
+
+     No brackets required -- you are *NOT* actually calling the /method/:
+     You're providing the _equivalent_ of a /lambda expression/ that can be
+     called in order to call the /method/.
+
+   - _CALL /constructors/:_ ~Classname::new~
+
+     ~(name, nationality) -> new Artist(name, nationality)~
+     can be abbreviated as
+     ~Artist::new~
+
+   - Use /method references/ to create arrays.
+     For example, ~String[]::new~
+
+     =from Jian=
+     Java has /primitive types/, /classes/, and /array types/.
+     This is why we always need to talk about /array types/ separately.
+     =from Jian=
+     I'm confused at the very beginning -- Scala does NOT have a specifc /array
+     types/.
+
+** DONE Element Ordering - 60
+   CLOSED: [2019-12-26 Thu 22:50]
+   *How elements are ordered in /streams/?*
+
+   - The situation with /ordering/ becomes a little _MORE COMPLEX_ with ~Stream~
+     operations.
+
+   - A ~Stream~ _intuitively presents an order_ because each element is operated
+     upon, or encountered, in turn.
+
+     + We call this the /encounter order/.
+
+     + Q :: How the /encounter order/ is defined?
+
+     + A :: It _DEPENDS ON_ BOTH
+       * the *source* of the data
+       * the *operations* performed on the ~Stream~.
+
+   - Some intuition you may have are right!!!
+     + If a ~Stream~ created from a collection that has a _defined order_,
+       a /stream/ created _DIRECTLY_ from it has the *same* /order/ as its
+       /encounter order/.
+
+     + If a ~Stream~ is created from data structures like ~HashSet~,
+       there won't be /encounter order/.
+
+     + Operations like ~.sorted()~ can *create* /encounter order/.
+
+   - The /encounter order/, if it exists, is *propagated* across itermediate
+     operations.
+
+   - Some operations are _more EXPENSIVE_ on /ordered streams/.
+     This problem can be solved by *ELIMINATING* /ordering/.
+     To do so, call the /stream/'s ~unordered~ /method/.
+     TODO TODO TODO
+
+     Most operations, however, such as ~filter~, ~map~, and ~reduce~, can
+     operate VERY EFFICIENTLY on /ordered streams/.
+
+   - /Orders/ can cause _unexpected behavior_,
+
+     for example,
+     + ~forEach~ provides *NO guarantees as to /encounter order/ if you're
+       using /parallel streams/.* (This will be discussed in more detail in
+       Chapter 6. TODO)
+
+     + If you require an ordering guarantee in these situations, then
+       ~forEachOrdered~ is your friend!
+
+** TODO Enter the Collector - 62
+   The standard library provides a bunch of useful collectors out of the box,
+   so let's look at those first.
+     In the code examples throughout this chapter the /collectors/ are _statically
+   imported_ from the ~java.util.stream.Collectors~ /class/.
+
+*** DONE Into Other Collections - 62
+    CLOSED: [2018-08-05 Sun 23:05]
+    - The /static methods/ ~toList~, ~toSet~, ~toCollection~, etc. come from the
+      ~java.util.stream.Collectors~ /class/.
+
+    - You can produce a ~Collection~ as a final value -- for example:
+      + When passing your collection to existing code that is written to use
+        collections
+
+      + When creating a final value at the end of a chain of collections
+
+      + When writing test case asserts that operate on a concrete collection
+
+    - But when you're calling ~toList~ or ~toSet~, you don't get to specify the
+      concrete implementation of the ~List~ or ~Set~.
+        Under the hood, the streams library is picking an appropriate
+      implementation for you. =TODO= =HOW=
+
+    - If you really want to convert streams to specific collections,
+      try ~aStream.collect(toCollection(TreeSet::new));~
+
+    - =TODO= *parallel operations* =TODO=
+      Later in this book I’ll talk about how you can use the streams library to
+      perform data parallel operations; collecting the results of parallel
+      operations can require a different type of ~Set~ to be produced than if
+      there were no requirement for thread safety.
+      =TODO=
+
+*** DONE To Values - 63
+    CLOSED: [2018-08-05 Sun 23:30]
+    It's also possible to _collect into_ *a SINGLE value* using a /collector/.
+
+    - There are ~maxBy~ and ~minBy~ /collectors/ that let you obtain a SINGLE
+      value according to some /ordering/.
+
+    - Example 5-6. Finding the band with the most members
+      #+BEGIN_SRC java
+        public Optional<Artist> biggestGroup(Stream<Artist> artists) {
+            Function<Artist, Long> getCount = artist -> artist.getMembers().count();
+            return artists.collect(maxBy(comparing(getCount)))
+        }
+      #+END_SRC
+
+      =TODO= Read the source code to understand the ~comparing~ and the ~maxBy~
+      /methods/.
+
+    - Example 5-7. Finding the average number of tracks for a list of albums
+      #+BEGIN_SRC java
+        public double averageNumberOfTracks(List<Album> albums) {
+            return albums.stream()
+                         .collect(averagingInt(album -> album.getTrackList().size()));
+        }
+      #+END_SRC
+      + There are also /overloaded operations/ for the ~double~ and ~long~ types,
+        which let you convert your element into these type of values.
+
+    - In the "Primitives" on page 42, we talked about how the _primitive specialized
+      variants_ of /streams/ had addtional functionality for _numerical operations_.
+
+      There are also a group of /collectors/ that offer similar functionality, in
+      the vein of ~averagingInt~.
+
+      + You can add up the values using ~summingInt~ and friends.
+
+      + ~SummaryStatistics~ is collectible using ~summarizingInt~ and its combinations.
+        =TODO=
+
+*** DONE Partitioning the Data - 64
+    CLOSED: [2018-08-07 Tue 14:04]
+    Partition a /stream/ to *two groups*, which are saved as the values of a
+    ~Map<Boolean, List<ElementType>>~.
+
+    For example,
+    ~artists.collect(partitioningBy(Artist::isSolo));~
+    is a ~Map<Boolean, List<Artist>>~.
+
+*** DONE Grouping the Data - 65
+    CLOSED: [2018-08-07 Tue 14:52]
+    Example 5-10. Grouping albums by their main artist
+    #+BEGIN_SRC java
+      public Map<Artist, List<Album>> albumsByArtist(Stream<Album> albums) {
+          return albums.collect(groupingBy(Album::getMainMusician));
+      }
+    #+END_SRC
+
+    - The /classifier/ (the one passed to ~groupingBy~) is a ~Function~.
+
+*** DONE Strings - 66
+    CLOSED: [2018-08-07 Tue 14:59]
+    - Before Java 8,
+      #+BEGIN_SRC java
+        StringBuilder builder = new StringBuilder("[");
+
+        for (Artist artist : artists) {
+            if (builder.length() > 1)
+                builder.append(", ");
+
+            String name = artist.getName();
+            builder.append(name);
+        }
+
+        builder.append("]");
+        String result = builder.toString();
+      #+END_SRC
+
+    - From Java 8 on,
+      #+BEGIN_SRC java
+        String result =
+            artists.stream()
+                   .map(Artist::getName)
+                   .collect(Collectors.joining(", ", "[", "]"));
+      #+END_SRC
+
+*** DONE Composing Collectors - 67 - =Re-Read=
+    CLOSED: [2018-08-08 Wed 13:46]
+    =TODO= =More Details=
+    Some /collectors/ can accept ANOTHER /collecotrs/ as argument(s).
+    This ANOTHER /collector/ is called *downstream* /collectors/.
+
+    - Example 5-14. Using collectors to count the number of albums for each artist
+      #+BEGIN_SRC java
+        public Map<Artist, Long> numberOfAlbums(Stream<Album> albums) {
+            return albums.collect(groupingBy(album -> album.getMainMusician(),
+                                             counting()));
+        }
+      #+END_SRC
+
+    - Example 5-16. Using collectors to find the names of every album that an
+      artist has produced
+      #+BEGIN_SRC java
+        public Map<Artist, List<String>> nameOfAlbums(Stream<Album> albums) {
+            return albums.collect(groupingBy(Album::getMainMusician,
+                                             mapping(Album::getName, toList())));
+        }
+      #+END_SRC
+
+    - The /primitive specialized functions/, such as ~averagingInt~ or ~summarizingLong~,
+      are actually DUPLICATE functionality over calling the /method/ on the
+      /specialized stream/ themselves.
+
+      *The real _MOTIVATION_ for them to exist is to be used as /downstream collectors/.*
+      =TODO= =???= =IMPORTANT=
+
+*** TODO Refactoring and Custom Collectors - 69
+*** TODO Reduction as a Collector - 76
+
+** DONE Collection Niceties - 77
+   CLOSED: [2019-12-26 Thu 23:01]
+   - =from Jian=
+     Since /streams/ are often used with /lambda expressions/ together,
+     after using /streams/ a lot time we may forget that /lambda expressions/ is
+     NOT only for /streams/!
+
+   - Let's have a look at some useful changes that have been made to ~Map~:
+     + ~computeIfAbsent~
+       Suppose we have a ~Map<String, Artist> artistCache~, and we want to look
+       up _artists_ using an expensive database operations result.
+       #+BEGIN_SRC java
+         public Artist getArtist(String name) {
+             return artistCache.computeIfAbsent(name, this::readArtistFromDB);
+         }
+       #+END_SRC
+
+       This is equivalent to the non-lambda-old-style code below:
+
+       #+BEGIN_SRC java
+         public Artist getArtist(String name) {
+             Artist artist = artistCache.get(name);
+
+             if (artist == null) {
+                 artist = readArtistFromDB(name);
+                 artistCache.put(name, artist);
+             }
+
+             return artist;
+         }
+       #+END_SRC
+
+     + Iterate a ~Map~
+       * Before Java 8,
+         #+BEGIN_SRC java
+           Map<Artist, Integer> countOfAlbums = new HashMap<>();
+
+           for (Map.Entry<Artist, List<Album>> entry : albumsByArtist.entrySet()) {
+               Artist artist = entry.getKey();
+               List<Album> albums = entry.getValue();
+               countOfAlbums.put(artist, albums.size());
+           }
+         #+END_SRC
+
+       * From Java 8 on,
+         #+BEGIN_SRC java
+           Map<Artist, Integer> countOfAlbums = new HashMap<>();
+
+           albumsByArtist.forEach((artist, albums) -> {
+                   countOfAlbums.put(artist, albums.size());
+           });
+         #+END_SRC
+
+** DONE Key Points - 78
+   CLOSED: [2018-08-07 Tue 16:06]
+   - /Method references/ in the pattern of ~ClassName::methodName~.
+
+   - /Collectors/ let us compute the _final values_ of /streams/ and are the
+     _mutable analogue_ of the ~reduce~ /method/. =TODO= =???=
+
+   - Java 8 provides
+     + out-of-the-box support for collecting into MANY collection types
+
+     + the ability to _build CUSTOM /collectors/._
+
+** TODO Exercises - 78
+
+* TODO 6. Data Parallelism - 81
+** TODO Parallelism Versus Concurrency - 81
+** TODO Why Is Parallelism Important? - 83
+** TODO Parallel Stream Operations - 83
+** TODO Simulations - 85
+** TODO Caveats - 88
+** TODO Performance - 89
+** TODO Parallel Array Operations - 92
+** TODO Key Points - 94
+** TODO Exercises - 94
+
+* TODO 7. Testing, Debugging, and Refactoring - 97
+** TODO Lambda Refactoring Candidates - 97
+*** TODO In, Out, In, Out, Shake It All About - 98
+*** TODO The Lonely Override - 98
+*** TODO Behavioral Write Everything Twice - 99
+
+** TODO Unit Testing Lambda Expressions - 102
+** TODO Using Lambda Expressions in Test Doubles - 105
+** TODO Lazy Evaluation Versus Debugging - 106
+** TODO Logging and Printing - 106
+** TODO The Solution: peek - 107
+** TODO Midstream Breakpoints - 107
+** TODO Key Points - 108
+
+* TODO 8. Design and Architectural Principles -109
+** TODO Lambda-Enabled Design Patterns - 110
+*** TODO Command Pattern - 110
+    - Command Pattern:
+      xxxxxxxx
+      =TODO=
+      =TODO=
+      =TODO=
+
+    - Example problem settings:
+      #+BEGIN_SRC java
+        public interface Editor {
+            public void save();
+            public void open();
+            public void close();
+        }
+
+        public interface Action {
+            public void perform();
+        }
+
+        // Use to run a sequence of actions
+        public class Macro {
+            private final List<Action> actions;
+
+            public Macro() {
+                actions = new ArrayList<>();
+            }
+
+            public void record(Action action) {
+                actions.add(action);
+            }
+
+            public void run() {
+                actions.forEach(Action::perform);
+            }
+        }
+
+        final Editor editor = ...
+      #+END_SRC
+
+    - Before Java 8,
+      #+BEGIN_SRC java
+        public class Save implements Action {
+            private final Editor editor;
+
+            public Save(Editor editor) {
+                this.editor = editor;
+            }
+
+            @Override
+            public void perform() {
+                editor.save();
+            }
+        }
+
+
+        public class Open implements Action {
+            private final Editor editor;
+
+            public Open(Editor editor) {
+                this.editor = editor;
+            }
+
+            @Override
+            public void perform() {
+                editor.open();
+            }
+        }
+
+
+        public class Close implements Action {
+            private final Editor editor;
+
+            public Close(Editor editor) {
+                this.editor = editor;
+            }
+
+            @Override
+            public void perform() {
+                editor.open();
+            }
+        }
+      #+END_SRC
+
+      Then use them,
+      #+BEGIN_SRC java
+        Macro macro = new Macro();
+        macro.record(new Open(editor));
+        macro.record(new Save(editor));
+        macro.record(new Close(editor));
+        macro.run();
+      #+END_SRC
+
+    - From Java 8 on,
+
+      NO need to create the /classes/ ~Save~, ~Open~, and ~Close~.
+      Use lambda expression directly (this means use the ~Action~ /interface/
+      _IMPLICITLY_).
+
+      #+BEGIN_SRC java
+        Macro macro = new Macro();
+        macro.record(editor::open);
+        macro.record(editor::save);
+        macro.record(editor::close);
+        macro.run();
+      #+END_SRC
+      + You can use ~Runnable~ instead of defining the ~Action~ /SAM interface/.
+
+    - The /command pattern/ is really just a _poor man's lambda expression_ to
+      begin with.
+
+*** DONE Strategy Pattern - 114
+    CLOSED: [2018-08-08 Wed 15:14]
+    The /strategy pattern/ is a way of changing the algorithmic behavior of software
+    based upon a _runtime decision_.
+
+    How you implement the /strategy pattern/ depends upon your circumstances,
+
+    BUT in all cases the main idea is to be able to define a common problem that is
+    solved by different algorithms and then *ENCAPSULATE all the algorithms behind
+    the same programming /interface/.*
+
+    - Example Question:
+      Compress files -- we provide the zip algorithm and the gzip algorithm.
+      They should implement a generic ~Compressor~ /class/ that can compress using
+      either alogirhtms
+
+      See Figure 8-2. The strategy pattern
+
+    - Settings:
+      #+BEGIN_SRC java
+        public interface CompressionStrategy {
+            public OutputStream compress(OutputStream data) throws IOException;
+        }
+
+
+        public class Compressor {
+            private final CompressionStrategy strategy;
+
+            public Compressor(CompressionStrategy strategy) {
+                this.strategy = strategy;
+            }
+
+            public void compress(Path inFile, File outFile) throws IOException {
+                try (OutputStream outStream = new FileOutputStream(outFile)) {
+                    Files.copy(inFile, strategy.compress(outStream));
+                }
+            }
+        }
+      #+END_SRC
+
+    - Before Java 8,
+      #+BEGIN_SRC java
+        // zip
+        public class GzipCompressionStrategy implements CompressionStrategy {
+            @Override
+            public OutputStream compress(OutputStream data) throws IOException {
+                return new GZIPOutputStream(data);
+            }
+        }
+
+
+        // gzip
+        public class ZipCompressionStrategy implements CompressionStrategy {
+            @Override
+            public OutputStream compress(OutputStream data) throws IOException {
+                return new ZipOutputStream(data);
+            }
+        }
+      #+END_SRC
+
+      Then use them,
+      #+BEGIN_SRC java
+        Compressor gzipCompressor = new Compressor(new GzipCompressionStrategy());
+        gzipCompressor.compress(inFile, outFile);
+
+        Compressor zipCompressor = new Compressor(new ZipCompressionStrategy());
+        zipCompressor.compress(inFile, outFile);
+      #+END_SRC
+
+    - From Java 8 on,
+      No need to define the ~GzipCompressionStrategy~ class and the
+      ~ZipCompressionStrategy~.
+
+      #+BEGIN_SRC java
+        Compressor gzipCompressor = new Compressor(GZIPOutputStream::new);
+        gzipCompressor.compress(inFile, outFile);
+
+        Compressor zipCompressor = new Compressor(ZipOutputStream::new);
+        zipCompressor.compress(inFile, outFile);
+      #+END_SRC
+
+*** DONE Observer Pattern - 117
+    CLOSED: [2018-08-08 Wed 20:48]
+    - Observer pattern:
+      + This pattern is another /behavioral pattern/.
+
+      + In the /observer pattern/, an /object/, called the /subject/, _maintains
+        a list of other /objects/,_ which are its *observers*. *When the state
+        of the subject changes, its observers are notified.*
+          It is heavily used in MVC-based GUI toolkits in order to allow view
+        components to be updated when state changes in the model *without
+        coupling the two classes together.*
+
+    - Example Question:
+      Seeing GUI components update is a bit boring, so the /subject/ that we'll
+      be observing is the moon!
+        Both NASA and some aliens want to keep track of things landing on the
+      moon.
+      + NASA wants to make sure its Apollo astronauts have landed safely;
+
+      + the aliens want to invade Earth when NASA is distracted.
+
+    - Settings:
+      #+BEGIN_SRC java
+        public interface LandingObserver {
+            public void observeLanding(String name);
+        }
+
+
+        public class Moon {
+            private final List<LandingObserver> observers = new ArrayList<>();
+            public void land(String name) {
+                for (LandingObserver observer : observers) {
+                    observer.observeLanding(name);
+                }
+            }
+            public void startSpying(LandingObserver observer) {
+                observers.add(observer);
+            }
+        }
+      #+END_SRC
+
+    - Before Java 8,
+      #+BEGIN_SRC java
+        public class Aliens implements LandingObserver {
+            @Override
+            public void observeLanding(String name) {
+                if (name.contains("Apollo")) {
+                    System.out.println("They're distracted, lets invade earth!");
+                }
+            }
+        }
+
+
+        public class Nasa implements LandingObserver {
+            @Override
+            public void observeLanding(String name) {
+                if (name.contains("Apollo")) {
+                    System.out.println("We made it!");
+                }
+        }
+      #+END_SRC
+
+      Then use them,
+      #+BEGIN_SRC java
+        Moon moon = new Moon();
+        moon.startSpying(new Nasa());
+        moon.startSpying(new Aliens());
+
+        moon.land("An asteroid");
+        moon.land("Apollo 11");
+      #+END_SRC
+
+    - From Java 8 on,
+      NO need to define ~Aliens~ and ~Nasa~ /classes/.
+      #+BEGIN_SRC java
+        Moon moon = new Moon();
+        moon.startSpying(name -> {
+                if (name.contains("Apollo"))
+                    System.out.println("We made it!");
+        });
+
+        moon.startSpying(name -> {
+                if (name.contains("Apollo"))
+                    System.out.println("They're distracted, lets invade earth!");
+        });
+
+        moon.land("An asteroid");
+        moon.land("Apollo 11");
+      #+END_SRC
+
+*** TODO Template Method Pattern - 119 - =Re-Read=
+    - Template Method Pattern ::
+      + One algorithm -- common pattern.
+
+      + Different specifics -- different implementations of the common pattern
+        have different details.
+
+    - Example Question:
+      =TODO=
+      =TODO=
+
+    - Settings
+      #+BEGIN_SRC java
+      #+END_SRC
+
+    - Before Java 8,
+      #+BEGIN_SRC java
+        public abstract class LoanApplication {
+            public void checkLoanApplication() throws ApplicationDenied {
+                checkIdentity();
+                checkCreditHistory();
+                checkIncomeHistory();
+                reportFindings();
+
+            protected abstract void checkIdentity() throws ApplicationDenied;
+
+            protected abstract void checkIncomeHistory() throws ApplicationDenied;
+
+            protected abstract void checkCreditHistory() throws ApplicationDenied;
+
+            private void reportFindings() { /* ... */}
+        }
+
+        /** IMPLEMENT `CompanyLoanApplication` and `PersonalLoanApplication` */
+        // public class CompanyLoanApplication extends LoanApplication
+        // public class PersonalLoanApplication extends LoanApplication
+
+        public class EmployeeLoanApplication extends PersonalLoanApplication {
+            @Override
+            protected void checkIncomeHistory() {
+                // They work for us!
+            }
+        }
+      #+END_SRC
+
+    - From Java 8 on,
+      #+BEGIN_SRC java
+        // Modify the `LoanApplication` class
+        public class LoanApplication {
+            private final Criteria identity;
+            private final Criteria creditHistory;
+            private final Criteria incomeHistory;
+
+            public LoanApplication(Criteria identity,
+                                   Criteria creditHistory,
+                                   Criteria incomeHistory) {
+                this.identity = identity;
+                this.creditHistory = creditHistory;
+                this.incomeHistory = incomeHistory;
+            }
+
+            public void checkLoanApplication() throws ApplicationDenied {
+                identity.check();
+                creditHistory.check();
+                incomeHistory.check();
+                reportFindings();
+            }
+
+            private void reportFindings() { /* ... */ }
+        }
+      #+END_SRC
+
+      - No need to implement the ~LoanApplication~ as ~abstract class~.
+        =From Jian= This is actually a kind of DI.
+
+      - The ~Criteria~ is a /functional interface/:
+        #+BEGIN_SRC java
+          public interface Criteria {
+              public void check() throws ApplicationDenied;
+          }
+        #+END_SRC
+
+      - This also simplify the implementation of concrete implementations like
+        ~CompanyLoanApplication~:
+        #+BEGIN_SRC java
+          public class CompanyLoanApplication extends LoanApplication {
+              public CompanyLoanApplication(Company company) {
+
+                        company::checkHistoricalDebt,
+                        company::checkProfitAndLoss);
+              }
+          }
+        #+END_SRC
+
+        Here we assume there is a ~Company~ /class/ that have _criteria methods_
+        #+BEGIN_SRC java
+          public void checkIdentity() throws ApplicationDenied;
+          public void checkProfitAndLoss() throws ApplicationDenied;
+          public void checkHistoricalDebt() throws ApplicationDenied;
+        #+END_SRC
+
+      - No need to build inheritance relation between ~EmployeeLoanApplication~
+        and ~PersonalLoanApplication~. This is also a kind of de-coupling, which
+        makes the implementation more flexible about where to delegate the
+        functionality to.
+
+** TODO Lambda-Enabled Domain-Specific Languages - 123
+*** TODO A DSL in Java - 124
+*** TODO How We Got There - 125
+*** TODO Evaluation - 127
+
+** TODO Lambda-Enabled SOLID Principles - 127
+   - The SOLID principles :: a set of basic principles for designing OO programs.
+        The name itself is a acronym, with each of the _five_ principles named after
+        one of the letters:
+     + Single responsibility
+     + Open/closed
+     + Liskov substitution
+     + Interface segregation
+     + Dependency inversion.
+
+   - Each of the principles corresponds to a set of potential code smells that
+     can exist in your code,
+
+     and
+
+     they offer a route out of the problems that they cause.
+
+   - I will, however, look at how _three_ of the principles can be applied in the
+     context of /lambda expressions/. =TODO=
+
+     In the Java 8 context, some of the principles can be extended beyond their
+     original limitations. =TODO=
+
+*** TODO The Single Responsibility Principle - 128
+    *EVERY /class/ or /method/ in your program should have only a _single reason_
+    to change.*
+
+    - xxx
+
+*** TODO The Open/Closed Principle - 130
+    - xxx
+
+*** TODO The Dependency Inversion Principle - 134
+    - The description of this principle:
+      + High-level modules should _NOT depend on_ low-level modules.
+        *Both should depend on abstractions*.
+
+      + Abstractions should not depend on details.
+        Details should depend on abstractions.
+
+    - More concrete:
+      One of the ways in which we can _make RIGID and FRAGILE programs_ that are
+      resistant to change is by *coupling* high-level business logic and low-level
+      code that is designed to glue modules together.
+
+      Do NOT do this!
+      These two levels are two *different concerns* that may change over time.
+
+    - =From Jian=
+      I can guess:
+      Use /functional interfaces/ as the abstractions.
+        Pass the _LOW-LEVEL code_ as /lambda expression/, with the help of /functional
+      interfaces/ to the _HIGH-LEVEL business logic code_.
+
+    - =TODO=
+
+    - =TODO=
+
+    - =TODO=
+
+** DONE Further Reading - 137 - =Read=
+   CLOSED: [2018-08-09 Thu 17:25]
+   More details
+
+   - SOLID
+     "Uncle" Bob Martin - Object Mentor website, under the topic "Design Patterns".
+
+   - Martin Fowler - Domain-Specific Languages.
+
+** DONE Key Points - 137
+   CLOSED: [2018-08-09 Thu 17:26]
+   - /Lambda expressions/ can be used to make many existing /design patterns/
+     *simpler and more readable*, ESPECIALLY the /command pattern/.
+
+   - There is MORE *flexibility* to the kind of /domain-specific languages/ you
+     can create with Java 8.
+
+   - New opportunities open up for applying the /SOLID/ principles in Java 8.
+
+* TODO 9. Lambda-Enabled Concurrency - 139
+** TODO Why Use Nonblocking I/O? - 139
+** TODO Callbacks - 140
+** TODO Message Passing Architectures - 144
+** TODO The Pyramid of Doom - 145
+** TODO Futures - 147
+** TODO Completable Futures - 149
+** TODO Reactive Programming - 152
+** TODO When and Where - 155
+** TODO Key Points - 155
+** TODO Exercises - 156
+
+* DONE 10. Moving Forward - 159
+  CLOSED: [2017-10-03 Tue 02:20]
+  - =From Jian= The author mentioned the ~Jodatime~ library.
+    However, browse the ~Jodatime~ official website, I see
+    #+BEGIN_QUOTE
+     Joda-Time is the de facto standard date and time library for Java PRIOR TO
+     Java SE 8. Users are now _asked to migrate_ to ~java.time~ (JSR-310).
+    #+END_QUOTE
+
+  - Open exercises TODO TODO TODO TODO TODO
+    + Explain
+      * what /lambda expressions/ are
+        AND
+      * why they should be of interest to another programmer.
+
+    + Start a trial deployment of your work product on Java 8.
+
+    + Start refactoring a bit of legacy code in a real product to use streams and
+      collectors.
+
+    + Do you have any _concurrency problems_ or _large-scale data-processing_ code?
+      If so, try to prototype a refactor in order to use either streams for data
+      parallelism or some of the new concurrency features in _RxJava_ or
+      ~CompletableFuture~.
+
+    + Have a look at the design and architecture of a code base you know really well:
+      * Could it be implemented better at a macro level?
+      * Can you simplify the design?
+      * Can you reduce the amount of code needed to implement a feature?
+      * Can the code be made easier to read?
+
+* TODO Index - 161
+* Tips
+  - Java 8 change:
+    /interfaces/ now can have ~default~ /methods/ and ~static~ /methods/.
+
+  - The primitive specializations have a very clear-cut _naming convention_:
+    + If the _return type_ is a primitive, the interface is prefixed with =To= and
+      the primitive type, as in ~ToLongFunction~ (shown in Figure 4-1).
+
+    + If the _argument type_ is a primitive type, the name PREFIX is just the
+      type name, as in ~LongFunction~ (Figure 4-2). If the higher-order function
+      uses a primitive type, it is suffixed with =To= and the primitive type, as
+      in ~mapToLong~.

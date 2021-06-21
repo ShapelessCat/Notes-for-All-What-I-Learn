@@ -1,0 +1,1311 @@
+#+TITLE: Java Concurrency in Practice
+#+VERSION: 2006
+#+AUTHOR: Brian Goetz, Tim Peierls, Joshua Bloch, Joseph Bowbeer, David Holmes, and Doug Lea
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Listings - xii
+* TODO Preface - xvii
+** How to use this book - xviii
+** Code examples - xix
+** Acknowledgments - xx
+
+* TODO 1 Introduction - 1
+  - Q :: Why do we bother with /concurrency/, even if we know it's much more
+         complicated than SINGLE /thread/ ones?
+
+  - A :: /Threads/
+    * can simplify the development of complex systems by _turning complicated
+      asynchronous code into simpler straight-line code_.
+      TODO =HOW=
+
+    * are the EASIEST WAY to tap the computing _POWER of MULTI-PROCESSOR systems_.
+
+  - As *procesor counts* increase, exploiting concurrency effectively will only
+    become _MORE IMPORTANT_!
+      
+** DONE 1.1 A (very) brief history of concurrency - 1 - =START=
+   CLOSED: [2017-12-28 Thu 18:56]
+   - =TODO= =NOTE=
+     The days before OS's exist.
+
+   - processes :: _isolated_, _independently executing_ programs to which the
+                  operating system *allocates resources* such as
+                  /memory/, /file handles/, and /security credentials/.
+
+   - /Processes/ could *communicate* with one another through a variety of
+     _COARSE-GRAINED communication mechanisms_:
+     * sockets
+     * signal handlers
+     * shared memory
+     * semaphores
+     * files
+
+   - _Several motivating factors_ led to the development of operating systems
+     that allowed multiple programs to execute simultaneously:
+     * Resource utilization.
+     * Fairness
+     * Convenience
+
+   - /Threads/ allow multiple streams of program control flow to _coexist whithin
+     a process_. They *share* _PROCESS-WIDE resources._
+
+   - /Threads/ also provide a natural decomposition for exploiting hardware
+     parallelism on /multiprocessor systems/;
+     =TODO=
+     /multiple threads/ within the same program can be scheduled simultaneously
+     on multiple CPUs.
+     =TODO=
+
+   - /Threads/ are sometimes called /lightweight process/.
+
+   - Most modern OS's treat /threads/, _NOT_ /processes/, as the _basic units of
+     scheduling_.
+
+   - _ALL_ /threads/ within a process have access to the _SAME_ /variables/ and
+     allocate objects from the SAME /heap/, which allows finer-grained data
+     sharing than inter-process mechanisms.
+
+     BUT WITHOUT explicit synchronization to coordinate access to shared data, a
+     /thread/ may modify variables that another /thread/ is in the middle of
+     using, with unpredictable results.
+
+** TODO 1.2 Benefits of threads - 3
+   - The proper use of /threads/ can
+     * *reduce* development and maintainance costs;
+     * *improve* the performance of complex application.
+
+   - /Threads/ make it easier to model how humans work and interact,
+     _by turning /asynchronous workflows/ into /mostly sequential ones/._
+
+   - /Threads/ can also TURN otherwise convoluted code _INTO straight-line code_
+     that is easier to write, read, and maintain.
+
+   - /Threads/ are useful
+     * in GUI applications for _improving the *responsiveness* of the user interface_,
+     * in server applications for _improving *resource utilization* and *throughput*._
+
+   - /Threads/ also *SIMPLIFY the implementation of the JVM* — the /garbage collector/
+     usually runs in one or more dedicated /threads/.
+
+*** DONE 1.2.1 Exploiting multiple processors - 3
+    CLOSED: [2021-05-02 Sun 17:17]
+    - Since the _basic unit_ of *scheduling* is the /thread/, a program with only
+      one thread can run on at mot one procesor at a time.
+      * This means
+        it give up half the available CPU resources in a two-processor system
+        it give up 99% the available CPU resources in a 100-processor system
+
+      * On the other hand, programs with
+        _MULTIPLE_ active /threads/
+        can execute simutaneously on
+        _MULTIPLE_ /processors/.
+        + When properly designed, _multithreaded programs_ can *IMPROVE throughput*
+          by utilizing available processor resources more effectively.
+
+    - Using _multiple threads_ can also help achieve *better throughput*
+      on single-processor system:
+      * If a program is single-threaded,
+        the processor remains idle while it waits for a synchronous I/O
+        operation to complete.
+
+      * In a multithreaded program,
+        _ANOTHER thread_ can still run
+        while the _FIRST thread_ is waiting for the I/O to complete,
+        allowing the application to still make progress during the *blocking I/O*.
+
+*** DONE 1.2.2 Simplicity of modeling - 3
+    CLOSED: [2018-08-16 Thu 17:23]
+    - TODO Note
+
+*** TODO 1.2.3 Simplified handling of asynchronous events - 4
+    - Historically, OS's placed relatively _LOW limits on the number_ of
+      /threads/ that a /process/ could create, as few as _several hundred (or
+      even less)_.
+
+    - TODO 
+      As a result,
+      operating systems developed efficient facilities for
+      multiplexed I/O, such as the Unix ~select~ and ~poll~ system calls,
+      and
+      to access these facilities, the Java class libraries acquired a set of
+      packages (~java.nio~) for nonblocking I/O.
+
+    - However,
+      OS support for _LARGER numbers_ of /threads/ has _IMPROVED significantly_,
+      making the thread-per-client model practical even for large numbers of
+      clients on some platforms.
+
+*** TODO 1.2.4 More responsive user interfaces - 5
+    - /event dispatch thread (EDT)/
+
+** DONE 1.3 Risks of threads - 5
+   CLOSED: [2018-08-16 Thu 17:46]
+   - Java's _built-in support_ for /threads/ is a double-edged sword:
+     + *PROS*:
+       while it simplifies the development of concurrent applications by
+       providing language and library support and a formal _cross-platform
+       memory model_
+
+     + *CONS*: 
+       it also raises the bar for developers because more programs will use
+       /threads/.
+
+*** DONE 1.3.1 Safety hazards - 5
+    CLOSED: [2017-12-28 Thu 21:11]
+    - Listing 1.1. Non-thread-safe sequence generator
+      #+BEGIN_SRC java
+        @NotThreadSafe
+        public class UnsafeSequence {
+            private int value;
+
+            // Returns a unique value.
+            public int getNext() {
+                return value++;
+            }
+        }
+      #+END_SRC
+
+    - In this book we will use some /nonstandard annotation/:
+      + ~@NotThreadSafe~
+      + ~@ThreadSafe~
+      + ~@Immutable~
+
+      If a class is annotated with ~@ThreadSafe~, users can use it with
+      confidence in a multi-threaded environment, maintainers are put on notice
+      that it makes _thread safety guarantees_ that _must be preserved_, and
+      software analysis tools can identify possible coding errors.
+
+    - The ~UnsafeSequence~ illustrates a common /concurrency hazard/ called a
+      /race condition/.
+
+    - Fix it:
+      #+BEGIN_SRC java
+        @ThreadSafe
+        public class Sequence {
+            @GuardedBy("this") private int value;
+
+            public synchronized int getNext() {
+                return value++;
+            }
+        }
+      #+END_SRC
+
+      TODO
+      Exactly why this works is the subject of Chapter 2 and 3.
+
+*** DONE 1.3.2 Liveness hazards - 8
+    CLOSED: [2017-12-28 Thu 21:20]
+    - While /safety/ means “nothing bad ever happens”,
+
+      /liveness/ concerns the complementary goal that “something good eventually
+      happens”.
+
+    - liveness failure :: it occurs when an activity gets into a state such that
+         it is permanently unable to make forward progress.
+
+    - Concurrency programming does NOT introduce /liveness failure/. It just
+      introduces additional forms of /liveness failure/ that do NOT occur in
+      single-threaded programs.
+
+    - An inadvertent infinite loop is a kind of /liveness failure/ in _SINGLE
+      thread_ situation.
+
+    - For concurrency, for example, a /liveness failure/ can be
+      if thread A is waiting for a resource that thread B holds exclusively, and
+      B never releases it, A will wait forever.
+
+*** DONE 1.3.3 Performance hazards - 8
+    CLOSED: [2018-08-16 Thu 17:46]
+    - Related to liveness is performance.
+      + If liveness is guaranteed, something good eventually happens.
+
+      + If performance is guaranteed, something good happens quickly.
+
+    - Performance issues subsume a broad range of problems, including:
+      + poor service time
+      + responsiveness
+      + throughput
+      + resource consumption
+      + scalability
+
+    - Just as with /safety/ and /liveness/,
+      + /multi-threaded programs/ are *subject to* ALL the /performance hazards/ of
+        /single-threaded programs/,
+
+      + /multi-threaded programs/ may introduce *more* hazards.
+
+    - In well designed concurrent applications the use of /threads/ is a *NET performance
+      gain*, BUT /threads/ nevertheless carry some degree of _runtime overhead_.
+
+    - Context Switches :: when the scheduler _suspends_ the ACTIVE /thread/ temporarily
+        so ANOTHER /thread/ can _run_
+
+    - For applications with many /threads/, /context switches/ have *significant costs*:
+      + *saving* and *restoring* execution context,
+
+      + *loss* of locality,
+        TODO =???=
+
+      + CPU time spent scheduling /threads/ instead of running them.
+
+      + When threads *share* data, they _MUST_ use /synchronization/ mechanisms
+        that can inhibit compiler optimizations, flush or invalidate memory
+        caches, and create /synchronization traffic/ on the shared memory bus.
+
+      All these factors introduce additional performance costs;
+
+    - TODO =IMPORTANT=
+      Chapter 11 covers techniques for analyzing and reducing these costs.
+
+** TODO 1.4 Threads are everywhere - 9
+   - *Timer*
+
+   - *Servlets and JavaServer Pages (JSPs)*
+
+   - *Remote Method Invocation*
+
+   - *Swing and AWT*
+
+* TODO I Fundamentals - 13
+** DONE 2 Thread Safety - 15
+   CLOSED: [2018-08-19 Sun 20:05]
+   - Writing /thread-safe/ code is, at its core, about *managing access to state*,
+     and in particular to *shared, mutable state*.
+
+     + (object's) state :: data that stored in /state variables/ such as /instance/
+          or /static fields/.
+       * An /object's state/ may include fields from other, dependent objects;
+           For instance, a ~HashMap~'s state is partially stored in the ~HashMap~
+         object itself, but also in many Map.Entry objects.
+
+       * An /object's state/ encompasses ANY data that *can affect its _externally
+         visible_ behavior*.
+
+     + shared :: a variable could be _accessed by_ *multiple* /threads/.
+
+     + mutable :: the value of a variable could change during its lifetime.
+
+   - We may talk about /thread safety/ _AS IF_ it were about code,
+     BUT what we are _REALLY_ trying to do is _protect data from uncontrolled
+     concurrent access_.
+
+   - Whether an object needs to be /thread-safe/ depends on whether it will be
+     accessed from multiple threads --
+     =From Jian= NO need to do extra work for the features you don't acutally
+     use/need -- like "try to keep /thread-safe/ in single thread program"!!! --
+     this is not a joke, if you forget the motivation you WILL DO STUPID things.
+
+     *This is a property of _HOW_ the object is used in a program*, NOT _WHAT_ it
+     does.
+
+   - Making an object /thread-safe/
+     + REQUIRES using /synchronization/ to *coordinate _access_ to its /mutable
+       state/;*
+
+     + FAILING TO DO SO could RESULT IN
+       * data corruption
+         and
+       * other undesirable consequences.
+
+   - =IMPORTANT=
+     Whenever *more than one* /thread/ _accesses_ a given /state variable/, and
+     one of them might write to it, they all must *coordinate* their access to
+     it using /synchronization/.
+     + the primary mechanism for /synchronization/ in Java is the ~synchronized~
+       /keyword/, which provides *exclusive locking*,
+
+     + there are other "synchronization" methods like the use of /volatile
+       variables/, /explicit locks/ TODO =???=, and /atomic variables/.
+
+   - You should *avoid* the temptation to think that there are "special" situations
+     in which this rule does not apply.
+
+   - If _multiple threads_ ACCESS the /same mutable state variable/ *without appro-
+     priate /synchronization/,* _YOUR PROGRAM IS *BROKEN*._
+
+     There are _three_ ways to fix it:
+     + *Do NOT share* the /state variable/ *across* /threads/;
+
+     + *Make* the /state variable/ *immutable*;
+
+     + *Use* /synchronization/ *whenever accessing* the /state variable/.
+
+   - *It's easier to design a class with thread-safety feature at the beginning,
+     rather than to retrofit it for thread-safety later!*
+
+   - The Java language does _NOT force_ you to *encapsulate* /state/,
+     BUT _the BETTER *encapsulated* your program /state/, the EASIER it is to
+     make your program thread-safe and to help maintainers keep it that way._
+
+   - _When designing /thread-safe classes/,_
+     your best friends are
+     + /encapsulation/
+     + /immutability/
+     + /clear specification of invariants/ TODO =???=
+
+   - We've used the terms /thread-safe class/ and /thread-safe program/ nearly
+     interchangeably thus far.
+
+     _HOWEVER_,
+     + a program that consists ENTIRELY of /thread-safe classes/ *may NOT* be
+       /thread-safe/,
+
+       AND
+
+     + a /thread-safe program/ may contain /classes/ that are *NOT* /thread-safe/.
+
+   - TODO
+     The issues surrounding the *composition* of /thread-safe classes/ are also
+     taken up in Chapter 4.
+
+   - In any case, the concept of a /thread-safe class/ makes sense *ONLY* if the
+     /class/ *encapsulates* its own /state/.
+
+     /Thread safety/ may be a term that is applied to code, BUT it is about /state/,
+     and it can *ONLY be applied to the entire body of code that *encapsulates its
+     /state/,* which may be
+     + an object
+       OR
+     + an entire program.
+
+*** DONE 2.1 What is thread safety? - 17
+    CLOSED: [2018-08-15 Wed 22:57]
+    - A /class/ is /thread-safe/ when it continues to *behave correctly* when accessed
+      from _multiple threads_, *regardless* of the scheduling or interleaving of the
+      execution of those threads by the runtime environment, and *with no additional*
+      /synchronization/ or other coordination on the part of the calling code.
+
+    - *No* set of operations performed sequentially or concurrently on instances of
+      a /thread-safe class/ can cause an instance to be in an INVALID state.
+
+    - /Thread-safe classes/ *encapsulate _ANY_ needed synchronization*
+      SO THAT *clients need not provide their own*.
+
+**** DONE 2.1.1 Example: a stateless servlet - 18
+     CLOSED: [2018-08-15 Wed 22:57]
+     - In Chapter 1,
+       we listed a number of FRAMEWORKS that *create* /threads/ and *call* your
+       components from those /threads/,
+       *leaving you with the responsibility* of making your components /thread-safe/.
+       TODO
+
+     - Very often, /thread-safety/ requirements stem
+       + _NOT from_ a decision to _USE /threads/ directly_
+
+       + BUT _from_ a decision to _use a facility_ like the /Servlets framework/.
+
+     - We're going to develop a simple example -- a servlet-based factorization
+       service -- and SLOWLY *extend* it to ADD FEATURES while *preserving* its
+       /thread safety/.
+
+     - Listing 2.1. A stateless servlet
+       #+BEGIN_SRC java
+         @ThreadSafe
+         public class StatelessFactorizer implements Servlet {
+             public void service(ServletRequest req, ServletResponse resp) {
+                 BigInteger i = extractFromRequest(req);
+                 BigInteger[] factors = factor(i);
+                 encodeIntoResponse(resp, factors);
+             }
+         }
+       #+END_SRC
+
+     - ~StatelessFactorizer~ is, _like MOST /servlets/_, *stateless*:
+       it
+       + has no fields
+         and
+       + references no fields from other classes.
+
+       TODO _SUMMARY_
+       The transient state for a particular computation exists solely in local
+       variables that are stored on the thread’s stack and are accessible only
+       to the executing thread. One thread accessing a StatelessFactorizer cannot
+       influence the result of another thread accessing the same
+       ~StatelessFactorizer~; because the two threads do not share state, it is
+       as if they were accessing different instances. Since the actions of a
+       thread accessing a stateless object cannot affect the correctness of
+       operations in other threads, stateless objects are /thread-safe/.
+
+     - *Stateless objects are always thread-safe.*
+
+     - The fact that *MOST* /servlets/ can be implemented with no state greatly
+       reduces the burden of making servlets /thread-safe/.
+
+     - /Thread safety/ requirement becomes an issue
+       when servlets want to *remember* things from one request to another.
+
+*** DONE 2.2 Atomicity - 19
+    CLOSED: [2018-08-15 Wed 22:56]
+    - =EN=
+      susceptible - 易感
+
+    - Listing 2.2. Servlet that counts requests without the necessary synchronization.
+      *DON'T DO THIS*
+      #+BEGIN_SRC java
+        @NotThreadSafe
+        public class UnsafeCountingFactorizer implements Servlet {
+            private long count = 0;
+
+            public long getCount() { return count; }
+
+            public void service(ServletRequest req, ServletResponse resp) {
+                BigInteger i = extractFromRequest(req);
+                BigInteger[] factors = factor(i);
+                ++count;  // <-------- non-atomic operation, race condition can happen!
+                encodeIntoResponse(resp, factors);
+            }
+        }
+      #+END_SRC
+
+    - =From Jian=
+      However, this example code can give a right lower-bound of ~count~, which is
+      enough in some cases in real world -- *you do NOT ALWAYS need EXACT result*.
+
+      There can be no harm race condition, but we won't talk about this in details
+      now.
+
+**** DONE 2.2.1 Race conditions - 20
+     CLOSED: [2018-08-15 Wed 22:22]
+     - =EN=
+       stale - 陳舊
+
+     - The _MOST COMMON_ type of /race condition/ is /check-then-act/, where a
+       potentially stale observation is used to make a decision on what to do
+       next.
+
+     - A Example
+
+**** DONE 2.2.2 Example: race conditions in lazy initialization - 21
+     CLOSED: [2018-08-15 Wed 22:40]
+     - A common idiom that uses check-then-act is /lazy initialization/.
+
+     - The GOAL of /lazy initialization/:
+       _*defer* initializing an object *until* it is actually needed while at the
+       same time *ensuring* that it is *initialized only once*._
+
+     - Listing 2.3. Race condition in lazy initialization. *DON'T DO THIS*
+       #+BEGIN_SRC java
+         @NotThreadSafe
+         public class LazyInitRace {
+             private ExpensiveObject instance = null;
+
+             public ExpensiveObject getInstance() {
+                 if (this.instance == null)
+                     this.instance = new ExpensiveObject();
+                 return this.instance;
+             }
+         }
+       #+END_SRC
+
+     - _Like most concurrency errors_, /race conditions/ do *NOT ALWAYS result in
+       failure*:
+       some unlucky timing is also required.
+       _But /race conditions/ can cause SERIOUS problems._
+
+     - If ~LazyInitRace~ is used to _instantiate an application-wide registry_,
+       having it return different instances from multiple invocations could cause
+       + registrations to be lost
+         OR
+       + multiple activities to have inconsistent views of the set of registered objects.
+
+     - If ~UnsafeSequence~ is used to _generate entity identifiers in a persistence
+       framework_,
+
+       two distinct objects could end up with the _SAME_ ID, *violating identity
+       integrity constraints*.
+
+**** DONE 2.2.3 Compound actions - 22
+     CLOSED: [2018-08-15 Wed 22:56]
+     - Both ~LazyInitRace~ and ~UnsafeCountingFactorizer~ contained *a sequence of
+       operations_ that needed to be /atomic, or indivisible/,* relative to other
+       operations on the same state.
+
+       To avoid /race conditions/, there MUST be a way to *prevent* other /threads/
+       from using a variable *while we're in the MIDDLE of modifying it*, so we can
+       ensure that other /threads/ can observe or modify the state *only _BEFORE_
+       we start OR _AFTER_ we finish, but _NOT in the middle_.*
+
+     - To ensure /thread safety/,
+
+       /check-then-act/ operations (like /lazy initialization/)
+       and
+       /read-modify-write/ operations (like /increment/)
+
+       *must always be /atomic/.*
+
+     - We refer collectively to /check-then-act/ and /read-modify-write/ sequences
+       as /compound actions/.
+
+     - Compound Actions :: sequences of operations that *MUST be executed ATOMICALLY*
+          in order to remain /thread-safe/.
+
+       + =From Jian=
+         Of course, this concept is NOT important, if no multi-thread programming
+         required.
+
+     - TODO
+       In the next section, we’ll consider /locking/, Java’s _built-in mechanism_
+       for *ensuring* /atomicity/.
+
+     - For now, we use an existing /thread-safe class/ to fix our program.
+
+       + Listing 2.4. Servlet that counts requests using ~AtomicLong~.
+         #+BEGIN_SRC java
+           import java.util.concurrent.atomic.AtomicLong;
+
+           @ThreadSafe
+           public class CountingFactorizer implements Servlet {
+               private final AtomicLong count = new AtomicLong(0);  // IMPORTANT
+
+               public long getCount() { return count.get(); }
+
+               public void service(ServletRequest req, ServletResponse resp) {
+                   BigInteger i = extractFromRequest(req);
+                   BigInteger[] factors = factor(i);
+                   count.incrementAndGet();
+                   encodeIntoResponse(resp, factors);
+               }
+           }
+         #+END_SRC
+
+         * Beause the state of the servlet is the state of the counter and the
+           counter is /thread-safe/, our servlet is once again /thread-safe/.
+
+     - The /thread-safe classes/ seems a solution.
+       TODO =IMPORTANT=
+       However, as we’ll see in the next section, *going from _one state variable
+       to more than one_ is _not necessarily as simple as_ going from _zero to one_.*
+
+*** TODO 2.3 Locking - 23 - =Re-Read=
+**** TODO 2.3.1 Intrinsic locks - 25
+     - TODO NOTE
+
+**** DONE 2.3.2 Reentrancy - 26
+     CLOSED: [2018-08-16 Thu 19:30]
+     - reentrant :: if a /thread/ tries to acquire a lock that it *ALREADY holds*,
+                    the request succeeds.
+
+     - *Intrinsic locks are /reentrant/.*
+       + Q :: WHY does /reentrancy/ is important for the /intrinsic locks/?
+
+       + A :: /Reentrancy/ facilitates encapsulation of locking behavior, and thus
+              simplifies the development of object-oriented concurrent code.
+                Without reentrant locks, the very natural-looking code in Listing
+              2.7,
+         * Listing 2.7. Code that would deadlock if intrinsic locks were not reentrant.
+           #+BEGIN_SRC java 
+             public class Widget {
+                 public synchronized void doSomething() {
+                     // ...
+                 }
+             }
+             public class LoggingWidget extends Widget {
+                 public synchronized void doSomething() {
+                     System.out.println(toString() + ": calling doSomething");
+                     super.doSomething();
+                 }
+             }
+           #+END_SRC
+           *If* there is NO /reentrancy/ feature, the ~doSomething~ method of
+           ~LoggingWidget~ can never run -- you want to run it, but, without
+           /reentrancy/, it cannot get the same lock twice (one for
+           ~this.doSomething~, one for ~super.doSomething~ -- they are considered
+           the SAME lock because of the inheritance relation)!
+
+*** TODO 2.4 Guarding state with locks - 27 - =Re-Read=
+    - Because *locks enable _serialized access_ to the code paths they guard*,
+      we can use them to _construct protocols_ for guaranteeing _exclusive access_
+      to /shared state/, and then /state consistency/.
+
+    - Compound actions on shared state, such as incrementing a hit counter (read-
+      modify-write) or lazy initialization (check-then-act), must be made atomic
+      to avoid race conditions.
+
+      Holding a lock for the entire duration of a compound action can make that
+      compound action atomic. However, just wrapping the compound action with a
+      synchronized block is *not sufficient*; if synchronization is used to
+      coordinate access to a variable, it is needed everywhere that variable is
+      accessed. Further, when using locks to coordinate access to a variable,
+      the same lock must be used wherever that variable is accessed.
+
+      8.Serializing access to an object has nothing to do with object
+      serialization (turning an object into a byte stream); serializing access
+      means that threads take turns accessing the object exclusively, rather than
+      doing so concurrently.
+
+      It is a common mistake to assume that synchronization needs to be used only
+      when writing to shared variables; this is simply not true. (The reasons for
+      this will become clearer in Section 3.1.)
+
+    - Quote
+      #+BEGIN_QUOTE
+      For *each* /mutable state variable/ that may be _accessed by *more than one*
+      /thread/,_ _ALL accesses_ to that variable *must be* performed with the *same
+      lock* held.
+
+      In this case, we say that *the /variable/ is _GUARDED_ by that /lock/.*
+      #+END_QUOTE
+
+    - In ~SynchronizedFactorizer~ in Listing 2.6, ~lastNumber~ and ~lastFactors~ are
+      guarded by the servlet object’s intrinsic lock; this is documented by the
+      ~@GuardedBy~ annotation. There is no inherent relationship between an
+      object’s intrinsic lock and its state; an object’s fields need not be
+      guarded by its intrinsic lock, though this is a perfectly valid locking
+      convention that is used by many classes. Acquiring the lock associated with
+      an object does not prevent other threads from accessing that object—the
+      only thing that acquiring a lock prevents any other thread from doing is
+      acquiring that same lock. The fact that every object has a built-in lock is
+      just a convenience so that you needn’t explicitly create lock objects. 9 It
+      is up to you to construct locking protocols or synchronization policies
+      that let you access shared state safely, and to use them consistently
+      throughout your program.
+
+    - Quote
+      #+BEGIN_QUOTE
+      *Every* /shared, mutable variable/ should be *guarded by _EXACTLY ONE_ /lock/.*
+      Make it clear to maintainers which lock that is.
+      #+END_QUOTE
+
+    - A common locking convention is to encapsulate all mutable state within an
+      object and to protect it from concurrent access by synchronizing any code path
+      that accesses mutable state using the object’s intrinsic lock. This pattern is used
+      by many thread-safe classes, such as Vector and other synchronized collection
+      classes. In such cases, all the variables in an object’s state are guarded by the
+      object’s intrinsic lock. However, there is nothing special about this pattern, and
+      neither the compiler nor the runtime enforces this (or any other) pattern of lock-
+      ing. 10 It is also easy to subvert this locking protocol accidentally by adding a new
+      method or code path and forgetting to use synchronization.
+
+    - Not all data needs to be guarded by locks—only mutable data that will be
+      accessed from multiple threads. In Chapter 1, we described how adding a simple
+      asynchronous event such as a TimerTask can create thread safety requirements
+      that ripple throughout your program, especially if your program state is poorly
+      encapsulated. Consider a single-threaded program that processes a large amount
+      of data. Single-threaded programs require no synchronization, because no data is
+      shared across threads. Now imagine you want to add a feature to create periodic
+      snapshots of its progress, so that it does not have to start again from the beginning
+      if it crashes or must be stopped. You might choose to do this with a TimerTask
+      that goes off every ten minutes, saving the program state to a file.
+
+      Since the TimerTask will be called from another thread (one managed by
+      Timer ), any data involved in the snapshot is now accessed by two threads: the
+      main program thread and the Timer thread. This means that not only must the
+      TimerTask code use synchronization when accessing the program state, but so
+      must any code path in the rest of the program that touches that same data. What
+      used to require no synchronization now requires synchronization throughout the
+      program.
+
+    - DONE When a variable is guarded by a /lock/, _EVERY_ access to that variable is
+      performed with that /lock/ held -- you've *ensured that _ONLY ONE_ /thread/
+      at a time can access that variable.*
+
+      + *Additionally*
+        #+BEGIN_QUOTE
+        For EVERY /invariant/ that involves *more than one* variable, *ALL* the
+        variables involved in that /invariant/ must be guarded by the *SAME* /lock/.
+        #+END_QUOTE
+
+        * Do this to *preserve* the /invariant/.
+
+        * For example, Listing 2.6 the ~SynchronizedFactorizer~:
+          both the _cached number_ and the _cached factors_ are guarded by the
+          /(servlet object's) intrinsic lock/.
+
+    - Q :: If /synchronization/ is the cure for /race conditions/, why not just
+           declare every method synchronized?
+
+    - A :: It turns out that such indiscriminate application of synchronized might
+           be either too much or too little /synchronization/.
+
+      + *Merely synchronizing _EVERY_ /method/,* as ~Vector~ does, is *not enough*
+        to render compound actions on a ~Vector~ atomic:
+        #+BEGIN_SRC java
+          if (!vector.contains(element))
+              vector.add(element);
+        #+END_SRC
+
+    - This attempt at a put-if-absent operation has a /race condition/,
+      even though both ~contains~ and ~add~ are /atomic/.
+
+      While /synchronized methods/ can _make individual operations /atomic/,_
+      *additional locking is required when multiple operations are combined into
+      a compound action.*
+
+      TODO
+      (See Section 4.4 for some techniques for safely adding additional atomic
+      operations to thread-safe objects.)
+
+      At the same time, *synchronizing EVERY method can lead to liveness or
+      performance problems*, as we saw in ~SynchronizedFactorizer~.
+
+*** DONE 2.5 Liveness and performance - 29
+    CLOSED: [2018-08-19 Sun 20:05]
+    - The way we used synchronization in ~SynchronizedFactorizer~ makes it *perform
+      badly*.
+        It is a simple approach -- guard EACH /state variable/ with the /servlet
+      object's intrinsic lock/, and that *policy* was implemented by _synchronizing
+      the *ENTIRETY* of the service /method/. 
+        However, it is a too coarse-grained approach -- it restored safety, but
+      at a high price.
+
+    - The intent of using the servlet framework is to be able to handle multiple
+      requests simutaneously -- therefore, it is wierd to make the whole service
+      synchronized and run one thread a time.
+
+    - Figure 2.1 shows what happens when multiple requests arrive for the synchro-
+      nized factoring servlet: they queue up and are handled sequentially.
+
+      + We would describe this web application as exhibiting *POOR concurrency*:
+        the number of simultaneous invocations is limited
+        * not by the availability of processing resources,
+        * but by the structure of the application itself.
+
+    - Narrow the /scope/ of the /synchronized block/ is a good way to resolve the
+      problem mentioned above.
+      + *CAUTION*
+        Besides NOT to make the block to small, you also need to exclude
+        _long-running operations_ that do *not* affect /shared state/, so that
+        *OTHER /threads/ are NOT prevented from accessing* the /shared state/
+        while the long-running operation is in progress.
+
+    - Listing 2.8. Servlet that caches its last request and result.
+      #+BEGIN_SRC java
+        @ThreadSafe
+        public class CachedFactorizer implements Servlet {
+            @GuardedBy("this") private BigInteger lastNumber;
+            @GuardedBy("this") private BigInteger[] lastFactors;
+            @GuardedBy("this") private long hits;
+            @GuardedBy("this") private long cacheHits;
+            public synchronized long getHits() { return hits; }
+            public synchronized double getCacheHitRatio() {
+                return (double) cacheHits / (double) hits;
+            }
+            public void service(ServletRequest req, ServletResponse resp) {
+                BigInteger i = extractFromRequest(req);
+                BigInteger[] factors = null;
+                synchronized (this) {  // <---- sync-1-start
+                    ++hits;
+                    if (i.equals(lastNumber)) {
+                        ++cacheHits;
+                        factors = lastFactors.clone();
+                    }
+                }  //                     <---- sync-1-end
+
+                if (factors == null) {
+                    factors = factor(i);
+                    synchronized (this) {  //          <---- sync-2-start
+                        lastNumber = i;
+                        lastFactors = factors.clone();
+                    }  //                              <---- sync-2-end
+                }
+                encodeIntoResponse(resp, factors);
+            }
+        }
+      #+END_SRC
+      + Q :: Why not keep using ~AtomicLong~?
+
+      + A :: It would be safe to use ~AtomicLong~ here,
+
+             _BUT_ there is less benefit than there was in ~CountingFactorizer~:
+             /Atomic variables/ are useful for effecting /atomic operations/ on a
+             _SINGLE_ variable, but since we are already using /synchronized blocks/
+             to construct /atomic operations/,
+
+             *using two different _synchronization mechanisms_ would be CONFUSING
+             and would offer no performance or safety benefit.*
+
+    - The restructuring of ~CachedFactorizer~ provides a balance between
+      + simplicity (synchronizing the entire method)
+
+      + concurrency (synchronizing the shortest possible code paths) --
+        though the ~++hits;~ can be put into a separate /synchronization block/,
+        people usually don't do this -- *acquiring and releasing a lock has some
+        overhead*.
+
+    - Quote
+      #+BEGIN_QUOTE
+      There is frequently a tension between simplicity and performance.
+
+      When implementing a synchronization policy, *resist the temptation* to
+      prematurely sacrifice simplicity (potentially compromising safety) for
+      the sake of performance.
+
+      =From Jian=
+      1. Make it right;
+      2. Make it simple;
+      3. (Finally) Make it fast!
+
+      If no performance requirement, you can omit the 3. step!
+      However, the 1. and the 2. steps can never be omitted!!!
+      #+END_QUOTE
+
+    - Whenever you use locking, you should be aware of
+      + what the code in the block is doing
+      + how likely it is to take a long time to execute.
+
+    - Holding a lock for a long time,
+      + either because you are doing something compute-intensive
+
+      + or because you execute a potentially blocking operation (if NOT deadlock),
+
+      introduces the risk of /liveness/ or /performance/ problems.
+
+    - Quote
+      #+BEGIN_QUOTE
+      Avoid holding locks during _LENGTHY_ computations or operations at risk of
+      _NOT completing quickly_ such as network or console I/O.
+      #+END_QUOTE
+
+** TODO 3 Sharing Objects - 33
+   - At the beginning of _Chapter 2_ we say *writing correct concurrent programs
+     is primarily about _managing access_ to /shared mutable state/.*
+
+     That chapter was about
+     using /synchronization/ to *prevent* multiple threads *from* accessing the
+     same data at the same time;
+
+   - This chapter examines techniques for
+     *sharing* and *publishing* objects so they can be safely accessed by multiple
+     threads.
+
+   - Chapter 2 and Chapter 3 together lay the foundation for building /thread-safe
+     classes/ and /safely structuring concurrent applications/ using the
+     ~java.util.concurrent~ library classes.
+
+   - The function of /synchronized blocks and methods/:
+     + NOT ONLY ensure that operations execute atomically (as we see in Chapter 2)
+
+     + BUT ALSO ensure /memory visibility/ -- we also want to ensure that when a
+       thread modifies the state of an object, other threads can actually see the
+       changes that were made.
+
+       *Without synchronization, this may not happen.*
+
+   - You can ensure that /memory visibility/ either 
+     + by using explicit /synchronization/
+       or
+     + by taking advantage of the synchronization built into *library classes*
+       (for example, /classes/ in ~java.util.concurrent~).
+
+*** TODO 3.1 Visibility - 33
+    - In general,
+      there is *no guarantee* that the reading thread will see a value written by
+      another thread on a timely basis, or even at all.
+
+      In order to *ensure* _visibility of memory writes across threads_, you *must
+      use synchronization*.
+
+**** 3.1.1 Stale data - 35
+     Listing 3.2. Non-thread-safe mutable integer holder.
+     #+BEGIN_SRC java
+       @NotThreadSafe
+       public class MutableInteger {
+           private int value;
+           public int get() { return value; }
+           public void set(int value) { this.value = value; }
+       }
+     #+END_SRC
+
+     Listing 3.3. Thread-safe mutable integer holder.
+     #+BEGIN_SRC java
+       @ThreadSafe
+       public class SynchronizedInteger {
+           @GuardedBy("this") private int value;
+           public synchronized int get() { return value; }
+           public synchronized void set(int value) { this.value = value; }
+       }
+     #+END_SRC
+
+**** 3.1.2 Nonatomic 64-bit operations - 36
+**** 3.1.3 Locking and visibility - 36
+**** 3.1.4 Volatile variables - 37
+
+*** TODO 3.2 Publication and escape - 39
+**** 3.2.1 Safe construction practices - 41
+
+*** TODO 3.3 Thread confinement - 42
+**** 3.3.1 Ad-hoc thread confinement - 43
+**** 3.3.2 Stack confinement - 44
+**** 3.3.3 ThreadLocal - 45
+
+*** TODO 3.4 Immutability - 46
+**** 3.4.1 Final fields - 48
+**** 3.4.2 Example: Using volatile to publish immutable objects - 48
+
+*** TODO 3.5 Safe publication - 49
+**** 3.5.1 Improper publication: when good objects go bad - 50
+**** 3.5.2 Immutable objects and initialization safety - 51
+**** 3.5.3 Safe publication idioms - 52
+**** 3.5.4 Effectively immutable objects - 53
+**** 3.5.5 Mutable objects - 54
+**** 3.5.6 Sharing objects safely - 54
+     - *Thread-confined*
+     - *Shared read-only*
+     - *Shared thread-safe*
+     - *Guarded*
+
+** TODO 4 Composing Objects - 55
+*** TODO 4.1 Designing a thread-safe class - 55
+**** 4.1.1 Gathering synchronization requirements - 56
+**** 4.1.2 State-dependent operations - 57
+**** 4.1.3 State ownership - 57
+
+*** TODO 4.2 Instance confinement - 58
+**** 4.2.1 The Java monitor pattern - 60
+**** 4.2.2 Example: tracking fleet vehicles - 61
+
+*** TODO 4.3 Delegating thread safety - 62
+**** 4.3.1 Example: vehicle tracker using delegation - 64
+**** 4.3.2 Independent state variables - 66
+**** 4.3.3 When delegation fails - 67
+**** 4.3.4 Publishing underlying state variables - 68
+**** 4.3.5 Example: vehicle tracker that publishes its state - 69
+
+*** TODO 4.4 Adding functionality to existing thread-safe classes - 71
+**** 4.4.1 Client-side locking - 72
+**** 4.4.2 Composition - 73
+
+*** TODO 4.5 Documenting synchronization policies - 74
+**** 4.5.1 Interpreting vague documentation - 76
+
+** TODO 5 Building Blocks - 79
+*** TODO 5.1 Synchronized collections - 79
+**** 5.1.1 Problems with synchronized collections - 79
+**** 5.1.2 Iterators and ~ConcurrentModificationException~ - 82
+**** 5.1.3 Hidden iterators - 83
+
+*** TODO 5.2 Concurrent collections - 84
+**** 5.2.1 ~ConcurrentHashMap~ - 85
+**** 5.2.2 Additional atomic ~Map~ operations - 86
+**** 5.2.3 ~CopyOnWriteArrayList~ - 86
+
+*** TODO 5.3 Blocking queues and the producer-consumer pattern - 87
+**** 5.3.1 Example: desktop search - 89
+**** 5.3.2 Serial thread confinement - 90
+**** 5.3.3 Deques and work stealing - 92
+
+*** TODO 5.4 Blocking and interruptible methods - 92
+*** TODO 5.5 Synchronizers - 94
+**** 5.5.1 Latches - 94
+**** 5.5.2 ~FutureTask~ - 95
+**** 5.5.3 Semaphores - 98
+**** 5.5.4 Barriers - 99
+
+*** TODO 5.6 Building an efficient, scalable result cache - 101
+
+** TODO Summary of Part I
+* II Structuring Concurrent Applications - 111
+** TODO 6 Task Execution - 113
+*** 6.1 Executing tasks in threads - 113
+**** 6.1.1 Executing tasks sequentially - 114
+**** 6.1.2 Explicitly creating threads for tasks - 115
+**** 6.1.3 Disadvantages of unbounded thread creation - 116
+
+*** 6.2 The Executor framework - 117
+**** 6.2.1 Example: web server using ~Executor~ - 117
+**** 6.2.2 Execution policies - 118
+**** 6.2.3 Thread pools - 119
+**** 6.2.4 ~Executor~ lifecycle - 121
+**** 6.2.5 Delayed and periodic tasks - 123
+
+*** 6.3 Finding exploitable parallelism - 123
+**** 6.3.1 Example: sequential page renderer - 124
+**** 6.3.2 Result-bearing tasks: ~Callable~ and ~Future~ - 125
+**** 6.3.3 Example: page renderer with ~Future~ - 127
+**** 6.3.4 Limitations of parallelizing heterogeneous tasks - 127
+**** 6.3.5 ~CompletionService~: ~Executor~ meets ~BlockingQueue~ - 129
+**** 6.3.6 Example: page renderer with ~CompletionService~ - 130
+**** 6.3.7 Placing time limits on tasks - 131
+**** 6.3.8 Example: a travel reservations portal - 131
+
+*** Summary - 133
+
+** TODO 7 Cancellation and Shutdown - 135
+*** 7.1 Task cancellation - 135
+**** 7.1.1 Interruption - 138
+**** 7.1.2 Interruption policies - 141
+**** 7.1.3 Responding to interruption - 142
+**** 7.1.4 Example: timed run - 144
+**** 7.1.5 Cancellation via ~Future~ - 145
+**** 7.1.6 Dealing with non-interruptible blocking - 147
+**** 7.1.7 Encapsulating nonstandard cancellation with ~newTaskFor~ - 148
+
+*** 7.2 Stopping a thread-based service - 150
+**** 7.2.1 Example: a logging service - 150
+**** 7.2.2 ~ExecutorService~ shutdown - 153
+**** 7.2.3 Poison pills - 155
+**** 7.2.4 Example: a one-shot execution service - 156
+**** 7.2.5 Limitations of ~shutdownNow~ - 158
+
+*** 7.3 Handling abnormal thread termination - 161
+**** 7.3.1 Uncaught exception handlers - 162
+
+*** 7.4 JVM shutdown - 164
+**** 7.4.1 Shutdown hooks - 164
+**** 7.4.2 Daemon threads - 165
+**** 7.4.3 Finalizers - 165
+
+*** Summary
+
+** TODO 8 Applying Thread Pools - 167
+*** 8.1 Implicit couplings between tasks and execution policies - 167
+**** 8.1.1 Thread starvation deadlock - 168
+**** 8.1.2 Long-running tasks - 170
+
+*** 8.2 Sizing thread pools - 170
+*** 8.3 Configuring ThreadPoolExecutor - 171
+**** 8.3.1 Thread creation and teardown - 171
+**** 8.3.2 Managing queued tasks - 172
+**** 8.3.3 Saturation policies - 174
+**** 8.3.4 Thread factories - 175
+**** 8.3.5 Customizing ~ThreadPoolExecutor~ after construction - 177
+
+*** 8.4 Extending ThreadPoolExecutor - 179
+**** 8.4.1 Example: adding statistics to a thread pool - 179
+
+*** 8.5 Parallelizing recursive algorithms - 181
+**** 8.5.1 Example: A puzzle framework - 183
+
+*** Summary - 188
+
+** TODO 9 GUI Applications - 189
+*** TODO 9.1 Why are GUIs single-threaded? - 189
+**** 9.1.1 Sequential event processing - 191
+**** 9.1.2 Thread confinement in Swing - 191
+
+*** TODO 9.2 Short-running GUI tasks - 192
+*** TODO 9.3 Long-running GUI tasks - 195
+**** 9.3.1 Cancellation - 197
+**** 9.3.2 Progress and completion indication - 198
+**** 9.3.3 ~SwingWorker~ - 198
+
+*** TODO 9.4 Shared data models - 198
+**** 9.4.1 Thread-safe data models - 201
+**** 9.4.2 Split data models - 201
+
+*** TODO 9.5 Other forms of single-threaded subsystems - 202
+*** TODO Summary - 202
+
+* III Liveness, Performance, and Testing - 203
+** TODO 10 Avoiding Liveness Hazards - 205
+*** 10.1 Deadlock - 205
+**** 10.1.1 Lock-ordering deadlocks - 206
+**** 10.1.2 Dynamic lock order deadlocks - 207
+**** 10.1.3 Deadlocks between cooperating objects - 211
+**** 10.1.4 Open calls - 211
+**** 10.1.5 Resource deadlocks - 213
+
+*** 10.2 Avoiding and diagnosing deadlocks - 215
+**** 10.2.1 Timed lock attempts - 215
+**** 10.2.2 Deadlock analysis with thread dumps - 216
+
+*** 10.3 Other liveness hazards - 218
+**** 10.3.1 Starvation - 218
+**** 10.3.2 Poor responsiveness - 219
+**** 10.3.3 Livelock - 219
+
+*** Summary
+
+** TODO 11 Performance and Scalability - 221
+*** 11.1 Thinking about performance - 221
+**** 11.1.1 Performance versus scalability - 222
+**** 11.1.2 Evaluating performance tradeoffs - 223
+
+*** 11.2 Amdahl's law - 225
+**** 11.2.1 Example: serialization hidden in frameworks - 227
+**** 11.2.2 Applying Amdahl's law qualitatively - 228
+
+*** 11.3 Costs introduced by threads - 229
+**** 11.3.1 Context switching - 229
+**** 11.3.2 Memory synchronization - 230
+**** 11.3.3 Blocking - 232
+
+*** 11.4 Reducing lock contention - 232
+**** 11.4.1 Narrowing lock scope (“Get in, get out”) - 233
+**** 11.4.2 Reducing lock granularity - 235
+**** 11.4.3 Lock striping - 237
+**** 11.4.4 Avoiding hot fields - 238
+**** 11.4.5 Alternatives to exclusive locks - 239
+**** 11.4.6 Monitoring CPU utilization - 240
+**** 11.4.7 Just say no to object pooling - 241
+
+*** 11.5 Example: Comparing ~Map~ performance - 242
+*** 11.6 Reducing context switch overhead - 243
+*** Summary - 245
+
+** TODO 12 Testing Concurrent Programs - 247
+*** 12.1 Testing for correctness - 248
+**** 12.1.1 Basic unit tests - 250
+**** 12.1.2 Testing blocking operations - 251
+**** 12.1.3 Testing safety - 252
+**** 12.1.4 Testing resource management - 257
+**** 12.1.5 Using callbacks - 257
+**** 12.1.6 Generating more interleavings - 259
+
+*** 12.2 Testing for performance - 260
+**** 12.2.1 Extending ~PutTakeTest~ to add ~timing~ - 260
+**** 12.2.2 Comparing multiple algorithms - 263
+**** 12.2.3 Measuring responsiveness - 264
+
+*** 12.3 Avoiding performance testing pitfalls - 266
+**** 12.3.1 Garbage collection - 266
+**** 12.3.2 Dynamic compilation - 267
+**** 12.3.3 Unrealistic sampling of code paths - 268
+**** 12.3.4 Unrealistic degrees of contention - 268
+**** 12.3.5 Dead code elimination - 269
+
+*** 12.4 Complementary testing approaches - 270
+**** 12.4.1 Code review - 271
+**** 12.4.2 Static analysis tools - 271
+**** 12.4.3 Aspect-oriented testing techniques - 273
+
+*** Summary - 273
+
+* IV Advanced Topics - 275
+** TODO 13 Explicit Locks - 277
+*** 13.1 ~Lock~ and ~ReentrantLock~ - 277
+**** 13.1.1 Polled and timed lock acquisition - 279
+**** 13.1.2 Interruptible lock acquisition - 279
+**** 13.1.3 Non-block-structured locking - 281
+
+*** 13.2 Performance considerations - 282
+*** 13.3 Fairness - 283
+*** 13.4 Choosing between synchronized and ReentrantLock - 285
+*** 13.5 Read-write locks - 286
+*** Summary
+
+** TODO 14 Building Custom Synchronizers - 291
+*** 14.1 Managing state dependence - 291
+**** 14.1.1 Example: propagating precondition failure to callers - 292
+**** 14.1.2 Example: crude blocking by polling and sleeping - 295
+**** 14.1.3 Condition queues to the rescue - 296
+
+*** 14.2 Using condition queues - 298
+**** 14.2.1 The condition predicate - 299
+**** 14.2.2 Waking up too soon - 300
+**** 14.2.3 Missed signals - 301
+**** 14.2.4 Notification - 302
+**** 14.2.5 Example: a gate class - 304
+**** 14.2.6 Subclass safety issues - 304
+**** 14.2.7 Encapsulating condition queues - 306
+**** 14.2.8 Entry and exit protocols - 306
+
+*** 14.3 Explicit condition objects - 306
+*** 14.4 Anatomy of a synchronizer - 308
+*** 14.5 ~AbstractQueuedSynchronizer~ - 311
+**** 14.5.1 A simple latch - 313
+
+*** 14.6 AQS in ~java.util.concurrent~ synchronizer classes - 314
+**** 14.6.1 ~ReentrantLock~ - 314
+**** 14.6.2 ~Semaphore~ and ~CountDownLatch~ - 315
+**** 14.6.3 ~FutureTask~ - 316
+**** 14.6.4 ~ReentrantReadWriteLock~ - 316
+
+*** Summary - 317
+
+** TODO 15 Atomic Variables and Nonblocking Synchronization - 319
+*** 15.1 Disadvantages of locking - 319
+*** 15.2 Hardware support for concurrency - 321
+**** 15.2.1 Compare and swap - 321
+**** 15.2.2 A nonblocking counter - 322
+**** 15.2.3 CAS support in the JVM - 324
+
+*** 15.3 Atomic variable classes - 324
+**** 15.3.1 Atomics as “better volatiles” - 325
+**** 15.3.2 Performance comparison: locks versus atomic variables - 326
+
+*** 15.4 Nonblocking algorithms - 329
+**** 15.4.1 A nonblocking stack - 330
+**** 15.4.2 A nonblocking linked list - 330
+**** 15.4.3 Atomic field updaters - 335
+**** 15.4.4 The ABA problem - 336
+
+*** Summary
+
+** TODO 16 The Java Memory Model - 337
+*** 16.1 What is a memory model, and why would I want one? - 337
+**** 16.1.1 Platform memory models - 338
+**** 16.1.2 Reordering - 339
+**** 16.1.3 The Java Memory Model in 500 words or less - 339
+**** 16.1.4 Piggybacking on synchronization - 342
+
+*** 16.2 Publication - 344
+**** 16.2.1 Unsafe publication - 344
+**** 16.2.2 Safe publication - 346
+**** 16.2.3 Safe initialization idioms - 346
+**** 16.2.4 Double-checked locking - 348
+
+*** 16.3 Initialization safety - 349
+*** Summary
+
+* DONE Appendix A. Annotations for Concurrency - 353
+  CLOSED: [2018-08-17 Fri 16:16]
+** DONE A.1 Class annotations - 353
+   CLOSED: [2018-08-17 Fri 16:16]
+   - We use _THREE_ /class-level annotations/ to describe a class's intended
+     /thread-safety/ promises:
+     + ~@Immutable~: The /class/ is immutable, which implies ~@ThreadSafe~.
+
+     + ~@ThreadSafe~: Thread safe.
+
+     + ~@NotThreadSafe~: This is optional, and it is used only for extra clear
+       -- if you use the ~@Immutable~ and ~@ThreadSafe~ annotations, the left can
+       be cansidered _Not Thread Safe_ BY DEFAULT.
+
+** DONE A.2 Field and method annotations - 353
+   CLOSED: [2018-08-17 Fri 16:16]
+   - The /class-level annotations/ above are part of the *public documentation*
+     for the /class/.
+
+     Other aspects of a /class/'s /thread-safety/ strategy
+     + are *entirely for maintainers*
+       and
+     + are *NOT* part of its *public documentation*.
+
+   - /Classes/ that use locking SHOULD DOCUMENT
+     + which /state variables/ are guarded with which /locks/,
+       and
+     + which /locks/ are used to guard those /variables/.
+
+   - A common source of inadvertent non-thread-safety is when a thread-safe class
+     consistently uses locking to guard its state, but is later modified to add
+     either new state vari- ables that are not adequately guarded by locking, or
+     new methods that do not use locking properly to guard the existing state
+     variables. Documenting which variables are guarded by which locks can help
+     prevent both types of omissions.
+     =TODO= =SUMMARY=
+
+   - ~@GuardedBy(lock)~ documents that a field or method should be accessed only
+     with a specific lock held. The lock argument identifies the lock that
+     should be held when accessing the annotated field or method. The possible
+     values for lock are:
+
+     + ~@GuardedBy("this")~
+       the /intrinsic lock/ on the _containing object_ of this /field/ or
+       /method/.
+
+     + ~@GuardedBy("fieldName")~
+       the /lock/ associated with the object referenced by the named field,
+       * either an /intrinsic lock/ (for fields that do _NOT_ refer to a ~Lock~)
+         =TODO= =???=
+
+       * or an /explicit Lock/ (for fields that refer to a ~Lock~);
+         =TODO= =???=
+
+     + ~@GuardedBy("ClassName.fieldName")~
+       like ~@GuardedBy("fieldName")~, but referencing a /lock object/ held in a
+       /static field/ of _ANOTHER_ /class/;
+
+     + ~@GuardedBy("methodName()")~
+       the /lock object/ that is returned by calling the named /method/.
+
+     + ~@GuardedBy("ClassName.class")~
+       the /class literal object/ for the named /class/.
+
+     Using ~@GuardedBy~ to identify each /state variable/ that needs locking and
+     which lock guards it can assist in maintenance and code reviews, and can
+     help automated analysis tools spot potential /thread-safety/ errors.
+
+* Bibliography - 355
+* Index - 359

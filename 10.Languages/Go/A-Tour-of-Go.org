@@ -1,0 +1,729 @@
+#+TITLE: A Tour of Go
+#+AUTHOR: Alan A. A. Donovan, Brian W. Kernighan
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Using the tour
+** Welcome!
+*** 01. Hello, 世界
+*** 02. Go local
+*** 03. Go offline
+*** 04. The Go Playground
+
+* TODO Basics 
+** TODO Packages, variables, and functions.
+*** TODO 01. Packages
+*** DONE 02. Imports
+    CLOSED: [2018-05-11 Fri 04:12]
+    SYNTAX:
+    1. The one mostly used in this tutorial
+       #+BEGIN_SRC go
+         import (
+           "fmt"
+           "strings"
+         )
+       #+END_SRC
+
+    2. The one =Jian= prefers:
+       #+BEGIN_SRC go
+         import "fmt"
+         import "strings"
+       #+END_SRC
+
+*** DONE 03. Exported names
+    CLOSED: [2018-05-11 Fri 04:14]
+    If an identifier begins with a capital letter,
+    it is a name that can be exported!
+
+*** TODO 04. Functions
+*** TODO 05. Functions continued
+*** DONE 06. Multiple results
+    CLOSED: [2018-05-11 Fri 04:15]
+    Example:
+    #+BEGIN_SRC go
+      func swap2strings(x, y string) (string, string) {
+        return y, x
+      }
+    #+END_SRC
+
+*** DONE 07. Named return values
+    Example:
+    #+BEGIN_SRC go
+      func split(sum int) (x, y int) {
+        x = sum * 4 / 9
+        y = sum - x
+        return
+      }
+    #+END_SRC
+
+*** TODO 08. Variables
+*** TODO 09. Variables with initializers
+*** TODO 10. Short variable declarations
+*** TODO 11. Basic types
+*** TODO 12. Zero values
+*** TODO 13. Type conversions
+*** TODO 14. Type inference
+*** TODO 15. Constants
+*** TODO 16. Numeric Constants
+*** TODO 17. Congratulations!
+
+** TODO Flow control statements: ~for~, ~if~, ~else~, ~switch~ and ~defer~
+*** TODO 01. ~for~
+*** TODO 02. ~for~ continued
+*** TODO 03. ~for~ is Go's "while"
+*** TODO 04. Forever
+*** TODO 05. ~if~
+*** TODO 06. ~if~ with a short statement
+*** TODO 07. ~if~ and ~else~
+*** TODO 08. Exercise: Loops and Functions
+*** TODO 09. Switch
+*** TODO 10. Switch evaluation order
+*** TODO 11. Switch no condition
+*** TODO 12. Defer
+*** TODO 13. Stacking defers
+*** TODO 14. Congratulations!
+
+** TODO More types: structs, slices, and maps
+*** TODO 01. Pointers
+*** TODO 02. Structs
+*** TODO 03. Structs Fields
+*** TODO 04. Pointers to structs
+*** TODO 05. Structs Literals
+*** TODO 06. Arrays
+*** TODO 07. Slices
+*** TODO 08. Slices are like references to arrays
+*** TODO 09. Slice literals
+*** TODO 10. Slice defaults
+*** TODO 11. Slice length and capacity
+*** TODO 12. Nil Slices
+*** TODO 13. Creating a slice with ~make~
+*** TODO 14. Slices of slices
+*** TODO 15. Appending to a slice
+*** TODO 16. ~range~
+*** TODO 17. ~range~ continued
+*** TODO 18. Exercise: Slices
+*** TODO 19. ~map~'s
+*** TODO 20. ~map~ literals
+*** TODO 21. ~map~ literals continued
+*** TODO 22. Mutating ~map~'s
+*** TODO 23. Exercise: ~map~'s
+*** TODO 24. Function values
+*** TODO 25. Function closures
+*** TODO 26. Exercise: Fibonacci closure
+*** DONE 27. Congratulations!
+    CLOSED: [2018-05-11 Fri 04:29]
+*** 
+* TODO Methods and interfaces
+** DONE 01 Methods
+   CLOSED: [2018-05-10 Thu 21:43]
+   - Go is an OOP language, but it is NOT a class-based OOP language.
+
+   - You can define /methods/ on /types/.
+
+   - method :: a function with a special /receiver/ argument.
+
+   - The SYNTAX of defining a /method/:
+     #+BEGIN_SRC go
+       func (receiver receiverType) functionName(parameters...) optionalReturnList body
+     #+END_SRC
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "math"
+       )
+
+       type Vertex struct {
+         X, Y float64
+       }
+
+       func (v Vertex) Abs() float64 {
+         return math.Sqrt(v.X*v.X + v.Y*v.Y)
+       }
+
+       func main() {
+         v := Vertex{3, 4}
+         fmt.Println(v.Abs())
+       }
+     #+END_SRC
+     The ~Abs~ is a method of ~Vertex~, and ~(v Vertex)~ in the definition is
+     the /receiver/ part.
+
+** DONE 02 Methods are functions
+   CLOSED: [2018-05-10 Thu 21:43]
+   - A /method/ is just a /function/ with a /receiver argument/.
+
+   - It's easy to write a non-method /function/ to implement the functionality of
+     a /method/. For example, let's write an non-method ~Abs~ function:
+     #+BEGIN_SRC go
+       func Abs(v Vertex) float64 {
+         return math.Sqrt(v.X*v.X + v.Y*v.Y)
+       }
+     #+END_SRC
+
+** DONE 03 Methods continued
+   CLOSED: [2018-05-10 Thu 21:43]
+   - You can declare a /method/ on /non-struct types/, too.
+
+   - Example:
+     #+BEGIN_SRC go
+       type MyFloat float64
+
+       func (f MyFloat) Abs() float64 {
+         if f < 0 {
+           return float64(-f)
+         }
+
+         return float64(f)
+       }
+     #+END_SRC
+
+   - *RESTRICTION*:
+     A /type/ definition and its /methods/ should always be in the *same*
+     /package/.
+
+     + Rationale:
+       A /type/ and its /methods/ should be put together!!!
+
+       If NOT, the compiler cannot know the comprehensive information of a
+       /type/, and every people can add /methods/ to modify the functionality
+       related to a /type/. You evenly can add multiple same name /methods/ to
+       different /packages/, and confuse the compiler and the user!
+
+   - Due to this *RESTRICTION*, you know you cannot define a /method/ for a
+     built-in type for the reason that you don't have the ownership of it, and
+     you cannot modify the source code in the /package/ that contains it.
+
+     However, you can use ~type~ to create a new type, and add /methods/ to it
+     just like the ~MyFloat~ in the example code above.
+
+   - From the *RESTRICTION* =Jian= notice a *BAD design* of Go:
+     If /type/ and its /methods/ should be put together, WHY NOT design a syntax
+     like the /class definition syntax/ in other languages -- force the /method
+     definitions/ follow the their /receiver type definition/???
+
+
+
+** DONE 04 Pointer receivers
+   CLOSED: [2018-05-11 Fri 01:35]
+   - /Pointer receiver/ is very useful!
+     The /method/ with /pointer receiver/ can modify the object pointed by this /pointer/.
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "math"
+       )
+
+       type Vertex struct {
+         X, Y float64
+       }
+
+       func (v Vertex) Abs() float64 {
+         return math.Sqrt(v.X*v.X + v.Y*v.Y)
+       }
+
+       func (v *Vertex) Scale(f float64) {
+         v.X = v.X * f
+         v.Y = v.Y * f
+       }
+
+       func main() {
+         v := Vertex{3, 4}
+         v.Scale(10)
+         fmt.Println(v)
+         fmt.Println(v.Abs())
+       }
+     #+END_SRC
+
+     The output is:
+     ={30, 40}=
+     =50=
+
+   - If you modify the /receiver/ and get
+     #+BEGIN_SRC go
+       func (v Vertex) Scale(f float64) {
+         v.X = v.X * f
+         v.Y = v.Y * f
+       }
+     #+END_SRC
+
+     If keep the other part, the output now is:
+     ={3, 4}=
+     =5=
+
+   - =TODO= =TODO= =TODO= =TODO= =TODO= =TODO= =TODO=
+     The /receiver type/ has the _literal syntax_ ~*T~ for some /type/ ~T~.
+     (Also, ~T~ CANNOT itself be a pointer such as ~*int~.)
+     =From Jian= It seems this is a restriction! =TODO= Try to confirm this!
+
+** DONE 05 Pointers and functions
+   CLOSED: [2018-05-11 Fri 01:37]
+   Re-write the ~Abs~ and ~Scale~ /methods/ as /functions/.
+
+** DONE 06 Methods and pointer indirection
+   CLOSED: [2018-05-11 Fri 01:52]
+   - You must always follow the signature of a non-method /function/ to pass
+     right type parameters to it.
+
+     This is true for /pointer type/ and /non-pointer type/.
+
+     + If a /function/ parameter is of type ~*T~, you *cannot* pass ~T~ to it.
+
+     + If a /function/ parameter is of type ~T~, you *cannot* pass ~*T~ to it.
+
+   - The rules for /recivers/ are more flexible.
+     =From Jian= The compiler does the auto-reference and auto-dereference
+
+     + If a /method receiver/ is of type ~*T~, you can pass a /reciver/ of type
+       ~T~ or ~*T~ to it.
+
+     + If a /method receiver/ is of type ~T~, you can pass a /reciver/ of type
+       ~*T~ or ~T~ to it.
+
+   - =Jian= I merge my notes of the next section to this part.
+
+** DONE 07 Methods and pointer indirection (2)
+   CLOSED: [2018-05-11 Fri 02:02]
+
+** DONE 08 Choosing a value or pointer receiver
+   CLOSED: [2018-05-11 Fri 02:13]
+   There are *two* _reasons_ to use a /pointer receiver/:
+   - So that the /method/ can *modify* the /value/ that its /receiver/ points to.
+
+   - *Avoid copying* the /value/ on EACH /method/ call.
+       This can be more EFFICIENT if the /receiver/ is a LARGE /struct/, for
+     example.
+
+   - In this example, both ~Scale~ and ~Abs~ are with /receiver type/ ~*Vertex~,
+     _EVEN THOUGH_ the ~Abs~ /method/ NEEDN'T modify its /receiver/.
+
+   - In general, ALL /methods/ on a given type should have _either_ non-pointer
+     _or_ pointer receivers, but *not a mixture of both*. =IMPORTANT=
+
+     =TODO= (We'll see why over the next few pages.)
+
+** DONE 09 Interfaces
+   CLOSED: [2018-05-10 Thu 21:49]
+   - interface type :: an /abstract type/ that contains a set of /method
+                       signatures/.
+
+   - A *value* of /interface type/ can hold *any value* that _implements_ those
+     /methods/.
+
+   - Example:
+     #+BEGIN_SRC go
+       type Abser interface {
+         Abs() float64
+       }
+
+       func main() {
+         var a Abser
+         f := MyFloat(-math.Sqrt2)
+         v := Vertex{3, 4}
+
+         a = f  // a MyFloat implements Abser
+         a = &v // a *Vertex implements Abser
+
+         fmt.Println(a.Abs())
+       }
+
+       type MyFloat float64
+
+       func (f MyFloat) Abs() float64 {
+         if f < 0 {
+           return float64(-f)
+         }
+
+         return float64(f)
+       }
+
+       type Vertex struct {
+         X, Y float64
+       }
+
+       func (v *Vertex) Abs() float64 {
+         return math.Sqrt(v.X*v.X + v.Y*v.Y)
+       }
+     #+END_SRC
+
+     + Pay attention that ~Abs~ /method/ of ~*Vertex~.
+
+       ~Abs~ is NOT a /method/ of ~Vertex~ -- it is a /method/ of the /pointer/
+       to ~Vertex~. This is why we do ~a = &v~, and we cannot do ~a = v~.
+
+** DONE 10 Interfaces are implemented implicitly
+   CLOSED: [2018-05-10 Thu 22:58]
+   - =From Jian=
+     - What are BAD:
+       + Since the /methods/ of a /type/ can scatter in *MULTIPLE* files in one
+         /package/, the programmer must scan the whole /package/ to find out if a
+         /type/ implements some /interfaces/.
+
+         If Go forbid the programmer from writing the /methods/ of a /type/ in
+         *MULTIPLE* files, this problem can be solved automatically.
+           Sadly, Go is NOT designed in this way! A programmer, a team, or a
+         company can create their rules to follow to satisfy this requirement,
+         but they cannot assume the other people follow their rules!!!
+
+     - What may be GOOD:
+       + Since
+         Go doesn't have /inheritance/, and Go's /interfaces/ can only have
+         /method names and their corresponding signatures/ (NO /default
+         method implemtations/ like in Java, Scala, C++),
+
+         Go doesn't need to solve any confliction in /mulitple-inheritance/ and
+         /(with default method implementation) multiple-implementation/.
+
+** DONE 11 Interfaces are implemented implicitly
+   - Polymorphism??? =from jian= ???????
+
+** DONE 12 Interface values with ~nil~ underlying values
+   CLOSED: [2018-05-10 Thu 23:13]
+   The Go's way to get rid of null pointer exception:
+
+   When you call a /method/ on a /receiver/, Go doesn't crash if the /receiver/
+   is a ~nil~. It will run the /method/ of the annotated /type/, and the body of
+   this /method/ can make decision what to do!
+
+   Here is a /method/, whose body knows how to deal with ~nil~:
+   #+BEGIN_SRC go
+     func (t *T) M() {
+       if t == nil {
+         fmt.Println("<nil>")
+         return
+       }
+
+       fmt.Println(t.S)
+     }
+   #+END_SRC
+
+** DONE 13 ~nil~ interface values
+   - A ~nil~ /interface value/ holds _neither_ /value/ _nor_ /concrete type/.
+     The output of ~fmt.Printf("(%v, %T)\n")~ is =(<nil>, <nil>)=
+
+   - Calling a /method/ on /a ~nil~ value interface/ is a *run-time error*
+     because ~nil~ doesn't have this /concrete method/ to call.
+     #+BEGIN_SRC go
+       type I interface {
+         M()
+       }
+
+       func main() {
+         var i I
+         i.M()
+       }
+     #+END_SRC
+
+     + Result:
+       #+BEGIN_SRC text
+         panic: runtime error: invalid memory address or nil pointer dereference
+         [signal SIGSEGV: segmentation violation code=0xffffffff addr=0x0 pc=0xd57a4]
+  
+         goroutine 1 [running]:
+         main.main()
+           /tmp/sandbox992795705/main.go:12 +0x24
+       #+END_SRC
+
+   - =From Jian=
+     Go is a language that was released in 2012, but still includes Tony Hoare's
+     "Billion Dollar Mistake"!!! WHY??? It doesn't need to include ~nil~ to be
+     compatible with some other languages like C++ or Scala!
+
+** DONE 14 The empty interface
+   CLOSED: [2018-05-10 Thu 23:28]
+   - The empty interface :: ~interface{}~
+
+   - The /empty interface/ is used to *handle* /unknown type/.
+
+   - =From Jian=
+     The /empty interface/ is like Java's ~Object~ and Scala's ~Any~.
+
+     However, WHY does the designer choose such an UGLY SYNTAX.
+     WHY NOT give it a short name!
+
+** DONE 15 Type assertions
+   CLOSED: [2018-05-10 Thu 23:35]
+   - type assertion :: provides access to an /interface/ value's underlying /concrete value/.
+
+   - The SYNTAX of /type assertion/:
+     the right hand side of this declaration ~t := i.(T)~.
+
+   - A /panic/ will be triggered if ~i~ doesn't implement the /interface/ ~T~ in
+     the above example.
+
+   - You can avoid the /panic/ by doing the /type assertion check/ at the same
+     time of doing the /type assertion/ by doing
+     ~t, ok := i.(T)~
+
+     + If ~i~ holds a ~T~,
+       then ~t~ will be the underlying value and ~ok~ will be ~true~.
+
+     + If *NOT*, ~ok~ will be ~false~ and ~t~ will be the /zero value/ of /type/
+       ~T~, and *NO* /panic/ occurs.
+
+   - You may notice the ~t, ok := i.(T)~ SYNTAX is similar to a SYNTAX we use to
+     work with a ~map~ data structure.
+
+** DONE 16 Type switches
+   CLOSED: [2018-05-11 Fri 02:18]
+   - type switch :: a construct that permits _several /type assertions/ in
+                    series_.
+
+   - /type switch/ SYNTAX
+     #+BEGIN_SRC go
+       switch v := i.(type) {
+       case T:
+         // here v has type T
+       case S:
+         // here v has type S
+       default:
+         // no match; here v has the same type as i
+       }
+     #+END_SRC
+
+     + The ~type~ in the first line is the keyword ~type~.
+
+   - Example: 
+     We use the /empty interface/ here
+     #+BEGIN_SRC go
+       package main
+
+       import "fmt"
+
+
+       func do(i interface{}) {
+         switch v := i.(type) {
+         case int:
+           fmt.Printf("Twice %v is %v\n", v, v*2)
+         case string:
+           fmt.Printf("%q is %v bytes long\n", v, len(v))
+         default:
+           fmt.Printf("I don't know about type %T!\n", v)
+         }
+       }
+
+       func main() {
+         do(21)
+         do("hello")
+         do(true)
+       }
+
+     #+END_SRC
+
+** DONE 17 Stringers
+   CLOSED: [2018-05-11 Fri 02:21]
+   #+BEGIN_SRC go
+     // from the package `fmt`
+
+     type Stringer interface {
+       String() string
+     }
+   #+END_SRC
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import "fmt"
+
+
+       type Person struct {
+         Name string
+         Age  int
+       }
+
+       func (p Person) String() string {
+         return fmt.Sprintf("%v (%v years)", p.Name, p.Age)
+       }
+
+       func main() {
+         a := Person{"Arthur Dent", 42}
+         z := Person{"Zaphod Beeblebrox", 9001}
+         fmt.Println(a, z)
+       }
+     #+END_SRC
+
+** DONE 18 Exercise: Stringers
+   CLOSED: [2018-05-11 Fri 03:10]
+   #+BEGIN_SRC go
+     package main
+
+     import "fmt"
+
+
+     type IPAddr [4]byte
+
+     // DONE: implement this method
+     func (ip IPAddr) String() string {
+       // Since the length of `IPAddr` is 4, which is fixed,
+       // the solution here, hard code the elements, is reasonable.
+       return fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
+     }
+
+     func main() {
+       hosts := map[string]IPAddr{
+         "loopback":  {127, 0, 0, 1},
+         "googleDNS": {8, 8, 8, 8},
+       }
+       for name, ip := range hosts {
+         fmt.Printf("%v: %v\n", name, ip)
+       }
+     }
+   #+END_SRC
+** DONE 19 Errors
+   CLOSED: [2018-05-11 Fri 03:26]
+   The ~error~ type is a built-in /interface/:
+   #+BEGIN_SRC go
+     type error interface {
+       Error() string
+     }
+   #+END_SRC
+
+   - A ~nil~ ~error~ denotes *success*;
+     a non-nil ~error~ denotes *failure*.
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "time"
+       )
+
+       type MyError struct {
+         When time.Time
+         What string
+       }
+
+       func (e *MyError) Error() string {
+         return fmt.Sprintf("at %v, %s", e.When, e.What)
+       }
+
+       func run() error {
+         // `*MyError` implements the `Error` method, and `*MyError` is an error,
+         // while `MyError` is NOT!
+         return &MyError{
+           time.Now(),
+           "it didn't work",
+         }
+       }
+
+       func main() {
+         if err := run(); err != nil {
+           fmt.Println(err)
+         }
+       }
+
+     #+END_SRC
+
+** TODO 20 Exercise: Errors
+** DONE 21 Readers
+   CLOSED: [2018-05-11 Fri 03:32]
+   The ~io.Reader~ /interface/
+
+   - Many /types/ implements this /interface/.
+
+   - The ~io.Reader~ /interface/ has a ~Read~ method:
+     ~func (T) Read(b []byte) (n int, err error)~
+
+   - ~Read~ populates the given /byte slice/ with data
+     and
+     *returns* the _number of bytes_ populated and an /error value/.
+
+     It returns an ~io.EOF~ /error/ when the stream ends.
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "io"
+         "strings"
+       )
+
+       func main() {
+         r := strings.NewReader("Hello, Reader!")
+
+         b := make([]byte, 8)
+         for {
+           n, err := r.Read(b)
+           fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
+           fmt.Printf("b[:n] = %q\n", b[:n])
+
+           if err == io.EOF {
+             break
+           }
+         }
+       }
+     #+END_SRC
+
+** TODO 22 Exercise: Readers
+   =TODO= ?????
+
+** TODO 23 Exercise: rot13Reader
+** DONE 24 Images
+   CLOSED: [2018-05-11 Fri 03:57]
+   The ~image.Image~ /interface/:
+   #+BEGIN_SRC go
+     package image
+
+     type Image interface {
+       ColorModel() color.Model
+       Bounds() Rectangle
+       At(x, y int) color.Color
+     }
+   #+END_SRC
+
+   - The absolute path of the ~Rectangle~ is ~image.Rectangle~.
+     Since it's inside the /package/, no prefix /package/ name required.
+
+   - ~color.Model~ and ~color.Color~ are also /interfaces/ in the ~image/color~
+     /package/.
+
+     In our examples, we use the predefined implementations ~color.RGBA~ and
+     ~color.RGBAModel~.
+
+   - Example:
+     #+BEGIN_SRC go
+       package main
+
+       import (
+         "fmt"
+         "image"
+       )
+
+
+       func main() {
+         m := image.NewRGBA(image.Rect(0, 0, 100, 100))
+         fmt.Println(m.Bounds())
+         fmt.Println(m.At(0, 0).RGBA())
+       }
+     #+END_SRC
+
+   - =TODO= =TODO= =TODO=
+     Read the API to understand what does the first line in ~main~ do!?
+
+** TODO 25 Exercise: Images
+** TODO 26 Congratulations!
+
+* TODO Concurrency
+** 01 Goroutines
+** 02 Channels
+** 03 Buffered Channels
+** 04 Range and Close
+** 05 Select
+** 06 Default Selection
+** 07 Exercise: Equivalent Binary Trees
+** 08 Exercise: Equivalent Binary Trees
+** 09 ~sync.Mutex~
+** 10 Exercise: Web Crawler
+** 11 Where to Go from here ...

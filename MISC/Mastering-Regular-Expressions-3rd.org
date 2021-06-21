@@ -1,0 +1,280 @@
+#+TITLE: Mastering Regular Expressions
+#+VERSION: 2006
+#+AUTHOR: Jeffrey E.F. Friedl
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface
+  - =from Jian=
+    In an ideal world of programming, most of the data are structured, and we
+    don't need to frequently use /regular expressions/.
+    However, in this is not the case in the real world!
+
+  - To master /regular expressions/ is to master your (=from Jian= un-structured)
+    data.
+  
+** DONE The Need for This Book
+   CLOSED: [2020-11-08 Sun 21:04]
+** DONE Intended Audience
+   CLOSED: [2020-11-08 Sun 21:05]
+   =from Jian= Summary: Everyone who frequently use /regular expressions/.
+   
+** DONE How to Read This book
+   CLOSED: [2020-11-08 Sun 22:30]
+   This book is part tutorial, part reference manual, and part story, depending on
+   when you use it.
+   
+   - It is not recommended to use this book as a reference before reading Chapter
+     1 ~ 6, which are important.
+   
+** TODO Organization
+   The ten chapters of this book can be logically divided into roughly three parts.
+
+   - Here's a quick overview:
+     * The Introduction
+       + Chapter 1 introduces the concept of regular expressions.
+       + Chapter 2 takes a look at text processing with regular expressions.
+       + Chapter 3 provides an overview of features and utilities, plus a bit of history.
+
+     * The Details
+       + Chapter 4 explains the details of how regular expressions work.
+       + Chapter 5 works through examples, using the knowledge from Chapter 4.
+       + Chapter 6 discusses efficiency in detail.
+         
+     * Tool-Specific Information
+       + Chapter 7 covers Perl regular expressions in detail.
+       + Chapter 8 looks at Sun's java.util.regex package.
+       + Chapter 9 looks at .NET's language-neutral regular-expr ession package.
+       + Chapter 10 looks at PHP's preg suite of regex functions.
+
+   - The introduction elevates the absolute novice to "issue-aware" novice.
+     (1) Readers with a fair amount of experience can feel free to skim the early chapters,
+     (2) BUT *I particularly recommend _Chapter 3_ even for the grizzled expert.*
+     * _Chapter 1, Introduction to Regular Expressions_,
+       is geared toward the complete novice.
+       1. I introduce the concept of /regular expressions/ using the widely available
+          program ~egrep~,
+       2. offer my perspective on how to think /regular expressions/,
+       3. instilling a solid foundation for the advanced concepts presented in
+          later chapters.
+
+     * _Chapter 2, Extended Introductory Examples_,
+       looks at real text processing in a programming language that has
+       regular-expression support.
+       
+       + The additional examples provide a basis for the detailed discussions of
+         later chapters, and show additional important thought processes behind
+         crafting advanced regular expressions.
+
+       + To provide a feel for how to "speak in regular expressions," this chapter
+         takes a problem requiring an advanced solution and shows ways to solve
+         it using two unrelated regular-expression-wielding tools.
+
+     * _Chapter 3, Overview of Regular Expression Features and Flavors_,
+       provides an overview of the wide range of /regular expressions/ commonly
+       found in tools today.
+       
+       + Due to their turbulent history, current commonly-used regular-expression
+         flavors can differ greatly.
+       
+       + This chapter also takes a look at a bit of the history and evolution of
+         regular expressions and the programs that use them.
+       
+       + The end of this chapter also contains the "Guide to the Advanced Chapters."
+         This guide is your road map to getting the most out of the advanced
+         material that follows.
+   
+*** TODO The Details
+    Once you have the basics down, it's time to investigate the how and the why.
+    Like the "teach a man to fish" parable, truly understanding the issues will
+    allow you to apply that knowledge whenever and wherever regular expressions
+    are found.
+    - Chapter 4, The Mechanics of Expression Processing, ratchets up the pace several
+      notches and begins the central core of this book. It looks at the important
+      inner workings of how regular expression engines really work from a practical
+      point of view. Understanding the details of how regular expressions are
+      handled goes a very long way toward allowing you to master them.
+
+    - Chapter 5, Practical Regex Techniques, then puts that knowledge to high-level,
+      practical use. Common (but complex) problems are explor ed in detail, all with
+      the aim of expanding and deepening your regular-expr ession experience.
+
+    - Chapter 6, Crafting an Efficient Expression, looks at the real-life efficiency
+      ramifications of the regular expressions available to most programming
+      languages. This chapter puts information detailed in Chapters 4 and 5 to
+      use for exploiting an engine's strengths and stepping around its
+      weaknesses.
+
+*** TODO Tool-Specific Information
+    Once the lessons of Chapters 4, 5, and 6 are under your belt, there is
+    usually little to say about specific implementations. However, I've
+    devoted an entire chapter to each of four popular systems:
+    - Chapter 7, Perl, closely examines regular expressions in Perl, arguably the
+      most popular regular-expression -- laden pr ogramming language in use today.
+      It has only four operators related to regular expressions, but their myriad
+      of options and special situations provides an extremely rich set of programming
+      options -- and pitfalls. The very richness that allows the programmer to move
+      quickly from concept to program can be a minefield for the uninitiated.
+      This detailed chapter clears a path.
+
+    - Chapter 8, Java, looks in detail at the java.util.regex regular-expr ession
+      package, a standard part of the language since Java 1.4. The chapter's primary
+      focus is on Java 1.5, but differ ences in both Java 1.4.2 and Java 1.6 are noted.
+      
+    - Chapter 9, .NET, is the documentation for the .NET regular-expr ession library
+      that Microsoft neglected to provide. Whether using VB.NET, C#, C++, JScript,
+      VBscript, ECMAScript, or any of the other languages that use .NET components,
+      this chapter provides the details you need to employ .NET regular-expr essions
+      to the fullest.
+      
+    - Chapter 10, PHP, provides a short introduction to the multiple regex engines
+      embedded within PHP, followed by a detailed look at the regex flavor and API
+      of its preg regex suite, powered under the hood by the PCRE regex library.
+    
+** TODO Typographical Conventions
+** TODO Exercises
+** TODO Links, Code, Errata, and Contacts
+** TODO Personal Comments and Acknowledgments
+* TODO 1 Introduction to Regular Expressions
+  - Here's the scenario: you're given the job of checking the pages on a web server
+    for doubled words (such as "this this"), a common problem with documents subject
+    to heavy editing. Your job is to create a solution that will:
+    * Accept any number of files to check, report each line of each file that has
+      doubled words, highlight (using standard ANSI escape sequences) each doubled
+      word, and ensure that the source filename appears with each line in the
+      report.
+      
+    * Work across lines, even finding situations where a word at the end of one
+      line is repeated at the beginning of the next.
+
+    * Find doubled words despite capitalization differ ences, such as with
+      'The the...', as well as allow differing amounts of whitespace (spaces,
+      tabs, newlines, and the like) to lie between the words.
+
+    * Find doubled words even when separated by HTML tags. HTML tags are for marking
+      up text on World Wide Web pages, for example, to make a word bold:
+      '...it is <B>very</B> very important...'.
+
+  - That's certainly a tall order! But, it's a real problem that needs to be solved.
+    At one point while working on the manuscript for this book, I ran such a
+    tool on what I'd written so far and was surprised at the way numerous
+    doubled words had crept in. Ther e ar e many programming languages one could
+    use to solve the problem, but one with regular expression support can make
+    the job substantially easier.
+
+  - Regular expressions ar e the key to powerful, flexible, and efficient text
+    processing. Regular expressions themselves, with a general pattern notation
+    almost like a mini pr ogramming language, allow you to describe and parse text.
+    With additional support provided by the particular tool being used, regular
+    expressions can add, remove, isolate, and generally fold, spindle, and mutilate
+    all kinds of text and data.
+
+  - It might be as simple as a text editor's search command or as powerful as a full
+    text processing language. This book shows you the many ways regular expressions
+    can increase your productivity. It teaches you how to think regular expressions
+    so that you can master them, taking advantage of the full magnitude of their power.
+
+  - A full program that solves the doubled-word problem can be implemented in just
+    a few lines of many of today's popular languages. With a single regular-expression
+    search-and-r eplace command, you can find and highlight doubled words in the
+    document. With another, you can remove all lines without doubled words (leaving
+    only the lines of interest left to report). Finally, with a third, you can ensure
+    that each line to be displayed begins with the name of the file the line came from.
+    We'll see examples in Perl and Java in the next chapter.
+
+  - The host language (Perl, Java, VB.NET, or whatever) provides the peripheral
+    processing support, but the real power comes from regular expressions. In
+    harnessing this power for your own needs, you learn how to write regular
+    expressions to identify text you want, while bypassing text you don't. You
+    can then combine your expr essions with the language's support constructs to
+    actually do something with the text (add appropriate highlighting codes,
+    remove the text, change the text, and so on).
+  
+* TODO 2 Extended Introductory Examples
+* TODO 3 Overview of Regular Expression Features and Flavors
+* TODO 4 The Mechanics of Expression Processing
+* TODO 5 Practical Regex Techniques
+* TODO 6 Crafting an Efficient Expression
+* TODO 7 Perl
+* TODO 8 Java
+  - Java has had a native regex package, ~java.util.regex~,
+    since the early-2002 release of Java 1.4.0.
+    + It has fairly good Unicode support
+    + =TODO= It matches against ~CharSequence~ objects, so it can be quite
+      flexible in its application.
+
+  - Officially, this book covers Java 1.5.0.
+
+    Important differences from Java 1.4.2 and the second 1.6 beta will be
+    indicated.
+    (=TODO= The differences are also summarized at the end of this chapter)
+
+  - *Reliance on Earlier Chapters* 
+    =TODO=
+
+  - =TODO=
+
+** TODO Java's Regex Flavor
+   - =TODO= ~java.util.regex~ is powered by a /Traditional NFA/ (metioned in
+     Chapters 4, 5, and 6).
+
+   - Table 8-2 on the facing page summarizes its metacharacters.
+*** TODO Java Support for ~\p{...}~ and ~\P{...}~
+     - The ~\p{...}~ and ~\P{...}~ constructs support
+       + _Unicode properties and blocks_,
+         as well as
+       + _special Java character properties_.
+
+     - Unicode support is as of Unicode Version 4.0.0.
+       (Java 1.4.2's support is only as of Unicode Version 3.0.0.)
+       =FROM JIAN= how about Java 8 and 9???
+
+**** TODO Unicode properties
+**** TODO Unicode blocks
+**** TODO Special Java character properties
+*** TODO Unicode Line Terminators
+** Using ~java.util.regex~
+** The ~Pattern.compile()~ Factory
+*** Pattern's matcher method
+** The Matcher Object
+*** Applying the Regex
+*** Querying Match Results
+**** Match-result example
+*** Simple Search and Replace
+**** Simple search and replace examples
+**** The replacement argument
+*** Advanced Search and Replace
+**** Search-and-replace examples
+*** In-Place Search and Replace
+**** Using a different-sized replacement
+*** The Matcher's Region
+**** Points to keep in mind
+**** Setting and inspecting region bounds
+**** Looking outside the current region
+**** Transparent bounds
+**** Anchoring bounds
+*** Method Chaining
+*** Methods for Building a Scanner
+**** Examples illustrating ~hitEnd~ and ~requireEnd~
+**** The ~hitEnd~ bug and its workaround
+*** Other Matcher Methods
+**** Querying a matcher's target text
+** Other Patter n Methods
+*** Pattern's split Method, with One Argument
+**** Empty elements with adjacent matches
+*** Pattern's split Method, with Two Argument
+**** Split with a limit less than zero
+**** Split with a limit of zero
+**** Split with a limit greater than zero
+** Additional Examples
+*** Adding Width and Height Attributes to Image Tags
+*** Validating HTML with Multiple Patter ns Per Matcher
+**** Multiple Patterns and the One-Argument ~find()~
+*** Parsing Comma-Separated Values (CSV) Text
+** Java Version Differences
+*** Differences Between 1.4.2 and 1.5.0
+**** New methods in Java 1.5.0
+**** Unicode-support differences between 1.4.2 and 1.5.0
+*** Differences Between 1.5.0 and 1.6
+* TODO 9 .NET
+* TODO 10 PHP

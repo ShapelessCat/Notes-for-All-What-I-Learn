@@ -1,0 +1,497 @@
+#+TITLE: Effective Scala
+#+VERSION: 20XX
+#+AUTHOR: Marius Eriksen
+#+ORGANIZATION: Twitter Inc.
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Introduction
+  - x
+
+* DONE Formatting
+  CLOSED: [2018-10-05 Fri 11:44]
+  This doc adhere to the OFFICIAL /Scala style guide/ plus the following rules.
+
+** DONE Whitespace
+   CLOSED: [2018-10-05 Fri 11:16]
+   =Check if this is the same as the Scala Style Guide=
+   - Indent by *two spaces*.
+
+   - Try to _avoid lines greater than_ *100 columns* in length.
+
+   - Use *one blank line* between /method/, /class/, and /object definitions/.
+     =from Jian= I prefer add *two blank lines* between class-level things.
+
+** DONE Naming
+   CLOSED: [2018-10-05 Fri 11:27]
+   - Use SHORT _names_ for small scopes, and use LONGER _names_ for larger scopes.
+
+   - Use common _abbreviations_ but eschew esoteric ones
+     + comment:
+       Everyone knows ~ok~, ~err~, or ~defn~ whereas ~sfri~ is NOT so common --
+       =from Jian=
+       you should only use a name like this when your code is read by a specific
+       group of people, who have this kind of domain knowledge.
+
+   - Don't rebind names for different uses -- use ~val~'s
+
+   - Avoid using ~`~ s to overload reserved names.
+     For example, use ~typ~ instead of ~`type`~
+
+   - Use _active names_ for operations with /side effects/
+     ~user.activate()~ *not* ~user.setActive()~
+     =???= =TODO= =???=
+
+   - Use descriptive names for /methods/ that return values
+     ~src.isDefined~ *not* ~src.defined~
+
+   - *Don't prefix* /getters/ with ~get~ prefix
+     As per the previous rule, it's redundant: ~site.count~ *not* ~site.getCount~
+
+   - *Don't repeat names* that are already encapsulated in /package/ or /object/
+     name
+
+     *Prefer*
+     #+BEGIN_SRC scala
+       object User {
+         def get(id: Int): Option[User]
+       }
+     #+END_SRC
+
+     *TO*
+
+     #+BEGIN_SRC scala
+       object User {
+         def getUser(id: Int): Option[User]
+       }
+     #+END_SRC
+     They are redundant in use: ~User.getUser~ provides no more information than
+     ~User.get~.
+
+** DONE Imports
+   CLOSED: [2018-10-05 Fri 11:35]
+   - *Sort ~import~ lines alphabetically*
+     This makes it easy to examine visually, and is simple to automate.
+
+   - Use braces when importing several names from a package
+     ~import com.twitter.concurrent.{Broker, Offer}~
+
+   - Use /wildcards/ when *MORE THAN _six_ names* are imported
+     e.g.: ~import com.twitter.concurrent._~
+     Don't apply this blindly: some packages export too many names
+
+   - When using /collections/, qualify names by importing ~scala.collection.immutable~
+     and/or ~scala.collection.mutable~ --- mutable and immutable collections
+     have dual names. Qualifiying the names makes is obvious to the reader which
+     variant is being used (e.g. ~immutable.Map~)
+
+     =from Jian= I prefer using, for example, non-prefixed ones as immutable!
+
+   - *Do not use relative imports from other packages* =IMPORTANT=
+     Avoid
+     #+BEGIN_SRC scala
+       import com.twitter
+       import concurrent
+     #+END_SRC
+
+     in favor of the unambiguous
+
+     #+BEGIN_SRC scala
+       import com.twitter.concurrent
+     #+END_SRC
+
+   - Put ~import~'s *at the top of the file*
+     *The reader can refer to ALL _imports_ in one place.*
+
+** DONE Braces
+   CLOSED: [2018-01-31 Wed 18:43]
+   Avoid using braces for single expression.
+   For example,
+   Use ~def square(x: Int) = x * x~, rather than ~def square(x: Int) = { x * x }~
+
+** DONE Pattern matching
+   CLOSED: [2018-01-31 Wed 18:47]
+   Use /partial function/, rather than explicitly write ~match~
+   #+BEGIN_SRC scala
+     list map {
+       case Some(x) => x
+       case None => default
+     }
+   #+END_SRC
+
+   Do *NOT* use
+   #+BEGIN_SRC scala
+     list map { item =>
+       item match {
+         case Some(x) => x
+         case None    => default
+       }
+     }
+   #+END_SRC
+
+** DONE Comments
+   CLOSED: [2018-10-05 Fri 11:41]
+   - This doc prefer
+     #+BEGIN_SRC scala
+       /**
+         * ServiceBuilder builds services
+         * ...
+         */
+     #+END_SRC
+
+     rather than the ScalaDoc style:
+     #+BEGIN_SRC scala
+       /** ServiceBuilder builds services
+         * ...
+         */
+     #+END_SRC
+
+   - =from Jian=
+     Which style to choose depends the project team preference!!!
+
+   - Do NOT resort to ASCII art or other visual embelishments.
+
+* TODO Types and Generics
+** DONE Return type annotations
+   CLOSED: [2018-02-01 Thu 12:05]
+   =From Jian= Re-write the note for this section =TODO=
+
+   _Almost all_ /public methods/ should be annotated with /return types/,
+   if not all.
+
+   Explicitly annotate the /types/ of all parts of the public API is good for
+   *maintaining* /backward compatibility/.
+
+   - Omit /return types/ for
+     + /non-public methods/
+       OR
+     + the /return type/ is OBVIOUS
+       For example, ~def x = 3~
+
+   - This is _ESPECIALLY important_ when *instantiating objects with mixins* as
+     the scala compiler creates /singleton types/ for these.
+
+     =Comment from Jian= This is also an important reason WHY we should annotate
+     type or return type for all parts of public API.
+
+     For example, ~make~ in:
+     #+BEGIN_SRC scala
+       trait Service
+
+       // Somewhere in a class or object
+       def make() = new Service {
+         def getId = 123
+       }
+     #+END_SRC
+     + Since the /method/ ~make()~ has no explicit /return type/ annotation, the
+       compiler will try to infer and get/create the refinement type
+       ~Object with Service{def getId: Int}~.
+
+     + Instead if use an explict annotation:
+       ~def make(): Service = new Service{}~
+
+       Now the author is free to mix in MORE /tratis/ *WITHOUT* changing the
+       type of ~make()~, which might be a part of the public API.
+       *This make it easier to manage backwards compatibility*.
+
+   - =TODO= =!!!=
+     =IMPORTANT=
+     *Let the compiler to check the inferred /singleton (refinement) type/, which
+     can be a potential disaster of the pubic API.*
+
+** TODO Variance
+** DONE Type aliases
+   CLOSED: [2018-02-01 Thu 13:12]
+   - A /type alias/ is *NOT a new* /type/.
+
+   - Use type aliases when they provide convenient naming or clarify purpose,
+
+     but do not alias types that are self-explanatory.
+     For example, ~() => Int~ is clearer than
+
+   - *BAD* example of using /type aliases/
+     #+BEGIN_SRC scala
+       type IntMaker = () => Int
+       // Use IntMaker
+     #+END_SRC
+
+   - *GOOD* example of using /type aliases/
+     #+BEGIN_SRC scala
+       class ConcurrentPool[K, V] {
+         type Queue = ConcurrentLinkedQueue[V]
+         type Map   = ConcurrentHashMap[K, Queue]
+         // ...
+       }
+     #+END_SRC
+     + Communicate purpose
+     + Enhance brevity
+
+   - An usual mistake:
+     forget /type aliases/, and use /subclass/.
+
+     For example,
+     Use ~type SocketFactory = SocketAddress => Socket~,
+     rather than ~trait SocketFactory extends (SocketAddress => Socket)~
+
+   - Put /type aliases/ in /package objects/ to make it _toplevel names_.
+     For example,
+     #+BEGIN_SRC scala
+       package com.twitter
+
+       package object net {
+         type SocketFactory =
+           SocketFactory => Socket
+       }
+     #+END_SRC
+
+** DONE Implicits
+   CLOSED: [2018-02-01 Thu 13:18]
+   - /Implicts/ should be used *sparingly*.
+     They are a powerful type system feature.
+
+   - It's definitely OK to use /implicits/ in the following situations:
+     =From Jian= Examples ???
+     + Extending or adding a Scala-style collection
+
+     + Adapting or extending an object (“pimp my library” pattern)
+
+     + Use to enhance type safety by providing constraint evidence
+
+     + To provide type evidence (typeclassing)
+
+     + For =Manifest='s
+
+   - *Do not* use /implicits/ to do automatic conversions _between SIMILAR
+     datatypes_ (for example, converting a /list/ to a /stream/); these are
+     better done *explicitly* because the /types/ have *different semantics*, and
+     the reader _should beware of these implications_.
+
+* TODO Collections
+  Read the [[https://www.scala-lang.org/docu/files/collections-api/collections.html][collections design document]] (for 2.8+).
+
+  =TODO= =IMPORTANT=
+  =from Jian= We need this kind of document for 2.13+.
+
+** Hierarchy
+** Use
+** Style
+** Performance
+** Java Collections
+
+* TODO Concurrency
+** Futures
+** Collections
+
+* TODO Control structures
+** TODO Recursion
+** TODO Returns
+   - =TODO= ~fixDown~ above =TODO=
+
+   - /Returns/ can be used to cut down on branching and establish invariants. =TODO= =???=
+     It helps the READER by
+     + reducing nesting
+     + making it easier to reason about the correctness of subsequent code.
+
+     This is especially useful in "guard" clauses:
+     #+BEGIN_SRC scala
+       def compare(a: AnyRef, b: AnyRef): Int = {
+         if (a eq b) { return 0 }
+
+         val d = System.identityHashCode(a) compare System.identityHashCode(b)
+         if (d != 0) { return d }
+
+         // slow path ...
+       }
+     #+END_SRC
+
+   - Note that /returns/ _can have_ *hidden costs*:
+     when used *inside* of a /closure/,
+     #+BEGIN_SRC scala
+       seq foreach { elem =>
+         if (elem.isLast)
+           return
+
+         // process...
+       }
+     #+END_SRC
+     this is implemented in bytecode _as an exception catching/throwing pair_
+     which, used in hot code, has performance implications.
+
+** TODO ~for~ loops and comprehensions
+** DONE ~require~ and ~assert~
+   CLOSED: [2018-02-01 Thu 13:23]
+   - ~require~ and ~assert~ both serve as /executable documentation/.
+
+   - Both are useful for situations in which the /type system/ *CANNOT express*
+     the REQUIRED /invariants/.
+
+   - ~assert~ is used for /invariants/ that _the code ASSUMES_ (either internal
+     or external) (=From Jian= Postcondition???), for example
+     #+BEGIN_SRC scala
+       val stream = getClass.getResourceAsStream("someclassdata")
+       assert(stream != null)
+     #+END_SRC
+
+   - Whereas require is used to express API contracts (=From Jian= Precondition):
+     #+BEGIN_SRC scala
+       def fib(n: Int) = {
+         require(n > 0)
+         // ...
+         // ...
+       }
+     #+END_SRC
+
+* TODO Functional programming
+** Case classes as algebraic data types
+** Options
+** Pattern matching
+** Partial functions
+** Destructuring bindings
+** Laziness
+** Call by name
+** ~flatMap~
+
+* TODO Object oriented programming
+** Dependency injection
+** Traits 
+** Visibility
+*** Singleton class types
+    =Comment from Jian=: Need an example
+
+    It's common in Scala to create /singleton class types/, for example
+    ~def foo() = new Foo with Bar with Baz { ... }~
+
+    In these situations,
+    /visibility/ can be *constrained* _by_ *declaring the returned type*:
+    ~def foo(): Foo with Bar = new Foo with Bar with Baz { ... }~
+    where callers of ~foo()~ will see a *restricted view* (~Foo with Bar~) of the
+    returned instance.
+   
+** DONE Structural typing
+   CLOSED: [2018-02-01 Thu 10:49]
+   - Do not use /structural types/ in normal use.
+
+     They are a convenient and powerful feature, but unfortunately do
+     *not have an efficient implementation on the JVM*.
+     =From Jian: This doc is written 2012. How about now???=
+
+   - However — due to an implementation quirk — they provide a very nice
+     shorthand for doing /reflection/.
+     #+BEGIN_SRC scala
+       val obj: AnyRef
+       obj.asInstanceOf[{def close()}].close()
+     #+END_SRC
+
+* DONE Error handling
+  CLOSED: [2018-02-01 Thu 11:10]
+  Use something like ~Option~ type, rather than _throwing exception_, to deal with
+  commonplace errors.
+
+  =From Jian= This manual mentions ~com.twitter.util.Try~, check it later =TODO=
+
+  #+BEGIN_SRC scala
+    trait Repository[Key, Value] {
+      def get(key: Key): Option[Value]
+      // The return type tells the user some key may not be found.
+    }
+  #+END_SRC
+
+  is usually better than
+
+  #+BEGIN_SRC scala
+    trait Repository[Key, Value] {
+      def get(key: Key): Value
+    }
+  #+END_SRC
+
+  - The ~Value~ type do NOT convey information as complete as that of the
+    ~Option[Value]~ type.
+
+  - ~Option~ has a number of /combinators/ (e.g. with the help of the ~getOrElse~
+    /method/) to handle cases, for this example, like _missing keys_.
+
+  - The ~Value~ type acually *implies* that this method may
+    + throw an /exception/.
+      OR
+    + return ~null~.
+      This is mostly the worst thing, especially for Scala, which has ~Option~
+      since it was created, NOT like Java.
+
+** DONE Handling exceptions
+   CLOSED: [2018-02-01 Thu 11:10]
+   - *WRONG*
+     #+BEGIN_SRC scala
+       try {
+         operation()
+       } catch {
+         case _ => ...
+       }
+     #+END_SRC
+
+     There are always some *fatal exceptions*, that should propagate, rather than
+     being handled. You must distinguish them, rather than use ~case _~ to catch.
+
+   - =TODO= =TODO= =???= =HOW TO=
+     Use ~com.twitter.util.NonFatal~ /extractor/ to handle ONLY *nonfatal
+     exceptions*.
+     #+BEGIN_SRC scala
+       try {
+         operation()
+       } catch {
+         case NonFatal(exc) => ...
+       }
+     #+END_SRC
+
+* DONE Garbage collection
+  CLOSED: [2018-10-05 Fri 11:55]
+  We spend a lot of time *tuning* /garbage collection/ in production.
+
+  - The /garbage collection/ concerns are largely similar to those of Java
+    though idiomatic Scala code tends to generate more (short-lived) garbage
+    than idiomatic Java code — a byproduct of the functional style.
+
+    Hotspot’s generational garbage collection typically makes this a nonissue
+    as short-lived garbage is effectively free in most circumstances.
+
+  - Before tackling GC performance issues, watch this presentation by Attila that
+    illustrates some of our experiences with GC tuning.
+    =TODO= =TODO= =TODO=
+
+  - In Scala proper, your only tool to mitigate GC problems is to generate less
+    garbage; but do not act without data!
+
+    =IMPORTANT= =TODO=
+    Unless you are doing something obviously degenerate =TODO= =???=, use the
+    various *Java profiling tools* — our own include ~heapster~ and ~gcprof~.
+
+* DONE Java compatibility
+  CLOSED: [2018-02-01 Thu 13:51]
+  - _MOSTLY_, it requires *NO extra effort* to get Java compatibility,
+
+    but _sometimes_ *SEPARATE Java APIs* need to be provided.
+    For example,
+    /Traits/ that contain implementation are _NOT *directly* usable from Java_
+    #+BEGIN_SRC scala
+      // Not directly usable from Java
+      trait Animal {
+        def eat(other: Animal)
+        def eatMany(animals: Seq[Animal]) = animals foreach(eat)
+      }
+
+      // But this is:
+      abstract class JavaAnimal extends Animal
+    #+END_SRC
+
+  - =IMPORTANT= =IMPORTANT=
+    A good way to get a feel for your library's Java API:
+    _write a /unittest/ in Java (just for compilation)_;
+
+    + this _also ensures_ that
+      the Java-view of your library remains stable _over time_ as the Scala
+      compiler can be volatile in this regard.
+
+* TODO Twitter's standard libraries
+** Futures
+** Offer/Broker
+
+* TODO Acknowledgments

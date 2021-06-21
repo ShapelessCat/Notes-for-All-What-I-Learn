@@ -1,0 +1,1056 @@
+#+TITLE: Scala in Depth
+#+SUBTITLE: A comprehensive step-by-step guide
+#+YEAR: 2012
+#+AUTHOR: Joshua D. Suereth
+#+Foreword by: Martin Odersky
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE foreword - xi
+  CLOSED: [2018-02-07 Wed 15:44]
+  - The author Joshua D. Suereth is an expert in /high-performance systems/,
+    /build tools/, /type theory/, and _many other areas_.
+
+  - This book talks about more intricate areas of Scala:
+    * advanced aspects of Scala's type system
+
+    * implicts
+
+    * composition techniques with traits
+
+    * collections
+
+    * actors (=TODO= If this is the theory, it is OK. If this is the library, it should be replaced with Akka)
+
+    * functional categories
+
+  - =IMPORTANT= This book talks about and explains /the Scala specification/!!!
+
+* preface - xiii
+* acknowledgments - xiv
+* DONE about this book - xvi
+  CLOSED: [2018-02-07 Wed 15:55]
+  - This book, _picking up where introductory books drop off_, enables readers to
+    write idiomatic Scala code and understand trade-offs when making use of
+    advanced language features.
+
+** DONE Who should read this book? - xvi
+   CLOSED: [2018-02-07 Wed 16:04]
+   - This book is for *intermediate Scala developers*.
+     =From Jian= the author mentioned *new* Scala developer, but I think it is
+                 more _intermediate Scala developers oriented_.
+
+   - This readers should know Java or another OO language.
+     It covers Scala 2.7.x through Scala 2.9.x (=From Jian= They don't fully
+     support Java 8's features, and they don't mandatorily require Java 8).
+
+** DONE Roadmap - xvi
+   CLOSED: [2018-02-07 Wed 16:20]
+   - _THREE_ dichotomies are discussed:
+     + static typing versus expressiveness
+     + functional programming versus object-oriented programming
+     + powerful language features versus dead simple Java integration
+
+   - =TODO= Each chapter =NOTE='s
+
+** DONE Code downloads and conventions - xvii
+   CLOSED: [2018-02-07 Wed 16:12]
+   - https://github.com/jsuereth/scala-in-depth-source
+
+** TODO Author online - xviii
+** DONE About the author - xviii
+   CLOSED: [2018-02-07 Wed 16:00]
+   Josh Suereth is a Senior Software Engineer at Typesafe Inc (=From Jian= now
+   it's Lightbend Inc).
+
+   He started his professional career as a software developer in 2004, cutting
+   his teeth with C++, STL, and Boost. His path:
+   1. C++, STL, and Boost
+   2. Web-hosted distributed Java-delivered solutions
+   3. (from 2007) Scala
+
+* TODO about the cover illustration - xix
+* 1 Scala -- a blended language - 1
+  - In this chapter
+    + Short introduction to Scala
+
+    + Insights into Scala's design
+
+  - 
+
+** TODO 1.1 Functional programming meets object orientation - 2
+*** TODO Discovering existing functional concepts - 4
+*** DONE Examining functional concepts in Google Collections - 6
+    CLOSED: [2018-02-07 Wed 19:00]
+    - Q: Why is NOT there something like ~? super T~ in Scala?
+
+      A: Scala defines /type variances/ at declaration time, *rather than*
+         requiring it on _every_ /method/ that used the /class/.
+
+
+    - The essence of functional programming:
+      *delaying* /side effects/ as long as possible.
+
+** 1.2 Static typing and expressiveness - 8
+*** Changing sides - 8
+*** Type inference - 9
+*** Dropping verbose syntax - 9
+*** Implicits are an old concept - 10
+*** Using Scala's implicit keyword - 11
+
+** 1.3 Transparently working with the JVM - 12
+*** Java in Scala - 12
+*** Scala in Java - 13
+*** The benefits of a JVM - 14
+
+** 1.4 Summary - 15
+
+* 2 The core rules - 16
+** 2.1 Learn to use the Read Eval Print Loop (REPL) - 16
+*** Experiment-driven development - 18
+*** Working around eager parsing - 19
+*** Inexpressible language features - 20
+
+** 2.2 Think in expressions - 21
+*** Don't use return - 22
+*** Mutability - 24
+
+** 2.3 Prefer immutability - 26
+*** Object equality - 27
+*** Concurrency - 31
+
+** 2.4 Use None instead of null - 34
+*** Advanced Option techniques - 35
+
+** 2.5 Polymorphic equality - 38
+*** Example: A timeline library - 38
+*** Polymorphic equals implementation - 40
+
+** 2.6 Summary - 42
+
+* TODO 3 Modicum of style -- coding conventions - 43
+  This chapter presents _style suggestions_ that will help you AVOID compiler or
+  runtime errors.
+
+  - In this chapter
+    + The dangers of dragging old coding conventions into Scala
+    + Working with end-of-line inference
+    + Avoiding dangerous names for variables
+    + Ensuring correct behavior with annotations
+
+  - We won't join in the "holy war" of coding styles.
+    This chapter
+    + merely presents a few styles that will cause real issues in Scala,
+      and
+    + why you should modify your preferred style accordingly, if needed.
+
+  - We discuss TODO
+    + why placing _OPENING braces_ for block expressions can convey different
+      meanings to the compiler.
+
+    + _Operator notation_ can CAUSE ISSUES
+      if the compiler CANNOT tell where a _line ends_.
+
+    + Some syntactically valid identifier can cause compiler or runtime errors.
+
+    + The benefits of /compile-time warnings/
+      and
+      how you can use /annotations/ to INCREASE the helpfulness of the Scala
+      compiler.
+
+** DONE 3.1 Avoid coding conventions from other languages - 44
+   CLOSED: [2019-01-03 Thu 15:45]
+   - Error prevention rules :: =TODO=
+
+   - Uniformity rules :: =TODO=
+
+   - Code discovery rules :: =TODO=
+
+   - =TODO=
+
+*** DONE 3.1.1 The block debacle - 45
+    CLOSED: [2019-01-03 Thu 15:45]
+    - You should use *same line opening brace* in Scala!
+
+      If NOT, /semicolon inference/ can cause issues in a few key places.
+      This makes the next line opening brace style error-prone.
+
+      =from Jian= I think this is a huge defect!!!
+
+    - Example:
+      + Works from Scala 2.8 on:
+        #+BEGIN_SRC scala
+          def foo()
+          {
+            println("foo was called")
+          }
+
+        #+END_SRC
+        ~: Unit =~ must be added after ~def foo()~ before Scala 2.8:
+
+      + The NO `: Unit =` version is considered a bad design, which shouldn't be
+        added!  -- Martin wants to remove this usage, but I don't remember when!?
+
+        *DO NOT USE IT!!!*
+
+        * Here is a kind of problem can be caused by this kind of usage:
+          #+BEGIN_SRC scala
+            class FooHolder
+            {
+              def foo()
+                              // <-- a blank line here!!!!!!
+              {
+                // This block executed during construction,
+                // rather than considered as the body of `foo`.
+                println("foo was called")
+              }
+            }
+          #+END_SRC
+
+    - The above example is the ONLY one kind of issues.
+
+      Similar problem can happen to ~if~.
+      LUCKILY in that case, the compiler will catch and flag an error.
+
+      For example, /REPL/ will *NOT* accept the code below -- it assume the ~}~
+      of the ~if~ block completes the expression.
+      #+BEGIN_SRC scala
+        if (true)
+        {
+          println("true!")
+        }
+        else
+        {
+          println("false!")
+        }
+      #+END_SRC
+      Though, it works well in non-interactive session.
+
+    - In the official Scala REPL, you can use ~:paste~ to get into paste mode, and
+      paste the code above, and back to interactive mode. Then everything will work
+      well.
+
+** DONE 3.2 Dangling operators and parenthetical expressions - 48
+   CLOSED: [2019-01-03 Thu 16:18]
+   - Dangling operators will help the compiler determine the true end of a statement.
+
+   - Example:
+     + Cannot compile:
+       #+BEGIN_SRC scala
+         object Test {
+           val x = 5
+
+           def foo = "HAI"
+             + x
+             + "ZOMG"
+             + "\n"
+         }
+       #+END_SRC
+
+     + Compilable:
+       #+BEGIN_SRC scala
+         object Test {
+           val x = 5
+
+           def foo = "HAI" +
+             x +
+             "ZOMG" +
+             "\n"
+         }
+       #+END_SRC
+
+   - An alternative is, of course, parentheses.
+
+** TODO 3.3 Use meaningful variable names - 49
+   - You sometimes need to implement some mathematical algorithm,
+     there might be no proper names you know to represent some variables,
+
+     then you SHOULD use the name of the standard math symbol like
+     + =N= (represent the size of input data)
+     + =n= (represent the index of a summing operation)
+     + =k= (represent the index to an output array in acceptable.
+
+   - Do NOT use the reserved key word, even if the compiler allow you to use --
+     avoid potential issues.
+
+   - Do NOT use random or occisional _unicode symbols_ -- this can be frustrating
+     for developers!
+
+     If you think you may need to use _unicode symbols_ frequently when you slove
+     some specific domain problem, you can provide both _unicode symbol_
+     (usually by the convention in math) and some easy to type symbol, like in
+     Scalaz -- you can use either ~⊛~ or ~|@|~ as an /applicative builder operator/.
+
+*** 3.3.1 Avoid ~$~ in names - 50 - =TODO= =RE-READ=
+    Scala has some /name mangling/ strategy which will use ~$~.
+    You should always avoid using ~$~ directly in your source code.
+
+    - =TODO=
+
+    - =TODO=
+
+*** TODO 3.3.2 Working with named and default parameters - 53
+    - Scala 2.8.x brings with it the ability to use named parameters.
+      This means that the names you give parameters of methods become part of
+      the public API . Your parameter names become part of the API , and
+      changing them can and will break clients. Also, Scala allows users to
+      define different parameter names in subclasses. Let’s look at the named
+      and default parameter feature.
+      =TODO=
+
+    - 
+
+** TODO 3.4 Always mark overridden methods - 55
+** TODO 3.5 Annotate for expected optimizations - 60
+   The Scala compiler provides _several *optimizations* of functional style code_
+   into performant runtime /bytecoes/.
+
+   - The compiler will _OPTIMIZE_ /tail recursion/ to execute
+     AS a /looping construct/ at /runtime/,
+     RATHER THAN a /recursive function call/.
+     * /Tail call optimization/ is *NOT*
+       as much about improving speed
+       as preventing stack overflow errors.
+
+   - The compiler can also _OPTIMIZE_ a /pattern match/ that _looks LIKE_ a /Java
+     ~switch~ statement/ to _act LIKE_ _a ~switch~ statement at /runtime/._
+     * The compiler can figure out
+       _IF_ it's more efficient and still correct to use a /branch lookup table/.
+
+       + The compiler will then emit a ~tableswitch~ bytecode for this /pattern
+         match/.
+         - The ~tableswitch~ bytecode is a branching statement that can be _more
+           efficient_ than /multiple comparison branch statements/.
+
+   - _The /switch/ and /tail recursion/ optimizations_ come with /OPTIONAL
+     annotations/.
+     * The annotations will ensure
+       + the *optimization* is applied where expected
+         OR
+       + an *error* is issued.
+     
+*** TODO 3.5.1 Using the ~tableswitch~ optimization - 61
+    Sometimes, you can TREAT /pattern matching/ AS a Java ~switch~ statement.
+
+    - ~tableswitch~ Optimization:
+      TRY TO compile a /pattern match/ into a /branch table/ _RATHER THAN_ a
+      /decision tree (based comparison)/.
+
+      * In a /branch table/, the JVM can then jump directly to the appropriate
+        code by look up a label. _This whole process is done in a *single*
+        bytecode,_ the ~tableswitch~ operation.
+        + In Java, the ~switch~ statement can be compiled into a ~tableswitch~ operation.
+
+        + In Scala, the compiler can
+          OPTIMIZE a /pattern match/ into a single ~tableswitch~ operation
+          _IF_ all the stars align, or at least the right conditions apply.
+
+    - For Scala to apply the ~tableswitch~ optimization, the following has to hold
+      true:
+      * The matched value *must be* a known /integer/.
+
+      * Every match expression must be "simple."
+        + It *can't* contain any
+          - /type checks/,
+          - ~if~ statements or /extractors/.
+
+        + The expression must also have its /value/ _AVAILABLE at /compile time/:_
+          The /value/ of the expression *must not* be computed at /runtime/
+          but instead always be the same value.
+
+      * There should be *more than _TWO_ ~case~ statements*,
+        otherwise the optimization is unneeded.
+
+    - Let's take a quick look at some successfully optimized code and what operations
+      will break it.
+      1. Let's start off with a simple _switch on an /integer/._
+         #+begin_src scala
+           def unannotated(x: Int): String =
+             x match {
+               case 1 => "One"
+               case 2 => "Two!"
+               case z => z + "?"
+             }
+         #+end_src
+         The compiler is able to optimize this to a ~tableswitch~, as you can
+         see in the bytecode. Here’s the Java output:
+         #+begin_src text
+           public java.lang.String unannotated(int);
+             Code:
+               0:  iload_1
+               1:  istore_2
+               2:  iload_2
+               3:  tableswitch   {  // 1 to 2
+                                 1: 51;
+                                 2: 56;
+                           default: 24 }
+           // ...
+         #+end_src
+         What you're seeing here are the /bytecode instructions/ for the _unannotated
+         method_:
+         * The instruction at ~label 2~: shows us loading the first argument as
+           an integer (~iload_2~).
+
+         * The next instruction is our ~tableswitch~.
+           The ~tableswitch~ instruction is made up of
+           *mappings* of _integer values_ *to* /bytecode instruction labels/ (or
+           line numbers).
+           
+      2. It's fairly easy to mess this up.
+         Let's look at a few ways to do this.
+
+         * we can include a type check in the pattern match.
+           This can be _SURPRISING_, as you might expect the /type check/ would be
+           superfluous, and _NOT_ change the compiled code. Let's take our original
+           function and add a /type check/ for ~Int~ on one of the /case statements/.
+           #+begin_src scala
+             def notOptimised(x: Int) = x match {
+               case 1      => "One"
+               case 2      => "Two!"
+               case i: Int => "Other"
+             }
+           #+end_src
+           The difference between this example and the previous one is the type
+           check on the 3rd /case statement/: ~i : Int~.
+             Although the type of the variable is already known to be an ~Int~,
+           the compiler will still create a /type check/ in the /pattern match/
+           and this will *prevent* it from using a ~tableswitch~ bytecode. Let's
+           look at the bytecode (shortened to fit here):
+            #+begin_src text
+              public java.lang.String notOptimised(int);
+                Code:
+                 0: iload_1
+                 1: istore_3
+                 2: iconst_1
+                 3: iload_3
+                 4: if_icmpne 10
+                 ...
+                 16: iconst_2
+                 17: iload_3
+                 12: if_icmpne 20
+                 ...
+                 20: iload_1
+                 21: invokestatic #43;
+                       //Method scala/runtime/BoxesRunTime.boxToInteger:
+                       (I)Ljava/lang/Integer;
+                 24: instanceof #85; //class java/lang/Integer
+                 27: ifeq 33
+                 30: ldc #87; //String Other
+                 // ...
+                 32: areturn
+                 33: new #89; //class scala/MatchError
+            #+end_src
+            Scala 2.13.4 compiler will by default *optimize out* the ~instanceof~.
+
+*** DONE 3.5.2 Using the tail recursion optimization - 64
+    CLOSED: [2019-01-03 Thu 18:35]
+    - The JVM doesn't support TCO natively,
+      so /tail recursive/ methods will need to rely on the Scala compiler
+      performing the optimization -- code transformation (recursive to iterative).
+
+    - To OPTIMIZE /tail calls/, the Scala compiler requires the following:
+      + The method MUST be ~final~ or ~private~: It can't be polymorphic. =???=
+        =???= =???=
+
+      + The method MUST have its /return type annotated/.
+
+      + The method MUST call itself as the "end" of one of its branches.
+
+    - Example:
+      + Source code
+        #+BEGIN_SRC scala
+          case class Node(name: String, edges: List[Node] = Nil)
+
+          def search(start: Node, p: Node => Boolean) = {
+            def loop(nodeQueue: List[Node], visited: Set[Node]): Option[Node] =
+              @tailrec
+              nodeQueue match {
+                case head :: tail if p(head)                 => Some(head)
+                case head :: tail if !visited.contains(head) => loop(tail ++ head.edges, visited + head)
+                case head :: tail                            => loop(tail, visited)
+                case Nil                                     => None
+              }
+
+            loop(List(start), Set.empty[Node])
+          }
+        #+END_SRC
+
+      + Bytecode:
+        #+BEGIN_SRC text
+          private final scala.Option loop$1(scala.collection.immutable.List,
+              scala.collection.immutable.Set, scala.Function1);
+            Code:
+             0: aload_1
+             ...
+             61: invokespecial #97;
+               //Method scala/Some."<init>":(Ljava/lang/Object;)V
+             64: goto 221
+             ...
+             150: astore_2
+             151: astore_1
+             152: goto 0
+             ...
+             186: astore_1
+             187: goto 0
+             ...
+             218: getstatic #158; //Field scala/None$.MODULE$:Lscala/None$;
+             221: areturn
+             ...
+        #+END_SRC
+        This is a set of ~while~-like bytecode. =TODO= =Page 66=
+
+    - =from Jian=
+      The book said ~tailrec~ is used to *require* the compiler to do TCO,
+      _rather than_ *ask*.
+
+      However, the doc of 2.12.8 said
+      #+BEGIN_QUOTE
+      A method annotation which verifies that the method will be compiled with tail call optimization.
+
+      If it is present, the compiler will issue an error if the method cannot be optimized into a loop. 
+      #+END_QUOTE
+
+      I guess something may changed after the book was written.
+
+** DONE 3.6 Summary - 66
+   CLOSED: [2019-01-03 Thu 17:19]
+   - Users of Scala should make sure to: =IMPORTANT=
+     + Keep opening braces on the same line
+     + Dangle operators or use parentheses
+     + Use meaningful names
+     + Consistently name parameters
+     + Always mark methods with override
+
+   - With Scala, the syntax was designed in a “scalable” way.
+
+     This means that if you attempt to write concise code and run into issues,
+     try to use the less concise, more formal/plain syntax until you resolve the
+     issue.
+
+* TODO 4 Utilizing object orientation - 68
+  - In this chapter
+    * Object initialization
+    * Abstract methods
+    * Composition and Inheritance
+    * Abstract interfaces
+    * Type inference and public APIs
+
+  - Scala is a rich object-oriented language.
+    /Objects/ are CORE to everything in Scala, and understanding the details of
+    how they work is important for using Scala.
+
+  - In Scala,
+    * EVERY /value/ is an /object/.
+      Even /operators/ are /method calls/ against the /class/ of an /object/.
+
+    * Scala offers /mixin inheritance/ through the use of /traits/.
+
+  - /Object/, /class/, and /traits/ are used to define public APIs for libraries.
+    The /initialization/, /comparison/, and /composition/ of /objects/ are most
+    fundamental and import parts of Scala development.
+    * *INITIALIZATION* is important because of
+      + /mixin inheritance/ and
+        AND
+      + the way /objects/ *get instantiated* in various locations
+
+    * *COMPARING two objects for equality* is CRITICAL and can be made _trickier_
+      when /inheritance/ gets in the mix.
+      =from Jian= Identity is always important!!!
+    
+    * *COMPOSITION of functionality* is how code *reuse* is accomplished,
+      and Scala provides _a few NEW ways_ to compose objects.
+      =from Jian= Not _few_ actually!!!
+
+** TODO 4.1 Limit code inside an object or trait's body to initialization logic - 69
+*** 4.1.1 Delayed construction - 69
+*** 4.1.2 And then there's multiple inheritance - 70
+
+** TODO 4.2 Provide empty implementations for abstract methods on traits - 72
+   - *Class linearization*
+     
+** TODO 4.3 Composition can include inheritance - 76
+*** 4.3.1 ember composition by inheritance - 78
+*** 4.3.2 Classic constructors with a twist - 80
+
+** TODO 4.4 Promote abstract interface into its own trait - 82
+*** 4.4.1 Interfaces you can talk to - 84
+*** 4.4.2 Learning from the past - 85
+
+** TODO 4.5 Provide return types in your public APIs - 86
+** TODO 4.6 Summary - 88
+
+* 5 Using implicits to write expressive code - 89
+  - In this chapter
+    + Introduction to /implicits/
+    + Mechanics of the /implicit resolution system/
+    + Using /implicits/ to _ENHANCE classes_
+    + Using /implicits/ to _ENFORCE scope rules_
+
+  - =TODO=
+    Notes
+
+** TODO 5.1 Introduction to implicits - 90
+*** Identifiers: A digression - 91 
+    This section references chapter 2 of the *Scala Language Specification (SLS)*.
+    =TODO= Read through this!!!
+
+    - /Identifiers/ play a crucial role in the selection of /implicits/, so let's
+      dig into the nuts and bolts of /identifiers/ in Scala.
+
+*** Scope and bindings - 92 
+*** Implicit resolution - 96
+
+** TODO 5.2 Enhancing existing classes with implicit views - 101
+** TODO 5.3 Utilize implicit parameters with defaults - 106
+** TODO 5.4 Limiting the scope of implicits - 112
+*** Creating implicits for import - 113 
+*** Implicits without the import tax - 115
+
+** TODO 5.5 Summary - 119
+
+* 6 The type system - 120
+  - In this chapter
+    + Structural types
+
+    + Using type constraints
+
+    + Type parameters and higher-kinded types
+
+    + Existential types
+
+  - _THE MORE_ you know about Scala’s type system, _THE MORE_ information you can
+    give the compiler,
+    and
+    the type walls become less restrictive while still providing the same protection.
+
+  - =TODO=
+    This chapter will cover the basics of the type system, touching on
+    definitions and theory. The next chapter covers more practical applications
+    of the type system and the best practices to use when defining constraints.
+
+  - 
+
+** 6.1 Types - 121
+   - In Scala, /types/ can be defined in _TWO ways_:
+     + Defining a ~class~, ~trait~ or ~object~.
+
+     + *Directly* defining a /type/ using the ~type~ keyword.
+
+   - ~class~, ~trait~ are ~object~ NOT themselves types!
+     Just when you create them, an *associated* /type/ is AUTOMATICALLY created!
+     + /class/ or /trait/: This type can be referred to using the same name.
+
+     + /object/: Refer to the /type/ slightly differently due to the potential of
+       /classes/ or /traits/ having the *SAME* name as an /object/.
+
+       =from Jian=
+       Refer the /type/ of an /object/ with the ~type~ /member/ of EACH /object/.
+
+   - Example: 
+     #+BEGIN_SRC scala
+       class ClassName
+       // define class ClassName
+
+       class TraitName
+       // define trait TraitName
+
+       class ObjectName
+       // define module ObjectName
+
+
+       def foo(x: ClassName): ClassName = x
+
+       def bar(x: TraitName): TraitName = x
+
+       def baz(x: ObjectName.type): ObjectName.type = x
+     #+END_SRC
+
+   - *Using objects as parameters*
+     Great help when defining DSL,
+     as you can embed words as objects that become parameters.
+
+     Example:
+     #+BEGIN_SRC scala
+       object Now
+
+       object simulate {
+         def once(behavior: () => Unit) = new {
+           def right(now: Now.type): Unit = behavior  // OR some other operations
+         }
+       }
+
+       def someAction(): Unit = ()
+
+       simulate once someAction() right Now
+       // side effect //
+       //// hi
+     #+END_SRC
+
+*** 6.1.1 Types and paths - 122
+    - 
+    - *PATH-DEPENDENT TYPES VERSUS TYPE PROJECTS*
+
+*** 6.1.2 The ~type~ keyword - 124
+*** 6.1.3 Structural types - 125
+
+** 6.2 Type constraints - 131
+** 6.3 Type parameters and higher-kinded types - 134
+*** Type parameter constraints - 134
+*** Higher-kinded types - 135
+
+** 6.4 Variance - 137
+*** Advanced variance annotations - 141
+
+** 6.5 Existential types - 144
+   - xxx
+
+   - xxx
+
+   - xxx
+
+   - xxx
+
+   - Example:
+     #+begin_src java
+       interface List<E> extends Collection<E> {
+           E get(int idx);
+       }
+     #+end_src
+     The /interface/ has a /type parameter/ ~E~ which is used to specify the
+     type of elements in the list. The ~get~ /method/ is defined using this
+     /type parameter/ for its _return value_.
+
+     * The strangeness begins when we look at the _backward compatibility_.
+       The older ~List~ /interface/ in Java was designed WITHOUT /generic
+       types/. Code written for this OLD /interface/ is still compatible with
+       /Java Generics/. For example:
+       #+begin_src java
+         List foo = ...
+         System.out.println(foo.get(0));
+       #+end_src
+
+     * The type returned in the REPL is ~java.util.List[_]~.
+       Scala provides a _convenience syntax_ for creating /existential types/ that
+       uses the _underscore_ in the place of a /type parameter/.
+       
+       + We'll cover the full syntax shortly; but this shorthand is more commonly
+         found in production code. This ~_~ can be considered a _place holder_ for
+         a single valid type.
+
+       + The ~_~ is _DIFFERENT from_ /closure syntax/
+         because it isn't a placeholder for a /type argument/,
+         but rather is *a HOLE in the /type/.*
+
+       + The compiler *isn't sure* what the SPECIFIC /type parameter/ is, but it
+         knows that there is one.
+         You *can't substitute* a /type parameter/ later; *the HOLE remains.*
+
+   - *DEVIATION FROM JAVA*
+     * In Scala,
+       We *can't add* things to a ~List[_]~
+       UNLESS the compiler can determine that they're of the SAME type as the
+       list.
+         This means we can't add new values to the list without some form of
+       /casting/.
+     
+     * In Java,
+       this operation would compile and an *Unchecked* WARNING would be issued.
+
+   - /Existential types/ can also have /upper and lower bounds/ in Scala.
+     This can be done by treating the ~_~ as if it were a /type parameter/.
+     Let's take a look:
+     #+begin_src scala
+       def foo(x: List[_ >: Int]) = x
+     #+end_src
+     The ~foo~ /method/ is defined to accept a ~List~ of some parameter that has
+     a lower bound of ~Int~. _This parameter could have ANY type;_ the compiler
+     doesn't care which type, as long as it's ~Int~ or one of its /super types/.
+     We can call this /method/ with a value of type ~String~, because ~Int~ and
+     ~String~ share a parent, ~Any~. Let's look.
+     #+begin_src scala
+       foo(List("Hi"))
+       // res9: List[Any] = List(Hi)
+     #+end_src
+     When calling the ~foo~ /method/ with a ~List("Hi")~ the call succeeds, as
+     expected.
+     
+*** 6.5.1 The formal syntax of existential types - 146
+    Scala's _formal syntax_ for /existential types/ uses the ~forSome~ keyword.
+    
+    - Here's the excerpt explaining the syntax from the Scala Language Specification:
+      * *SCALA LANGUAGE SPECIFICATION -- EXCERPT FROM SECTION 3.2.10*
+        An /existential type/ has the form ~T forSome {Q}~ where ~Q~ is _a
+        sequence of type declarations_.
+    
+      * In the preceding definition, the ~Q~ block is _a set of /type declarations/._
+        + /Type declarations/, in the Scala Language Specification COULD BE
+          /abstract type statements/ or /abstract val statements/.
+
+        + The declarations in the ~Q~ block are /existential/ -- the compiler
+          *knows* that there's some type that meets these definitions,
+          *but doesn't remember* what that type is specifically.
+        
+        + The /type/ declared in the ~T~ section can then use these /existential
+          identifiers/ directly.
+
+    - Example:
+      This is easiest to see by
+      CONVERTING _the convenient syntax_
+      INTO the _formal syntax_.
+      Let's take a look:
+      #+begin_src scala
+        val y: List[_] = Nil
+        // y: List[_] = List()
+
+        val x: List[X forSome { type X }] = y
+        // x: List[X forSome { type X} ] = List()
+      #+end_src
+      In ~x~ value, the /type/ ~X~ is /existential/ and acts the *SAME* as the
+      ~_~ in the ~y~'s type.
+
+    - A more complicated scenario occurs when the /existential type/ has a /lower
+      or upper bound restriction/.
+        In that case, the entire /lower bound/ or /upper bound/ is translated
+      into the ~forSome~ block:
+      #+begin_src scala
+        val y: List[_ <: AnyRef] = Nil
+        // y: List[_ <: AnyRef] = List()
+
+        val x: List[X forSome { type X <: AnyRef }] = y
+        // x: List[X forSome { type X <: AnyRef }] = List()
+      #+end_src
+      * The first value, ~y~, has the type ~List[_ <: AnyRef]~.
+        + The /existential/ ~_ <: AnyRef~ is translated to type ~X <: AnyRef~ in
+          the ~forSome~ section.
+      
+        + Remember that all type declarations in the ~forSome~ blocks are treated
+          as /existential/ that can be used in the left hand side type.
+      
+        + In this case, the left-hand side type is ~X~.
+      
+        + The ~forSome~ block could be used for any kind of /type declaration/,
+          including values or other /existential types/.
+      
+** 6.6 Summary - 149
+
+* 7 Using implicits and types together - 150
+** 7.1 Context bounds and view bounds - 151
+*** When to use implicit type constraints - 152
+
+** 7.2 Capturing types with implicits - 153
+*** Manifests - 153
+*** Using Manifests - 154
+*** Capturing type constraints - 156
+*** Specialized methods - 158
+
+** 7.3 Use type classes - 159
+*** FileLike as a type class - 163
+*** The benefits of type classes - 166
+
+** 7.4 Conditional execution using the type system - 167
+*** Heterogeneous typed list - 169
+*** IndexedView - 172
+
+** 7.5 Summary - 178
+
+* 8 Using the right collection - 179
+  - In this chapter
+    + Determining the *appropriate* collection for an algorithm
+
+    + Descriptions of _immutable collection_ types
+
+    + Descriptions of _mutable collection_ types
+
+    + *Changing the execution semantics* of a _collection_ FROM /strict/ TO /lazy/
+      and BACK
+
+    + *Changing the execution semantics* of a _collection_ FROM /sequential/ TO
+      /parallel/ and BACK
+
+    + Writing /methods/ for ALL collection types
+      =TODO= =???=
+
+  - Scala's collections also split into THREE dichotomies:
+    + _Immutable_ and _mutable_ collections
+
+    + _Eager_ and _delayed_ evaluation
+
+    + _Sequential_ and _parallel_ evaluation
+
+  - The Scala collections library provides the means for developers to choose the
+    attributes their collections should have. =TODO= =???=
+
+    We'll discuss these in sections 8.2 through 8.4
+    =TODO= =???=
+
+  - The biggest difficulty with all the new power from the collections library is
+    working generically across collections. =TODO= =???=
+
+    We discuss a technique to handle this in section 8.5.
+    =TODO= =???=
+
+** 8.1 Use the right collection - 180
+   - Each collection
+     + has DIFFERENT /runtime characteristics/
+       and
+     + is SUITED FOR different styles of algorithms.
+
+   - For example,
+     + Scala's ~List~ collection
+       * is a /single linked-list/
+         and
+       * is suited for /recursive algorithms/
+         that *operate by splitting* the head off the rest of the collection.
+
+     + Scala's ~Vector~ class is implemented as *a set of nested arrays*
+       that's EFFICIENT at *splitting* and *joining*.
+
+   - =TODO=
+     In Scala, there are _TWO_ places to WORRY ABOUT _collection types_:
+     + Q :: HOWTO *create generic methods that work against _MULTIPLE_ collections*?
+
+     + A :: Choose the lowest possible collection type that keeps the generic
+            method performant, but isn't so high up the collections hierarchy
+            that it can't be used for lots of different collections.
+
+     + =TODO= =???= =???=
+       In fact, the type-system tricks we discuss in section 7.3 can allow you
+       to use type-specialized optimizations generically.
+       We’ll show this technique in section 8.5.
+       =TODO= =???=
+
+     + Q :: *choosing a collection for a DATATYPE*?
+
+     + A :: Choosing a collection for a datatype is done by instantiating the
+            right collection type for the use case of the data.
+
+       For example,
+       * ~scala.collection.immutable.List~:
+         ideal for recursive algorithms that split collections by head and tail.
+
+       * The ~scala.collection.immutable.Vector~ collection is suited toward most
+         general purpose algorithms, due to its efficient indexing and its
+         ability to share much of its inter- nal structure when using methods
+         like ~+:~ and ~++~. We’ll show this technique in section 8.3.
+
+   - The core abstractions in the collections library illustrate different styles
+     of collections.
+     =TODO= =???=
+
+*** 8.1.1 The collection hierarchy - 180
+*** 8.1.2 ~Traversable~ - 182
+*** 8.1.3 ~Iterable~ - 185
+    The core method is ~def iterator: Iterator[A]~
+    =from Jian= This actually comes from ~IterableOnce~
+
+*** 8.1.4 ~Seq~ - 187
+*** 8.1.5 ~LinearSeq~ - 187
+*** 8.1.6 ~IndexedSeq~ - 189
+*** 8.1.7 ~Set~ - 190
+*** 8.1.8 ~Map~ - 191
+
+** 8.2 Immutable collections - 192
+*** 8.2.1 ~Vector~ - 192
+*** 8.2.2 ~List~ - 194
+*** 8.2.3 ~Stream~ - 195
+    =from Jian= This is deprecated, and use ~LazyList~ instead!!!
+
+** 8.3 Mutable collections - 198
+*** 8.3.1 ~ArrayBuffer~ - 198
+*** 8.3.2 Mixin mutation event
+*** 8.3.3 publishing - 199
+*** 8.3.4 Mixin synchronization - 200
+    =TODO= =???=
+
+** 8.4 Changing evaluation with views and parallel collections - 200
+*** Views - 201
+*** Parallel collections - 203
+
+** 8.5 Writing methods to use with all collection types - 205
+*** Optimizing algorithms for each collections type - 209
+
+** 8.6 Summary - 211
+
+* 9 Actors - 212
+** 9.1 Know when to use actors - 213
+*** Using actors to search - 213
+
+** 9.2 Use typed, transparent references - 216
+*** Scatter-Gather with OutputChannel - 217
+
+** 9.3 Limit failures to zones - 221
+*** Scatter-Gather failure zones - 221
+*** General failure handling practices - 224
+
+** 9.4 Limit overload using scheduler zones - 225
+*** Scheduling zones - 227
+
+** 9.5 Dynamic actor topology - 228
+** 9.6 Summary - 233
+
+* TODO 10 Integrating Scala with Java - 234
+  - In this chapter
+    + The *benefits* of _using /interfaces/ for Scala-Java interaction._
+
+    + The *dangers* _of /automatic implicit conversions/ of /Java types/._
+
+    + The *complications* _of /Java serialization/ in Scala._
+
+    + How to *effectively use* /annotations/ _in Scala for Java libraries._
+
+  - Two apsects add complicate things to the integration of Scala and Java:
+    + _From Scala_:
+      But complicated Scala features are implemented with some compiler tricks,
+
+      and these tricks are usually the cause of issues when integrating with
+      Java.
+
+    + _From Java_:
+      For the most part, the Java language translates simply into JVM bytecode;
+      however, it too has language features that use compiler tricks.
+
+      These will also cause rough spots in Scala/ Java interaction.
+
+  - *Another benefit* of understanding how to interface Scala with Java is that
+    *it helps to _integrate Scala with every other JVM language_.*
+
+    *Rationale*:
+    Because Java is king on the JVM, all alternative JVM languages provide means
+    of using existing Java code.
+    *This means that communications from Scala to another JVM language can be
+    accomplished through Java _even in the worst case_.*
+
+    + Scala is working on language features to integrate directly with (JVM)
+      dynamic languages, but even with the 2.9.0 release, these features are
+      considered experimental.
+
+** TODO 10.1 The language mismatch between Scala and Java - 235
+*** 10.1.1 Differences in primitive boxing - 236
+*** 10.1.2 Differences in visibility - 240
+*** 10.1.3 Inexpressible language features - 241
+
+** TODO 10.2 Be wary of implicit conversions - 244
+*** 10.2.1 Object identity and equality - 245
+*** 10.2.2 Chaining implicits - 246
+
+** TODO 10.3 Be wary of Java serialization - 248
+*** TODO 10.3.1 Serializing anonymous classes - 250
+
+** TODO 10.4 Annotate your annotations - 252
+*** TODO Annotation targets 254 ■ Scala and static fields - 255
+
+** TODO 10.5 Summary - 256
+
+* 11 Patterns in functional programming - 257
+** 11.1 Category theory for computer science - 258
+** 11.2 Functors and monads, and how they relate to categories - 262
+*** Monads - 264
+
+** 11.3 Currying and applicative style - 266
+*** Currying - 266
+*** Applicative style - 268
+
+** 11.4 Monads as workflows - 272
+** 11.5 Summary - 276
+
+* index - 277

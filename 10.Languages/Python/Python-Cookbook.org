@@ -1,0 +1,976 @@
+#+TITLE: Python Cookbook
+#+VERSION: 3rd
+#+YEAR: 2013
+#+AUTHOR: David Beazley, Brian K. Jones
+#+Python Version: Python 3.3
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* 9. Metaprogramming - 329
+** 9.1. Putting a Wrapper Around a Function - 329
+** 9.2. Preserving Function Metadata When Writing Decorators - 331
+** 9.3. Unwrapping a Decorator - 333
+** 9.4. Defining a Decorator That Takes Arguments - 334
+** 9.5. Defining a Decorator with User Adjustable Attributes - 336
+** 9.6. Defining a Decorator That Takes an Optional Argument - 339
+** 9.7. Enforcing Type Checking on a Function Using a Decorator - 341
+** 9.8. Defining Decorators As Part of a Class - 345
+** 9.9. Defining Decorators As Classes - 347
+** 9.10. Applying Decorators to Class and Static Methods - 350
+** 9.11. Writing Decorators That Add Arguments to Wrapped Functions - 352
+** 9.12. Using Decorators to Patch Class Definitions - 355
+** 9.13. Using a Metaclass to Control Instance Creation - 356
+** 9.14. Capturing Class Attribute Definition Order - 359
+** 9.15. Defining a Metaclass That Takes Optional Arguments - 362
+** 9.16. Enforcing an Argument Signature on *args and **kwargs - 364
+** 9.17. Enforcing Coding Conventions in Classes - 367
+** 9.18. Defining Classes Programmatically - 370
+** 9.19. Initializing Class Members at Definition Time - 374
+** 9.20. Implementing Multiple Dispatch with Function Annotations - 376
+** 9.21. Avoiding Repetitive Property Methods - 382
+** 9.22. Defining Context Managers the Easy Way - 384
+** 9.23. Executing Code with Local Side Effects - 386
+** 9.24. Parsing and Analyzing Python Source - 388
+** 9.25. Disassembling Python Byte Code - 392
+
+* 10. Modules and Packages - 397
+  This chapter focuses on common programming techniques involving /modules/ and
+  /packages/, such as
+  - how to *organize* /packages/
+  - *splitting* large /modules/ *into* multiple files
+  - *creating* /namespace packages/
+  - Recipes that allow you to *customize* the operation of _the ~import~ statement_
+    itself are also given
+
+** 10.1. Making a Hierarchical Package of Modules - 397
+*** Problem
+*** Solution
+*** Discussion
+   
+** 10.2. Controlling the Import of Everything - 398
+*** Problem
+*** Solution
+*** Discussion
+    
+** 10.3. Importing Package Submodules Using Relative Names - 399
+*** Problem
+*** Solution
+*** Discussion
+    
+** DONE 10.4. Splitting a Module into Multiple Files - 401
+   CLOSED: [2021-04-01 Thu 11:01]
+*** DONE Problem
+    CLOSED: [2021-04-01 Thu 10:27]
+    - Q :: *Split* a /module/ *into* _MULTIPLE files_ *WITHOUT breaking existing
+           code* by keeping the SEPARATE files unified as a *SINGLE /logical
+           module/.*
+
+*** DONE Solution
+    CLOSED: [2021-04-01 Thu 10:34]
+    - A ::
+      * Before change:
+        #+NAME: mymodule.py
+        #+begin_src python
+          class A:
+              def spam(self):
+                  print('A.spam')
+
+
+          class B(A):
+              def bar(self):
+                  print('B.bar')
+        #+end_src
+
+      * After change:
+        #+begin_src text
+          mymodule/
+              __init__.py
+              a.py
+              b.py
+        #+end_src
+
+        + =a.py=
+          #+begin_src python
+            class A:
+                def spam(self):
+                    print('A.spam')
+          #+end_src
+
+        + =b.py=
+          #+begin_src python
+            from .a import A
+
+            class B(A):
+                def bar(self):
+                    print('B.bar')
+          #+end_src
+
+        + =__init__.py=
+          #+begin_src python
+            from .a import A
+            from .b import B
+          #+end_src
+
+      * Use case (both before and after change):
+        #+begin_src python
+          import mymodule
+
+          a = mymodule.A()
+          a.spam()  # A.spam
+
+          b = mymodule.B()
+          b.bar()  # B.bar
+        #+end_src
+
+*** DONE Discussion
+    CLOSED: [2021-04-01 Thu 11:01]
+    - The way we write ~__init__.py~ in the _Solution_ sub-section can help us
+      avoid fragile imports like:
+      #+begin_src python
+        from mymodule.a import A
+        from mymodule.b import B
+      #+end_src
+
+      by using
+      #+begin_src python
+        from mymodule import A, B
+      #+end_src
+
+    - When a /module/ gets split, you'll need to pay careful attention to
+      _cross-filename references_.
+      * Use /package-relative imports/ to avoid hardcoding the _toplevel module
+        name_ into the source code.
+          This makes it easier to *rename* the /module/ or *move* it around
+        elsewhere later (see _Recipe 10.3_).
+    
+    - =IMPORTANT=
+      =NOT mentioned in the _Solution_ sub-section=
+      One extension of this recipe involves the introduction of _"lazy" imports_.
+      * As shown, the =__init__.py= file, in the _Solution_ sub-section, *imports*
+        all of the required subcomponents *all at once*.
+          However, for a very large /module/, perhaps you only want to load
+        components as they are needed. To do that, here is a slight variation of
+        =__init__.py=:
+        #+begin_src python
+          def A():
+              from .a import A
+              return A()
+
+
+          def B():
+              from .b import B
+              return B()
+        #+end_src
+
+    - The *main DOWNSIDE* of /lazy loading/ is that /inheritance/ and /type checking/
+      might break.
+      * For example,
+        you might have to change your code slightly:
+        #+begin_src python
+          isinstance(x, mymodule.A)
+          ## TypeError: isinstance() arg 2 must be a type or tuple of types
+
+          isinstance(x, mymodule.a.A)
+          # True
+        #+end_src
+        + =TODO= =TODO= =TODO=
+          Is there any technique, in new Python version, to hide this detail and
+          make ~isinstance(x, mymodule.A)~ work directly.
+
+      * A real-world example:
+        =multiprocessing/__init__.py=
+
+** TODO 10.5. Making Separate Directories of Code Import Under a Common Namespace - 404
+*** DONE Problem
+    CLOSED: [2021-04-01 Thu 11:16]
+    _Background_:
+    You have a large base of code with parts possibly maintained and distributed
+    by different people -- each part is organized as a directory of files, like a
+    /package/.
+
+    - Q :: However, instead of having each part installed as a separated named
+           /package/,
+           you would like all of the parts to join together *under a common
+           package prefix.*
+
+*** TODO Solution
+*** TODO Discussion
+    
+** TODO 10.6. Reloading Modules - 406
+   =from Jian=
+   The /module/ used in this part is *Deprecated* since version 3.4:
+   _The ~imp~ /module/ is deprecated in favor of ~importlib~._
+
+   - =from Jian=
+     My note will use ~importlib~ instead of ~imp~
+
+*** DONE Problem
+    CLOSED: [2021-04-01 Thu 17:08]
+    - Q :: How to *reload* an _already loaded_ /module/
+           because of the source code change of this /module/?
+
+*** DONE Solution
+    CLOSED: [2021-04-01 Thu 17:08]
+    #+begin_src python
+      #>>>
+      import spam
+
+      #>>>
+      import importlib
+
+      #>>>
+      importlib.reload(spam)
+      ## <module 'spam' from './spam.py'>
+
+      #>>>
+    #+end_src
+
+*** TODO Discussion
+    - _Reloading a module_ is something that
+      * is often useful during _debugging_ and _development_,
+
+      * but which is generally *never safe in production code*
+        due to the fact that it doesn't always work as you expect.
+    
+    - Under the covers, the reload() operation wipes out the contents of a module's
+      underlying dictionary and refreshes it by re-executing the module’s source
+      code. The identity of the module object itself remains unchanged. Thus,
+      this operation updates the module everywhere that it has been imported in
+      a program.
+
+    - However, ~reload()~ does *NOT update* definitions that have been imported
+      using statements such as ~from <module> import <name>~.
+      * To illustrate, consider the following code:
+        #+NAME: spam.py
+        #+begin_src python
+          def bar():
+              print('bar')
+
+
+          def grok():
+              print('grok')
+        #+end_src
+
+        * Start an _interactive session_:
+          #+begin_src python
+            import spam
+
+            from spam import grok
+
+            spam.bar()
+            # bar
+
+            grok()
+            # grok
+          #+end_src
+          + Update the source code of =spam.py=
+            #+begin_src python
+              def grok():
+                  print('New grok')
+            #+end_src
+
+** DONE 10.7. Making a Directory or Zip File Runnable As a Main Script - 407
+   CLOSED: [2021-04-04 Sun 03:49]
+*** DONE Problem
+    CLOSED: [2021-04-04 Sun 03:48]
+    - Q :: Is there some easy way for users to run the program that beyonds a
+           simple script?
+
+*** DONE Solution
+    CLOSED: [2021-04-04 Sun 03:48]
+    - A :: Put a =__main__.py= into its own directory.
+
+    - For example,
+      #+begin_src text
+        myapplication/
+          |- spam.py
+          |- bar.py
+          |- grok.py
+          |- __main__.py
+      #+end_src
+      Run it in bash with ~/usr/bin/env python myapplication~
+
+      * This also works for zipped Python packages.
+        #+begin_src bash
+          cd myapplication
+
+          zip -r myapp.zip *.py
+
+          /usr/bin/env python myapp.zip
+        #+end_src
+
+*** DONE Discussion
+    CLOSED: [2021-04-04 Sun 03:49]
+    
+** DONE 10.8. Reading Datafiles Within a Package - 408
+   CLOSED: [2021-04-04 Sun 04:13]
+*** DONE Problem
+    CLOSED: [2021-04-04 Sun 03:51]
+    - Q :: What is the most portable way to read a datafile in a package?
+
+*** DONE Solution
+    CLOSED: [2021-04-04 Sun 03:55]
+    #+begin_src text
+      mypackage/
+        |- __init__.py
+        |- somedata.dat
+        |- spam.py
+    #+end_src
+    Suppose =spam.py= wants to read the contents of the file =somedata.dat=.
+
+    - Solution:
+      #+NAME: spam.py
+      #+begin_src python
+        import pkgutil
+
+        from typing import ByteString
+
+        data: ByteString = pkgutil.get_data(__package__, 'somedata.dat')
+      #+end_src
+
+*** TODO Discussion
+    - To read a datafile, you might be inclined to write code that uses built-in
+      I/O functions, such as ~open()~. *However, there are several problems with
+      this approach.*
+      1. a package has very little control over the _current working directory_
+         of the interpreter.
+           Thus, any I/O operations would have to be programmed to use _absolute
+         filenames_. Since EACH /module/ includes a ~__file__~ variable with the
+         _full path_, it's not impossible to figure out the location, *but it's
+         messy.*
+         * =TODO= Learn more about ~__file__~ =TODO=
+
+      2. packages are often installed as =.zip= or =.egg= files, which don't
+         preserve the files in the same way as a normal directory on the filesystem.
+         Thus, if you tried to use ~open()~ on a datafile contained in an archive,
+         it wouldn't work at all.
+
+    - The ~pkgutil.get_data()~ function is meant to be a _high-level tool_ for
+      getting a datafile *REGARDLESS of* _WHERE or HOW a package has been
+      installed_.
+
+      * 1st argument:
+        a /string/ containing the _package name_.
+        You can either supply it directly _OR_ use a special variable, such as
+        ~__package__~.
+
+      * 2nd argument:
+        the _relative name_ of the file *within* the /package/.
+        + If necessary, you can navigate into different directories using
+          _standard Unix filename conventions_ as long as the _final directory_
+          is *still located within the /package/.*
+   
+** TODO 10.9. Adding Directories to ~sys.path~ - 409
+*** TODO Problem
+*** TODO Solution
+*** TODO Discussion
+    
+** TODO 10.10. Importing Modules Using a Name Given in a String - 411
+*** TODO Problem
+*** TODO Solution
+*** TODO Discussion
+    
+** 10.11. Loading Modules from a Remote Machine Using Import Hooks - 412
+*** Problem
+*** Solution
+*** Discussion
+    
+** 10.12. Patching Modules on Import - 428
+*** Problem
+*** Solution
+*** Discussion
+    
+** 10.13. Installing Packages Just for Yourself - 431
+*** Problem
+*** Solution
+*** Discussion
+    
+** 10.14. Creating a New Python Environment - 432
+*** Problem
+*** Solution
+*** Discussion
+    
+** 10.15. Distributing Packages - 433
+*** Problem
+*** Solution
+*** Discussion
+
+* 12. Concurrency - 485
+  - Python has long supported _DIFFERENT approaches_ to /concurrent programming/,
+    including
+    + programming with threads
+    + launching subprocesses
+    + various tricks involving /generator functions/ =???= =TODO=
+
+  - In this chapter, recipes related to various aspects of concurrent programming
+    are presented, including
+    + common /thread programming/ techniques
+    + approaches for /parallel processing/.
+
+  - As experienced programmers know, /concurrent programming/ is fraught with
+    potential peril.
+      Thus, a _MAJOR FOCUS_ of this chapter is on recipes that tend to lead to
+    more *reliable* and *debuggable* code.
+
+** TODO 12.1. Starting and Stopping Threads - 485 - _???_ =TODO=
+*** Problem - 485
+    You want to *create* and *destroy* /threads/ for _concurrent execution_ of code.
+
+*** Solution - 485
+    - The ~threading~ library can be used to execute _ANY_ /Python callable/ in
+      its own /thread/. To do this, you
+      1. create a ~Thread~ /instance/
+      2. supply the /callable/ that you wish to execute as a target.
+
+    - Here is a simple example:
+      #+begin_src python
+        # Code to execute in an independent thread
+        import time
+
+
+        def countdown(n):
+            while n > 0:
+                print('T-minus', n)
+                n -= 1
+                time.sleep(5)
+                # Create and launch a thread
+                from threading import Thread
+                t = Thread(target=countdown, args=(10,))
+                t.start()
+      #+end_src
+
+    - /Threads/ are executed in their own /system-level thread/ (e.g., a /POSIX
+      thread/ or /Windows threads/) that is FULLY _managed by the HOST OS_.
+
+    - Once started, /threads/ run *independently* UNTIL the _target function_ returns.
+
+    - You can *query* a /thread instance/ to see if it's still running:
+      #+begin_src python
+        if t.is_alive():
+            print('Still running')
+        else:
+            print('Completed')
+      #+end_src
+
+    - You can also request to /join/ with a /thread/, which *waits* for it to
+      _terminate_: ~t.join()~
+
+    - The interpreter remains running until all /threads/ terminate. For /long-running
+      threads/ or _background tasks_ that run forever, you should consider *making the
+      /thread/ /daemonic/.* For example:
+      #+begin_src python
+        t = Thread(target=countdown, args=(10,), daemon=True)
+        t.start()
+      #+end_src
+      + /Daemonic threads/ *can't* be /joined/.
+        However, they are *destroyed* AUTOMATICALLY _when the /main thread/
+        terminates._
+
+    - Beyond the two operations shown (~.start()~ and ~.join()~),
+      there *aren't* many other things you can do with /threads/.
+      + For example, there are *NO* operations to
+        * *terminate* a /thread/
+        * *signal* a /thread/,
+        * *adjust* its scheduling,
+        * *perform* any other high-level operations.
+
+      + If you want these features, *you need to build them yourself.*
+        =TODO= =HOWTO= =???=
+
+    - If you want to be able to *terminate* /threads/, the /thread/ *MUST* be
+      programmed to poll for exit at selected points. =???= =TODO=
+      + For example, you might put your /thread/ in a /class/ such as this:
+        #+begin_src python
+          class CountdownTask:
+              def __init__(self):
+                  self._running = True
+
+              def terminate(self):
+                  self._running = False
+
+              def run(self, n):
+                  while self._running and n > 0:
+                      print('T-minus', n)
+                      n -= 1
+                      time.sleep(5)
+
+          if __name__ == '__main__':
+              c = CountdownTask()
+              t = Thread(target=c.run, args=(10,))
+              t.start()
+              # ...
+              c.terminate()  # Signal termination
+              t.join()       # Wait for actual termination (if needed)
+        #+end_src
+
+    - =TODO= =TODO= =TODO= =???= =???= =???=
+    - _Polling for /thread/ termination_ can be tricky to coordinate if /threads/
+      perform /blocking operations/ such as I/O.
+      + For example, a /thread/ blocked indefinitely on an I/O operation may never
+        return to check if it's been killed. To correctly deal with this case,
+        you'll need to carefully program /thread/ to utilize timeout loops.
+        * For example:
+          #+begin_src python
+            class IOTask:
+                def terminate(self):
+                    self._running = False
+
+                def run(self, sock):
+                    # sock is a socket
+                    sock.settimeout(5)  # Set timeout period
+                    while self._running:
+                        # Perform a blocking I/O operation w/ timeout
+                        try:
+                            data = sock.recv(8192)
+                            break
+                        except socket.timeout:
+                            continue
+                        # Continued processing
+                        # ...
+                    # Terminated
+                    return
+          #+end_src
+
+*** Discussion - 487
+
+** DONE 12.2. Determining If a Thread Has Started - 488
+   CLOSED: [2020-10-07 Wed 02:12]
+*** Problem - 488
+    You've launched a thread, but want to know _when_ it actually starts running.
+
+*** Solution - 488
+    - A key feature of /threads/ is that they execute
+      + *independently*
+      + *nondeterministically*.
+
+    - This can present a tricky synchronization problem:
+      if other /threads/ in the program need to know if a /thread/ has reached a
+      certain point in its execution before carrying out further operations.
+      To solve such problems, use the ~Event~ object from the ~threading~ library.
+
+    - ~Event~ /instances/ are similar to a _"sticky" flag_ that allows /threads/
+      to wait for something to happen.
+      1. Initially, an /event/ is *set* to ~0~.
+
+      2. If the /event/ is *unset* and a /thread/ *waits* on the /event/, it will
+         *block (i.e., go to sleep) until* the /event/ gets *set*.
+
+      3. A /thread/ that *sets* the /event/ will *wake up* _ALL_ of the /threads/
+         that happen to be *waiting* (if any).
+
+      4. If a /thread/ *waits* on an /event/ that has *ALREADY been set*, it merely
+         moves on, continuing to execute.
+
+    - Here is some sample code that uses an ~Event~ to coordinate the startup of
+      a /thread/:
+      #+begin_src python
+        from threading import Thread, Event
+        import time
+
+
+        # Code to execute in an independent thread
+        def countdown(n, started_evt):
+            print('countdown starting')
+            started_evt.set()
+            while n > 0:
+                print('T-minus', n)
+                n -= 1
+                time.sleep(5)
+
+        if __main__ == '__name__':
+            # Create the event object that will be used to signal startup
+            started_evt = Event()
+
+            # Launch the thread and pass the startup event
+            print('Launching countdown')
+            t = Thread(target=countdown, args=(10, started_evt))
+            t.start()
+
+            # Wait for the thread to start
+            started_evt.wait()
+            print('countdown is running')
+      #+end_src
+      + When you run this code, the ="countdown is running"= message will always
+        appear after the ="countdown starting"= message.
+          This is coordinated by the /event/ that makes the /main thread/ _wait
+        until_ the ~countdown()~ function has first printed the startup message.
+
+*** Discussion - 489
+    - ~Event~ /objects/ are BEST used for *one-time* /events/.
+      That is, you create an /event/, /threads/ _wait_ for the /event/ to be
+      *set*, and *once set*, the ~Event~ is _discarded_.
+      + Although it is possible to _clear_ an /event/ using its ~clear()~ /method/,
+        safely clearing an /event/ and _waiting_ for it to be _set_ again is tricky
+        to coordinate, and can lead to _missed_ /events/, /deadlock/, or other
+        problems (in particular, you *CAN'T GUARANTEE* that a request to _clear_
+        an /event/ after setting it will execute *BEFORE* a _released_ /thread/
+        cycles back to _wait_ on the /event/ again).
+
+    - If a /thread/ is going to *repeatedly* signal an /event/ over and over, you're
+      probably better off using a ~Condition~ /object/ *INSTEAD*.
+      + For example,
+        this code implements a periodic timer that other /threads/ can monitor to
+        see whenever the timer expires:
+        #+begin_src python
+          import threading
+          import time
+
+
+          class PeriodicTimer:
+              def __init__(self, interval):
+                  self._interval = interval
+                  self._flag = 0
+                  self._cv = threading.Condition()
+
+              def start(self):
+                  t = threading.Thread(target=self.run)
+                  t.daemon = True
+                  t.start()
+
+              def run(self):
+                  '''Run the timer and notify waiting threads after each interval'''
+                  while True:
+                      time.sleep(self._interval)
+                      with self._cv:
+                          self._flag ^= 1
+                          self._cv.notify_all()
+
+              def wait_for_tick(self):
+                  '''Wait for the next tick of the timer'''
+                  with self._cv:
+                      last_flag = self._flag
+                      while last_flag == self._flag:
+                          self._cv.wait()
+
+
+          if __main__ == '__name__':
+              # Example use of the timer
+              ptimer = PeriodicTimer(5)
+              ptimer.start()
+
+              # Two threads that synchronize on the timer
+              def countdown(nticks):
+                  while nticks > 0:
+                      ptimer.wait_for_tick()
+                      print('T-minus', nticks)
+                      nticks -= 1
+
+              def countup(last):
+                  n = 0
+                  while n < last:
+                      ptimer.wait_for_tick()
+                      print('Counting', n)
+                      n += 1
+
+              threading.Thread(target=countdown, args=(10,)).start()
+              threading.Thread(target=countup, args=(5,)).start()
+        #+end_src
+
+    - A critical feature of ~Event~ objects is that they *wake* _ALL_ /waiting threads/.
+        If you are writing a program where you only want to wake up a *single*
+      /waiting thread/, it is probably better to use a ~Semaphore~ or ~Condition~
+      object instead.
+      + For example, consider this code involving /semaphores/:
+        #+begin_src python
+          # Worker thread
+          def worker(n, sema):
+              # Wait to be signaled
+              sema.acquire()
+              # Do some work
+              print('Working', n)
+
+          # Create some threads
+          sema = threading.Semaphore(0)
+          nworkers = 10
+          for n in range(nworkers):
+              t = threading.Thread(target=worker, args=(n, sema,))
+              t.start()
+        #+end_src
+
+    - If you run this, a /pool of threads/ will start, but nothing happens because
+      they're all *blocked* _waiting to acquire_ the /semaphore/.
+        _Each time_ the /semaphore/ is _released_, *ONLY ONE* ~worker~ will
+      _wake up and run_. For example:
+      #+begin_src python
+        sema.release()  # Working 0
+        sema.release()  # Working 1
+      #+end_src
+
+    - Writing code that involves a lot of *TRICKY synchronization* between
+      /threads/ is likely to make your head explode.
+      =from Jian= this is a imperative way to manage /threads/, which can work,
+                  but complicated.
+
+      + A more sane approach is to *thread* /threads/ as *communicating tasks*
+        * using /queues/ (=TODO= described in the next recipe.)
+          OR
+        * as /actors/ (=TODO= described in Recipe 12.10.)
+
+** TODO 12.3. Communicating Between Threads - 491
+*** Problem - 491
+*** Solution - 491
+*** Discussion - 494
+
+** 12.4. Locking Critical Sections - 497
+*** Problem - 497
+    Your program uses /threads/ and you want to *lock* _critical sections_ of code
+    to *avoid* /race conditions/.
+
+*** Solution - 497
+    Use the object of ~threading.Lock~ to make /mutable object/ *safe* to use.
+
+    - Example:
+      #+begin_src python
+        import threading
+
+
+        class SharedCounter:
+            '''A counter object that can be shared by multiple threads.'''
+            def __init__(self, initial_value = 0):
+                self._value = initial_value
+                self._value_lock = threading.Lock()
+
+            def incr(self, delta = 1):
+                '''Increment the counter with locking.'''
+                with self._value_lock:
+                    self._value += delta
+
+            def decr(self, delta = 1):
+                '''Decrement the counter with locking.'''
+                with self._value_lock:
+                    self._value -= delta
+      #+end_src
+      + A ~Lock~ *guarantees* /mutual exclusion/ when used with the ~with~ statement
+        -- that is, *only* one /thread/ is allowed to execute the block of statements
+        under the ~with~ statement at a time.
+
+      + /The ~with~ statement/ *acquires* the /lock/ for the duration of the indented
+        statements and *releases* the /lock/ WHEN control flow exits the indented block.
+
+*** Discussion - 497
+    - /Thread scheduling/ is *INHERENTLY nondeterministic*.
+      1. Because of this, failure to use /locks/ in _threaded programs_ can result
+         in randomly corrupted data and bizarre behavior known as a /"race
+         condition"/.
+
+      2. To avoid this, /locks/ should always be used whenever /shared mutable state/
+         is accessed by MULTIPLE /threads/.
+
+    - In older Python code, it is common to see /locks/ EXPLICITLY *acquired* and
+      *released*. For example, in this variant of the last example:
+      #+begin_src python
+        import threading
+
+        class SharedCounter:
+            '''A counter object that can be shared by multiple threads.'''
+            def __init__(self, initial_value = 0):
+                self._value = initial_value
+                self._value_lock = threading.Lock()
+
+            def incr(self, delta = 1):
+                '''Increment the counter with locking.'''
+                self._value_lock.acquire()
+                slef._value += delta
+                self._value_lock.release()
+
+            def decr(self, delta = 1):
+                '''Decrement the counter with locking.'''
+                self._value_lock.acquire()
+                slef._value -= delta
+                self._value_lock.release()
+      #+end_src
+
+    - The with statement is more elegant and less prone to error―especially in
+      situations where a programmer might forget to call the release() method or
+      if a program happens to raise an exception while holding a lock (the with
+      statement guarantees that locks are always released in both cases).
+
+    - To avoid the potential for deadlock, programs that use locks should be written
+      in a way such that each thread is only allowed to acquire one lock at a time.
+      If this is not possible, you may need to introduce more advanced
+      deadlock avoidance into your program, as described in Recipe 12.5.
+
+** 12.5. Locking with Deadlock Avoidance - 500
+*** Problem - 500
+*** Solution - 500
+*** Discussion - 502
+
+** 12.6. Storing Thread-Specific State - 504
+*** Problem - 504
+*** Solution - 504
+*** Discussion - 505
+
+** 12.7. Creating a Thread Pool - 505
+*** Problem - 505
+*** Solution - 506
+*** Discussion - 507
+
+** 12.8. Performing Simple Parallel Programming - 509
+*** Problem - 509
+*** Solution - 509
+*** Discussion - 511
+
+** 12.9. Dealing with the GIL (and How to Stop Worrying About It) - 513
+*** Problem - 513
+*** Solution - 513
+*** Discussion - 515
+
+** 12.10. Defining an Actor Task - 516
+*** Problem - 516
+*** Solution - 517
+*** Discussion - 519
+
+** 12.11. Implementing Publish/Subscribe Messaging - 520
+*** Problem - 520
+*** Solution - 520
+*** Discussion - 522
+
+** 12.12. Using Generators As an Alternative to Threads - 524
+*** Problem - 524
+*** Solution - 524
+*** Discussion - 530
+
+** 12.13. Polling Multiple Thread Queues - 531
+*** Problem - 531
+*** Solution - 532
+*** Discussion - 533
+
+** 12.14. Launching a Daemon Process on Unix - 534
+*** Problem - 534
+*** Solution - 534
+*** Discussion - 537
+
+* 13. Utility Scripting and System Administration - 539
+** 13.1. Accepting Script Input via Redirection, Pipes, or Input Files - 539
+** 13.2. Terminating a Program with an Error Message - 540
+** 13.3. Parsing Command-Line Options - 541
+** 13.4. Prompting for a Password at Runtime - 544
+** 13.5. Getting the Terminal Size - 545
+** 13.6. Executing an External Command and Getting Its Output - 545
+** 13.7. Copying or Moving Files and Directories - 547
+** 13.8. Creating and Unpacking Archives - 549
+** 13.9. Finding Files by Name - 550
+** 13.10. Reading Configuration Files - 552
+** DONE 13.11. Adding Logging to Simple Scripts - 555
+   CLOSED: [2020-10-03 Sat 00:36]
+*** DONE Problem - 555
+    CLOSED: [2020-10-03 Sat 00:35]
+    You want scripts and simple programs to _write diagnostic information_
+    *TO* _log files_.
+
+*** DONE Solution - 555
+    CLOSED: [2020-10-03 Sat 00:36]
+    The easiest way: use the logging module in the standard library.
+
+    - Example:
+      Here the logging configuration is hardcoded directly into the program.
+      This is not flexible -- change the configuration need to change the code.
+      #+begin_src python
+        import logging
+
+
+        def main():
+            # Configure the logging system
+            logging.basicConfig(
+                filename='app.log',
+                level=logging.ERROR
+            )
+
+            # Variables (to make the calls that follow work)
+            hostname = 'www.python.org'
+            item = 'spam'
+            filename = 'data.csv'
+            mode = 'r'
+
+            # Example logging calls (insert into your program)
+            logging.critical('Host %s unknown', hostname)
+            logging.error("Couldn't find %r", item)
+            logging.warning('Feature is deprecated')
+            logging.info('Opening file %r, mode=%r', filename, mode)
+            logging.debug('Got here')
+
+        if __name__ == '__main__':
+            main()
+      #+end_src
+    -
+
+    - Example:
+      Change the output or level of output:
+      #+begin_src python
+        logging.basicConfig(
+            filename='app.log',
+            level=logging.WARNING,
+            format='%(levelname)s:%(asctime)s:%(message)s'
+        )
+      #+end_src
+
+    - Example:
+      Configure logging system from a configuration file:
+      + Use ~logging.config.fileConfig('logconfig.ini')~ in code
+
+      + Configuration file =logconfig.ini=
+        #+begin_src text
+          [loggers]
+          keys=root
+
+          [handlers]
+          keys=defaultHandler
+
+          [formatters]
+          keys=defaultFormatter
+
+          [logger_root]
+          level=INFO
+          handlers=defaultHandler
+          qualname=root
+
+          [handler_defaultHandler]
+          class=FileHandler
+          formatter=defaultFormatter
+          args=('app.log', 'a')
+
+          [formatter_defaultFormatter]
+          format=%(levelname)s:%(name)s:%(message)s
+        #+end_src
+
+*** DONE Discussion - 557
+    CLOSED: [2020-10-03 Sat 00:36]
+    - Simply make sure that you execute the ~basicConfig()~ call prior to making
+      any logging calls, and your program will generate logging output.
+
+    - Show logging messages in /standard error/ INSTEAD OF a file:
+      don't supply any filename information to ~basicConfig()~.
+
+    - ~basicConfig()~ can *only* be called *once* in your program.
+      *Change* the configuration _later_ need to
+      ~logging.getLogger().level = logging.DEBUG~
+      1. obtain the /root logger/
+      2. make changes to it directly
+
+    - You can learn advanced customizations in "Logging Cookbook".
+      =from Jian= Official documentations
+
+** TODO 13.12. Adding Logging to Libraries - 558
+*** Problem - 558
+*** Solution - 558
+*** Discussion - 558
+
+** 13.13. Making a Stopwatch Timer - 559
+** 13.14. Putting Limits on Memory and CPU Usage - 561
+** 13.15. Launching a Web Browser - 563
+
+* 14. Testing, Debugging, and Exceptions - 565
+** 14.1. Testing Output Sent to stdout - 565
+** 14.2. Patching Objects in Unit Tests - 567
+** 14.3. Testing for Exceptional Conditions in Unit Tests - 570
+** 14.4. Logging Test Output to a File - 572
+** 14.5. Skipping or Anticipating Test Failures - 573
+** 14.6. Handling Multiple Exceptions - 574
+** 14.7. Catching All Exceptions - 576
+** 14.8. Creating Custom Exceptions - 578
+** 14.9. Raising an Exception in Response to Another Exception - 580
+** 14.10. Reraising the Last Exception - 582
+** 14.11. Issuing Warning Messages - 583
+** 14.12. Debugging Basic Program Crashes - 585
+** 14.13. Profiling and Timing Your Program - 587
+** 14.14. Making Your Programs Run Faster - 590

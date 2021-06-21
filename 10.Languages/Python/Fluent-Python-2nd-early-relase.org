@@ -1,0 +1,1347 @@
+#+TITLE: Fluent Python
+#+SUBTITLE: Clear, Concise, and Effective Programming
+#+VERSION: 2nd, Early Relase
+#+AUTHOR: Luciano Ramalho
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface - xv
+* DONE Part I. Prologue
+  CLOSED: [2017-09-07 Thu 21:14]
+** DONE 1. The Python Data Model - 3
+   CLOSED: [2021-04-04 Sun 22:05]
+   - One of the best quanlities of Python is its *consistency*.
+     * However, you may find it stange to use ~len(collection)~ instad of
+       ~collection.len()~. To understand this, you need to learn /Python Data
+       Model/.
+       + =from Jian=
+         ~len~ is not a good name!!!
+         Python even use ~len~ to get _size_.
+   
+   - Python Data Model ::
+     describes the API that if you use it properly you can use to make your own
+     objects play well with the most idiomatic language features.
+
+   - /Python data model/ can be considered as a description of Python as a
+     framework.
+       It *formalizes* the interfaces of the building blocks of the language itself,
+     such as /sequences/, /iterators/, /functions/, /classes/, /context managers/,
+     and so on.
+
+   - While coding with any framework, you spend a lot of time implementing
+     methods that are called by the framework. The same happens when you
+     leverage the /Python data model/.
+
+   - =IMPORTANT=
+     JARGON:
+     ~__getitem__~ is called as ~dunder-getitem~ (a shortcut for
+     "under-under-getitem-under-under" invented by Steve Holden).
+     * Call this kind of methods "dunder methods".
+
+*** DONE What's new in this chapter
+    CLOSED: [2021-04-04 Sun 22:05]
+    Sine the Python Data Model is quite stable, there is few changes.
+
+    - Ths most significant changes:
+      * /Special methods/ supporting /asynchronous programming/ and _other new
+        features_, added to the tables in "Overview of Special Methods".
+        =TODO=
+
+      * Figure 1-2 showing the use of /special methods/ in "Collection API",
+        including the ~collections.abc.Collection~ /abstract base class/ introduced
+        in Python 3.6.
+
+    - Adopt the f-string syntax introduced in Python 3.6. 
+      * Try to use this syntax, instead of the less readable ~str.format()~ and
+        ~%~ operator.
+
+      * Only use ~my_fmt.format()~ when building the template ~my_fmt~ at runtime.
+
+*** DONE A Pythonic Card Deck - 4
+    CLOSED: [2021-04-04 Sun 22:42]
+    #+BEGIN_SRC python
+      from collections import namedtuple
+
+      Card = namedtuple('Card', ['rank', 'suit'])
+
+      class FrenchDeck:
+          ranks = tuple([str(n) for n in range(2, 11)] + ['J', 'K', 'Q', 'A'])
+          suits = ('spades', 'diamonds', 'clubs', 'hearts')
+
+          def __init__(self):
+              self._cards = [Card(rank, suit)
+                             for suit in self.suits
+                             for rank in self.ranks]
+
+          def __len__(self):
+              return len(self._cards)
+
+          def __getitem__(self, position):
+              return self._cards[position]
+    #+END_SRC
+
+    - Usage:
+      #+BEGIN_SRC python
+        ## Create a card through the `Card` namedtuple
+        beer_card = Card('7', 'diamonds')
+        beer_card
+        # Card(rank='7', suit='diamonds')
+
+        ## Instance creation, and use `len`
+        deck = FrenchDeck()
+        len(deck)
+        # 52
+
+        ## Indexing
+        deck[0]
+        # Card(rank='2', suit='spades')
+        deck[-1]
+        # Card(rank='A', suit='hearts')
+
+        ## Pick a random card
+        from random import choice
+        choice(deck)
+        # Card(rank='3', suit='hearts')
+        choice(deck)
+        # Card(rank='K', suit='spades')
+      #+END_SRC
+
+    - Just by implementing the ~__getitem__~, our deck is also /iterable/ (then
+      the ~reverse~ function can be applied).
+
+    - /Iteration/ is often _implicit_.
+      If a collection has *NO* ~__contains__~ method, the ~in~ operator does a
+      _sequential scan_ (use ~__getitem__~).
+
+    - *How About Shuffling?*
+      By convention, a single underscore prefixed attribute is private -- cannot
+      be accessed outside, and therefore de facto *immutable* (ONLY be convention).
+      * We can't do shuffling now.
+
+      * =TODO= Chapter 11
+        Use ~__setitem__~ to make shuffling available.
+
+*** DONE How Special Methods Are Used - 8
+    CLOSED: [2017-09-07 Thu 20:09]
+    - /Special methods/ should always be called by the Python interpreter, and
+      NOT by you.
+
+    - When measure the size, ~__len__~ is _NOT always_ used by the interpreter.
+
+      For built-in types like ~list~, ~str~, ~bytearray~, and so on, the
+      interpreter takes a shortcut:
+        The /CPython/ implementation of ~len()~ actually returns the value of the
+      ~ob_size~ field in the ~PyVarObject~ C struct that represents any
+      _variable-sized built-in object_ in memory. This is _much faster_ than
+      calling a method.
+
+    - Unless you are doing a lot of /metaprogramming/, you should be implementing
+      /special methods/ more often than invoking them explicitly.
+
+    - The _ONLY_ /special method/ that is frequently called by user code directly
+      is ~__init__~, to invoke the initializer of the superclass in your own
+      ~__init__~ implementation.
+
+    - _CONCLUSION_:
+      If you need to invoke a /special method/,
+      it is usually BETTER to call the related built-in function (e.g., ~len~,
+      ~iter~, ~str~, etc).
+
+      These built-ins call the corresponding /special method/, but often provide
+      other services and -- for built-in types -- are faster than method calls.
+
+      =TODO= See, for example, “A Closer Look at the iter Function” on page 436
+      in Chapter 14.
+
+    - _NEVER_ create a dunder identifier to your own use -- they can be
+      /special methods/ in the future, even if they are not today; consider them
+      as reserved names for the future /special methods/.
+
+**** DONE Emulating Numeric Types - 9
+     CLOSED: [2017-09-07 Thu 19:02]
+     =TODO= More details in Chapter 13
+
+     - What we want is
+       #+BEGIN_SRC python
+         v1 = Vector(2, 4)
+         v2 = Vector(2, 1)
+         v1 + v2              # Vector(4, 5)
+
+         v = Vector(3, 4)
+         abs(v)               # 5.0
+
+         v * 3                # Vector(9, 12)
+
+
+       #+END_SRC
+
+     - Implementation (with ~__repr__~, ~__abs__~, ~__add__~, and ~__mul__~):
+       #+BEGIN_SRC python
+         from math import hypot
+         # TODO: ???
+
+
+         class Vector:
+             def __init__(self, x=0, y=0):
+                 self.x = x
+                 self.y = y
+
+             def __repr__(self):
+                 return 'Vector({!r}, {!r})'.format(self.x, self.y)
+
+             def __abs__(self):
+                 return hypot(self.x, self.y)
+
+             def __bool__(self):
+                 return bool(abs(self))
+
+             def __add__(self, other):
+                 x = self.x + other.x
+                 y = self.y + other.y
+                 return Vector(x, y)
+
+             def __mul__(self, scalar):
+                 return Vector(self.x * scalar, self.y * scalar)
+       #+END_SRC
+
+**** DONE String Representation - 11
+     CLOSED: [2017-09-07 Thu 19:54]
+     - The ~__repr__~ /special method/ is called by the ~repr~ built-in.
+
+     - If it wasn't implemented in the example of the last subsection, the
+       printed out is like =<Vector object at 0x10e100070>=
+
+     - The interactive console and debugger call repr on the results of the
+       expressions evaluated. When print, use ~%r~ for ~%~ operator, and use
+       ~!r~ for the ~format~ method or function.
+
+     - The string returned by ~__repr__~ should be unambiguous and, if possible,
+       match the source code necessary to re-create the object being represented
+       (when use built-in ~eval~).
+       #+BEGIN_SRC python
+         repr(3)  # '3'
+         repr('3')  # '"3"'
+       #+END_SRC
+
+     - If no ~__str__~ is implemented, ~__repr__~ will be the fallback.
+
+     - StackOverflow Question:
+       "Difference between ~__str__~ and ~__repr__~ in Python"
+       Answers from Alex Martelli and Martijn Pieters
+
+**** DONE Arithmetic Operators - 12
+     CLOSED: [2017-09-07 Thu 20:02]
+     - ~__add__~ and ~__mul__~ return new instances.
+       (=From Jian=: there are also in-place versions of /special methods/
+       corresponding operators)
+
+     - =TODO= Chapter 13
+       Use ~__rmul__~ to fix the commutative problem of Vectors:
+       Suppose there are a scalar ~s~ and a Vector (of our created) ~v~,
+       currently our ~Vector~ only support ~v~ * ~s~, and it doesn't support
+       ~s~ * ~v~, which should be supported and its result should the same as
+       ~v~ * ~s~.
+
+**** DONE Boolean Value of a Custom Type - 12
+     CLOSED: [2017-09-07 Thu 20:09]
+     - By default, instances of user-defined classes are considered truthy, unless
+       either ~__bool__~ or ~__len__~ is implemented.
+
+       Basically, ~bool(x)~ calls ~x.__bool__()~ and uses the result.
+       If ~__bool__~ is not implemented, Python will try to invoke ~x.__len__()~,
+       which returns ~True~ if it is non-zero.
+
+     - The ~__bool__~ method should always do ~return bool(something)~
+       If not, when you use built-in ~bool~, the result can be a non-boolean
+       variable, even though, as in Python, it always has a boolean value.
+       =IMPORTANT=
+
+     - A faster ~__bool__~ implementation for our version of ~Vector~ (avoid
+       using ~abs~):
+       #+BEGIN_SRC python
+         def __bool__(self):
+             return bool(self.x or self.y)
+       #+END_SRC
+
+**** TODO Collection API - NEW in 2nd Edition
+
+*** DONE Overview of Special Methods - 13 =READ=
+    CLOSED: [2017-09-07 Thu 21:07]
+    The “Data Model” chapter of The Python Language Reference lists 83 special
+    method names, 47 of which are used to implement arithmetic, bitwise, and
+    comparison operators
+
+    - Table 1-1. Special method names (operators excluded)
+      _READ THE BOOK_
+
+    - Table 1-2. Special method names for operators
+      _READ THE BOOK_
+
+*** DONE Why ~len~ Is Not a Method - 14
+    CLOSED: [2021-04-04 Sun 23:07]
+    I (Luciano Ramalho) asked this question to core developer Raymond Hettinger
+    in 2013 and the key to his answer was a quote from *The Zen of Python*:
+    _"practicality beats purity."_
+
+    - If the ~__len__~ is always called when calculating the length and size,
+      some performance requirement can't be satisfied.
+      * When ~len(built_in_object)~ is called, it simply read a field in the
+        underlying C struct to get the length. This can be much efficient.
+
+*** DONE Chapter Summary - 14
+    CLOSED: [2021-04-04 Sun 23:02]
+    By implementing /special methods/, your objects can *behave like the built-in
+    types*, enabling the expressive coding style the community considers Pythonic.
+
+    - There two possible string representations:
+      * ~__repr__~ is for _debugging_ and _logging_
+      * ~__str__~ is for end users.
+    
+*** TODO Further Reading - 15
+
+* TODO Part II. Data Structures
+** TODO 2. An Array of Sequences - 19
+*** TODO Overview of Built-In Sequences - 20
+    - The standard library offers a rich selection of sequence types implemented
+      in C:
+      + Container sequences :: ~list~, ~tuple~, and ~collections.deque~ can hold
+           items of different types.
+
+      + Flat sequences :: ~str~, ~bytes~, ~bytearray~, ~memoryview~, and
+                          ~array.array~ hold items of one type.
+
+    - Another way of grouping sequence types is by mutability:
+      + Mutable sequences :: ~list~, ~bytearray~, ~array.array~,
+           ~collections.deque~, and ~memoryview~
+
+      + Immutable sequences :: ~tuple~, ~str~, and ~bytes~
+
+    - Figure 2-1. UML class diagram for some classes from ~collectior.abc~
+      =TODO=
+
+    - Refer to /list comprehensions/ as /listcomps/;
+      Refer to /generator/as /genexps/.
+
+*** DONE List Comprehensions and Generator Expressions - 21
+    CLOSED: [2017-09-07 Thu 21:39]
+**** DONE List Comprehensions and Readability - 21
+     CLOSED: [2017-09-07 Thu 21:34]
+    - For readability: /listcomps/ should be short and no side-effect.
+
+    - *Listcomps No Longer Leak Their Variables* in Python 3.
+
+**** DONE Listcomps Versus map and filter - 23
+     CLOSED: [2017-09-07 Thu 21:37]
+**** DONE Cartesian Products - 23
+     CLOSED: [2017-09-07 Thu 21:37]
+     #+BEGIN_SRC python
+       tshirts = [(color, size) for size in sizes
+                                for color in colors]
+     #+END_SRC
+**** DONE Generator Expressions - 25
+     CLOSED: [2017-09-07 Thu 21:39]
+
+*** DONE Tuples Are Not Just Immutable Lists - 26
+    CLOSED: [2017-09-07 Thu 22:07]
+    Tuples do _double_ duty: they can be used
+    + as immutable lists
+    + as records with no field names.
+
+    The second use is sometimes overlooked, so we will start with that.
+
+**** DONE Tuples as Records - 26
+     CLOSED: [2017-09-07 Thu 21:47]
+     - Tuples hold records:
+       each item in the tuple holds the data for one field and the position of
+       the item gives its meaning.
+
+     - Tuples work well as records because of the /tuple unpacking/ mechanism.
+
+**** DONE Tuple Unpacking - 27
+     CLOSED: [2017-09-07 Thu 21:55]
+     - The term /tuple unpacking/ is widely used by Pythonistas,
+
+       BUT /iterable unpacking/ is gaining traction, as in the title of
+       PEP 3132 — Extended Iterable Unpacking.
+
+     - Trap: =TODO=
+       If you write _internationalized_ software,
+       ~_~ is NOT a good dummy variable because it is traditionally used as an
+       alias to the ~gettext.gettext~ function, as recommended in the gettext
+       module documentation.
+
+       _Otherwise_, it's a nice name for placeholder variable.
+
+***** DONE Using ~*~ to grab excess items
+      CLOSED: [2017-09-07 Thu 21:55]
+      It Works in Python 3
+      #+BEGIN_SRC python
+        a, b, *rest = range(5)
+        a, b, rest
+        # (0, 1, [2, 3, 4])
+
+
+        a, b, *rest = range(3)
+        a, b, rest
+        # (0, 1, [2])
+
+
+        a, b, *rest = range(2)
+        a, b, rest
+        # (0, 1, [])
+
+
+        a, *body, c, d = range(5)
+        a, body, c, d
+        # (0, [1, 2], 3, 4)
+
+
+        ,*head, b, c, d = range(5)
+        head, b, c, d
+        # ([0, 1], 2, 3, 4)
+      #+END_SRC
+
+**** DONE Nested Tuple Unpacking - 29
+     CLOSED: [2017-09-07 Thu 21:59]
+     - Definition header like ~def fn(a, (b, c), d):~ is legal before Python 3,
+       which is disabled, and the reasons are explained in _PEP 3113 -- Removal
+       of Tuple parameter Unpacking_.
+
+**** DONE Named Tuples - 30
+     CLOSED: [2017-09-07 Thu 22:07]
+     - ~collections.namedtuple~ function is a factory that produce subclasses of
+       tuple enhanced with field names and a class name -- _which helps debugging_.
+
+     - Instances of a class that you build with /namedtuple/ take _exactly the
+       same amount of memory as_ /tuples/
+
+       _BECAUSE_ the field names are _stored in the class_. They use less memory
+       than a regular object because they don't store attributes in a
+       per-instance ~__dict__~.
+
+     - Namedtuple elements can be accessed through name or index.
+
+     - ~_fields~ is a tuple with the field names of the class.
+       ~_make()~ allow you to instantiate a named tuple from an iterable; City(*del hi_data) would do the same.
+       ~_asdict()~ returns a collections.OrderedDict built from the named tuple instance. That can be used to produce a nice display of city data.
+       #+BEGIN_SRC python
+         City._fields
+         # ('name', 'country', 'population', 'coordinates')
+
+
+         LatLong = namedtuple('LatLong', 'lat long')
+         delhi_data = ('Delhi NCR', 'IN', 21.935, LatLong(28.613889, 77.208889))
+         delhi = City._make(delhi_data)
+
+
+         delhi._asdict()
+         # OrderedDict([('name', 'Delhi NCR'), ('country', 'IN'), ('population', 21.935),
+         #              ('coordinates', LatLong(lat=28.613889, long=77.208889))])
+
+         for key, value in delhi._asdict().items():
+             print(key + ':', value)
+         # name: Delhi NCR
+         # country: IN
+         # population: 21.935
+       #+END_SRC
+
+**** DONE Tuples as Immutable Lists - 32
+     CLOSED: [2017-09-07 Thu 22:13]
+     - Table 2-1. Methods and attributes found in list or tuple (methods
+       implemented by object are omitted for brevity)
+
+     - /tuple/ supports _all_ list methods _that do NOT involve_ *adding* or
+       *removing* items (of course, here only in-place operations cannot be
+       involved),
+
+       with _ONE exception_ -- tuple lacks the ~__reversed__~ method, which is
+       reasonable -- it's used for in-place reverse (should always have no return
+       value). Since we cannot do in-place operations to /tuples/, this is just
+       an optimization -- eliminate might-be-confusing /special method/;
+
+       For /tuples/, ~reversed(my_tuple)~ works, and it works without
+       ~__reversed__~.
+
+       (=From Jian= from table, there is one method that /list/ doesn't implement
+
+        ~s.__getnewargs__()~ that Support for optimized serialization with
+        ~pickle~)
+        =TODO=
+
+*** DONE Slicing - 33
+    CLOSED: [2017-09-07 Thu 22:47]
+    - =TODO= Implement a user-defined class with slicing will be covered in
+      Chapter 10,
+
+**** DONE Why Slices and Range Exclude the Last Item - 33
+     CLOSED: [2017-09-07 Thu 22:27]
+     - This convetion works well with zero-based indexing languages.
+
+     - Some convenient features of the convention are:
+       + It's easy to see the length of a /slice/ or /range/ when only the stop
+         position is given:
+         ~range(3)~ and ~my_list[:3]~ both produce _three_ items.
+
+       + It's easy to compute the length of a /slice/ or /range/ when _start_ and
+         _stop_ are given:
+         just subtract _stop - start_.
+
+       + It's easy to *split* a sequence in two parts at any index ~x~, without
+         overlapping: simply get ~my_list[:x]~ and ~my_list[x:]~.
+
+     - =TODO=
+       But the best arguments for this convention were written by the Dutch
+       computer scientist Edsger W. Dijkstra (see the last reference in “Further
+       Reading” on page 59).
+
+**** DONE Slice Objects - 34
+     CLOSED: [2017-09-07 Thu 22:37]
+     - =TODO= As we will see in “How Slicing Works” on page 281, to evaluate the
+       expression ~seq[start:stop:step]~, Python calls
+       ~seq.__getitem__(slice(start, stop, step))~.
+
+     - Even if you are not implementing your own sequence types,
+       knowing about /slice objects/ is useful
+       because it lets you assign names to slices.
+
+     - Example:
+       #+BEGIN_SRC python
+         invoice = """
+         0.....6.................................40........52...55........
+         1909  Pimoroni PiBrella                     $17.50    3    $52.50
+         1489  6mm Tactile Switch x20                 $4.95    2    $9.90
+         1510  Panavise Jr. - PV-201                 $28.00    1    $28.00
+         1601  PiTFT Mini Kit 320x240                $34.95    1    $34.95
+         """
+
+         SKU = slice(0, 6)
+         DESCRIPTION = slice(6, 40)
+         UNIT_PRICE = slice(40, 52)
+         QUANTITY = slice(52, 55)
+         ITEM_TOTAL = slice(55, None)
+
+         line_items = invoice.split('\n')[2:]
+
+         for item in line_items:
+             print(item[UNIT_PRICE], item[DESCRIPTION])
+
+         # $17.50 Pimoroni PiBrella
+         # $4.95 6mm Tactile Switch x20
+         # $28.00 Panavise Jr. - PV-201
+         # $34.95 PiTFT Mini Kit 320x240
+       #+END_SRC
+
+     - =TODO= We’ll come back to slice objects when we discuss creating your own
+       collections in “Vector Take #2: A Sliceable Sequence” on page 280.
+
+**** TODO Multidimensional Slicing and ~Ellipsis~ - 35
+     - =TODO= =RE-READ=
+
+     - Slices are not just useful to extract information from sequences;
+
+       they can also be used to change mutable sequences in place -- that is,
+       without rebuilding them from scratch.
+
+**** DONE Assigning to Slices - 36
+     CLOSED: [2017-09-07 Thu 22:47]
+     - Mutable sequences can be grafted, excised, and otherwise modified in place
+       using slice notation on the left side of an assignment statement or as
+       the target of a del statement.
+
+     - Example:
+       #+BEGIN_SRC python
+         l = list(range(10))
+
+         l[2:5] = [20, 30]
+         l
+         # [0, 1, 20, 30, 5, 6, 7, 8, 9]
+
+         del l[5:7]
+         l
+         # [0, 1, 20, 30, 5, 8, 9]
+
+         l[3::2] = [11, 22]
+         l
+         # [0, 1, 20, 11, 5, 22, 9]
+
+         l[2:5] = 100
+         l
+         # TypeError: can only assign an iterable
+
+         l[2:5] = [100]
+         l
+         # [0, 1, 100, 22, 9]
+       #+END_SRC
+
+*** DONE Using ~+~ and ~*~ with Sequences - 36
+    CLOSED: [2017-09-07 Thu 22:56]
+    - Trap:
+      Suppose ~a~ is a sequence containing _mutable items_, and ~n~ is greater
+      than 1.
+
+      The result will contain n reference to the _mutable items_, and the
+      consequence is: when you mutate one of this kind of item, the ones refer to
+      it will also change -- acutally, the are just images to the mutated item.
+
+**** DONE Building Lists of Lists - 37
+     CLOSED: [2017-09-07 Thu 22:56]
+     Use the /list comprehension/.
+     #+BEGIN_SRC python
+       board = [['_'] * 3 for i in range(3)]
+       board
+       # [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+
+       board[1][2] = 'X'
+       board
+       # [['_', '_', '_'], ['_', '_', 'X'], ['_', '_', '_']]
+     #+END_SRC
+
+     - =TODO= next subsection
+       The ~+=~ and ~*=~ operators produce very different results depending on the
+       _mutability_ of the target sequence.
+
+*** DONE Augmented Assignment with Sequences - 38
+    CLOSED: [2017-09-10 Sun 01:34]
+    The /augmented assignment/ operators ~+=~ and ~*=~ behave VERY DIFFERENTLY
+    depending on _the FIRST operand_.
+
+    To simplify the discussion, we will focus on augmented addition first (~+=~),
+    but the concepts also apply to ~*=~ and to other augmented assignment
+    operators.
+
+    - =Important=
+      =FROM JIAN= I THINK THIS IS A EXTREMELY BAD DESIGN!!!
+      _MY REASONS_?????????? =TODO=
+      The fallback of ~__iadd__~ (~__imul__~) is ~__add__~ (~__mul__~)!!!
+      #+BEGIN_SRC python
+        ## a mutable object
+        l = [1, 2, 3]
+        id(l)
+        # 4311953800
+
+        l *= 2
+        l
+        # [1, 2, 3, 1, 2, 3]
+
+        id(l)
+        # 4311953800
+        ### Unchanged
+
+        ## a immutable object, no in-place operation implemented, fallback to
+        ## non-in-place operations.
+        t = (1, 2, 3)
+        id(t)
+        # 4312681568
+
+        t *= 2
+        id(t)
+        # 4301348296
+        ### changed
+      #+END_SRC
+
+    - Repeated concatenation of immutable sequences is inefficient, because
+      instead of just appending new items, the interpreter has to copy the whole
+      target sequence to create a new one with the new items concatenated.3
+
+      =FROM JIAN= WHY NOT USE implement with /persistence/ as Scala???
+
+      - footnote:
+        ~str~ is an exception to this description.
+        Because string building with ~+=~ in loops is so common in the wild,
+        CPython is optimized for this use case. ~str~ instances are allocated in
+        memory with room to spare, so that concatenation does NOT require
+        copying the whole string every time.
+
+**** DONE A ~+=~ Assignment Puzzler - 40
+     CLOSED: [2017-09-10 Sun 01:34]
+     #+BEGIN_SRC python
+       t = (1, 2, [30, 40])
+       t[2] += [50, 60]
+
+       # Traceback (most recent call last):
+       #   File "<stdin>", line 1, in <module>
+       # TypeError: 'tuple' object does not support item assignment
+
+       t
+       # (1, 2, [30, 40, 50, 60])
+     #+END_SRC
+
+     - Details ...... (disassemble the Python bytecode)
+
+     - Conclusion:
+       + Putting mutable items into a supposed immutable objects (e.g. tuple), is
+         _NOT_ a good idea.
+
+       + /Augmented assignment/ is _NOT_ an /atomic operation/ -- we just saw it
+         throwing an exception after doing part of its job.
+
+       + Inspecting Python bytecode is NOT too DIFFICULT, and is often helpful to
+         see what is going on under the hood.
+
+*** DONE ~list.sort~ and the ~sorted~ Built-In Function - 42
+    CLOSED: [2017-09-10 Sun 00:25]
+    - Python API convention: the value a in-place operation returns should be
+      ~None~. For example, ~list.sort~ and ~random.shuffle~.
+
+    - In-palce operation returns ~None~, and thus cascade calls can be applied
+      any more.
+
+    - Read "Fluent interface" entry in wiki. =TODO=
+
+    - ~sorted~ accepts any iterable object as an argument, including generators
+      (see Chapter 14). =TODO=
+
+    - Both list.sort and sorted take two optional, keyword-only arguments:
+      + ~reverse~: The default is ~False~.
+      + ~key~: ......
+
+    - The _standard binary search algorithm_ is already provided in the ~bisect~
+      module of the Python standard library.
+      =IMPORTANT=
+
+    - ~bisect.insort~: use it to make sure that your sorted sequences stay
+      sorted.
+      =TODO= =???=
+
+*** DONE Managing Ordered Sequences with ~bisect~ - 44
+    CLOSED: [2020-04-22 Wed 01:21]
+    - The ~bisect~ module offers two main functions that exploit the /binary
+      search algorithm/:
+      + ~bisect~
+      + ~insort~
+
+**** DONE Searching with ~bisect~ - 44
+     CLOSED: [2020-04-22 Wed 01:21]
+     - ~bisect(haystack, needle)~
+       returns the index that all the elements include the one at the returned
+       index are less than or equal to the ~needle~.
+
+     - TODO =TRY it= TODO
+       Raymond Hettinger -- a prolific Python contributor -- has a
+       _Sorted Collection recipe_ that leverages the ~bisect~ module
+       BUT is _easier_ to use than these standalone functions.
+
+     - The ~bisect~ function is an alias of ~bisect_right~.
+       There is also an ~bisect_left~.
+       + The difference between them is when the ~needle~ equals a value in haystack,
+         * When using ~bisect~ / ~bisect_right~, insert it to the _right_.
+         * When using ~bisect_left~, insert it to the _left_.
+
+     - Read
+       _Example 2-17. bisect finds insertion points for items in a sorted sequence_
+
+     - Interesting example (Example 2-18) from _the ~bisect~ module documentation_.
+       #+begin_src python
+         def grade(score, breakpoints=[60, 70, 80, 90], grades='FDCBA'):
+             i = bisect.bisect(breakpoints, score)
+             return grades[i]
+
+         [grade(score) for score in [33, 99, 77, 70, 89, 90, 100]]
+         # ['F', 'A', 'C', 'C', 'B', 'A', 'A']
+       #+end_src
+
+**** DONE Inserting with ~bisect.insort~ - 47
+     CLOSED: [2020-04-22 Wed 01:21]
+     ~insort(seq, item)~ inserts ~item~ into seq so as to keep ~seq~ in _ascending
+     order_.
+
+     - Example 2-19. Insort keeps a sorted sequence always sorted.
+       #+begin_src python
+         import bisect
+         import random
+
+         SIZE = 7
+
+         random.seed(1729)
+
+         my_list = []
+         for i in range(SIZE):
+             new_item = random.randrange(SIZE * 2)
+             bisect.insort(my_list, new_item)
+             print(f'{new_item:>2d} -> {my_list}')
+       #+end_src
+
+     - Like ~bisect~, ~insort~ takes _optional_ ~lo~, ~hi~ arguments to _LIMIT
+       the search to a subsequence_.
+
+     - There is also an ~insort_left~ variation that uses ~bisect_left~ to find
+       insertion points.
+
+     - Python programmers sometimes overuse the ~list~ type because it is so handy
+       -- I know I’ve done it.
+       TODO next section TODO
+         If you are handling _lists of numbers_, /arrays/ are the way to go. The
+       remainder of the chapter is devoted to them.
+
+*** TODO When a List Is Not the Answer - 48
+    - For specific requirements, there are better options than ~list~:
+      + Store 10 million floating-point values, an ~array~ is much more efficient.
+          Just like the /array/ in Python's host language C, Python's ~array~ is
+        very compact in memory.
+
+      + For a sequence that need to operate its two ends frequently, use ~deque~.
+
+**** DONE Arrays - 48
+     CLOSED: [2020-04-22 Wed 01:55]
+     - ~array.array~ supports
+       + all mutable sequence operations (including ~.pop~, ~.insert~, and ~.extend~)
+       + Fast loading and saving such as ~.frombytes~ and ~.tofile~
+
+     - Create an array with typecode like:
+       ~array('b')~, where ~'b'~ is the typecode for *signed char*. Each item must
+       be a single byte (from -128 to 127).
+
+     - Example 2-20. Creating, saving, and loading a large array of floats
+       #+begin_src python
+         from array import array
+         from random import random
+
+         floats = array('d', (random() for i in range(10**7)))
+         floats[-1]  # 0.07802343889111107
+         floats.tofile(open('floats.bin', 'wb'))
+
+         floats2 = array('d')
+         floats.fromfile(open('floats.bin', 'rb'), 10**7)
+         floats2[-1]  # 0.07802343889111107
+
+         floats2 == floats  # True
+       #+end_src
+
+     - ~pickle.dump(array)~ is almost as fast as with ~array.tofile~.
+         However, the difference is ~pickle.dump~ can also handle almost all
+       built-in types automatically.
+
+     - TODO CHAPTER 4 TODO
+       For the specific case of numeric arrays representing binary data, such as
+       raster images, Python has the bytes and bytearray types discussed in
+       Chapter 4.
+
+     - Table 2-2. Methods and attributes found in list or array (deprecated array
+       methods and those also implemented by object were omitted for brevity)
+       TODO =RE-READ=
+
+     - As of Python 3.4, ~array~ doesn't have in place sort method.
+       Use ~a = array.array(a.typecode, sorted(a))~
+
+**** TODO Memory Views - 51
+**** TODO NumPy and SciPy - 52
+**** TODO Deques and Other Queues - 55
+
+*** TODO Chapter Summary - 57
+*** TODO Further Reading - 59
+
+** TODO 3. Dictionaries and Sets - 63
+*** TODO Generic Mapping Types - 64
+*** TODO ~dict~ Comprehensions - 66
+*** TODO Overview of Common Mapping Methods - 66
+**** Handling Missing Keys with setdefault - 68
+
+*** TODO Mappings with Flexible Key Lookup - 70
+**** defaultdict: Another Take on Missing Keys - 70
+**** The __missing__ Method - 72
+
+*** TODO Variations of ~dict~ - 75
+*** TODO Subclassing ~UserDict~ - 76
+*** DONE Immutable Mappings - 77
+    CLOSED: [2017-09-08 Fri 20:16]
+    Since Python 3.3, the ~types~ module provides a wrapper class called
+    ~MappingProxyType~, which, given a mapping, returns a ~mappingproxy~ instance
+    that is a _read-only_ but _dynamic view_ of the original mapping -- updates
+    to the original mapping can be seen in the ~mappingproxy~, but changes CANNOT
+    be made through it. (=FROM JIAN= Consider this as a immutable reference to
+    the original map)
+    #+BEGIN_SRC python
+      from types import MappingProxyType
+      d = {'one': 'A'}
+      d_proxy = MappingProxyType(d)
+
+      d_proxy
+      # mappingproxy({'one': 'A'})
+
+      d_proxy['one']
+      # 'A'
+
+      d_proxy['two'] = 'B'
+      ## TypeError: ...
+
+      d['two'] = 'B'
+      d_proxy
+      # mappingproxy({'one': 'A', 'two': 'B'})
+
+      d_proxy['two']
+      # 'B'
+    #+END_SRC
+
+*** TODO Set Theory - 79
+**** set Literals - 80
+**** Set Comprehensions - 81
+**** Set Operations - 82
+
+*** TODO ~dict~ and ~set~ Under the Hood - 85
+**** A Performance Experiment - 85
+**** Hash Tables in Dictionaries - 87
+**** Practical Consequences of How dict Works - 90
+**** How Sets Work—Practical Consequences - 93
+
+*** TODO Chapter Summary - 93
+*** TODO Further Reading - 94
+
+** TODO 4. Text versus Bytes - 97
+*** TODO Character Issues - 98
+*** TODO Byte Essentials - 99
+**** Structs and Memory Views - 102
+
+*** TODO Basic Encoders/Decoders 103
+*** TODO Understanding Encode/Decode Problems - 105
+**** Coping with ~UnicodeEncodeError~ - 105
+**** Coping with ~UnicodeDecodeError~ - 106
+**** SyntaxError When Loading Modules with Unexpected Encoding - 108
+**** How to Discover the Encoding of a Byte Sequence - 109
+**** BOM: A Useful Gremlin - 110
+
+*** TODO Handling Text Files - 111
+**** Encoding Defaults: A Madhouse - 114
+
+*** TODO Normalizing Unicode for Saner Comparisons - 117
+**** Case Folding - 119
+**** Utility Functions for Normalized Text Matching - 120
+**** Extreme “Normalization”: Taking Out Diacritics - 121
+
+*** TODO Sorting Unicode Text - 124
+**** Sorting with the Unicode Collation Algorithm - 126
+
+*** TODO The Unicode Database - 127
+*** TODO Dual-Mode ~str~ and ~bytes~ APIs - 129
+**** str Versus bytes in Regular Expressions - 129
+**** str Versus bytes on os Functions - 130
+
+*** TODO Chapter Summary - 132
+*** TODO Further Reading - 133
+
+** TODO 5. Record-like data structures
+   - data class ::
+     a *simple* /class/ that is just
+     + a bunch of /fields/
+     + with LITTLE OR NO extra funcionality
+
+   - Python offers a few ways to build /data classes/, and ~dataclass~ is the name
+     of a /Python decorator/ that supports it.
+       This chapter covers _THREE different class builders_ that you may use as
+     shortcuts to write /data classes/:
+     + ~collections.namedtuple~: the simplest way—since Python _2.6_;
+
+     + ~typing.NamedTuple~: an alternative that allows /type annotations/ on the
+       fields -- since Python _3.5_; class syntax supported since _3.6_;
+
+     + ~@dataclasses.dataclass~: a /class decorator/ that allows *more customization
+       than previous alternatives*, adding lots of options and potential complexity
+       -- since Python _3.7_.
+
+   - TODO ??? TODO
+     After covering those class builders, we will discuss why Data Class is also
+     the name of a code smell: a coding pattern that may be a symptom of poor
+     object-oriented design.
+
+   - The chapter ends with a section on a very different topic, but still closely
+     related to _record-like data_: the ~struct~ module, designed to PARSE and
+     BUILD *packed binary records* that you may find in legacy flat-file _databases_,
+     _network protocols_, and _file headers_.
+     TODO ??? TODO
+
+   - NOTE TODO TODO TODO TODO TODO TODO
+     ~typing.TypeDict~ (since Python _3.8_) may seem like another /data class
+     builder/ -- it's described right after ~typing.NamedTuple~ in the ~typing~
+     module documentation, and uses similar syntax.
+       However, ~TypedDict~ does not build concrete classes that you can
+     instantiate. It's just a way to write /static annotations/ for variables and
+     function arguments that are expected to accept plain dictionaries with a
+     fixed set of keys and a specific type for the value mapped to each key.
+
+*** DONE What's new in this chapter
+    CLOSED: [2020-04-27 Mon 02:52]
+    This chapter is new in Fluent Python 2nd edition.
+    - The sections _"Classic Named Tuples"_ and _"Structs and Memory Views"_ appeared
+      in chapters 2 and 4 in the 1st edition,
+
+    - but _the rest of the chapter is completely new._
+
+*** DONE Overview of data class builders
+    CLOSED: [2020-04-26 Sun 20:38]
+    - The /data class builders/ covered in this chapter provide the necessary
+      ~__init__~, ~__repr__~, and ~__eq__~ /methods/ *automatically*, as well as
+      other useful features.
+      + =from Jian= Just be similar to /case classes/ in Scala.
+
+    - NOTE
+      None of the class builders discussed here depend on inheritance to do
+      their work.
+      + Both ~collections.namedtuple~ and ~typing.NamedTuple~
+        build /classes/ that are /tuple/ /subclasses/.
+
+      + ~@dataclass~ is a /class decorator/ that does _NOT affect the /class
+        hierarchy/ in any way_.
+
+      + Each of them use *different* _metaprogramming techniques_ to _INJECT /methods/
+        and /data attributes/ INTO the class under construction_.
+
+    - Use ~namedtuple~
+      #+begin_src python
+        from collections import namedtuple
+
+
+        Coordinate = namedtuple('Coordinate', 'lat long')
+        issubclass(Coordinate, tuple)  # True
+        moscow = Coordinate(55.756, 37.617)
+        moscow  # Coordinate(lat=55.756, long=37.617)
+        moscow == Coordinate(lat=55.756, long=37.617)  # True
+      #+end_src
+
+    - Use ~typing.NamedTuple~
+      + Before Python 3.6, no extra funcionality:
+        #+begin_src python
+          from typing
+
+
+          Coordinate = typing.NamedTuple('Coordinate', [('lat', float),  ('long', float)])
+          issubclass(Coordinate, tuple)  # True
+          Coordinate.__annotations__
+          # {'lat': <class 'float'>, 'long': <class 'float'>}
+        #+end_src
+
+        * *TIP*
+          Another (more readable) syntax for ~typing.NamedTuple~
+          #+begin_src python
+            Coordinate = typing.NamedTuple('Coordinate', lat=float, long=float)
+          #+end_src
+
+      + Since Python 3.6,
+        ~typing.NamedTuple~ can also be used in a ~class~ statement, with /type
+        annotations/ written as described in *PEP 526 -- Syntax for Variable
+        Annotations*.
+        * This is much MORE READABLE, and
+          makes it easy to _override methods_ or _add new ones_.
+
+        * Example 5-2 is the same ~Coordinate~ class, with a pair of ~float~ attributes
+          and a custom ~__str__~ to display a coordinate formatted like 55.8°N, 37.6°E:
+          #+begin_src python
+            from typing import NamedTuple
+
+            class Coordinate(NamedTuple):
+
+                lat: float
+                long: float
+
+                def __str__(self):
+                    ns = 'N' if self.lat >= 0 else 'S'
+                    we = 'E' if self.long >= 0 else 'W'
+                    return f"{abs(self.lat):.1f}°{ns}, {abs(self.long):.1f}°{we}"
+          #+end_src
+          - *WARNING*
+            Although ~NamedTuple~ appears in the class statement as a superclass, it’s
+            actually not. typing.NamedTuple uses the advanced functionality of a
+            metaclass2 to customize the creation of the user’s class. Check this out:
+            #+begin_src python
+              issubclass(Coordinate, typing.NamedTuple)  # False
+              issubclass(Coordinate, tuple)              # True
+            #+end_src
+            In the ~__init__~ /method/ *generated* by ~typing.NamedTuple~, the /fields/
+            appear as parameters _in the SAME ORDER they appear in the /class statement/._
+
+    - Use ~dataclass~
+      _Like ~typing.NamedTuple~, the /dataclass decorator/ supports *PEP 526* syntax to
+      declare instance attributes._ The /decorator/ reads the variable annotations
+      and automatically generates methods for your class.
+      #+begin_src python
+        from dataclasses import dataclass
+
+
+        @dataclass(frozen=True)
+        class Coordinate:
+            lat: float
+            long: float
+      #+end_src
+      + Note that the body of the classes in Example 5-2 and Example 5-3 are
+        identical—the difference is in the class statement itself.
+
+      + The ~@dataclass~ /decorator/ does *NOT depend on* /inheritance/ or a
+        /metaclass/, so it should not interfere with your own use of these
+        mechanisms.
+        #+begin_src python
+          issubclass(Coordinate, typing.NamedTuple)  # False
+          issubclass(Coordinate, tuple)              # False
+          issubclass(Coordinate, object)             # True
+        #+end_src
+
+**** Main features
+     The different data class builders have a lot of common. Here we’ll discuss
+     the main features they share. Table 5-1 summarizes.
+     - Table 5-1. =IMPORTANT= =RE-READ=
+       Selected features compared accross the THREE /data class builders/. ~x~
+       stands for an instance of a /data class/ of that kind.
+
+**** MUTABLE INSTANCES
+**** CLASS STATEMENT SYNTAX
+**** CONSTRUCT DICT
+**** GET FIELD NAMES AND DEFAULT VALUES
+**** GET FIELD TYPES
+**** NEW INSTANCE WITH CHANGES
+**** NEW CLASS AT RUNTIME
+
+*** DONE Classic Named Tuples
+    CLOSED: [2020-04-27 Mon 02:52]
+    - *TIP*
+      + EACH /instance/ of a /class/ built by ~namedtuple~ takes *EXACTLY the SAME
+        amount of memory* a ~tuple~ because the /field names/ are stored in the
+        /class/ (rather than in each /instance/).
+
+      + They use *LESS memory than a regular object (=from Jian= /class/ based
+        object?)* because they do *NOT* store attributes as key-value pairs in
+        one ~__dict__~ for EACH /instance/.
+
+    - Besides the methods a ~tuple~ has, a ~namedtuple~ also has ~_fields~ /class
+      attribute/, the /class method/ ~_make(iterable)~, and the /instance method/
+      ~_asdict()~.
+      + ~._asdict()~ is useful to serialize the data in JSON format, for example.
+        TODO =LEARN MORE= TODO
+
+    - *WARNING*
+      + The ~_asdict()~ /method/ returned an ~OrderedDict~ in
+        _Python 2.7_, and in _Python 3.1 TO 3.7_.
+
+      + Since _Python 3.8_, a regular ~dict~ is returned -- which is probably fine
+        now that we *can rely on* _key insertion order_ (because of the new
+        implementation of ~dict~).
+
+      + If you must have an ~OrderedDict~ when you use _Python 3.8+_, the ~_asdict~
+        documentation recommends building one from the result:
+        ~OrderedDict(x._asdict())~.
+
+    - Since Python 3.7, namedtuple accepts the ~defaults~/ keyword-only argument/
+      providing an /iterable/ of _N default values for each of the N *rightmost*
+      fields_ of the /class/.
+      + Example 5-6 show how to define a ~Coordinate~ ~namedtuple~ with a ~default~
+        value for a reference field:
+        #+begin_src python
+          Coordinate = namedtuple('Coordinate', 'lat long reference', defaults=['WGS84'])
+          Coordinate(0, 0)            # Coordinate(lat=0, long=0, reference='WGS84')
+          Coordinate._field_defaults  # {'reference': 'WGS84'}
+        #+end_src
+
+    - There are straight forward ways to add methods to ~typing.NamedTuple~ and
+      ~@dataclass~ annotated /class/. For ~namedtuple~, we can also do this, but
+      must with some hack. See below!
+
+    - *HACKING A NAMEDTUPLE TO INJECT A METHOD*
+      Define a function and then assign it to a /class attribute/.
+      #+begin_src python
+        Card = collections.nametuple('Card', ['rank', 'suit'])
+
+        # Attach a class attribute with values for each suit.
+        Card.suit_values = dict(spades=3, hearts=2, diamonds=1, clubs=0)
+
+        def spades_high(card):
+            rank_value = FrenchDeck.ranks.index(card.rank)
+            suit_value = card.suit_values[card.suit]
+            return rank_value * len(card.suit_values) + suit_value
+
+        # Attach the spades_high function to the Cards class.
+        # It becomes a method named overall_rank.
+        Card.overall_rank = spades_high
+
+        lowest_card = Card('2', 'clubs')
+        highest_card = Card('A', 'spades')
+
+        lowest_card.overall_rank()  # 0
+        highest_card.overall_rank()  # 51
+      #+end_src
+      + =from Jian=
+        From the observation, the ~overall_rank~ use ~self~ as the ~card~ for
+        ~spades_high~. ~overall_rank~ is an /instance method/.
+        * TODO Learn more about this!
+          1. Can ~spades_high~ take more parameters?
+          2. Do the parameters _except the first one_ are considered as normal
+             /method parameters/?
+
+*** DONE Typed Named Tuples
+    CLOSED: [2020-04-27 Mon 02:58]
+    - Example 5-8. ~typing.NamedTuple~
+      #+begin_src python
+        from typing import NamedTuple
+
+
+        class Coordinate(NamedTuple):
+            lat: float
+            long: float
+            reference: str = 'WGS84'
+      #+end_src
+
+    - /Classes/ built by ~typing.NamedTuple~ _do NOT have any methods BEYOND_
+      those that ~collections.namedtuple~ also generates -- and those that are
+      inherited from ~tuple~.
+      + _The Only difference AT RUNTIME_ is the presence of the ~__attributes__~
+        /class field/ -- _which Python completely ignores AT RUNTIME._
+
+    - *WARNING*
+      + BEFORE Python 3.8, classes built with ~typing.NamedTuple~ also have a
+        ~_field_types~ /attribute/.
+
+      + SINCE Python 3.8, that /attribute/ is *deprecated* in favor of ~__annotations__~
+        which has the same information and is the _canonical place_ to find /type
+        hints/ in Python objects that have them.
+
+*** TODO Type hints 101
+    - /Type hints/ -- a.k.a. /type annotations/
+
+    - NOTE
+      TODO No complete info for this Early Release version.
+      Talk about type hints for function signatures and advanced annotations in
+      the future.
+
+**** DONE No runtime effect
+     CLOSED: [2020-04-26 Sun 20:55]
+     - Example 5-9. Python does not enforce type hints at runtime.
+       #+begin_src python
+         import typing
+
+
+         class Coordinate(typing.NamedTuple):
+             lat: float
+             long: float
+
+
+         trash = Coordinate('foo', None)
+         print(trash)
+         # Coordinate(lat='foo', long=None)
+       #+end_src
+
+     - The /type hints/ are intended primarily to support *third-party* /type
+       checkers/.
+
+     - If we run ~mypy nocheck_demo.py  # The code includes the Example 5-9 code~,
+       we can see:
+       #+begin_src note
+       nocheck_demo.py:8: error: Argument 1 to "Coordinate" has
+       incompatible type "str"; expected "float"
+       nocheck_demo.py:8: error: Argument 2 to "Coordinate" has
+       incompatible type "None"; expected "float"
+       #+end_src
+
+**** DONE Variable annotation Syntax
+     CLOSED: [2020-04-26 Sun 21:00]
+     - The type that goes after the ~:~ must be an _identifier_ for one of these
+       (See Acceptable /type hints/ in *PEP 484* for all details):
+       + a *concrete* /class/, for example ~str~ or ~FrenchDeck~;
+
+       + an ABC -- /abstract base class/;
+
+       + a type defined in the ~typing~ module, including special types and
+         constructs like ~Any~, ~Optional~, ~Union~, etc.;
+
+       + a /type alias/ -- as described in the ~Type~ aliases section of the
+         ~typing~ module documentation.
+
+**** TODO The meaning of variable annotations
+     - We saw in "No runtime effect" that /type hints/ have *NO* _effect at runtime_.
+       But _at import time_ -- when a module is loaded -- Python does read them
+       to build the ~__annotations__~ dictionary that ~typing.NamedTuple~ and
+       ~@dataclass~ then use to *enhance* the /class/.
+
+     - Example 5-10. =demo_plain.py=: a plain /class/ with /type hints/
+       #+begin_src python
+         class DemoPlainClass:
+             a: int
+             b: float = 1.1
+             c = 'spam'
+       #+end_src
+       + Check the annotation:
+         ~c~ is not annotated, and no info saved to ~__annotation__~.
+         #+begin_src python
+           from demo_plain import DemoPlainClass
+
+
+           DemoPlainClass.__annotations__
+           # {'a': <class 'int'>, 'b': <class 'float'>}
+
+           DemoPlainClass.a
+           ## Traceback (most recent call last):
+           ##   File "<stdin>", line 1, in <module>
+           ## AttributeError: type object 'DemoPlainClass' has no attribute 'a'
+
+           DemoPlainClass.b  # 1.1
+
+           DemoPlainClass.c  # 'spam'
+         #+end_src
+
+       + However, since ~a~ was not given a value and it can't become a /class
+         attribute/ but annotated, this is why ~a~ info is in
+         ~DemoPlainClass.__annotations__~, but we can't evaluate its value
+         through ~DemoPlainClass.a~.
+
+**** TODO INSPECTING A ~typing.NamedTuple~
+     - Example 5-11. a class built with ~typing.NamedTuple~
+       #+begin_src python
+         import typing
+
+
+         class DemoNTClass(typing.NamedTuple):
+
+             a: int
+             b: float = 1.1
+             c = 'spam'
+       #+end_src
+       + ~a~ becomes an annotation and also an instance attribute.
+
+       + b is another annotation, and also becomes
+
+
+
+**** TODO INSPECTING A CLASS DECORATED WITH ~dataclass~
+
+*** TODO More about ~@dataclass~
+**** Field options
+     - WARNING
+
+**** Post-init processing
+     - NOTE
+
+**** Typed class attributes
+
+**** Initialization variables that are not fields
+
+**** ~@dataclass~ Example: Dublin Core Resource Record
+
+*** TODO Data class as a code smell
+    - *CODE SMELL*
+
+**** TODO Data class as scaffolding
+
+**** TODO Data class as Intermediate representation
+
+*** TODO Parsing binary records with struct
+**** Structs and Memory Views
+**** Should we use ~struct~?
+
+*** TODO Chapter Summary
+*** TODO Further Reading
+    - *SOAPBOX*
+
+** TODO 6. Object References, Mutability, and Recycling
+   # It was chapter 8 in PART III
+
+* TODO Part III. Functions as Objects
+** 7. First-Class Functions
+** 8. Type Hints in Functions
+** 9. Decorators and Closures
+** 10. Design Patterns with First-Class Functions
+
+* TODO Part IV. Classes and Protocols
+** 11. A Pythonic Object
+** 12. Sequence Hacking, Hashing, and Slicing
+** 13. Interfaces, Protocols, and ABCs
+** 14. Inheritance: For Good or For Worse
+** 15. Operator Overloading: Doing It Right
+** 16. Iterables, Iterators, and Generators
+** 17. Context Managers and else Blocks
+** 18. Classic Coroutines
+** 19. Concurrency Models in Python
+** 20. Concurrency with Futures

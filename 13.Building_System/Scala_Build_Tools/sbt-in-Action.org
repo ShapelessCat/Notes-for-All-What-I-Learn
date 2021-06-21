@@ -1,0 +1,1455 @@
+#+TITLE: sbt In Action
+#+SUBTITLE: The simple Scala build tool
+#+VERSION: 2016
+#+AUTHOR: Joshua Suereth, Matthew Farwell
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Table of Contents                                      :TOC_4_org:noexport:
+- [[Contents][Contents]]
+- [[Preface - xi][Preface - xi]]
+- [[Acknowledgments - xiii][Acknowledgments - xiii]]
+- [[About this book - xv][About this book - xv]]
+- [[About the cover illustration - xviii][About the cover illustration - xviii]]
+- [[PART 1 WHY SBT? - 1][PART 1 WHY SBT? - 1]]
+- [[1 Why sbt? - 3][1 Why sbt? - 3]]
+  - [[1.1 Why a build tool? - 4][1.1 Why a build tool? - 4]]
+  - [[1.2 Apache Ant - 6][1.2 Apache Ant - 6]]
+  - [[1.3 Apache Maven - 8][1.3 Apache Maven - 8]]
+    - [[Build definition - 8][Build definition - 8]]
+    - [[Maven workflow—default lifecycle - 9][Maven workflow—default lifecycle - 9]]
+    - [[Adding another task to a Maven build - 11][Adding another task to a Maven build - 11]]
+    - [[Advantages of Maven - 11][Advantages of Maven - 11]]
+    - [[Limitations of Maven - 11][Limitations of Maven - 11]]
+  - [[1.4 Gradle - 12][1.4 Gradle - 12]]
+    - [[What is Gradle? - 12][What is Gradle? - 12]]
+    - [[Gradle workflow - 13][Gradle workflow - 13]]
+    - [[Adding another task to a Gradle build - 13][Adding another task to a Gradle build - 13]]
+    - [[Advantages of Gradle - 14][Advantages of Gradle - 14]]
+    - [[Limitations of Gradle - 14][Limitations of Gradle - 14]]
+  - [[1.5 Why sbt? - 15][1.5 Why sbt? - 15]]
+    - [[How sbt works - 15][How sbt works - 15]]
+    - [[Plugin architecture vs. tasks - 16][Plugin architecture vs. tasks - 16]]
+    - [[Phases vs. task dependencies - 18][Phases vs. task dependencies - 18]]
+    - [[Passing information around your build - 18][Passing information around your build - 18]]
+    - [[Working with Scala - 19][Working with Scala - 19]]
+    - [[Multiproject builds - 20][Multiproject builds - 20]]
+    - [[Dependency resolution 21][Dependency resolution 21]]
+  - [[1.6 Interactivity/reactivity of sbt - 21][1.6 Interactivity/reactivity of sbt - 21]]
+    - [[Quicker compilation and testing cycle - 21][Quicker compilation and testing cycle - 21]]
+    - [[Quicker compilation and testing cycle - 21][Quicker compilation and testing cycle - 21]]
+    - [[sbt and the Scala REPL—the console command - 22][sbt and the Scala REPL—the console command - 22]]
+  - [[1.7 Summary - 23][1.7 Summary - 23]]
+- [[2 Getting started - 24][2 Getting started - 24]]
+  - [[2.1 Setting up sbt - 25][2.1 Setting up sbt - 25]]
+    - [[Setting the ~PATH~ in bash (for Linux/Mac) - 25][Setting the ~PATH~ in bash (for Linux/Mac) - 25]]
+    - [[Running sbt - 26][Running sbt - 26]]
+  - [[2.2 Setting up a build - 27][2.2 Setting up a build - 27]]
+    - [[2.2.1 Tasks - 28][2.2.1 Tasks - 28]]
+    - [[2.2.2 Settings - 29][2.2.2 Settings - 29]]
+  - [[2.3 Running code - 31][2.3 Running code - 31]]
+  - [[2.4 Testing code - 35][2.4 Testing code - 35]]
+    - [[2.4.1 Running tasks when sources change - 37][2.4.1 Running tasks when sources change - 37]]
+    - [[2.4.2 Selecting tests with interactive tasks - 38][2.4.2 Selecting tests with interactive tasks - 38]]
+  - [[2.5 Summary - 39][2.5 Summary - 39]]
+- [[PART 2 UNDERSTANDING SBT'S CORE CONCEPTS - 41][PART 2 UNDERSTANDING SBT'S CORE CONCEPTS - 41]]
+- [[3 Core concepts - 43][3 Core concepts - 43]]
+  - [[3.1 Creating builds - 44][3.1 Creating builds - 44]]
+  - [[3.2 Defining settings - 44][3.2 Defining settings - 44]]
+    - [[3.2.1 Initializations - 47][3.2.1 Initializations - 47]]
+  - [[3.3 Creating and executing tasks - 49][3.3 Creating and executing tasks - 49]]
+    - [[3.3.1 Task dependencies - 52][3.3.1 Task dependencies - 52]]
+  - [[3.4 Using configurations - 54][3.4 Using configurations - 54]]
+  - [[3.5 Defining with subprojects - 55][3.5 Defining with subprojects - 55]]
+  - [[3.6 Putting it all together - 60][3.6 Putting it all together - 60]]
+  - [[3.7 Summary - 64][3.7 Summary - 64]]
+- [[4 The default build - 66][4 The default build - 66]]
+    - [[4.1 Compiling your code - 67][4.1 Compiling your code - 67]]
+    - [[4.2 Finding your sources - 68][4.2 Finding your sources - 68]]
+      - [[4.2.1 Standard organization of sources - 68][4.2.1 Standard organization of sources - 68]]
+      - [[4.2.2 Testing sources - 71][4.2.2 Testing sources - 71]]
+      - [[4.2.3 Custom organization of sources - 72][4.2.3 Custom organization of sources - 72]]
+      - [[4.2.4 Filtering the source you want - 74][4.2.4 Filtering the source you want - 74]]
+    - [[4.3 Depending on libraries - 75][4.3 Depending on libraries - 75]]
+      - [[4.3.1 Unmanaged dependencies - 76][4.3.1 Unmanaged dependencies - 76]]
+      - [[4.3.2 Managed dependencies - 76][4.3.2 Managed dependencies - 76]]
+      - [[4.3.3 Managed dependencies and configurations - 79][4.3.3 Managed dependencies and configurations - 79]]
+    - [[4.4 Packaging your project - 80][4.4 Packaging your project - 80]]
+      - [[4.4.1 Identifying your project - 82][4.4.1 Identifying your project - 82]]
+    - [[4.5 Summary - 83][4.5 Summary - 83]]
+- [[PART 3 WORKING WITH SBT - 85][PART 3 WORKING WITH SBT - 85]]
+- [[5 Testing - 87][5 Testing - 87]]
+  - [[5.1 Configuring specs2 with sbt - 88][5.1 Configuring specs2 with sbt - 88]]
+    - [[5.1.1 Reports and forking tests - 90][5.1.1 Reports and forking tests - 90]]
+    - [[5.1.2 Digging deeper: other options for forking - 93][5.1.2 Digging deeper: other options for forking - 93]]
+  - [[5.2 JUnit and using custom code - 94][5.2 JUnit and using custom code - 94]]
+    - [[Report generation with JUnit - 95][Report generation with JUnit - 95]]
+  - [[5.3 ScalaCheck - 98][5.3 ScalaCheck - 98]]
+  - [[5.4 Integration testing - 102][5.4 Integration testing - 102]]
+    - [[5.4.1 *ScalaTest* and *Selenium* - 102][5.4.1 *ScalaTest* and *Selenium* - 102]]
+    - [[5.4.2 Challenges of integration testing - 104][5.4.2 Challenges of integration testing - 104]]
+    - [[5.4.3 Adding integration tests to sbt - 105][5.4.3 Adding integration tests to sbt - 105]]
+  - [[5.5 Summary - 109][5.5 Summary - 109]]
+- [[6 The IO and Process libraries - 110][6 The IO and Process libraries - 110]]
+  - [[6.1 Packaging using processes - 111][6.1 Packaging using processes - 111]]
+  - [[6.2 Packaging using the sbt.IO library - 114][6.2 Packaging using the sbt.IO library - 114]]
+  - [[6.3 More mappings - 116][6.3 More mappings - 116]]
+  - [[6.4 Task dependencies - 118][6.4 Task dependencies - 118]]
+  - [[6.5 Logging using the sbt logger - 119][6.5 Logging using the sbt logger - 119]]
+  - [[6.6 Running your build using fork - 121][6.6 Running your build using fork - 121]]
+  - [[6.7 Linking everything together: dependencies - 122][6.7 Linking everything together: dependencies - 122]]
+  - [[6.8 Linking everything together: processes - 124][6.8 Linking everything together: processes - 124]]
+  - [[6.9 Summary - 127][6.9 Summary - 127]]
+- [[7 Accepting user input - 128][7 Accepting user input - 128]]
+  - [[7.1 Accepting user input with input tasks - 130][7.1 Accepting user input with input tasks - 130]]
+  - [[7.2 Defining an interface with parsers - 133][7.2 Defining an interface with parsers - 133]]
+  - [[7.3 Defining a database evolution parser - 136][7.3 Defining a database evolution parser - 136]]
+  - [[7.4 Helping the user with autocomplete - 142][7.4 Helping the user with autocomplete - 142]]
+  - [[7.5 Summary - 144][7.5 Summary - 144]]
+- [[8 Using plugins and external libraries - 146][8 Using plugins and external libraries - 146]]
+  - [[8.1 Using plugins to check your code - 147][8.1 Using plugins to check your code - 147]]
+  - [[8.2 Using the Revolver plugin to restart the application - 151][8.2 Using the Revolver plugin to restart the application - 151]]
+  - [[8.3 Creating your uber jar using the assembly plugin - 153][8.3 Creating your uber jar using the assembly plugin - 153]]
+  - [[8.4 Including a library in your plugin build - 155][8.4 Including a library in your plugin build - 155]]
+  - [[8.5 Adding a plugin for use in all of your projects-signing your projects - 159][8.5 Adding a plugin for use in all of your projects-signing your projects - 159]]
+  - [[8.6 Adding local credentials for deployment - 161][8.6 Adding local credentials for deployment - 161]]
+  - [[8.7 Summary - 161][8.7 Summary - 161]]
+- [[9 Debugging your build - 162][9 Debugging your build - 162]]
+    - [[9.1 Running sbt - 163][9.1 Running sbt - 163]]
+    - [[9.2 Making your build compile - 165][9.2 Making your build compile - 165]]
+    - [[9.3 Ensuring tasks are run - 168][9.3 Ensuring tasks are run - 168]]
+    - [[9.4 Resolving dependency conflicts - 172][9.4 Resolving dependency conflicts - 172]]
+      - [[Fixing resolution failures - 173][Fixing resolution failures - 173]]
+      - [[Fixing resolution conflicts - 175][Fixing resolution conflicts - 175]]
+    - [[9.5 Summary - 179][9.5 Summary - 179]]
+- [[PART 4 EXTENDING SBT - 181][PART 4 EXTENDING SBT - 181]]
+- [[10 Automating workflows with commands - 183][10 Automating workflows with commands - 183]]
+  - [[10.1 Creating a simple command - 184][10.1 Creating a simple command - 184]]
+  - [[10.2 Running tasks in parallel - 186][10.2 Running tasks in parallel - 186]]
+  - [[10.3 Parsing input with commands - 187][10.3 Parsing input with commands - 187]]
+  - [[10.4 Creating useful help messages - 194][10.4 Creating useful help messages - 194]]
+  - [[10.5 Summary - 197][10.5 Summary - 197]]
+- [[11 Defining a plugin - 198][11 Defining a plugin - 198]]
+    - [[11.1 Reusing code using Scala files - 200][11.1 Reusing code using Scala files - 200]]
+    - [[11.2 Introducing the AutoPlugin interface - 200][11.2 Introducing the AutoPlugin interface - 200]]
+      - [[Taking a closer look—the plugin definition - 203][Taking a closer look—the plugin definition - 203]]
+      - [[Taking a closer look—task and setting dependencies - 204][Taking a closer look—task and setting dependencies - 204]]
+    - [[11.3 Testing a plugin with the scripted plugin - 206][11.3 Testing a plugin with the scripted plugin - 206]]
+    - [[11.4 Using configurations in your plugin - 211][11.4 Using configurations in your plugin - 211]]
+    - [[11.5 Adding incremental tasks - 215][11.5 Adding incremental tasks - 215]]
+      - [[Adding incremental tasks with .previous—a sneak preview of 1.0 - 217][Adding incremental tasks with .previous—a sneak preview of 1.0 - 217]]
+    - [[11.6 Making things easy for the user--more about the AutoPlugin interface - 218][11.6 Making things easy for the user--more about the AutoPlugin interface - 218]]
+    - [[11.7 Summary - 222][11.7 Summary - 222]]
+- [[PART 5 DEPLOYING YOUR PROJECTS - 223][PART 5 DEPLOYING YOUR PROJECTS - 223]]
+- [[12 Distributing your projects - 225][12 Distributing your projects - 225]]
+  - [[12.1 Publishing a library - 226][12.1 Publishing a library - 226]]
+  - [[12.2 Publishing locally - 229][12.2 Publishing locally - 229]]
+  - [[12.3 Publishing a simple server - 230][12.3 Publishing a simple server - 230]]
+  - [[12.4 Generating a distribution - 232][12.4 Generating a distribution - 232]]
+  - [[12.5 Creating a Linux distribution - 236][12.5 Creating a Linux distribution - 236]]
+  - [[12.6 Summary - 239][12.6 Summary - 239]]
+- [[appendix A What you need to know about Ivy - 240][appendix A What you need to know about Ivy - 240]]
+  - [[A.1 Modules - 240][A.1 Modules - 240]]
+  - [[A.2 Module identification - 240][A.2 Module identification - 240]]
+  - [[A.3 Artifacts - 241][A.3 Artifacts - 241]]
+  - [[A.4 Differences in Ivy and Maven - 241][A.4 Differences in Ivy and Maven - 241]]
+  - [[A.5 Configuration - 242][A.5 Configuration - 242]]
+  - [[A.6 Resolvers - 244][A.6 Resolvers - 244]]
+  - [[A.7 Resolving dependency conflicts - 248][A.7 Resolving dependency conflicts - 248]]
+- [[appendix B Migrating to autoplugins - 251][appendix B Migrating to autoplugins - 251]]
+  - [[B.1 Older sbt plugins - 251][B.1 Older sbt plugins - 251]]
+  - [[B.2 Migrating to autoplugins - 252][B.2 Migrating to autoplugins - 252]]
+- [[appendix C Advanced setting/task API - 254][appendix C Advanced setting/task API - 254]]
+  - [[C.1 Optional settings - 254][C.1 Optional settings - 254]]
+  - [[C.2 Failing tasks - 254][C.2 Failing tasks - 254]]
+  - [[C.3 Dynamic tasks - 255][C.3 Dynamic tasks - 255]]
+  - [[C.4 Composing InputTasks - 256][C.4 Composing InputTasks - 256]]
+- [[index - 257][index - 257]]
+
+* Contents
+* Preface - xi
+* Acknowledgments - xiii
+* About this book - xv
+* About the cover illustration - xviii
+* PART 1 WHY SBT? - 1
+* TODO 1 Why sbt? - 3
+** 1.1 Why a build tool? - 4
+** 1.2 Apache Ant - 6
+** 1.3 Apache Maven - 8
+*** Build definition - 8
+*** Maven workflow—default lifecycle - 9
+*** Adding another task to a Maven build - 11
+*** Advantages of Maven - 11
+*** Limitations of Maven - 11
+
+** 1.4 Gradle - 12
+*** What is Gradle? - 12
+*** Gradle workflow - 13
+*** Adding another task to a Gradle build - 13
+*** Advantages of Gradle - 14
+*** Limitations of Gradle - 14
+
+** 1.5 Why sbt? - 15
+*** How sbt works - 15
+*** Plugin architecture vs. tasks - 16
+*** Phases vs. task dependencies - 18
+*** Passing information around your build - 18
+*** Working with Scala - 19
+*** Multiproject builds - 20
+*** Dependency resolution 21
+
+** 1.6 Interactivity/reactivity of sbt - 21
+*** Quicker compilation and testing cycle - 21
+*** Quicker compilation and testing cycle - 21
+*** sbt and the Scala REPL—the console command - 22
+
+** 1.7 Summary - 23
+
+* DONE 2 Getting started - 24
+  CLOSED: [2017-12-21 Thu 20:57]
+** DONE 2.1 Setting up sbt - 25
+   CLOSED: [2017-11-12 Sun 02:22]
+   - This book use the *0.13.5* version /sbt/.
+     =from Jian= I use *0.13.17* -- the last version of sbt 0.13.x.
+
+   - Make sure your ~sbt/bin~ folder is in ~PATH~.
+
+     =from Jian= I install /sbt/ with the system package manager, and I don't
+     need to setup this.
+
+     + ~sbt/bin/sbt~ is the launcher script for Linux/Mac
+
+     + ~sbt/bin/sbt-launch.jar~ is the Launcher it self.
+
+     + ~sbt/bin/sbt.bat~ and ~sbt/bin/sbt-win~ are launcher scripts for
+       Windows/Cygwin
+
+*** DONE Setting the ~PATH~ in bash (for Linux/Mac) - 25
+    CLOSED: [2017-11-12 Sun 02:22]
+
+*** DONE Running sbt - 26
+    CLOSED: [2017-11-12 Sun 02:22]
+    - When you first run ~sbt~ command, it will download some /artifacts/.
+
+    - =NOT MENTIONED in THIS BOOK=
+      If you don't specify the version of /sbt/ in a new project, /sbt/ will
+      issue a warning message:
+      =[warn] No sbt.version set in project/build.properties,
+       base directory: $yourProjectPath=
+
+       + Solution:
+         create the =project/build.properties= file (the =project= folder is by
+         default non-exist, you need to create it manually) with content like,
+         for this book, ~sbt.version=0.13.5~ before the first time you run
+         /sbt/ in your project folder, or else /sbt/ will download and use the
+         newest version of /sbt/ before you specify.
+
+    - ~exit~ is used to exit /sbt/.
+
+** DONE 2.2 Setting up a build - 27
+   CLOSED: [2017-11-12 Sun 03:47]
+   - Every real world non-practice project using sbt SHOULD have _TWO_ files
+     + =project/build.properties= is used to inform sbt which _version_ it
+       should use for your build
+       #+BEGIN_SRC scala
+         sbt.version = 0.13.17
+       #+END_SRC
+
+       =Jian= tries this setting
+       #+BEGIN_SRC scala
+         sbt.version = 1.0.4
+       #+END_SRC
+
+     + =build.sbt= defines the _actual settings_ for your build.
+       #+BEGIN_SRC scala
+         name := "preowned-kittens"
+
+         version := "1.0"
+
+         // Jian add this line
+         scalaVersion := "2.12.7"
+       #+END_SRC
+       The empty line between settings _was mandatory_ prior to /sbt/ 0.13.7
+       =from Jian= WHAT A STUPID REQUIREMENT IT IS!!!
+
+   - sbt command ~help~
+
+   - In ~help~ output, there are a lot of options. We first talk about _three_
+     most important command-line options:
+     + ~tasks~ -- Lists the tasks you can run on the build
+
+     + ~settings~ -- Lists the settings you can modify for the project
+
+     + ~inspect~ -- Displays information about a given
+       * /setting/
+         or
+       * /task/
+
+*** DONE 2.2.1 Tasks - 28
+    CLOSED: [2017-11-12 Sun 03:46]
+    - Try ~tasks~ command in /sbt/ shell. Details later.
+    - Try the commands listed by ~tasks~ in /sbt/ shell, for example, ~compile~.
+
+*** DONE 2.2.2 Settings - 29
+    CLOSED: [2017-11-12 Sun 03:46]
+    - Try ~settings~ command in /sbt/ shell.
+
+      You'll see a list of settings defined for the current project.
+
+      + It does NOT list the /scopes/ the /settings/ are defined in; use the
+        ~inspect~ command for that.
+
+    - One /setting/ listed by the /sbt command/ ~settings~ is the ~scalaSource~,
+      which by default give you a path like =projectPath/src/main/scala=.
+
+    - *Default project layout*
+      Page 31 =IMPORTANT= =!!!=
+      #+BEGIN_SRC text
+        <build directory>/
+          project/                <--- sbt plugins and build helper code
+          src/
+            main/
+              scala/
+              java/
+              resources/
+          test/
+              scala/
+              java/
+              resources/
+          target/
+          build.sbt
+      #+END_SRC
+
+    - Add the first scala source file =src/main/scala/PreownedKittenMain.scala=:
+      #+BEGIN_SRC scala
+        object PreownedKittenMain extends App {
+          println("Hello, sbt world!")
+        }
+      #+END_SRC
+
+      Run ~compile~ and then ~run~ to get the current result -- an output
+      ="Hello, sbt world!"=.
+
+    - ~run~ task *found* the ~PreownedKittenMain~ application you just built, and
+      runs it locally.
+
+** DONE 2.3 Running code - 31
+   CLOSED: [2017-11-12 Sun 04:06]
+   - In sbt, running code can take on a few different flavors.
+     Here's a nonexhaustive list of options:
+     + Run any applications (as you saw with ~PreownedKittenMain~).
+
+     + Open a Scala interpreted session against your current codebase.
+
+     + Run any tests defined on the project.
+
+   - You can use sbt command ~console~ to get into _scala shell (still inside sbt)_
+     which have _PRELOAD all the code in current project_ (the task ~console~
+     depends on the task ~compile~), and you can experiment with them.
+
+     =from Jian= How to avoid this dependency??? Sometimes we need to do this!
+
+   - =src/main/scala/Models.scala=
+     #+BEGIN_SRC scala
+       case class Kitten(id: Long, attributes: Seq[String])
+       case class BuyerPreferences(attributes: Seq[String])
+     #+END_SRC
+     Create this file and then you can use the type ~Kitten~ and
+     ~BuyerPreferences~
+
+   - =src/main/scala/Logic.scala=
+     #+BEGIN_SRC scala
+       object Logic {
+         def matchLikelihood(kitten: Kitten,
+                             buyer: BuyerPreferences): Double = {
+           val matches = buyer.attributes map { attribute =>
+             kitten.attributes contains attribute
+           }
+           val nums = matches map { b => if(b) 1.0 else 0.0 }
+           nums.sum / nums.length
+         }
+       }
+     #+END_SRC
+     Create this file, use ~:q~ quit scala repl (still inside /sbt/), and then
+     run ~console~. Now the scala repl load the newly created =Logic.scala=, and
+     you can use the defined object inside it.
+
+     =IMPORTANT= Always remember to exit the Scala interpreter 
+
+** DONE 2.4 Testing code - 35
+   CLOSED: [2017-11-12 Sun 23:06]
+   - For the purpose of this chapter we'll use the /specs2/ library
+     (http://specs2.org).
+
+   - Declare a dependency on this /specs2/ in your build and get some testing
+     going. Add the following line to =build.sbt=:
+     #+BEGIN_SRC scala
+       libraryDependencies ++= Seq(
+         "org.specs2" %% "specs2-core" % "4.0.0" % Test,
+         "org.scala-lang.modules" %% "scala-xml" % "1.0.6" % Test)
+     #+END_SRC
+
+     + =From Jian=
+       From Scala 2.11 on, the /scala-xml/ library is separated from the
+       standard library. The test code below uses something from /scala-xml/
+       (sbt tells me). Thus, you must add the /scala-xml/ library, which is NOT
+       mentioned in this book.
+
+     + =TODO= =TODO= =TODO=
+       The syntax and rules for dependencies, including testing versus
+       compile-time dependencies, are covered in appendix A, "Ivy."
+
+   - After adding the lines above to =build.sbt=, you need to tell /sbt/ with
+     the ~reload~ command.
+
+     =IMPORTANT= Make sure to reload
+
+   - Define a test for our ~matchLikelihood~ method in
+     =src/test/scala/LogicSpec.scala=
+     #+BEGIN_SRC scala
+       import org.specs2.mutable.Specification
+
+       object LogicSpec extends Specification {
+         "The 'matchLikelihood' method" should {
+           "be 100% when all attributes match" in {
+             val tabby = Kitten(1, List("male", "tabby"))
+             val prefs = BuyerPreferences(List("male", "tabby"))
+             val result = Logic.matchLikelihood(tabby, prefs)
+             result must beGreaterThan(.999)
+           }
+         }
+       }
+     #+END_SRC
+     Then you can run this test with the /sbt/ command ~test~.
+
+     =TODO= More in Chapter 5
+
+*** DONE 2.4.1 Running tasks when sources change - 37
+    CLOSED: [2017-11-12 Sun 22:58]
+    =IMPORTANT=
+    Use the /tilde-prefixed command/ ~~test~ to get into /watch mode/.
+    After running exist tests, it waits rahter quits, and you can see
+    =1. Waiting for source changes... (press enter to interrupt)=
+
+*** DONE 2.4.2 Selecting tests with interactive tasks - 38
+    CLOSED: [2017-11-12 Sun 23:06]
+    - ~test<tab>~ and you can see some autocompletion candidates.
+      This section will talk about ~testOnly~
+      
+    - Try ~help testOnly~
+
+    - Try ~testOnly <tab>~ and you can see the tests you can run.
+      =From Jian= the space above is important, if it wasn't there, /sbt/ will
+      try to help to find out ~testOnlyxxxxxxx~ command(s), rather than the
+      parameters of ~testOnly~.
+
+** DONE 2.5 Summary - 39
+   CLOSED: [2017-11-12 Sun 23:06]
+
+* PART 2 UNDERSTANDING SBT'S CORE CONCEPTS - 41
+  In Part 2, we'll help you understand the _Core Concepts_ of /sbt/.
+  We'll start with the fundamentals: /settings/ and /tasks/.
+  Then we'll move on to the /default build/.
+
+* DONE 3 Core concepts - 43
+  CLOSED: [2017-12-25 Mon 05:39]
+  - This chapter covers
+    + Configuring /settings/, /tasks/, and /projects/
+    + Reusing /values/ across /settings/
+    + Learning the _core concepts_ of an /sbt build/
+    + Adding ADDITIONAL /projects/ to the _preowned-kittens build_
+
+  - After reading this chapter, given sufficient time, you could implement sbt's
+    default build, although we don't recommend that you do so!
+    =TODO= =Try it= =!!!=
+
+** DONE 3.1 Creating builds - 44
+   CLOSED: [2017-12-21 Thu 22:49]
+   - Though =project/build.properties= can be used to specify several things,
+     it's commonly used _ONLY_ to specify the _sbt version_.
+
+   - In the =build.sbt= in Chapter 2, we only have build /settings/ for the
+     /root project/, which is created implicitly by default if you didn't try to
+     create it explicitly.
+
+** DONE 3.2 Defining settings - 44
+   CLOSED: [2017-12-21 Thu 22:49]
+   - A /setting/ consists of _THREE_ parts:
+     + a key
+     + an initialization
+     + an operator that associates the key and initialization.
+
+     For example,
+     ~name := "preowned-kittens"~
+       |    |             | 
+       |    |             |
+      Key  Operator   Initialization
+
+   - A /setting/ is used to
+     + change an aspect of the build
+       or
+     + add functionality.
+
+   - In /sbt/ /settings/ have specific _types_, like ~String~, ~Int~, and
+     ~ModuleID~, and only values of those types can go into a cell.
+
+   - Each key has a default value, which you can override.
+
+   - *Typesafe settings*
+     In /sbt/, every key has one and only one /type/.
+
+     Any value placed into a /setting/ _must match the exact type_. This
+     prevents mismatched data from being passed around the build.
+
+   - Explanation of the ~libraryDependencies~ line in Chapter 2:
+     ~libraryDependencies += "org.specs2" % "specs2_2.10" % "1.14" % "test"~
+
+     ~libraryDependencies~ is a type ~SettingKey[Seq[ModuleID]]~ /setting key/,
+     and you can ONLY assign a type ~Seq[ModuleID]~ value to this /setting key/.
+
+     Since the value is a ~Seq~, we can use ~+=~.
+
+     You can also use ~++=~ to add a ~Seq~ of dependencies.
+
+   - *Defining dependencies*
+     sbt provides a convenient syntax for defining dependencies on /remote
+     artifacts/ using the ~%~ method.
+
+     Method ~%~ is used to create ~ModuleID~ instances.
+
+     To define a ~ModuleID~ in sbt, write ~"groupId" % "artifactId" % "version"~
+     and it will automatically become an instance of a ~ModuleID~.
+
+     =TODO= =Read=
+     For more information on remote artifacts and how sbt uses Ivy for general
+     dependency management, see _appendix A_.
+
+*** DONE 3.2.1 Initializations - 47
+    CLOSED: [2017-11-13 Mon 02:32]
+    - /initialization/ can use other settings.
+      You can access the value of another setting using the ~value~ method.
+
+      For example, we want to create a library that
+      + _INDEPENDENT_ from our _website project_
+
+      + but it is _a core library_ for the _website project_.
+
+      _We want their evolute in the same speed (same version)_.
+      =From Jian= this kind of situation happens in real life frequently.
+
+      #+BEGIN_SRC scala
+        libraryDependencies +=
+          organization.value % "core-library" % version.value
+      #+END_SRC
+
+      The ~version.value~ here is a /setting dependency/.
+
+    - /Circular references/ is NOT allowed.
+
+** DONE 3.3 Creating and executing tasks - 49
+   CLOSED: [2017-12-21 Thu 23:25]
+   - /Builds/ are about accomplishing /tasks/, from _running a compiler_ to
+     _generating zip files for distribution_.
+
+   - task :: an operation that runs everytime you call it, which usually has
+             side effect. =From Jian= compare this with /no-task setting/.
+
+   - Because /settings/ are executed _AFTER_ /definitions/ (use ~=~), /settings/
+     can refer to any /definition/ in the build file.
+
+   - Create a new /task key/ and implement it.
+     #+BEGIN_SRC scala
+       import scala.sys.process.Process
+
+       val gitHeadCommitSHA = taskKey[String]("Determines the current git commit SHA")
+       gitHeadCommitSHA := Process("git rev-parse HEAD").lineStream.head
+     #+END_SRC
+
+     Use ~show gitHeadCommitSHA~ to check its value.
+     ~show <task>~ displays the result of the /task/.
+     =From Jian= Other usage??? Only /task/ (or, also, /setting/)???
+
+   - *Parallel task execution*
+     + _UNLIKE a lot of modern build tools_,
+       /sbt/ _SEPARATES_ defining the computation of a value _FROM_ the slot that
+       stores the value.
+
+       This can aid in parallel execution of builds.
+       =More details= in this page, page 51.
+
+   - *Handling errors in tasks*
+     + When a /setting/ FAILS, the build _STOPS_.
+
+     + When a /task/ FAILS, it _STOPS THE CURRENT /task/ execution_ with an error.
+       Other /tasks/ in the build will _CONTINUE_ to execute.
+
+*** 3.3.1 Task dependencies - 52
+    - Assume that /task A/ depends on /task B/ and /task C/, if /task B/ and
+      /task C/ do NOT depend on each other, when you run /task A/, /task B/ and
+      /task C/ will run _in PARALLEL_.
+
+    - Create a task that generate the properties file that contains the Git
+      version
+      #+BEGIN_SRC scala
+        val makeVersionProperties =
+          taskKey[Seq[File]]("Makes a version.properties file.")
+
+        makeVersionProperties := {
+          val propFile = new File((resourceManaged in Compile).value, "version.properties")
+          val content = "version=%s" format (gitHeadCommit.value)
+          IO.write(propFile, content)
+          Seq(propFile)
+        }
+      #+END_SRC
+
+    - You may need to wire generated source/resource file in the /runtime
+      classpath/ for your website.
+        To do that, you can use the ~resourceGenerators~ key,
+      #+BEGIN_SRC scala
+        resourceGenerators in Compile += makePropertiesFile
+      #+END_SRC
+
+    - ~resourceGenerators~ setting :: it is defined to store all the /tasks/ used
+         to generate resources. /sbt/ uses this setting to generate reousrces
+         before bundling production jar/war files or running tests.
+
+    - /sbt/ uses the ~resourceGenerators~ /setting/ to generate resources before
+      bundling production jar/war files or running tests.
+
+** DONE 3.4 Using configurations - 54
+   CLOSED: [2017-12-21 Thu 23:26]
+   - Configurations :: namespaces for keys.
+
+   - There are several /configurations/ in the default build:
+     + ~Compile~ :: These settings and values are sued to compile the main
+                    project and generate production artifacts.
+
+     + ~Test~ :: These settings and values are used to compile and run
+                 unit-testing code.
+
+     + ~Runtime~ :: These settings and values are used to run your project
+                    within sbt. =???=
+
+     + ~IntegrationTest~ :: These settings and values are used to run tests
+          against your production artifacts.
+
+   - These /configurations/ are used to split settings and tasks across
+     higher-level goals.
+
+   - Configurations provide consistencies between tasks within sbt.
+     =TODO= =???=
+
+   - /Configurations/ provide one means to _namespace_ /settings/ and /tasks/,
+
+     but there's another mechanism you can use: defining with /subprojects/.
+
+   - *A wealth of configurations*
+     /sbt/ also defines
+     + ~Default~
+     + ~Pom~
+     + ~Optional~
+     + ~System~
+     + ~Provided~
+     + ~Docs~
+     + ~Sources~
+
+     =TODO=  These are discussed in greater depth in chapter 4.
+
+** DONE 3.5 Defining with subprojects - 55
+   CLOSED: [2017-12-25 Mon 05:39]
+   - If the user didn't create any /project/, /sbt/ will create a implicit
+     /project/, and its default name of this default implicit /project/ is
+     the project base folder name. =???= =NOT sure=
+     =From Jian= I'm pretty sure it is NOT the ~name~ setting.
+
+   - *Projects need their own directories*
+     In sbt, _the default project settings assume that each project has its own
+     base directory_.
+       _EACH_ /project/ in your build should have its OWN /base directory/
+     that's _DIFFERENT_ from any other /project/. Within this /base directory/,
+     you'll find the directories for source code, testing code, and so on.
+
+   - *Project definition order matters!*
+     This is why we usually use ~lazy val~, which drastically simplifies life.
+     However, this also hide /circular references/. For debugging this, when you
+     see an ~ExceptionInitialization~ when starting /sbt/, try to remove all
+     ~lazy~ to debug.
+
+** DONE 3.6 Putting it all together - 60
+   CLOSED: [2017-12-25 Mon 05:39]
+   #+BEGIN_SRC scala
+     import scala.sys.process.Process
+
+     name := "preowned-kittens"
+
+     scalaVersion := "2.12.0"
+
+     // resourceGenerators in Compile += makeVersionProperties
+
+     lazy val gitHeadCommitSHA = taskKey[String]("Determines the current git commit SHA")
+
+     lazy val makeVersionProperties = taskKey[Seq[File]]("Makes a version.properties file.")
+
+     gitHeadCommitSHA in ThisBuild := Process("git rev-parse HEAD").lineStream.head
+
+     lazy val common =
+       project.in(file("common")).
+         settings(
+           makeVersionProperties := {
+             val propFile = new File((resourceManaged in Compile).value, "version.properties")
+             val content = ("version=%s" + scala.util.Properties.lineSeparator) format gitHeadCommitSHA.value
+             IO.write(propFile, content)
+             Seq(propFile)
+           }
+         )
+
+     lazy val analytics =
+       project.in(file("analytics")).
+         dependsOn(common).
+         settings()
+
+     lazy val website =
+       project.in(file("website")).
+         dependsOn(common).
+         settings()
+
+     libraryDependencies in ThisBuild ++=
+       Seq("org.specs2" %% "specs2-core" % "4.0.0" % Test,
+         "org.scala-lang.modules" %% "scala-xml" % "1.0.6" % Test)
+   #+END_SRC
+
+** DONE 3.7 Summary - 64
+   CLOSED: [2017-12-25 Mon 05:39]
+
+* TODO 4 The default build - 66
+  - This chapter covers
+    + Arranging source files
+    + Dealing with dependencies (libraries)
+    + Compiling Scala and Java code
+    + Running individual tests
+    + Packaging your code
+
+  - This chapter covers the structure of the building: the _default build_.
+    Talk about the mechanism, rather than add new features to =build.sbt=.
+
+  - We'll walk through the /tasks/
+    1. ~compile~
+    2. ~run~
+    3. ~test~
+    4. ~package~
+    5. ~publish~
+
+*** DONE 4.1 Compiling your code - 67
+    CLOSED: [2017-12-26 Tue 22:56]
+    - Type ~inspect tree <command>~ in /sbt shell/ to check the dependencies of
+      the ~<command>~. The output is an _ASCII tree_ detailing which /tasks/ and
+      /settings/ the ~<command>~ depends on and what values those /settings/ and
+      /tasks/ return.
+        For example, ~inspect tree compile:compile~.
+
+      This is an amazing resource for learning how a new project works.
+
+    - Figure 4.1 =IMPORTANT=
+
+*** DONE 4.2 Finding your sources - 68
+    CLOSED: [2017-12-26 Tue 22:55]
+    - /sbt/ applies certain _conventions_ when looking for your /source code/.
+      BUT you can easily customize the way sources are organized, if necessary
+      (usually NOT).
+
+    - *Convention over configuration*
+
+**** 4.2.1 Standard organization of sources - 68
+     ~inspect tree sources~
+
+     - Figure 4.2 =IMPORTANT=
+
+     - unmanagedSources :: A discovered list of source files using standard
+          project conventions.
+
+     - managedSources :: A list of sources that are either generated from the
+                         build or manually added.
+
+     - /Unmanaged/ means you (not sbt) have to do the work of adding, modifying,
+       and tracking the source files, whereas
+       /managed/ source files are ones that sbt will create and track for you.
+
+     - /Unmanaged sources/ make use of
+       + a set of _file filters_ =TODO= =???=
+         and
+       + a DEFAULT set of _directories_
+       to produce the sequence of source files for the project.
+
+     - /unmanagedSourceDirectories/ includes /javaSource/ and /scalaSource/.
+       + ~show javaSource~
+         =[info] <project-dir>/src/main/java=
+
+       + ~show scalaSource~
+         =[info] <project-dir>/src/main/scala=
+
+     - compile resources :: files that are also needed at /runtime/ but do _NOT_
+          need to be compiled.
+       + Well-known examples include =.properties= and =.xml= files to configure
+         your logging system. =TODO= =???=
+
+     - /resources/ includes
+       + /unmanagedResources/, which depends on /resourceDirectory/.
+
+       + /managedResources/, which depends on /resourceGenerators/.
+
+     - _When the context allows for it_,
+       we will _NOT_ always make a precise distinction between /sources/ and
+       /resources/ and _sometimes refer to both as_ *sources*.
+
+     - _UNLIKE_ the /sources/ /settings/, /resources/ do _NOT_ use /filters/.
+
+       =From Jian= This is reasonable. Runtime resources can be anything, and if
+       a file is NOT used in runtime, you should _NOT_ put it in the resource
+       folder.
+
+     - ~show resourceDirectory~
+       =[info] <project-dir>/src/main/resources=
+
+     - /sbt/ borrows _these conventions_ from Maven.
+
+**** 4.2.2 Testing sources - 71
+     /testing sources/ have the *SAME* directory structure and *SAME* mechanism
+     as /sources/.
+
+**** 4.2.3 Custom organization of sources - 72
+     #+BEGIN_SRC scala
+       // Default for "src"
+       sourceDirectory := new File(baseDirectory.value, "src")
+
+       // Default for "main" and "test"
+       sourceDirectory in Compile := new File(sourceDirectory.value, "main")
+       sourceDirectory in Test := new File(sourceDirectory.value, "test")
+     #+END_SRC
+     Usually change the last parameter to set a new directory for =src=,
+     =src/main=, and =src/test=.
+       For example, ~sourceDirectory := new File(baseDirectory.value, "sources")~
+
+     You can use similar way to change ~javaSource~, ~resourceDirectory~, and
+     ~scalaSource~ in the ~Compile~ and ~Test~ scope.
+
+**** 4.2.4 Filtering the source you want - 74
+     - _By default_
+       + the ~includefilter~ setting is initialized with a filter that includes
+         ALL =*.scala= and =*.java= files,
+
+       + the ~excludeFilter~ setting excludes ANY _hidden files_.
+
+       For example,
+       Suppose you want to change that so that =*.java= files are no longer
+       compiled but hidden files are, add the following lines into =build.sbt=:
+       ~includeFilter in (Compile, unmanagedSources) := "*.scala"~
+       ~excludeFilter in (Compile, unmanagedSources) := NothingFilter~
+
+     - *Multiple key scopes*
+       Keys can be scoped by additional items, specifically project,
+       configuration, and task.
+
+       The project axis is often implicitly defined by the context of the
+       setting -- for example, by the location of (=From Jian= ??? in) the
+       =build.sbt= file or the settings field of a particular project in
+       =Build.scala=.
+
+       If NO scope is provided for /configuration/, the /DEFAULT configuration/
+       is used.
+
+       If NO scope is provided for /task/, then the key is _available ONLY when
+       unscoped_.
+
+     - /Exclude filters/ _take precedence over_ /include filters/.
+
+       The actual implementation runs the /include filter/ _first_
+       _and then_ checks the /exclude filter/, leading to any excludes overriding
+       the includes.
+
+*** DONE 4.3 Depending on libraries - 75
+    CLOSED: [2017-12-28 Thu 03:13]
+    ~inspect tree compile:dependencyClasspath~
+
+    - The dependencies are split into two parts
+      + Internal dependencies ::
+           These are the dependencies _between projects_ defined in the current
+           sbt build.
+
+           These are calculated using the project ~dependOn~ method.
+
+      + External dependencies ::
+           These are dependencies that _must be pulled from somewhere outside_,
+           via Ivy or the filesystem. Ivy is a dependency management library,
+           discussed in detail in appendix A. =TODO=
+
+           Two components:
+        * Unmanaged dependencies ::
+             These are /external dependencies/ sbt discovers from _DEFAULT
+             locations_.
+
+        * Managed dependencies ::
+             These are /external dependencies/ you specify in the sbt build.
+             These dependencies are _resolved by the ~update~ task_.
+             =TODO= ~update~
+
+**** DONE 4.3.1 Unmanaged dependencies - 76
+     CLOSED: [2017-12-28 Thu 01:20]
+     Drop a /jar/ archive into the ~lib/~ directory of your project.
+
+     - The default ~unmanagedBase~ is ~lib/~
+
+     - The drawbacks of using /unmanaged dependencies/:
+       1. The most important,
+          _many libraries have dependencies of their own_; that is, you get
+          transitive library dependencies.
+            As a result, you have to download the additional libraries and put
+          these into the =lib/= directory, too.
+
+       2. There's NO way to distinguish between various configurations -- say,
+          ~Compile~ and ~Test~ -- for /unmanaged dependencies/.
+            Therefore, test libraries, which belong to the ~Test~ configuration,
+          would _end up in your PACKAGED /main artifact/._ And finally, it can
+          become hard to understand which libraries your project, rather than
+          tests, REALLY depends on.
+
+**** DONE 4.3.2 Managed dependencies - 76
+     CLOSED: [2017-12-28 Thu 03:08]
+     - Although managedDependencies can be used to specify =files/jars= directly,
+       it's recommended to directly use /Ivy/ and the ~update~ task.
+
+     - =IMPORTANT=
+       Figure 4.6 Determining what the ~update~ task depends on.
+
+     - ~ivySbt~ =TODO= =???=
+
+     - ~ivyModule~ =TODO= =???=
+
+     - The most important /setting/ to know about ~IvySbt~ is the ~resolvers~
+       /setting/.
+       + ~resolvers~ :: it is responsible for informing Ivy _where_ and _how_ to
+                        load libraries.
+
+       Add a new location to pull the artifacts from, for example,
+       #+BEGIN_SRC scala
+         resolvers +=
+           "Preowned Kitten Maven Repository" at "http://internal-repo.preowned-kittens.com"
+       #+END_SRC
+
+       + The sbt _DEFAULT_ is to treat URLs as Maven repositories.
+         This /setting/ informs Ivy to look at the repository found at the URL
+         http://internal-repo.preowned-kittens.com for jars.
+
+     - *Batteries included! a.k.a. default resolvers*
+        sbt comes out of the box with a few configured repositories:
+       + Bintray's JCenter =TODO=
+       + Maven Central
+       + Typesafe releases =TODO=
+       + sbt community releases =TODO=
+
+     - The ~libraryDependencies~ setting is defined as a sequence of ~ModuleID~
+       /values/.
+
+     - ~ModuleID~ :: an sbt abstraction to simplify the declaration of
+                     dependencies.
+
+     - ~ModuleID~ consists of _THREE mandatory values_:
+       1. /organization/
+       2. /name/
+       3. /revision/
+
+       These are Ivy's variants of Maven's /groupId/, /artifactId/, and /version/
+       attributes and are a way to uniquely identify a library.
+
+     - When it comes to dependencies on _Scala libraries_, you need to pay
+       special attention to /binary compatibility/.
+
+       + _Starting with Scala 2.9_, all micro releases are binary-compatible -- for
+         example, 2.9.0, 2.9.1, and 2.9.2.
+
+       + sbt has established a _de facto standard_ where the _Scala version_ is
+         encoded in the /name/ of the library by _name mangling_ (underscore
+         followed by major version number, dot, and minor version number).
+         ~"com.typesafe" % "scalalogging-slf4j_2.10" % "0.4.0"~
+
+         Manually control and update this version info is error-prone. /Sbt/
+         provides convenient and safe way to do this -- use ~%%~, and /sbt/ will
+         help to mangle this name.
+         ~"com.typesafe" %% "scalalogging-slf4j" % "0.4.0"~
+
+**** DONE 4.3.3 Managed dependencies and configurations - 79
+     CLOSED: [2017-12-28 Thu 03:13]
+     =Info???=
+
+*** TODO 4.4 Packaging your project - 80
+    - The DEFAULT sbt build is oriented around _open source JVM libraries_.
+
+      This means that, by default, sbt will package your project as reusable
+      _jar files_ that can be published to /Ivy/ or /Maven/ repositories and
+      consumed by others.
+
+    - The ~package~ /task/ depends on the ~packageBin~ /task/.
+
+    - The ~packageBin~ /task/ which generated the binary artifact (jar) for the
+      project.
+
+    - The contents of this file are defined by the ~mappings in packageBin~
+      ~task~, which has the type ~Seq[(File, String)]~, a sequence of _files_ and
+      _names_.
+      + The _files_ are the list of files to include in the resulting jar;
+      + the _names_ are the location within the jar to store the file.
+        =TODO=
+
+    - You may want to add a licensing file in the resulting jar files. Usually,
+      you pick one of these _TWO_ choices:
+      + Put a license file in the ~src/main/resources~ directory.
+        OR
+      + Add a line similar to the one below to the build file (add a =LICENSE=
+        file to the base directory, and it includes the content
+        "PREOWNED-KITTEN-LICENSE"):
+        #+BEGIN_SRC scala
+          mappings in packageBin in Compile +=
+            (baseDirectory.value / "LICENSE") -> "PREOWNED-KITTEN-LICENSE"
+        #+END_SRC
+
+    - ~inspect tree publish~
+      =From Jian= The listed dependencies in the book Figure 4.8 is different
+      from sbt 1.x
+      =TODO= Read this part in the sbt manual.
+
+**** DONE 4.4.1 Identifying your project - 82
+     CLOSED: [2017-12-28 Thu 04:44]
+     - _Package name_ (defined by ~name~ in build file, rather than the project
+       directory name) will be used for /artifacts/ created while packaging your
+       project.
+
+     - For a /MULTIMODULE build/ (that is, one with multiple projects) it's
+       common practice to have
+       _a base name with a suffi_ for EACH particular project.
+
+     - If you don’t define the name, sbt will use default.
+       =From Jian= NOT in sbt 1.x
+
+     - The ~organization~ will be used alongside the ~name~ to resolve managed
+       library dependencies.
+
+     - In a /MULTIMODULE build/, the SAME ~organization~ is usually used for ALL
+       the projects.
+         Therefore, the ~organization~ is usually defined at the build level;
+       that is, _scoped to the build_ instead of the individual projects.
+
+     - ~name~ and ~organization~ in /sbt/ are _equivalent to_ ~artifactId~ and
+       ~groupId~ from /Maven/.
+
+     - Because most Scala and Java libraries are published to /Maven/
+       repositories, your version should stick to the /Maven versioning scheme/.
+       This basically looks like the following:
+       _major.minor.micro-qualifier_
+       + /major/, /minor/, and /micro/ have to be _numbers_
+       + /qualifier/ has to be _alphanumeric_.
+       + ONLY /major/ is mandatory.
+
+     - The default ~version~ is ="0.1-SNAPSHOT"=
+       This is typically defined at the build level, so that all projects in a
+       /MULTIMODULE build/ have the same version value.
+
+     - =TODO=
+       A complete outline of _deployment_ options is found in chapter 12,
+       “Distributing your projects.” This includes how to deploy any project, be
+       it a library, server, command-line utility, or Windows application.
+
+*** DONE 4.5 Summary - 83
+    CLOSED: [2017-12-28 Thu 04:46]
+    - *Table 4.1 Conventional setting and task names*
+      =IMPORTANT=
+
+* PART 3 WORKING WITH SBT - 85
+* TODO 5 Testing - 87
+  - This chapter covers
+    + Configuring your build to use *specs2*
+    + Learning how to run *JUnit* tests
+    + Incorporating external libraries and code into your testing
+    + Using the *ScalaCheck* library to improve your testing experience
+    + Incorporating /Selenium HTML tests/ using the *ScalaTest* /Selenium DSL/
+
+** DONE 5.1 Configuring specs2 with sbt - 88
+   CLOSED: [2018-01-01 Mon 18:04]
+   - Let's start at the beginning by looking in depth at three tasks:
+     + ~test~ run all test.
+       e.g., ~sbt test~
+
+     + ~testOnly~ run (a) specific test(s). Wildcards are available.
+       e.g.,
+       ~sbt testOnly org.preownedkittens.LogicSpec~
+       ~sbt testOnly *Logic*~
+
+     + ~testQuick~ runs all of the tests that
+       1. failed in the previous run
+       2. haven't yet been run,
+          or
+       3. depend on code that has changed.
+       e.g.,
+       ~sbt testQuick~
+
+     + DON'T forget the ~~~ prefixed version of commands.
+
+*** DONE 5.1.1 Reports and forking tests - 90
+    CLOSED: [2018-01-01 Mon 17:52]
+    #+BEGIN_SRC scala
+      testOptions in (ThisBuild, Test) += Tests.Argument(TestFrameworks.Specs2, "html")
+
+      libraryDependencies += Seq(
+        "org.specs2" %% "specs2-core" % "4.0.2" % Test,
+        "org.specs2" %% "specs2-html" % "4.0.2" % Test
+      )
+    #+END_SRC
+    
+    - =From Jian= It seems ~specs2~ no longer use the ~pegdown~ package mentioned
+      in this book.
+
+    - The generated HTML report is located in
+      ~<baseDirectory>/target/specs2-reports/LogicSpec.html~
+
+      + To change the output directory of ~specs2~, you can specify a Java system
+        property ~-Dspecs2.outDir=<directory>~
+
+        * *DIRTY* solution
+          You could achieve this by adding
+          1. a custom /task/ called ~System.setProperty("specs2.outDir",
+             "/something")~, which is executed *BEFORE* the /test/.
+
+          2. then a ~System.clearProperty("specs2.outDir")~ *AFTER*.
+
+          This solution is fairly complex and changes the running sbt environment.
+
+        * *BETTER* solution
+          _run the tests in a different instance of the JVM, and then you can
+          specify parameters to that JVM._
+
+          In sbt, this is called /forking the JVM/.
+          You can do this for various /tasks/, such as /compiling/ and /testing/.
+          And obviously running the application forks the JVM. In sbt, you can use
+          the ~javaOptions~ setting to specify the options to the *new JVM*:
+          ~javaOptions in Test += "-Dspecs2.outDir=target/generated/test-reports"~
+
+    - ~javaOptions~ can be applied to the ~Test~ and ~run~ /tasks/, and you can
+      specify anything you're able to on the Java command line;
+      for instance: ~javaOptions in run += "-Xmx2048m"~
+
+    - ~javaOptions~ won't work without /forking/ (you cannot change current JVM
+      settings, you can only fork to create new with your settings):
+      ~fork in Test := true~
+
+      + The ~fork~ setting can apply to the ~run~, ~run-main~, and ~test~ /tasks/.
+
+      + ~run~ and ~run-main~ share the same /settings/.
+        * ~run-main~ allows you to select the class to run
+        * ~run~ selects the class for you
+
+    - In the "*Better* solution" we hard code the =target= directory, which is
+      also *BAD*, because the value of ~target~ /setting/ can change, and then
+      the sbt CANNOT manage our hard coded =target= directory. We should do like
+      this
+      #+BEGIN_SRC scala
+        javaOptions in Test +=
+          "-Dspecs2.outDir=" + (target.value / "generated/test-reports").getAbsolutePth
+      #+END_SRC
+      + The ~target.value~ returns a /file/ (not a ~String~). A /file/ has a
+        method called ~/~.
+
+      + Because the current working directory isn't necessarily the /base
+        directory/, call the ~getAbsolutePath~ is necessary.
+
+    - *Forking processes*
+      Most of the time you do NOT need to ~fork~, BUT there are _FOUR_ main
+      reasons why you may want to fork:
+      + New JVM requires different parameters
+        If you want to change some settings about the JVM, you must fork a new
+        one -- you cannot lift yourself by pulling your hair.
+        A common use case is to add a ~-D~ option, as you've done.
+
+      + ~System.exit()~
+        If your code calls ~System.exit()~, this normally shuts down the JVM.
+        Most of the time sbt copes with this, but there are certain situations
+        where it doesn't. =TODO=
+
+      + Threads
+        If your code creates a lot of new threads, and these threads are not
+        tidied before the main method returns, then this can cause problems. For
+        instance, a GUI using Swing creates a number of threads. In general,
+        these don't terminate until the JVM itself terminates.
+        =TODO=
+
+      + Class loading
+        If you’re using /class loaders/ (=TODO= what is it???), or if you’re
+        /deserializing/ for any reason, this can cause issues (=TODO= what kind
+        of issues?). Note that it may not be you who is doing the class loading
+        but a library that you're using, such as ~scalate~. ~Scalate~ is a
+        template engine that creates HTML from a template. It does this by
+        creating Scala files and then compiling and loading the classes. This
+        can cause problems with ~PermGen~ in some JVMs.
+        =TODO=
+
+        (=From Jian= For ~PermGen~, there is a GOOD news, JDK 8+ doesn't have
+         this setting, which means if you are using a right JDK, you can forget
+         this setting. However, for compatability, you should pay attention to
+         ~PermGen~.)
+
+*** TODO 5.1.2 Digging deeper: other options for forking - 93
+    =TODO= =TEST THEM ALL=
+    sbt provides other options when you're forking your processes.
+    Note that for these options to work, you need to have ~fork := true~.
+
+    - *CHANGING THE JVM*
+      You can also _specify a Java installation_ by using the ~javaHome~
+      /setting/. This is the directory in which the Java installation is found:
+      ~javaHome := file("\slash{}pathTo\slash{}jre")~
+      This does NOT change sbt itself. You can also specify the configuration
+      for the ~run~ and/or ~test~ /tasks/.
+
+    - *CHANGING THE WORKING DIRECTORY*
+      _When a /task/ forks_, you can set _the /working directory/ for the forked
+      JVM_:
+      #+BEGIN_SRC scala
+        baseDirectory := file("/working/directory")
+        baseDirectory in (Compile, run) := file("/working/directory")
+      #+END_SRC
+
+      Note, again, _that this does NOT affect sbt itself_, just the *NEW* JVM.
+      Again, you can specify the configuration for the ~run~ and ~test~ tasks
+      for different configurations.
+
+    - *INPUT AND OUTPUT*
+      When you fork a process, you can change _where the output goes to and
+      where input is read from_. You do this using the ~outputStrategy~
+      /setting/:
+      #+BEGIN_SRC scala
+        outputStrategy :=
+          Some(CustomOutput(new java.io.FileOutputStream("/tmp/run.log")))
+      #+END_SRC
+      _By default_, all standard output is logged to the sbt console at the Info
+      level, and all standard errors are logged at the Error level. There are
+      any number of options for output. Here’s how to send ALL output (_standard
+      out_ and _error_) to sbt standard out (NOT the logger):
+      ~outputStrategy := Some(StdoutOutput)~
+      
+      Finally, if you want your task to wire the standard input of the new
+      process into the standard input for sbt -- for example, if you want to ask
+      a question of the user -- you can use ~connectInput~:
+      ~connectInput in run := true~
+
+** TODO 5.2 JUnit and using custom code - 94
+*** Report generation with JUnit - 95
+    - =TODO=
+
+    - =TODO=
+
+    - *sbt test frameworks*
+      sbt defines five TestFrameworks:
+      #+BEGIN_SRC scala
+        val ScalaCheck = new TestFramework("org.scalacheck.ScalaCheckFramework")
+        val ScalaTest = new TestFramework("org.scalatest.tools.ScalaTestFramework")
+        val Specs = new TestFramework("org.specs.runner.SpecsFramework")
+        val Specs2 = new TestFramework("org.specs2.runner.SpecsFramework")
+        val JUnit = new TestFramework("com.novocode.junit.JUnitFramework")
+      #+END_SRC
+      These are defined by /sbt/ inside the ~TestFrameworks~ /object/ and can be
+      used out of the box. But if you use a test framework that is NOT defined
+      here, you can define and create your own.
+
+** TODO 5.3 ScalaCheck - 98
+** TODO 5.4 Integration testing - 102
+   Add /integration tests/. They run at a different time than the unit tests.
+   We use *ScalaTest* *Selenium* DSL to illustrate this.
+
+*** 5.4.1 *ScalaTest* and *Selenium* - 102
+    - *ScalaTest* implements a number of different styles of testing, including
+      + /specification-style testing/ like *specs2*
+      + /unit testing/ like *JUnit*
+      + /behavior-driven development-style testing/ *ScalaCheck*.
+
+      Which one to use depends on what stage of your project that you're at.
+
+    - *Selenium* :: a tool that aids the testing of websites.
+
+    - *Selenium* is available for a number of languages, including:
+      + Java/Scala
+      + Ruby
+      + Python
+      + .NET languages
+
+    - *Selenium* works by starting a browser via what it calls a web driver and
+      interacting with it, telling it to click this button or enter some text
+      into this or that field.
+
+      It can drive almost all mainstream browsers. 
+
+      *Selenium* tests are generally considered to be /integration tests/.
+
+    - You'll use the ~FlatSpec~ classes of *ScalaTest*.
+
+    - *ScalaTest* integrates *Selenium* through an internal DSL, so you're actually
+      writing Scala code,
+
+    - Example:
+      #+BEGIN_SRC scala
+        "Home page" should "redirect to kitten list" in {
+          go to "http://localhost:9000"
+          currentUrl should startWith ("http://localhost:9000/kittens")
+        }
+      #+END_SRC
+
+    - =TODO=
+      For now, you can run the site in one window and the tests from another.
+      You'll have a better solution to this in chapter 6.
+
+      - =TODO=
+
+*** 5.4.2 Challenges of integration testing - 104
+      - =TODO=
+
+*** 5.4.3 Adding integration tests to sbt - 105
+
+** TODO 5.5 Summary - 109
+
+* TODO 6 The IO and Process libraries - 110
+  - This chapter covers
+    + Creating sbt /tasks/ that run /external processes/
+    + Manipulating files with sbt's *IO* library
+    + Logging information with sbt's /task loggers/ =TODO=
+    + Managing the /task dependency graph/
+    + Forking /Java processes/
+
+  - 
+
+** TODO 6.1 Packaging using processes - 111
+   - *sbt cross-compiling*
+   - *Combining processes and output*
+   - *Consider alternatives to command-line processes*
+
+** TODO 6.2 Packaging using the sbt.IO library - 114
+** TODO 6.3 More mappings - 116
+** TODO 6.4 Task dependencies - 118
+** TODO 6.5 Logging using the sbt logger - 119
+   - *sbt and Scala macros: using the values of other tasks*
+
+** TODO 6.6 Running your build using fork - 121
+** TODO 6.7 Linking everything together: dependencies - 122
+   - *Replacing an already defined value*
+
+** TODO 6.8 Linking everything together: processes - 124
+** TODO 6.9 Summary - 127
+
+* TODO 7 Accepting user input - 128
+** TODO 7.1 Accepting user input with input tasks - 130
+   - *Using build libraries*
+   - *Classpath crazy!*
+   
+** TODO 7.2 Defining an interface with parsers - 133
+   - *Combinators everywhere*
+
+** TODO 7.3 Defining a database evolution parser - 136
+** TODO 7.4 Helping the user with autocomplete - 142
+** TODO 7.5 Summary - 144
+
+* TODO 8 Using plugins and external libraries - 146
+** TODO 8.1 Using plugins to check your code - 147
+   - *For plugins, Scala version corresponds to sbt version*
+** TODO 8.2 Using the Revolver plugin to restart the application - 151
+** TODO 8.3 Creating your uber jar using the assembly plugin - 153
+** TODO 8.4 Including a library in your plugin build - 155
+   - *When to use =project/\star{}.scala= and when to use*  =build.sbt=
+
+** TODO 8.5 Adding a plugin for use in all of your projects-signing your projects - 159
+   - *When user-level files conflict with project files*
+
+** TODO 8.6 Adding local credentials for deployment - 161
+** TODO 8.7 Summary - 161
+
+* TODO 9 Debugging your build - 162
+*** TODO 9.1 Running sbt - 163
+    - *The sbt launcher*
+
+*** TODO 9.2 Making your build compile - 165
+*** TODO 9.3 Ensuring tasks are run - 168
+    - *The task request*
+    - *for expressions for sequential execution with tasks*
+    - *More-versatile for expressions for sequential execution*
+
+*** TODO 9.4 Resolving dependency conflicts - 172
+**** TODO Fixing resolution failures - 173
+**** TODO Fixing resolution conflicts - 175
+
+*** TODO 9.5 Summary - 179
+
+* PART 4 EXTENDING SBT - 181
+* TODO 10 Automating workflows with commands - 183
+** TODO 10.1 Creating a simple command - 184
+   - *Scala's operator precedence and ::*
+
+** TODO 10.2 Running tasks in parallel - 186
+** TODO 10.3 Parsing input with commands - 187
+** TODO 10.4 Creating useful help messages - 194
+   - *Warning: conventions enable collaboration*
+
+** TODO 10.5 Summary - 197
+
+* TODO 11 Defining a plugin - 198
+*** TODO 11.1 Reusing code using Scala files - 200
+*** TODO 11.2 Introducing the AutoPlugin interface - 200
+    - *Why is the plugin interface called AutoPlugin and not Plugin?*
+
+**** TODO Taking a closer look—the plugin definition - 203
+**** TODO Taking a closer look—task and setting dependencies - 204
+
+*** TODO 11.3 Testing a plugin with the scripted plugin - 206
+    - *Why are you adding settings directly?*
+
+*** TODO 11.4 Using configurations in your plugin - 211
+*** TODO 11.5 Adding incremental tasks - 215
+**** TODO Adding incremental tasks with .previous—a sneak preview of 1.0 - 217
+
+*** TODO 11.6 Making things easy for the user--more about the AutoPlugin interface - 218
+*** TODO 11.7 Summary - 222
+
+* PART 5 DEPLOYING YOUR PROJECTS - 223
+* TODO 12 Distributing your projects - 225
+** TODO 12.1 Publishing a library - 226
+** TODO 12.2 Publishing locally - 229
+   - *Clean-slate development*
+
+** TODO 12.3 Publishing a simple server - 230
+   - *A rich ecosystem of plugins*
+   - *Temporary settings*
+
+** TODO 12.4 Generating a distribution - 232
+   - *Transitionary plugins*
+   - *Packaging for Heroku*
+
+** TODO 12.5 Creating a Linux distribution - 236
+   - *What Debian packages can you use?*
+
+** TODO 12.6 Summary - 239
+
+* TODO appendix A What you need to know about Ivy - 240
+** TODO A.1 Modules - 240
+** TODO A.2 Module identification - 240
+** TODO A.3 Artifacts - 241
+** TODO A.4 Differences in Ivy and Maven - 241
+** TODO A.5 Configuration - 242
+   - *Lost in translation*
+
+** TODO A.6 Resolvers - 244
+** TODO A.7 Resolving dependency conflicts - 248
+   - *When the latest version isn’t safe*
+
+* TODO appendix B Migrating to autoplugins - 251
+** TODO B.1 Older sbt plugins - 251
+** TODO B.2 Migrating to autoplugins - 252
+
+* TODO appendix C Advanced setting/task API - 254
+** TODO C.1 Optional settings - 254
+** TODO C.2 Failing tasks - 254
+** TODO C.3 Dynamic tasks - 255
+** TODO C.4 Composing InputTasks - 256
+
+* index - 257

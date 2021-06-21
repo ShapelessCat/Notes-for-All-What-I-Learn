@@ -1,0 +1,1659 @@
+#+TITLE: Rust Standard Library Cookbook
+#+SUBTITLE: Over 75 recipes to leverage the power of Rust
+#+VERSION: 2018
+#+AUTHOR: Jan Nils Ferner && Daniel Durante
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface
+** Who this book is for
+** What this book covers
+** To get the most out of this book
+*** Download the example code files
+*** Conventions used
+
+** Sections
+*** Getting ready
+*** How to do it&#x2026;
+*** How it works&#x2026;
+*** There's more&#x2026;
+*** See also
+
+** Get in touch
+*** Reviews
+
+** Disclaimer
+
+* DONE 1. Learning The Basics
+  CLOSED: [2018-06-10 Sun 19:00]
+** Introduction
+   - =EN=
+     quintessential - 精髓
+
+** Concatenating Strings
+*** Getting Ready
+*** How to Do It..
+*** How It Works..
+
+** Using the ~format!~ Macro
+*** How to Do It..
+*** How It Works..
+*** There's More..
+
+** Providing A Default Implementation
+*** How to Do It..
+*** How It Works..
+
+** DONE Using The Constructor Pattern
+   CLOSED: [2018-06-03 Sun 18:58]
+   - Q :: How to idiomatically initialize complex /structs/ in Rust?
+
+   - A :: Though Rust doesn't support some specific SYNTAX for a /constructor/,
+          it have a convention of "constructor". The std uses this pattern very
+          often, so we need to understand it if we want to use the std
+          effectively.
+
+*** DONE Getting Ready
+    CLOSED: [2018-06-03 Sun 18:57]
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 18:58]
+    =cargo run --bin constructor=
+
+    #+BEGIN_SRC rust
+      fn main() {
+          // We don't need to care about
+          // the internal structure of NameLength
+          // Instead, we can just call it's constructor
+          let name_length = NameLength::new("John");
+
+          // Prints "The name 'John' is '4' characters long"
+          name_length.print();
+      }
+
+      struct NameLength {
+          name: String,
+          length: usize,
+      }
+
+      impl NameLength {
+          // The user doesn't need to setup length
+          // We do it for him!
+          fn new(name: &str) -> Self {
+              NameLength {
+                  name: name.to_string(),
+                  length: name.len(),
+              }
+          }
+
+          fn print(&self) {
+              println!(
+                  "The name '{}' is '{}' characters long",
+                  self.name,
+                  self.length,
+              );
+          }
+      }
+    #+END_SRC
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 18:18]
+    =From Jian= *I don't understand the 1st paragraph!!!*
+
+*** DONE There's More
+    CLOSED: [2018-06-03 Sun 18:57]
+    - By convention, we create the ~new~ /method/ as the /main constructor/, and
+      name the other options according to how they differ from the DEFAULT.
+      For instance, ~Vec~ provide the /methods/ ~new~ and ~with_capacity~.
+
+    - When accepting a kind of string (either ~&str~, that is, a /borrowed
+      string slice/, or ~String~, that is, an /owned string/) with plans to store
+      it in your ~struct~, like we do in our example, also considering a ~Cow~.
+      + Cow :: Clone On Write, a /wrappter/ arround a /type/, which means that
+               it will try to borrow a type for as long as possible and only
+               make an owned clone of the data when absolutely necessary, which
+               happens at the first mutation.
+
+      + With the help of ~Cow~, the code below would NOT care whether the called
+        passed a ~&str~ or a ~String~ to it, and would instead try to work in
+        the most efficient way possible: =Re-Read Code=
+        #+BEGIN_SRC rust
+          use std::borrow::Cow;
+
+          struct NameLength<'a> {
+              name: Cow<'a, str>,
+              length: usize,
+          }
+
+          impl<'a> NameLength<'a> {
+              // The user doesn't need to setup length
+              // We do it for him!
+
+              fn new<S>(name: S) -> Self
+              where
+                  S: Into<Cow<'a, str>>,
+              {
+                  let name: Cow<'a, str> = name.into();
+
+                  NameLength {
+                      length: name.len(),
+                      name,
+                  }
+              }
+
+              fn print(&self) {
+                  println!(
+                      "The name '{}' is '{}' characters long",
+                      self.name, self.length
+                  );
+              }
+          }
+        #+END_SRC
+        * =IMPORTANT= =!!!=
+          Here the *order* of the lines ~length: name.len(),~ and ~name,~ matters,
+          actually, it is very _IMPORTANT_!!!
+            Only the given order is compilable -- use the borrowed one to call
+          ~len()~, and then make an owned clone to the ~struct~. If NOT in this
+          order -- the owned ~name~ first -- the owned ~name~ will be consumed
+          by the ~name.len()~ call!
+
+        * The ~Into~ trait and the ~Cow~ will be explained in the Chapter 5!
+
+    - About the ~Cow~:
+      Read this blog post by Joe Wilm: https://jwilm.io/blog/from-str-to-cow/.
+
+*** TODO See Also
+
+** DONE Using The Builder Pattern
+   CLOSED: [2018-06-03 Sun 19:43]
+   =From Jian= The /builder pattern/ is useless if there are features of /name
+   parameters/ and /default value parameters/. Hope Rust can have it in the
+   future!!!
+
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 19:43]
+    Try with =cargo run --bin builder=
+
+    #+BEGIN_SRC rust
+      fn main() {
+          // We can easily create different configurations
+          let normal_burger = BurgerBuilder::new().build();
+          let cheese_burger = BurgerBuilder::new()
+              .cheese(true)
+              .salad(false)
+              .build();
+
+          let veggie_bigmac = BurgerBuilder::new()
+              .vegetarian(true)
+              .patty_count(2)
+              .build();
+
+          if let Ok(normal_burger) = normal_burger {
+              normal_burger.print();
+          }
+
+          if let Ok(cheese_burger) = cheese_burger {
+              cheese_burger.print();
+          }
+
+          if let Ok(veggie_bigmac) = veggie_bigmac {
+              veggie_bigmac.print();
+          }
+
+          // Our builder can perform a check for
+          // invalid configurations
+          let invalid_burger = BurgerBuilder::new()
+              .vegetarian(true)
+              .bacon(true)
+              .build();
+
+          if let Err(error) = invalid_burger {
+              println!("Failed to print burger: {}", error);
+          }
+
+          // If we omit the last step, we can reuse our builder
+          let cheese_burger_builder = BurgerBuilder::new().cheese(true);
+
+          for i in 1..10 {
+              let cheese_burger = cheese_burger_builder.build();
+
+              if let Ok(cheese_burger) = cheese_burger {
+                  println!("cheese burger number {} is ready!", i);
+                  cheese_burger.print();
+              }
+          }
+      }
+
+
+      struct Burger {
+          patty_count: i32,
+          vegetarian: bool,
+          cheese: bool,
+          bacon: bool,
+          salad: bool,
+      }
+
+      impl Burger {
+          // This method is just here for illustrative purposes
+          fn print(&self) {
+              let pretty_patties =
+                  if self.patty_count == 1 {
+                      "patty"
+                  } else {
+                      "patties"
+                  };
+
+              let pretty_bool = |val| if val { "" } else { "no " };
+              let pretty_vegetarian = if self.vegetarian { "vegetarian " } else { "" };
+
+              println!(
+                  "This is a {}burger with {} {}, {}cheese, {}bacon and {}salad",
+                  pretty_vegetarian,
+                  self.patty_count,
+                  pretty_patties,
+                  pretty_bool(self.cheese),
+                  pretty_bool(self.bacon),
+                  pretty_bool(self.salad)
+              )
+          }
+      }
+
+      struct BurgerBuilder {
+          patty_count: i32,
+          vegetarian: bool,
+          cheese: bool,
+          bacon: bool,
+          salad: bool,
+      }
+
+      impl BurgerBuilder {
+          // in the constructor, we can specify
+          // the standard values
+          fn new() -> Self {
+              BurgerBuilder {
+                  patty_count: 1,
+                  vegetarian: false,
+                  cheese: false,
+                  bacon: false,
+                  salad: true,
+              }
+          }
+
+          // Now we have to define a method for every
+          // configurable value
+          fn patty_count(mut self, val: i32) -> Self {
+              self.patty_count = val;
+              self
+          }
+
+          fn vegetarian(mut self, val: bool) -> Self {
+              self.vegetarian = val;
+              self
+          }
+          fn cheese(mut self, val: bool) -> Self {
+              self.cheese = val;
+              self
+          }
+          fn bacon(mut self, val: bool) -> Self {
+              self.bacon = val;
+              self
+          }
+          fn salad(mut self, val: bool) -> Self {
+              self.salad = val;
+              self
+          }
+
+          // The final method actually constructs our object
+          fn build(&self) -> Result<Burger, String> {
+              let burger = Burger {
+                  patty_count: self.patty_count,
+                  vegetarian: self.vegetarian,
+                  cheese: self.cheese,
+                  bacon: self.bacon,
+                  salad: self.salad,
+              };
+              // Check for invalid configuration
+              if burger.vegetarian && burger.bacon {
+                  Err("Sorry, but we don't server vegetarian bacon yet".to_string())
+              } else {
+                  Ok(burger)
+              }
+          }
+      }
+    #+END_SRC
+
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 19:43]
+*** DONE There's More
+    CLOSED: [2018-06-03 Sun 19:42]
+    - If you want your object to be constructable *without* a /builder/,
+      you could also provide ~Burger~ with _a ~Default~ implementation_.
+      ~BurgerBuilder::new()~ could then just return ~Default::default()~.
+
+    - In ~build()~,
+      if your configuration can *inherently _NOT_ be invalid*, you can, of course,
+      return the object directly *without* wrapping it in a ~Result~.
+
+** TODO Parallelism Through Simple Threads
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** DONE Generating Random Numbers
+   CLOSED: [2018-06-03 Sun 21:41]
+   - As described in the preface, the Rust core team LEFT some functionality
+     intentionally OUT OF the standard and put it into its own /external crate/.
+
+     *Generating pseudo-random numbers is one such functionality.*
+
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 21:03]
+    - Add the ~rand ~ "0.5"= (=From Jian= Jun 3) line to the =Cargo.toml= file
+      ~[dependencies]~ section..
+
+    - Try with =cargo run --bin rand=
+      #+BEGIN_SRC rust
+        extern crate rand;
+
+        fn main() {
+            // random number between std::i32::MIN and std::i32::MAX
+            let random_num1 = rand::random::<i32>();
+            println!("random_num1: {}", random_num1);
+
+            // Every primitive data type can be randomized
+            let random_char = rand::random::<char>();
+            // Although random_char will probably not be
+            // representable on most operating systems
+            println!("random_char: {}", random_char);
+
+
+            use rand::Rng;
+            // We can use a reusable generator
+            let mut rng = rand::thread_rng();
+            // This is equivalent to rand::random()
+            if rng.gen() {
+                println!("This message has a 50-50 chance of being printed");
+            }
+            // A generator enables us to use ranges
+            // random_num3 will be between 0 and 9
+            let random_num3 = rng.gen_range(0, 10);
+            println!("random_num3: {}", random_num3);
+
+            // random_float will be between 0.0 and 0.999999999999...
+            let random_float = rng.gen_range(0.0, 1.0);
+            println!("random_float: {}", random_float);
+
+            // Per default, the generator uses a uniform distribution,
+            // which should be good enough for nearly all of your
+            // use cases. If you require a particular distribution,
+            // you specify it when creating the generator:
+
+            // TODO: Replace this deprecated method invoke!!!
+            let mut chacha_rng = rand::ChaChaRng::new_unseeded();
+            let random_chacha_num = chacha_rng.gen::<i32>();
+            println!("random_chacha_num: {}", random_chacha_num);
+        }
+      #+END_SRC
+
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 21:41]
+    - ~extern crate rand;~
+
+    - Uniform distribution:
+      + Get a random number directly (within the range of a type):
+        ~rand::random();~
+
+      + Get a random number /generator/:
+        * ~let rng = rand::random::<type_you_want>();~
+          or
+          ~let rng: type_you_want = rand::random();~
+
+        * Get a random number generator with ~let mut rng = rand::thread_rng();~,
+          and call ~rng.gen()~, which calls ~rand::random()~ implicitly.
+
+      + Use can use the random number generator above to get random number within
+        a range: ~rng.gen_range(0, 10)~, whose range is [0, 10) in math.
+
+    - You can also get a random number generator with other distribution!
+      =From Jian= For ~rand~ version 0.5, this ~new_unseeded~ method is deprecated!
+      #+BEGIN_SRC rust
+        let mut chacha_rng = rand::ChaChaRng::new_unseeded();
+        let random_chacha_num = chacha_rng.gen::<i32>();
+      #+END_SRC
+
+*** DONE There's More
+    CLOSED: [2018-06-03 Sun 21:41]
+    =IMPORTANT= =IMPORTANT= =IMPORTANT= _Useful for Test_
+    If you want to randomly populate an entire ~struct~, you use the
+    ~rand_derive~ helper /crate/ in order to derive it from ~Rand~.
+
+    You can then generate your own ~struct~, just as you would generate any other
+    type.
+
+** DONE Querying with Regexes
+   CLOSED: [2018-06-03 Sun 23:08]
+   The ~regex~ crate
+
+*** DONE Getting Ready
+    CLOSED: [2018-06-03 Sun 23:05]
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 23:08]
+    Try it with ~cargo run --bin regex~
+
+    #+BEGIN_SRC rust
+      extern crate regex;
+
+      fn main() {
+          use regex::Regex;
+          // Beginning a string with 'r' makes it a raw string,
+          // in which you don't need to escape any symbols
+          let date_regex =
+              Regex::new(r"^\d{2}.\d{2}.\d{4}$").expect("Failed to create regex");
+          let date = "15.10.2017";
+          // Check for a match
+          let is_date = date_regex.is_match(date);
+          println!("Is '{}' a date? {}", date, is_date);
+
+          // Let's use capture groups now
+          let date_regex = Regex::new(r"(\d{2}).(\d{2}).(\d{4})")
+              .expect("Failed to create regex");
+          let text_with_dates = "Alan Turing was born on 23.06.1912 and died on 07.06.1954. \
+          A movie about his life called 'The Imitation Game' came out on 14.11.2017";
+
+          // Iterate over the matches
+          for cap in date_regex.captures_iter(text_with_dates) {
+              println!("Found date {}", &cap[0]);
+              println!("Year: {} Month: {} Day: {}", &cap[3], &cap[2], &cap[1]);
+          }
+
+          // Replace the date format
+          println!("Original text:\t\t{}", text_with_dates);
+          let text_with_indian_dates =
+              date_regex.replace_all(text_with_dates, "$1-$2-$3");
+          println!("In indian format:\t{}", text_with_indian_dates);
+
+          // Replacing groups is easier when we name them
+          // ?P<somename> gives a capture group a name
+          let date_regex = Regex::new(r"(?P<day>\d{2}).(?P<month>\d{2}).(?P<year>\d{4})")
+              .expect("Failed to create regex");
+          let text_with_american_dates =
+              date_regex.replace_all(text_with_dates,
+                                     "$month/$day/$year");
+          println!("In american format:\t{}", text_with_american_dates);
+          let rust_regex = Regex::new(r"(?i)rust")
+              .expect("Failed to create regex");
+          println!("Do we match RuSt? {}", rust_regex.is_match("RuSt"));
+
+          // ------------------------------------------------------------------------ //
+          use regex::RegexBuilder;
+          let rust_regex = RegexBuilder::new(r"rust")
+              .case_insensitive(true)
+              .build()
+              .expect("Failed to create regex");
+          println!("Do we still match RuSt? {}", rust_regex.is_match("RuSt"));
+      }
+    #+END_SRC
+    + Add ~regex = "1.0.0"~ (=From Jian= Jun 3) to the ~[dependencies]~ section
+      of the =Cargo.toml= file.
+
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 23:05]
+    - Construct a /regex/ object by calling ~Regex::new(pattern_string)~.
+      Most of the time, you will want to pass a /raw string/ in the form of
+      ~r"..."~.
+
+    - We can iterate over the results of our /regex/.
+      The object we get on every match is a collection of our /capture groups/.
+      Keep in mind that the 0 index is always the /ENTIRE capture/.
+      #+BEGIN_SRC rust
+        for cap in date_regex.captures_iter(text_with_dates) {
+            println!("Found date {}", &cap[0]);
+            println!("Year: {} Month: {} Day: {}", &cap[3], &cap[2], &cap[1]);
+        }
+      #+END_SRC
+      + Unfortunately, the indeces are not checked at /compile-time/, and if we
+        access with out of bound indeces, there will be a /runtime error/.
+
+    - match groups (~$0~ is the entire match):
+      #+BEGIN_SRC rust
+        let text_with_indian_dates = date_regex.replace_all(text_with_dates, "$1-$2-$3")
+      #+END_SRC
+
+    - Named match groups: ~?P<somename>~
+      #+BEGIN_SRC rust
+        let date_regex = Regex::new(r"(?P<day>\d{2}).(?P<month>\d{2}).(?P<year>\d{4})")
+            .expect("Failed to create regex");
+        let text_with_american_dates = date_regex.replace_all(text_with_dates, "$month/$day/$year");
+      #+END_SRC
+
+    - Flags:
+      + Syntax: ~(?flag_name)~
+
+      + For instance:
+        * ~(?i)~: case insensitive.
+        * ~(?x)~: ignore whitespace in the regex string.
+
+    - ~RegexBuilder~ can be more clear, but verbose:
+      #+BEGIN_SRC rust
+        let rust_regex = RegexBuilder::new(r"rust")
+            .case_insensitive(true)
+            .build()
+            .expect("Failed to create regex");
+
+        // rust_regex.is_match("RuSt")
+      #+END_SRC
+
+*** DONE There's More..
+    CLOSED: [2018-06-03 Sun 22:51]
+    - The regexes work by compiling their strings into the equivalent Rust code
+      on creation.
+        For *performance reasons*, you are advised to *reuse* your /regexes/
+      instead of creating them anew every time you use them.
+
+      =TODO=
+      A good way of doing this is by using the ~lazy_static~ /crate/, which we
+      will look at later in the book, in the _Creating lazy static objects_
+      SECTION in _Chapter 5, Advanced Data Structures._
+
+    - One thing that is the MOST IMPORTANT for /regex/:
+      *DON'T over use it!*
+
+*** DONE See Also
+    CLOSED: [2018-06-03 Sun 22:51]
+    - =TODO=
+      Creating lazy static objects recipe in Chapter 5, Advanced Data Structures.
+
+** DONE Accessing The Command Line
+   CLOSED: [2018-06-03 Sun 23:29]
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 23:23]
+    Try with =cargo run --bin cli_params some_option some_other_option=
+
+    #+BEGIN_SRC rust
+      use std::env;
+
+      fn main() {
+          // env::args returns an iterator over the parameters
+          println!("Got following parameters: ");
+          for arg in env::args() {
+              println!("- {}", arg);
+          }
+
+          // We can access specific parameters using the iterator API
+          let mut args = env::args();
+          if let Some(arg) = args.nth(0) {
+              println!("The path to this program is: {}", arg);
+          }
+          if let Some(arg) = args.nth(1) {
+              println!("The first parameter is: {}", arg);
+          }
+          if let Some(arg) = args.nth(2) {
+              println!("The second parameter is: {}", arg);
+          }
+
+          // Or as a vector
+          let args: Vec<_> = env::args().collect();
+          println!("The path to this program is: {}", args[0]);
+          if args.len() > 1 {
+
+              println!("The first parameter is: {}", args[1]);
+          }
+          if args.len() > 2 {
+              println!("The second parameter is: {}", args[2]);
+          }
+      }
+    #+END_SRC
+
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 23:29]
+    - ~std::env::args()~ returns an /iterator/ over the provided command-line
+      parameters.
+      + By convention, the first command-line parameter on most OS is the path to
+        the executable itself.
+
+    - Access specific parameters in TWO ways:
+      + Keep them in an /iterator/.
+        Accessing an /iterator/ _FORCES_ you to _check at compile time_ whether
+        the element exists, for example, an ~if let~ binding.
+
+      + ~collect~ them into a collection such as ~Vec~
+        Accessing a /vector/ _checks the validity at runtime_
+
+*** DONE There's More
+    CLOSED: [2018-06-03 Sun 23:29]
+    If you ware building a serious command-line utility in the style of *nix
+    tools, you will have to parse a lot of different parameters. Try to take a
+    look at third-party libraries, such as ~clap~.
+
+** DONE Interacting with Environment Variables
+   CLOSED: [2018-06-03 Sun 23:44]
+   Read, set, and remove /environment variables/.
+*** DONE How to Do It
+    CLOSED: [2018-06-03 Sun 23:37]
+    Try it with the command =cargo run --bin env_vars=
+
+    #+BEGIN_SRC rust
+      use std::env;
+
+      fn main() {
+          // We can iterate over all the env vars for the current process
+          println!("Listing all env vars:");
+          for (key, val) in env::vars() {
+              println!("{}: {}", key, val);
+          }
+
+          let key = "PORT";
+          println!("Setting env var {}", key);
+          // Setting an env var for the current process
+          env::set_var(key, "8080");
+
+          print_env_var(key);
+
+          // Removing an env var for the current process
+          println!("Removing env var {}", key);
+          env::remove_var(key);
+
+          print_env_var(key);
+      }
+
+      fn print_env_var(key: &str) {
+          // Accessing an env var
+          match env::var(key) {
+              Ok(val) => println!("{}: {}", key, val),
+              Err(e) => println!("Couldn't print env var {}: {}", key, e),
+          }
+      }
+    #+END_SRC
+
+*** DONE How It Works
+    CLOSED: [2018-06-03 Sun 23:44]
+    - ~std::env::vars()~ returns an /iterator/ over all the /environment variables/
+      that were set _for the current process_ at the time of execution.
+
+    - Use ~std::env::var(key)~ to access a specific /environment variable/ with
+      its ~key~.
+
+      It returns an ~Err~ if the requested /environment variable/ is
+      + either not present
+      + or doesn't contain valid Unicode.
+
+    - Because your ~env::var~ returns a ~Result~,
+      you can easily _set up default values_ for them by using ~unwrap_or_default~.
+      For instance,
+      #+BEGIN_SRC rust
+        redis_addr = env::var("REDIS_ADDR")
+            .unwrap_or_default("localhost:6379".to_string());
+      #+END_SRC
+
+    - Use ~std::env::set_var(key)~ to create an /environment variable/.
+      Use ~std::env::remove_var(key)~ to delete an /environment variable/.
+
+      Both only change for our _current process_.
+
+*** DONE There's More
+    CLOSED: [2018-06-03 Sun 23:35]
+    - The industry standard way to do this is by creating a file called =.env=
+      that contains said config in the form of key-value-pairs, and loading it
+      into the process at some point during the build.
+
+      =TODO=
+      One easy way to do this in Rust is by using the dotenv
+      (https://crates.io/crates/dotenv) third-party crate.
+
+** DONE Reading from Stdin
+   CLOSED: [2018-06-10 Sun 18:47]
+*** DONE How to Do It
+    CLOSED: [2018-06-10 Sun 18:47]
+    #+BEGIN_SRC rust
+      use std::io;
+      use std::io::prelude::*;
+
+      fn main() {
+          print_single_line("Please enter your forename: ");
+          let forename = read_line_iter();
+
+          print_single_line("Please enter your surname: ");
+          let surname = read_line_buffer();
+
+          print_single_line("Please enter your age: ");
+          let age = read_number();
+
+          println!(
+              "Hello, {} year old human named {} {}!",
+              age, forename, surname
+          );
+      }
+
+      fn print_single_line(text: &str) {
+          // We can print lines without adding a newline
+          print!("{}", text);
+          // However, we need to flush stdout afterwards
+          // in order to guarantee that the data actually displays
+          io::stdout().flush().expect("Failed to flush stdout");
+      }
+
+      fn read_line_iter() -> String {
+          let stdin = io::stdin();
+          // Read one line of input iterator-style
+          let input = stdin.lock().lines().next();
+          input
+              .expect("No lines in buffer")
+              .expect("Failed to read line")
+              .trim()
+              .to_string()
+      }
+
+      fn read_line_buffer() -> String {
+          // Read one line of input buffer-style
+          let mut input = String::new();
+          io::stdin()
+              .read_line(&mut input)
+              .expect("Failed to read line");
+          input.trim().to_string()
+      }
+
+      fn read_number() -> i32 {
+          let stdin = io::stdin();
+          loop {
+              // Iterate over all lines that will be inputted
+              for line in stdin.lock().lines() {
+                  let input = line.expect("Failed to read line");
+                  // Try to convert a string into a number
+                  match input.trim().parse::<i32>() {
+                      Ok(num) => return num,
+                      Err(e) => println!("Failed to read number: {}", e),
+                  }
+              }
+          }
+      }
+    #+END_SRC
+
+*** DONE How It Works
+    CLOSED: [2018-06-10 Sun 18:47]
+    1) Use ~io::stdin()~ to obtain a handle to the /stdin/.
+       IMAGINE the returned object as a reference to a global stdin object.
+
+    2) This global buffer is managed by a ~Mutex~, which means that *only ONE*
+       /thread/ can access it at a time.
+       =TODO= See Chapter 7 to know more!
+
+    3) Get the access by locking (~lock()~) the buffer, which returns a new
+       handle.
+
+    4) Use the ~lines()~ /method/ to get an /iterator/.
+
+    5) The ~read_number~ function keep reading lines from the /infinite iterator/
+       generated by the ~lines()~ /method/ until get a legal ~i32~ number.
+
+       If you know what's next, you can also call the ~next()~ /method/. This
+       comes with an additional error check -- we cannot guarantee that there is
+       a next element.
+
+    6) We can use ~read_line~ in order to populate an existing buffer.
+       This does *NOT* require that we /lock/ the /handler/ first, *as it is done
+       implicitly.*
+
+*** DONE There's More
+    CLOSED: [2018-06-10 Sun 18:48]
+*** TODO See Also
+
+** TODO Accepting A Variable Number of Arguments
+   /Variadic functions/ and is *NOT* supported by Rust.
+   However, we can implement it ourselves by defining a /recursive macro/.
+
+*** DONE Getting Started
+    CLOSED: [2018-06-10 Sun 18:51]
+    
+*** How to Do It..
+    Run it with ~cargo run -bin variadic~:
+    #+BEGIN_SRC rust
+      macro_rules! multiply {
+          // Edge case
+          ( $last:expr ) => { $last };
+
+          ( $head:expr, $($tail:expr), +) => {
+              // Recursive call
+              $head * multiply!($($tail), +)
+          };
+      }
+
+      fn main() {
+          // You can call multiply! with
+          // as many parameters as you want
+          let val = multiply!(2, 4, 8);
+          println!("2*4*8 = {}", val)
+      }
+    #+END_SRC
+
+*** TODO How It Works..
+*** TODO There's More..
+*** TODO See Also
+
+* TODO 2. Working with Collections
+  In this chapter, we will cover the following recipes:
+  - Using a vector
+  - Using a string
+  - Accessing collections as iterators
+  - Using a ~VecDeque~
+  - Using a ~HashMap~
+  - Using a ~HashSet~
+  - Creating an own iterator
+  - Using a slab
+
+** DONE Introduction
+   CLOSED: [2018-06-26 Tue 17:48]
+** DONE Using A Vector
+   CLOSED: [2018-06-26 Tue 19:05]
+*** DONE How to do it
+    CLOSED: [2018-06-26 Tue 18:57]
+*** DONE How it works
+    CLOSED: [2018-06-26 Tue 18:56]
+    - Many of its core principles, like /preallocation/, apply to other collections
+      as well.
+
+    - ~splice~ does _three_ things:
+      + It takes a /range/.
+        This /range/ will be _removed from_ the vector.
+
+      + It takes an /iterator/.
+        This /iterator/ will be inserted into the space _left_ open by the
+        removal from the last step.
+
+      + It returns the _removed_ elements as an /iterator/.
+
+*** DONE There's more
+    CLOSED: [2018-06-26 Tue 19:05]
+    - Internally, ~Vec~ is implemented as a *continuous* chunk of memory stored
+      on the /heap/.
+
+    - The extra /capacity/ _doesn't go away_ when *shortening* the /vector/ --
+      ~.clear()~ won't change the /capacity/.
+
+      However, ~.shrink_to_fit()~ change the /capacity/.
+      This will bring the /capacity/ *as close as possible* to the /length/,
+      BUT it _is allowed to still leave_ a little bit of preallocated space ready.
+
+    - 
+
+** DONE Using A String
+   CLOSED: [2018-06-26 Tue 19:46]
+*** DONE How to do it
+    CLOSED: [2018-06-26 Tue 19:31]
+    Create =string.rs= in the folder =src/bin=, paste the code below, and then run
+    =cargo run --bin string=
+
+    #+BEGIN_SRC rust
+      fn main() {
+          // As a String is a kind of vector,
+          // you can construct them the same way
+          let mut s = String::new();
+          s.push('H');
+          s.push('i');
+          println!("s: {}", s);
+
+          // The String however can also be constructed
+          // from a string slice (&str)
+          // The next two ways of doing to are equivalent
+          let s = "Hello".to_string();
+          println!("s: {}", s);
+          let s = String::from("Hello");
+          println!("s: {}", s);
+
+          // A String in Rust will always be valid UTF-8
+          let s = " Þjóðhildur  ".to_string();
+          println!("s: {}", s);
+
+          // Append strings to each other
+          let mut s = "Hello ".to_string();
+          s.push_str("World");
+
+          // Iterate over the character
+          // A "character" is defined here as a
+          // Unicode Scalar Value
+          for ch in "Tubular".chars() {
+              print!("{}.", ch);
+          }
+          println!();
+          // Be careful though, a "character" might not
+          // always be what you expect
+          for ch in "y̆".chars() {
+              // This does NOT print y̆
+              print!("{} ", ch);
+          }
+          println!();
+
+          println!("------------------------------------------------------------------------");
+          println!("------- Use the following code to split a string in various ways: ------");
+          println!("------------------------------------------------------------------------");
+          // Split a string slice into two halves
+          let (first, second) = "HelloThere".split_at(5);
+          println!("first: {}, second: {}", first, second);
+
+          // Split on individual lines
+          let haiku = "\
+                       she watches\n\
+                       satisfied after love\n\
+                       he lies\n\
+                       looking up at nothing\n\
+                       ";
+          for line in haiku.lines() {
+              println!("\t{}.", line);
+          }
+          // Split on substrings
+          for s in "Never;Give;Up".split(';') {
+              println!("{}", s);
+          }
+          // When the splitted string is at the beginning or end,
+          // it will result in the empty string
+          let s: Vec<_> = "::Hi::There::".split("::").collect();
+          println!("{:?}", s);
+
+          // If you can eliminate the empty strings at the end
+          // by using split_termitor
+          let s: Vec<_> = "Mr. T.".split_terminator('.').collect();
+          println!("{:?}", s);
+
+          // char has a few method's that you can use to split on
+          for s in "I'm2fast4you".split(char::is_numeric) {
+              println!("{}", s);
+          }
+
+          // Split only a certain amount of times
+          for s in "It's not your fault, it's mine".splitn(3, char::is_whitespace) {
+              println!("{}", s);
+          }
+
+          // Get only the substrings that match a pattern
+          // This is the opposite of splitting
+          for c in "The Dark Knight rises".matches(char::is_uppercase) {
+              println!("{}", c);
+          }
+
+          // Check if a string starts with something
+          let saying = "The early bird gets the worm";
+          let starts_with_the = saying.starts_with("The");
+          println!(
+              "Does \"{}\" start with \"The\"?: {}",
+              saying,
+              starts_with_the
+          );
+          let starts_with_bird = saying.starts_with("bird");
+          println!(
+              "Does \"{}\" start with \"bird\"?: {}",
+              saying,
+              starts_with_bird
+          );
+
+          // Check if a string ends with something
+          let ends_with_worm = saying.ends_with("worm");
+          println!("Does \"{}\" end with \"worm\"?: {}", saying,
+                   ends_with_worm);
+
+          // Check if the string contains something somewhere
+          let contains_bird = saying.contains("bird");
+          println!("Does \"{}\" contain \"bird\"?: {}", saying,
+                   contains_bird);
+
+          println!("--------------------------------");
+          println!("------ Remove whitespace: ------");
+          println!("--------------------------------");
+          // Splitting on whitespace might not result in what you expect
+          let a_lot_of_whitespace = "    I   love spaaace     ";
+          let s: Vec<_> = a_lot_of_whitespace.split(' ').collect();
+          println!("{:?}", s);
+          // Use split_whitespace instead
+          let s: Vec<_> = a_lot_of_whitespace.split_whitespace().collect();
+          println!("{:?}", s);
+
+          // Remove leading and trailing whitespace
+          let username = "   P3ngu1n\n".trim();
+          println!("{}", username);
+          // Remove only leading whitespace
+          let username = "   P3ngu1n\n".trim_left();
+          println!("{}", username);
+          // Remove only trailing whitespace
+          let username = "   P3ngu1n\n".trim_right();
+          println!("{}", username);
+
+
+          // Parse a string into another data type
+          // This requires type annotation
+          let num = "12".parse::<i32>();
+          if let Ok(num) = num {
+              println!("{} * {} = {}", num, num, num * num);
+          }
+
+          println!("--------------------------------");
+          println!("------ Modify the string: ------");
+          println!("--------------------------------");
+          // Replace all occurrences of a pattern
+          let s = "My dad is the best dad";
+          let new_s = s.replace("dad", "mom");
+          println!("new_s: {}", new_s);
+
+          // Replace all characters with their lowercase
+          let lowercase = s.to_lowercase();
+          println!("lowercase: {}", lowercase);
+
+          // Replace all characters with their uppercase
+          let uppercase = s.to_uppercase();
+          println!("uppercase: {}", uppercase);
+
+          // These also work with other languages
+          let greek = "ὈΔΥΣΣΕΎΣ";
+          println!("lowercase greek: {}", greek.to_lowercase());
+
+          // Repeat a string
+          let hello = "Hello! ";
+          println!("Three times hello: {}", hello.repeat(3));
+      }
+    #+END_SRC
+*** DONE How it works..
+    CLOSED: [2018-06-26 Tue 19:46]
+    - Essentially, being a kind of /vector/, a /string/ can be created the same way
+      by combining ~new~ and ~push~;
+        HOWEVER, because this is really inconvenient, a /string/, which is an
+      owned chunk of memory, can be created from a /string slice (~&str~)/, which
+      is either a /borrowed string/ or a /literal/. Both of the ways to do it,
+      that are shown in this recipe, are equivalent:
+      #+BEGIN_SRC rust
+        let s = "Hello".to_string();
+        // let s = "Hello".to_owned();
+        println!("s: {}", s);
+        let s = String::from("Hello");
+        println!("s: {}", s);
+      #+END_SRC
+
+    - Out of pure personal preference, we will use the first variant.
+      #+BEGIN_QUOTE
+      Before Rust 1.9, ~to_owned()~ _WAS the fastest way_ to create a string.
+
+      Now, ~to_string()~ is equally performant and should be preferred,
+
+      because it *offers more clarity over what is done*. We mention this
+      because many old tutorials and guides have not been updated since then,
+      and still use ~to_owned()~.
+      #+END_QUOTE
+
+      =From Jian= I prefer the ~to_owned()~, which offers more clarity in /type/
+      and /ownership/.
+
+    - Use the ~.chars()~ /method/, you may get surprised sometimes -- a grapheme
+      can look like a character, but NOT must be.
+        You can get around this by using the Unicode-segmentation /crate/, which
+      supports *iteration over graphemes*: https://crates.io/crates/unicode-segmentation.
+
+    - The ~.split~, ~.split_whitespace~, and ~.split_terminator~ /methods/.
+
+*** DONE There's more
+    CLOSED: [2018-06-26 Tue 19:32]
+    The implementation of ~String~ should not be much of a surprise -- it's just
+    a kind of /vector/.
+
+** DONE Accessing Collections As Iterators
+   CLOSED: [2018-06-26 Tue 20:40]
+   - If you come from C#, you will already be familiar with /iterators/ because
+     of /Linq/. Rust's /iterators/ are kind of _similar_, but come with a more
+     functional approach to things.
+
+*** DONE How to do it
+    CLOSED: [2018-06-26 Tue 20:30]
+    Create =iterator.rs= in the folder =src/bin=, paste the code below, and then run
+    =cargo run --bin iterator=
+
+    #+BEGIN_SRC rust
+      fn main() {
+          let names = vec!["Joe", "Miranda", "Alice"];
+          // Iterators can be accessed in many ways.
+          // Nearly all collections implement .iter() for this purpose
+          let mut iter = names.iter();
+          // A string itself is not iterable, but its characters are
+          let mut alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+          // Ranges are also (limited) iterators
+          let nums = 0..10;
+          // You can even create infinite iterators!
+          let all_nums = 0..;
+
+          // As the name says, you can iterate over iterators
+          // This will consume the iterator
+          for num in nums {
+              print!("{} ", num);
+          }
+          // nums is no longer usable
+          println!();
+
+          // Get the index of the current item
+          for (index, letter) in "abc".chars().enumerate() {
+              println!("#{}. letter in the alphabet: {}",
+                       index + 1,
+                       letter);
+          }
+
+
+          println!("--------------------------------------------------------------");
+          println!("----------------- 3. Access individual items: ----------------");
+          println!("--------------------------------------------------------------");
+          // going through an iterator, step by step
+          if let Some(name) = iter.next() {
+              println!("First name: {}", name);
+          }
+          if let Some(name) = iter.next() {
+              println!("Second name: {}", name);
+          }
+          if let Some(name) = iter.next() {
+              println!("Third name: {}", name);
+          }
+          if iter.next().is_none() {
+              println!("No names left");
+          }
+
+          // Arbitrary access to an item in the iterator
+          if let Some(letter) = alphabet.nth(3) {
+              println!("the fourth letter in the alphabet is: {}", letter);
+          }
+
+          // This works by consuming all items up to a point
+          if let Some(current_first) = alphabet.nth(0) {
+              // This will NOT print 'A'
+              println!("The first item in the iterator is currently: {}", current_first);
+          }
+
+          if let Some(current_first) = alphabet.nth(0) {
+              println!("The first item in the iterator is currently: {}", current_first);
+          }
+
+          // Accessing the last item; This will consume the entire iterator
+          if let Some(last_letter) = alphabet.last() {
+              println!("The last letter of the alphabet is: {}",
+                       last_letter);
+          }
+
+
+          println!("------------------------------------------------------------------------");
+          println!("--------------- 4. Collect the iterator into a collection: -------------");
+          println!("------------------------------------------------------------------------");
+          // This requires an annotation of which collection we want
+          // The following two are equivalent:
+          let nums: Vec<_> = (1..10).collect();
+          println!("nums: {:?}", nums);
+          let nums = (1..10).collect::<Vec<_>>();
+          println!("nums: {:?}", nums);
+
+
+          println!("------------------------------------------------------------------------");
+          println!("------------- 5. Change which items are being iterated over: -----------");
+          println!("------------------------------------------------------------------------");
+          // Taking only the first n items This is often used to make an infinite iterator finite
+          let nums: Vec<_> = all_nums.take(5).collect();
+          println!("The first five numbers are: {:?}", nums);
+
+          // Skip the first few items
+          let nums: Vec<_> = (0..11).skip(2).collect();
+          println!("The last 8 letters in a range from zero to 10: {:?}", nums);
+
+          // take and skip accept predicates in the form of `take_while` and skip_while
+          let nums: Vec<_> = (0..).take_while(|x| x * x < 50).collect();
+          println!("All positive numbers that are less than 50 when squared: {:?}", nums);
+
+          // This is useful to filter an already sorted vector
+          let names = ["Alfred", "Andy", "Jose", "Luke"];
+          let names: Vec<_> = names.iter()
+              .skip_while(|x| x.starts_with('A'))
+              .collect();
+          println!("Names that don't start with 'A': {:?}", names);
+
+          // Filtering iterators
+          let countries = [
+              "U.S.A.",
+              "Germany",
+              "France",
+              "Italy",
+              "India",
+              "Pakistan",
+              "Burma",
+          ];
+
+          let countries_with_i: Vec<_> = countries
+              .iter()
+              .filter(|country| country.contains('i'))
+              .collect();
+
+          println!(
+              "Countries containing the letter 'i': {:?}",
+              countries_with_i
+          );
+
+
+          println!("------------------------------------------------------------------------");
+          println!("-------------- 6. Check if an iterator contains an element: ------------");
+          println!("------------------------------------------------------------------------");
+          // Find the first element that satisfies a condition
+          if let Some(country) = countries.iter().find(|country|
+                                                       country.starts_with('I')) {
+              println!("First country starting with the letter 'I': {}", country);
+          }
+
+          // Don't get the searched item but rather its index
+          if let Some(pos) = countries
+              .iter()
+              .position(|country| country.starts_with('I'))
+          {
+              println!("It's index is: {}", pos);
+          }
+
+          // Check if at least one item satisfies a condition
+          let are_any = countries.iter().any(|country| country.len() == 5);
+          println!("Is there at least one country that has exactly five letters? {}", are_any);
+
+          // Check if ALL items satisfy a condition
+          let are_all = countries.iter().all(|country| country.len() == 5);
+          println!("Do all countries have exactly five letters? {}", are_all);
+
+
+          println!("------------------------------------------------------------------------");
+          println!("---------------- 7. Useful operations for numeric items: ---------------");
+          println!("------------------------------------------------------------------------");
+          let sum: i32 = (1..11).sum();
+          let product: i32 = (1..11).product();
+          println!("When operating on the first ten positive numbers\n\
+                    their sum is {} and\n\
+                    their product is {}.",
+                   sum, product);
+
+          if let Some(max) = (1..11).max() {
+              println!("They have a highest number, and it is {}", max);
+          }
+
+          if let Some(min) = (1..11).min() {
+              println!("They have a smallest number, and it is {}", min);
+          }
+
+
+          println!("------------------------------------------------------------------------");
+          println!("------------------------- 8. Combine iterators: ------------------------");
+          println!("------------------------------------------------------------------------");
+          // Combine an iterator with itself, making it infinite
+          // When it reaches its end, it starts again
+          let some_numbers: Vec<_> = (1..4).cycle().take(10).collect();
+          // Reader exercise: Try to guess what this will print
+          println!("some_numbers: {:?}", some_numbers);
+
+          // Combine two iterators by putting them after another
+          let some_numbers: Vec<_> = (1..4).chain(10..14).collect();
+          println!("some_numbers: {:?}", some_numbers);
+
+          // Zip two iterators together by grouping their first items
+          // together, their second items together, etc.
+          let swiss_post_codes = [8957, 5000, 5034];
+          let swiss_towns = ["Spreitenbach", "Aarau", "Suhr"];
+          let zipped: Vec<_> =
+              swiss_post_codes.iter().zip(swiss_towns.iter()).collect();
+          println!("zipped: {:?}", zipped);
+
+          // Because zip is lazy, you can use two infine ranges
+          let zipped: Vec<_> = (b'A'..)
+              .zip(1..)
+              .take(10)
+              .map(|(ch, num)| (ch as char, num))
+              .collect();
+          println!("zipped: {:?}", zipped);
+
+
+          println!("-------------------------------------------------------------------------");
+          println!("-------------------- 9. Apply functions to all items: -------------------");
+          println!("-------------------------------------------------------------------------");
+          // Change the items' types
+          let numbers_as_strings: Vec<_> = (1..11).map(|x| x.to_string()).collect();
+          println!("numbers_as_strings: {:?}", numbers_as_strings);
+
+          // Access all items
+          println!("First ten squares:");
+          (1..11).for_each(|x| print!("{} ", x));
+          println!();
+
+          // filter and map items at the same time!
+          let squares: Vec<_> = (1..50)
+              .filter_map(|x| if x % 3 == 0 { Some(x * x) } else { None })
+              .collect();
+          println!("Squares of all numbers under 50 that are divisible by 3: {:?}", squares);
+
+
+          println!("-------------------------------------------------------------------------");
+          println!("----- 10. The real strength of iterators comes from combining them: -----");
+          println!("-------------------------------------------------------------------------");
+          // Retrieve the entire alphabet in lower and uppercase:
+          let alphabet: Vec<_> = (b'A' ..= b'z') // Start as u8
+              .map(|c| c as char) // Convert all to chars
+              .filter(|c| c.is_alphabetic()) // Filter only alphabetic chars
+              .collect(); // Collect as Vec<char>
+          println!("alphabet: {:?}", alphabet);
+      }
+    #+END_SRC
+
+*** DONE How it works..
+    CLOSED: [2018-06-26 Tue 20:38]
+    - I mention that /ranges/ are *limited*.
+      BECAUSE, in order to be /iterable/, the range-type has to implement ~Step~.
+      ~char~ does *NOT*, so you wouldn't be able to use ~'A'..'D'~.
+
+*** DONE There's more..
+    CLOSED: [2018-06-26 Tue 20:38]
+    - ~iter()~ creates an /iterator/ that *borrows* items.
+
+      ~into_iter()~ creates an /iterator/ that can be used to consume /items/
+      with /ownership/ by *moving* them.
+
+*** TODO See also
+
+** TODO Using A ~VecDeque~
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Using A ~HashMap~
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Using A ~HashSet~
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Creating An Own ~iterator~
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Using A slab
+*** How to do it..
+*** How it works..
+*** There's more..
+
+* TODO 3. Handling Files and The Filesystem
+** TODO Introduction
+** TODO Working with Text Files
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Handling Bytes
+*** Getting Ready
+*** How to Do It..
+*** How It Works..
+*** There's More..
+
+** TODO Working with Binary Files
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Compressing and Decompressing Data
+*** How to Do It..
+*** How It Works..
+*** There's More..
+
+** TODO Traversing The Filesystem
+*** Getting Ready
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Finding Files with Glob Patterns
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+* TODO 4. Serialization
+** TODO Introduction
+** TODO Working with CSV
+*** Getting started
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Serialization basics with Serde
+***  How to do it..
+***  How it works..
+***  There's more..
+***  See also
+
+** TODO Working with TOML
+****  Getting started
+****  How to do it..
+****  How it works..
+****  There's more..
+****  See also
+
+** TODO Working with JSON
+*** Getting ready
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Building JSON dynamically
+*** How to do it..
+*** How it works..
+*** See also
+
+* TODO 5. Advanced Data Structures
+** TODO Introduction
+** TODO Creating lazy static objects
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Working with bit fields
+*** Getting started
+*** How to do it..
+*** How it works..
+*** See also
+
+** TODO Providing custom derives
+*** Getting started
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Converting types into each other
+*** How to do it..
+*** How it works..
+
+** TODO Boxing data
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Sharing ownership with smart pointers
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Working with interior mutability
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+* TODO 6. Handling Errors
+** TODO Introduction
+** TODO Providing user-defined error types
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Providing logging
+*** How to do it..
+*** How it works..
+*** There's more..
+
+** TODO Creating a custom logger
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Implementing the Drop trait
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Understanding RAII
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+* TODO 7. Parallelism and Rayon
+** TODO Introduction
+** TODO Parallelizing iterators
+*** How to do it..
+*** How it works..
+*** See also
+
+** TODO Running two operations together
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Sharing resources in multithreaded closures
+*** How to do it..
+*** How it works..
+*** See also
+
+** TODO Sending data across threads
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Accessing resources in parallel with RwLocks
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Atomically accessing primitives
+*** How to do it..
+*** How it works..
+*** There's more..
+*** See also
+
+** TODO Putting it all together in a connection handler
+*** How to do it..
+*** How it works..
+*** There's more..
+
+* TODO 8. Working with Futures
+** TODO Introduction
+** TODO Providing Futures with A CPU Pool and Waiting for Them
+*** How to Do It..
+*** How It Works..
+
+** TODO Handling Errors in Futures
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Combining Futures
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Using Streams
+*** How to Do It..
+*** How It Works..
+
+** TODO Using Sinks
+*** How to Do It..
+*** How It Works..
+
+** TODO Using The Oneshot Channel
+*** How to Do It..
+*** How It Works..
+
+** TODO Returning Futures
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Locking Resources with ~BiLocks~
+*** How to Do It..
+*** How It Works..
+
+* TODO 9. Networking
+** TODO Introduction
+** TODO Setting Up A Basic HTTP Server
+*** Getting Ready
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Configuring An HTTP Server to Perform Echoing and Routing
+*** Getting Ready
+*** How to Do It..
+*** How It Works..
+
+** TODO Configuring An HTTP Server to Perform File Serving
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Making Requests to APIs
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+* TODO 10. Using Experimental Nightly Features
+** TODO Introduction
+** TODO Iterating Over An Inclusive Range
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Returning Abstract Types
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Composing Functions
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Filtering Strings Efficiently
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Stepping Through An Iterator In Regular Intervals
+*** How to Do It..
+*** How It Works..
+*** See Also
+
+** TODO Benchmarking Your Code
+*** How to Do It..
+*** How It Works..
+*** There's More..
+*** See Also
+
+** TODO Using Generators
+*** How to Do It...
+*** How It Works...
+*** See Also
+
+* Other Books You May Enjoy
+** Leave a review - let other readers know what you think

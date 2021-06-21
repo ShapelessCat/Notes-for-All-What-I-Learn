@@ -1,0 +1,544 @@
+#+TITLE: Style Guidelines
+#+VERSION: 1.0.0
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO 1. Introduction
+  Style Guidelines
+  TODO NOTE
+
+  - *Guideline statuses*
+    Every guideline has a status:
+    + [FIXME]:
+      Marks places where there is more work to be done. In some cases, that just
+      means going through the RFC process.
+
+    + [FIXME #NNNNN]:
+      Like [FIXME], but links to the issue tracker.
+
+    + [RFC #NNNN]:
+      Marks accepted guidelines, linking to the rust-lang RFC establishing them.
+
+  - *Guideline stabilization*
+
+  - *What's in this document*
+    + This document is broken into four parts:
+      * *Style* provides a set of rules governing _naming conventions_, _whitespace_,
+        and _other stylistic issues_.
+
+      * *Guidelines by Rust feature* places the focus on each of Rust's features,
+        starting from expressions and working the way out toward crates,
+        dispensing guidelines relevant to each.
+
+      * *Topical guidelines and patterns*. The rest of the document proceeds by
+        cross-cutting topic, starting with _Ownership and resources_.
+
+      * *APIs for a changing Rust* discusses the forward-compatibility hazards,
+        especially those that interact with the pre-1.0 library stabilization
+        process.
+
+    + [FIXME]
+      Add cross-references throughout this document to the tutorial, reference
+      manual, and other guides.
+
+    + [FIXME]
+      What are some non-goals, non-principles, or anti-patterns that we should
+      document?
+
+* TODO 2. Style - _READING_
+  This section gives a set of *STRICT rules* for styling Rust code.
+  [FIXME] General remarks about the style guidelines
+
+** DONE 2.1. Whitespace [FIXME: needs RFC]
+   CLOSED: [2019-07-29 Mon 02:34]
+   - Lines must not exceed _99 characters_.
+
+   - Use _4 spaces_ for indentation, _not tabs_.
+
+   - _No trailing whitespace_ at the end of lines or files.
+
+   - *Spaces*
+     + Use spaces around binary operators, including the equals sign in attributes:
+       #+begin_src rust
+         #[deprecated = "Use `bar` instead."]
+         fn foo(a: unit, b: unit) -> unit {
+             a + b
+         }
+       #+end_src
+
+     + Use a space after colons and commas:
+       #+begin_src rust
+         fn foo(a: Bar);
+
+         MyStruct { foo: 3, bar: 4 }
+
+         foo(bar, baz);
+       #+end_src
+
+     + Use a space after the opening and before the closing brace
+       FOR *single line blocks or struct expressions*:
+       #+begin_src rust
+         spawn(proc() { do_something(); });
+
+         Point { x: 0.1, y: 0.3 }
+       #+end_src
+
+   - Line wrapping
+     + For _multiline_ /function signatures/, each new line _should align with the
+       first parameter_. _Multiple parameters per line are permitted_:
+       #+begin_src rust
+         fn frobnicate(a: Bar, b: Bar,
+                       c: Bar, d: Bar)
+                       -> Bar {
+             // ...
+         }
+
+         fn foo<T: This,
+                U: That>(
+                a: Bar,
+                b: Bar)
+                -> Baz {
+             // ...
+         }
+       #+end_src
+
+     + _Multiline_ /function invocations/ generally follow the _SAME rule_ as for
+       /signatures/.
+         However, if the final argument begins a new block,
+       the contents of the block may begin on a new line, indented one level:
+       #+begin_src rust
+         fn foo_bar(a: Bar, b: Bar,
+                    c: |Bar|) -> Bar {
+             ...
+         }
+  
+         // Same line is fine:
+         foo_bar(x, y, |z| { z.transpose(y) });
+  
+         // Indented body on new line is also fine:
+         foo_bar(x, y, |z| {
+             z.quux();
+             z.rotate(x)
+         })
+       #+end_src
+
+     + [FIXME] Do we also want to allow the following?
+       #+begin_src rust
+         frobnicate(
+             arg1,
+             arg2,
+             arg3)
+       #+end_src
+       This style could ease the conflict between
+       _line length_ and _functions with many parameters (or long method chains)_.
+
+*** DONE Matches
+    CLOSED: [2019-07-29 Mon 02:24]
+    =from Jian= Current text in this subsection is +DEPRECATED+!
+
+*** DONE Alignment
+    CLOSED: [2019-07-29 Mon 02:18]
+    Idiomatic code *should _NOT_ use extra whitespace* in the middle of a line
+    to provide alignment.
+    #+begin_src rust
+      // Good
+      struct Foo {
+          short: f64,
+          really_long: f64,
+      }
+
+      // Bad
+      struct Bar {
+          short:       f64,
+          really_long: f64,
+      }
+
+      // Good
+      let a = 0;
+      let radius = 7;
+
+      // Bad
+      let b        = 0;
+      let diameter = 7;
+    #+end_src
+
+** DONE 2.2. Comments [FIXME: needs RFC]
+   CLOSED: [2019-07-29 Mon 02:58]
+   - *Avoid block comments*
+     Use line comments
+     #+begin_src rust
+       // Wait for the main thread to return, and set the process error code
+       // appropriately.
+     #+end_src
+
+     Instead of 
+     #+begin_src rust
+       /*
+        * Wait for the main thread to return, and set the process error code
+        * appropriately.
+        */
+     #+end_src
+
+   - *Doc comments*
+     /Doc comments/ are prefixed by _three slashes (~///~)_ and indicate documentation
+     that you would like to be included in Rustdoc's output.
+
+     They _SUPPORT Markdown syntax_ and are the main way of documenting your
+     public APIs.
+
+     The supported markdown syntax includes all of the extensions listed in the
+     [[https://help.github.com/en/categories/writing-on-github][GitHub Flavored Markdown]] documentation, plus superscripts.
+
+     + Summary line 
+       The *first line* in any doc comment should be a _single-line short
+       sentence providing a summary of the code_.
+         This line is used as a short summary description throughout Rustdoc's
+       output, so it's a good idea to keep it short.
+
+     + Sentence structure
+       * Capital letter and end with punctuations.
+       * Prefer full sentences to fragments.
+       * The /summary line/ should be written in /third person singular present
+         indicative form/. Basically, this means write "Returns" instead of "Return".
+       * Example:
+         #+begin_src rust
+           /// Sets up a default runtime configuration, given compiler-supplied arguments.
+           ///
+           /// This function will block until the entire pool of M:N schedulers has
+           /// exited. This function also requires a local thread to be available.
+           ///
+           /// # Arguments
+           ///
+           /// * `argc` & `argv` - The argument vector. On Unix this information is used
+           ///                     by `os::args`.
+           /// * `main` - The initial procedure to run inside of the M:N scheduling pool.
+           ///            Once this procedure exits, the scheduling pool will begin to shut
+           ///            down. The entire pool (and this function) will only return once
+           ///            all child threads have finished executing.
+           ///
+           /// # Return value
+           ///
+           /// The return value is used as the process return code. 0 on success, 101 on
+           /// error.
+         #+end_src
+
+     + Code snippets [FIXME]
+
+   - Avoid /inner doc comments/
+     Use /inner doc comments/ _ONLY_ to document /crates/ and /file-level modules/:
+     #+begin_src rust
+       //! The core library.
+       //!
+       //! The core library is a something something...
+     #+end_src
+
+** DONE 2.3. Braces, semicolons, commas [FIXME: needs RFC]
+   CLOSED: [2019-07-29 Mon 03:10]
+   - *Opening braces always go on the same line*
+     #+begin_src rust
+       fn foo() {
+           // ...
+       }
+
+       fn frobnicate(a: Bar, b: Bar,
+                     c: Bar, d: Bar)
+                     -> Bar {
+           // ...
+       }
+
+       trait Bar {
+           fn baz(&self);
+       }
+
+       impl Bar for Baz {
+           fn baz(&self) {
+               // ...
+           }
+       }
+
+       frob(|x| {
+           x.transpose()
+       })
+     #+end_src
+
+   - ~match~ *arms get braces, except for single-line expressions*
+     #+begin_src rust
+       match foo {
+           bar => baz,
+           quux => {
+               do_something();
+               do_something_else()
+           }
+       }
+     #+end_src
+
+   - ~return~ *statements get semicolons*
+     #+begin_src rust
+       fn foo() {
+           do_something();
+
+           if condition() {
+               return;
+           }
+
+           do_something_else();
+       }
+     #+end_src
+
+   - Trailing commas
+     [FIXME] We should have a guideline for when to include trailing commas in
+     structs, matches, function calls, etc.
+
+     One possible rule: a trailing comma should be included whenever the closing
+     delimiter appears on a separate line:
+
+** TODO 2.4. Naming
+   Naming conventions
+   - *General conventions [RFC #430]*
+
+   - *Referring to types in function/method names [RFC 344]*
+     TODO
+
+   - *Avoid redundant prefixes [RFC 356]*
+     Don't define ~FooError~ in ~mod foo~!
+     You can use name ~Error~, though this is a very common name, the library
+     clients can rename on import to avoid clashes.
+
+   - *Getter/setter methods [RFC 344]*
+     TODO
+
+   - *Escape hatches [FIXME]*
+     TODO
+
+   - *Predicates*
+     + _SIMPLE_ /boolean predicates/ should be _prefixed with_ ~is_~ or another
+       short question word, e.g., ~is_empty~.
+
+     + Common exceptions: ~lt~, ~gt~, and _other established predicate names_. TODO ???
+
+*** TODO 2.4.1. Ownership variants
+*** TODO 2.4.2. Containers/wrappers
+*** TODO 2.4.3. Conversions
+*** TODO 2.4.4. Iterators
+
+** DONE 2.5. Imports [FIXME: needs RFC]
+   CLOSED: [2019-07-29 Mon 03:27]
+   - *Avoid ~use \star{}~, except in tests*
+     ~use *~ They are *forwards-INCOMPATIBLE*,
+     since new upstream exports can clash with existing names.
+
+     + When writing a /test submodule/, importing ~super::*~ is appropriate as a
+       convenience.
+
+   - *Prefer _fully importing types/traits_ while _module-qualifying functions_.*
+     For example:
+     #+begin_src rust
+       use option::Option;
+       use mem;
+
+       let i: int = mem::transmute(Option(0));
+     #+end_src
+     [FIXME] Add rationale.
+
+** DONE 2.6. Organization [FIXME: needs RFC]
+   CLOSED: [2019-07-29 Mon 03:15]
+   - [FIXME] What else?
+
+   - Q :: *Reexport* the most important types _at the /crate level/._
+   - A :: Crates ~pub~ use the most common types for convenience, so that clients
+          do not have to remember or write the crate's module hierarchy to use
+          these types.
+
+   - Q :: Define /types/ and /operations/ *together*.
+   - A :: /Type definitions/ and the _functions/methods_ that operate on them should
+          be defined together *in a SINGLE /module/,* with
+          _the /type/ appearing *above* the functions/methods._
+
+* TODO 3. Guidelines by Rust feature
+  Guidelines by language feature
+** TODO 3.1. Let binding
+   - *Always separately bind RAII guards. [FIXME: needs RFC]*
+   - *Prefer conditional expressions to deferred initialization. [FIXME: needs RFC]*
+   - *Use type annotations for clarification; prefer explicit generics when inference fails. [FIXME: needs RFC]*
+   - *Shadowing [FIXME]*
+   - *Prefer immutable bindings. [FIXME: needs RFC]*
+   - *Prefer to bind all struct or tuple fields. [FIXME: needs RFC]*
+
+** TODO 3.2. Pattern matching
+   - *Dereference match targets when possible. [FIXME: needs RFC]*
+
+** TODO 3.3. Loops
+   - *Prefer ~for~ to ~while~. [FIXME: needs RFC]*
+   - *Guidelines for ~loop~. [FIXME]*
+
+** TODO 3.4. Functions and methods
+   - *Prefer methods to functions if there is a clear receiver. [FIXME: needs RFC]*
+   - *Guidelines for inherent methods. [FIXME]*
+
+*** TODO 3.4.1. Input
+    Input to functions and methods
+    - *Let the client decide when to copy and where to place data. [FIXME: needs RFC]*
+    - *Minimize assumptions about parameters. [FIXME: needs RFC]*
+    - *Prefer compound return types to out-parameters. [FIXME: needs RFC]*
+    - *Consider validating arguments, statically or dynamically. [FIXME: needs RFC]*
+
+*** TODO 3.4.2. Output
+    Output from functions and methods
+    - *Don't overpromise. [FIXME]*
+    - *Let clients choose what to throw away. [FIXME: needs RFC]*
+      + *Return useful intermediate results:*
+      + *Yield back ownership:*
+
+*** TODO 3.4.3. For convenience
+    Convenience methods
+    - *Provide small, coherent sets of convenience methods. [FIXME: needs RFC]*
+
+** TODO 3.5. Types
+   Data types
+   - *Use custom types to imbue meaning; do not abuse ~bool~, ~Option~ or other core types. [FIXME: needs RFC]*
+   - *Prefer private fields, except for passive data. [FIXME: needs RFC]*
+   - *Use custom ~enum~'s for alternatives, ~bitflags~ for C-style flags. [FIXME: needs RFC]*
+   - *Phantom types. [FIXME]*
+
+*** TODO 3.5.1. Conversions
+    Conversions between types
+    - *Associate conversions with the most specific type involved. [FIXME: needs RFC]*
+    - *Explicitly mark lossy conversions, or do not label them as conversions. [FIXME: needs RFC]*
+
+*** TODO 3.5.2. The newtype pattern
+    - *Use newtypes to provide static distinctions. [FIXME: needs RFC]*
+    - *Use newtypes with private fields for hiding. [FIXME: needs RFC]*
+    - *Use newtypes to provide cost-free views of another type. [FIXME]*
+
+** TODO 3.6. Traits
+   - *Know whether a trait will be used as an object. [FIXME: needs RFC]*
+   - *Default methods [FIXME]*
+   
+*** TODO 3.6.1. For generics
+    Using /traits/ for /bounds/ on /generics/
+    - *Favor widespread traits. [FIXME: needs RFC]*
+
+*** TODO 3.6.2. For objects
+    Using /trait objects/
+
+*** TODO 3.6.3. For overloading
+    Using /traits/ for /overloading/
+
+*** TODO 3.6.4. For extensions
+    Using /traits/ to add /extension methods/
+    - *Consider using default methods rather than extension traits [FIXME]*
+
+*** TODO 3.6.5. For reuse
+    Using /traits/ to share implementations
+
+*** TODO 3.6.6. Common traits
+    - *Eagerly implement common traits. [FIXME: needs RFC]*
+    - *When safe, derive or otherwise implement ~Send~ and ~Share~. [FIXME]*
+    - *Prefer to derive, rather than implement. [FIXME: needs RFC]*
+    - *Do not overload operators in surprising ways. [FIXME: needs RFC]*
+    - *The ~Drop~ trait*
+    - *The ~Deref/DerefMut~ traits*
+      + *Use ~Deref~/~DerefMut~ only for smart pointers. [FIXME: needs RFC]*
+      + *Do not fail within a ~Deref~/~DerefMut~ implementation. [FIXME: needs RFC]*
+      + *Avoid inherent methods when implementing ~Deref~/~DerefMut~ [FIXME: needs RFC]*
+
+** TODO 3.7. Modules
+   - *Headers [FIXME: needs RFC]*
+   - *Avoid path directives. [FIXME: needs RFC]*
+   - *Use the module hirearchy to organize APIs into coherent sections. [FIXME]*
+   - *Place modules in their own file. [FIXME: needs RFC]*
+   - *Use subdirectories for modules with children. [FIXME: needs RFC]*
+   - *Consider top-level definitions or reexports. [FIXME: needs RFC]*
+   - *Use internal module hirearchies for organization. [FIXME: needs RFC]*
+
+** TODO 3.8. Crates
+   [FIXME] What general guidelines should we provide for crate design?
+           Possible topics: facades; per-crate preludes (to be imported as globs); "lib.rs"
+
+* TODO 4. Ownership and resources
+  Ownership and resource management
+  [FIXME] Add general remarks about ownership/resources here.
+
+** TODO 4.1. Constructors
+** TODO 4.2. Builders
+   The builder pattern
+
+** TODO 4.3. Destructors
+** TODO 4.4. RAII
+** TODO 4.5. Cells and smart pointers
+
+* TODO 5. Errors
+  [FIXME] Add some general text here.
+
+** TODO 5.1. Signaling
+   Signaling errors [RFC #236]
+
+** TODO 5.2. Handling
+   Handling errors
+
+** TODO 5.3. Propagation
+** TODO 5.4. Ergonomics
+   Ergonomics error handling
+   - *The ~try!~ macro*
+   - *The ~Result-impl~ pattern [FIXME]*
+
+* TODO 6. Safety and guarantees
+** TODO 6.1. Using ~unsafe~
+** TODO 6.2. Library guarantees
+   Library-level guarantees
+
+* DONE 7. Testing
+  CLOSED: [2019-07-29 Mon 02:11]
+  [FIXME]
+  - Add some general remarks about _when_ and _how_ to /unit test/, versus other
+    kinds of testing.
+
+  - What are our expectations for Rust's core libraries?
+
+** TODO 7.1. Unit testing
+   - /Unit tests/ should live in a /tests submodule/ *at the BOTTOM of _the /module/
+     they test_.*
+
+   - Mark the /tests submodule/ with ~#[cfg(test)]~ so it is _ONLY compiled WHEN
+     testing_.
+
+   - The ~tests~ /module/ should contain:
+     + /Imports/ needed only for testing.
+
+     + /Functions/ marked with ~#[test]~ _striving for full coverage_ of the parent
+       module's definitions.
+
+     + /Auxiliary functions/ needed for writing the tests.
+
+   - Example:
+     #+begin_src rust
+       // Excerpt from std::str
+
+       #[cfg(test)]
+       mod tests {
+           #[test]
+           fn test_eq() {
+               assert!((eq(&"".to_owned(), &"".to_owned())));
+               assert!((eq(&"foo".to_owned(), &"foo".to_owned())));
+               assert!((eq(&"foo".to_owned(), &"bar".to_owned())));
+           }
+       }
+     #+end_src
+     [FIXME] add details about useful macros for testing, e.g. ~assert!~
+
+* TODO 8. FFI, platform-specific code
+  FFI and platform-specific code **[FIXME]**
+  [FIXME] Not sure where this should live.
+
+* TODO 9. APIs for a changing Rust
+  APIs design for a changing Rust
+** 9.1. Pre-1.0 changes
+   - ~std~ *facade*
+   - *Trait reform*
+   - *Unboxed closures*
+
+** 9.2. Post-1.0 changes
+   - *Higher-kinded types*
+
+** 9.3. Timing unclear
+   Changes with unclear timing 

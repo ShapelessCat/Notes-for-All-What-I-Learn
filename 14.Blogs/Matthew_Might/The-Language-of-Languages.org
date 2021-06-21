@@ -1,0 +1,161 @@
+#+TITLE: The language of languages
+#+AUTHOR: Matthew Might
+#+Year: 20xx
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Defining a language
+The focus of this article is the _context-free grammar_. Grammars beyond
+context-free will be discusses at the end.
+
+* DONE Components of context-free grammer
+  CLOSED: [2019-01-22 Tue 00:16]
+  - A set of *rules* is the CORE component of a /grammar/.
+
+    + Each rule has two parts:
+      1. a name;
+      2. an expansion of the name.
+
+* DONE Backus-Naur Form (BNF) notation
+  CLOSED: [2019-01-22 Tue 00:51]
+  - /BNF/ is a formal notation for encoding grammars intended
+    for human consumption.
+
+  - Many _programming languages_, _protocols_ or _formats_
+    have a /BNF/ description in their specification.
+
+  - Every rule in Backus-Naur form has the following structure:
+    #+BEGIN_EXAMPLE
+      name ::= expansion
+    #+END_EXAMPLE
+    The symbol ::= means "may expand into" and "may be replaced with."
+
+  - In some texts, a /name/ is also called a /non-terminal symbol/.
+
+    Every ~name~ in Backus-Naur form is surrounded by angle brackets, < >,
+    whether it appears on the left- or right-hand side of the rule.
+
+  - expansion :: an /expression/ containing
+    + terminal symbols ::
+      * A /literal/ like ("+" or "function")
+      * A /class of literals/ (like =integer=)
+
+    + /non-terminal symbols/
+    _joined_ together _by_ /sequencing/ and /choice/.
+
+  - sequencing :: Juxtaposing /expressions/
+
+  - choice :: ~|~
+
+  - Example (classic expression grammar in BNF):
+    #+begin_example
+      <expr> ::= <term> "+" <expr>
+              |  <term>
+
+      <term> ::= <factor> "*" <term>
+              | <factor>
+
+      <factor> ::= "(" <expr> ")"
+                | <const>
+
+      <const> ::= integer
+    #+end_example
+
+    + Naturally, we can define a grammar for rules in BNF:
+      #+BEGIN_EXAMPLE
+        rule      → name ::= expansion 
+        name      → <identifier> 
+        expansion → expansion expansion 
+        expansion → expansion | expansion 
+        expansion → name 
+        expansion → terminal
+      #+END_EXAMPLE
+
+      * We might define =<identifier>= as ~[-A-Za-z_0-9]+~ (using the regex).
+
+      * A =terminal= could be a quoted literal (like "+", "switch" or "<<=")
+        or
+        the name of a class of literals (like ~integer~).
+
+      * The name of a /class of literals/ is usually defined by other means,
+        such as a /regular expression/ or even _prose_.
+
+* DONE Extended BNF (EBNF) notation
+  CLOSED: [2019-01-22 Tue 01:01]
+  /EBNF/ is a COLLECTION of _extensions_ to /BNF/.
+
+  - *Not all of these are strictly a superset*,
+    as
+    + some change the rule-definition relation ~::=~ to ~=~,
+      while
+    + others remove the _angled brackets_ from /non-terminals/.
+
+  - More important than the minor syntactic differences between the forms of
+    /EBNF/ are _the *additional operations* it allows in expansions_.
+
+** DONE Option
+   CLOSED: [2019-01-22 Tue 00:56]
+   ~[ expansion ]~ means this _expansion_ is *optional*.
+   For example,
+   #+begin_example
+     <term> ::= [ "-" ] <factor>
+   #+end_example
+
+** DONE Repetition
+   CLOSED: [2019-01-22 Tue 00:58]
+   Curly braces indicate that the expression may be *repeated* zero or more times.
+
+   For example, a conventional comma-separated argument list.
+   #+begin_example
+     <args> ::= <arg> { "," <arg> }
+   #+end_example
+
+** DONE Grouping
+   CLOSED: [2019-01-22 Tue 01:01]
+   ~()~
+
+   For example,
+   #+begin_example
+     <expr> ::= <term> ("+" | "-") <expr>
+   #+end_example
+
+** DONE Concatenation
+   CLOSED: [2019-01-22 Tue 01:01]
+   Use ~,~!
+   This is different from /BNF/, which just juxtaposes components.
+
+* TODO Augmented BNF (ABNF) notation
+Protocol specifications often use _Augmented Backus-Naur Form (ABNF)_.
+
+RFC 5234 defines ABNF.
+
+ABNF is similar to EBNF in principle, except that its notations for
+choice, option and repetition differs.
+
+ABNF also provides the ability to specify specific byte values exactly
+-- detail which matters in protocols.
+
+In ABNF:
+   + choice is ~/~; and
+   + option uses square brackets: ~[ ]~; and
+   + repetition is /prefix*/; and
+   + repetition /n/ or more times is /prefix n*/; and
+   + repetition /n/ to /m/ times is /prefix n*m/.
+ 
+EBNF's ~{ expansion }~ becomes ~*(expansion)~ in ABNF.
+
+* TODO Regular extensions to BNF
+It's common to find regular-expression-like operations inside grammars.
+
+In these grammars:
+   + postfix * means "repeated 0 or more times"
+   + postfix + means "repeated 1 or more times"
+   + postfix ? means "0 or 1 times"
+
+* TODO Grammars in mathematics
+
+* TODO Beyond context-free grammars
+Context-sensitivity means that terminal symbols may also appear in the
+left-hand sides of rules.
+
+* TODO Parsing

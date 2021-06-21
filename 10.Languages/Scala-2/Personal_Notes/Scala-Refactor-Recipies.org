@@ -1,0 +1,338 @@
+#+TITLE: Scala Refactor Recipies
+#+EDITOR: Jian Lan
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Refactor all the things! - Daniela Sfregola
+  - https://www.youtube.com/watch?v=JwWQijhlTys
+
+  - Presenter Info:
+    + Twitter: @DanielaSfregola
+    + Book: Get Programming with Scala
+    + Blog: danielasfregola.com
+
+** Example 1
+   - _Before_:
+     #+begin_src scala
+       object Database {
+
+         private def connectToDatabase(config: Config): Connection = ???
+
+         def connection: Connection = {
+           val config: Config = ???
+           connectToDatabase(config)
+         }
+       }
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       object Database {
+
+         private def connectToDatabase(config: Config): Connection = ???
+
+         val connection: Connection = {
+           val config: Config = ???
+           connectToDatabase(config)
+         }
+       }
+     #+end_src
+     + This can save a lot of memories if you use ~connection~ again and again.
+
+   - *Tip*
+     Function with no parameters?
+     Consider replacing ~def~ with ~val~ to avoid excessive memory allocation.
+
+** Example 2
+   - _Before_:
+     #+begin_src scala
+       class MyApi {
+         def myEntryPoint(data: Data): OtherData = {
+           // some stuff here
+           anotherFunction(data)
+         }
+
+         def anotherFunction(data: Data): OtherData = ???
+       }
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       class MyApi {
+         def myEntryPoint(data: Data): OtherData = {
+           // some stuff here
+           anotherFunction(data)
+         }
+
+         private def anotherFunction(data: Data): OtherData = ???
+       }
+     #+end_src
+     Use the most restrictive /modifier/! This can add benefits like:
+     + IDE method Auto-completion list can be shorter!
+
+     + *Speed up* /incremental compilation/
+       * compiler will search /private methods/ and /protected methods/ in a much
+         smaller scope than /public methods/, which can be used any where that
+         can be reached.
+
+   - *Tip*
+     Use the *most restrictive* /access modifier/ that makes your code work!
+     Use ~private~ and then ~protected~ whenever possible!
+
+** Example 3
+   - _Before_:
+     #+begin_src scala
+       def myFunction(): Unit = {
+         val data: Int = 42
+         // do something here
+         data
+       }
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       def myFunction: Int = {
+         val data: Int = 42
+         // do something here
+         data
+       }
+     #+end_src
+     + This is an often happen copy-paste error!
+
+     + Use /compiler flags/ to detect this!
+
+   - *Tip*
+     Enable /compiler flags/ to *detect* suspicious patterns in your code.
+
+     + For this example, use
+       ~scalacOption += "-Xfatal-warnings // add to your build.sbt~
+
+     + See _Recommended Scalac Flags_ by Rob Norris
+       =TODO= =TODO= =TODO=
+   
+** Example 4
+   - _Before_:
+     #+begin_src scala
+       val a: String = "Happy 10th Birthday"
+       a + " Scala Days!"
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       val a: String = "Happy 10th Birthday"
+       s"$a Scala Days!"
+     #+end_src
+     + /String interpolation/ has better performance than /string concatenation/
+       (~+~).
+
+     + from Jian: you won't accidentally miss the space before "Scala Days!"
+
+   - *Tip*
+     Always pick /string interpolation/ over /string concatenation/.
+
+** Example 5
+   - _Before_:
+     #+begin_src scala
+       def extractParameter(args: Array[String]): String =
+         if (args.length == 0) {
+           throw new IllegalArgumentException("No param found")
+         } else if (args.length > 1) {
+           throw new IllegalArgumentException("Too many params found")
+         } else
+             args.head
+     #+end_src
+
+   - _After_: Replace unsafe operations with safe pattern mathcing
+     #+begin_src scala
+       def extractParameter(args: Array[String]): String =
+         args match {
+           case Array()  => throw new IllegalArgumentException("No param found")
+           case Array(a) => a
+           case _        => throw new IllegalArgumentException("Too many params found")
+         }
+     #+end_src
+     + from Jian: Use pattern matching to do alignment.
+
+   - In a conference, the author gives a talk with the code above, Before and
+     After, and Martin pointed out that even the After code is still not good.
+
+   - _Finally_: Case order matters for performance
+     it's always advisable to _put the happy case first_ for better performance.
+     #+begin_src scala
+       def extractParameter(args: Array[String]): String =
+         args match {
+           case Array(a) => a
+           case Array()  => throw new IllegalArgumentException("No param found")
+           case _        => throw new IllegalArgumentException("Too many params found")
+         }
+     #+end_src
+
+   - *Tip*
+     + Avoid /unsafe functions/, such as ~collectionValue.head~ and ~optionValue.get~!
+       Consider using /pattern matching/ and /high order function/ instead.
+       * Yes, in the _Before_ code, the test before ~else~ branch promise the ~args.head~
+         safe, but why not use /pattern matching/ to make critical info be more
+         localized and straightforward for human eyes.
+
+   - *Bonus Tip*
+     Code Reviews are the best way to improve your code!
+
+** Example 6
+   - _Before_:
+     #+begin_src scala
+       case class A(x: Int)
+
+       class B(x: Int, y: Int) extends A(x)
+     #+end_src
+
+   - Hint:
+     #+begin_src scala
+       new B(2, 1) == A(2)
+       // res1: Boolean = true
+     #+end_src
+     + There is full explanation on stackoverflow
+
+     + Nicolas Rinaudo's talk at tomorrow 15:45 will explain this a little bit
+       more!
+       =IMPORTANT= =IMPORTANT= =IMPORTANT=
+
+   - _After_:
+     #+begin_src scala
+       final case class A(x: Int)
+     #+end_src
+     Don't extend /case classes/!
+     + Q :: *WHY*
+     + A :: Extend /case classes/ can break the /equality check/!
+
+     + Q :: Why not design /case classes/ ~final~ BY DEFAULT?
+     + A :: There are some _edge cases_ in the Scala compiler code that *requires*
+            /case classes/ to be *NOT ~final~.*
+
+   - *Tip*:
+     Always make your /case classes/ ~final~!
+     If you need to extend them, consider *converting* your /case classes/ *to*
+     /regular classes/.
+
+** Example 7
+   - _Before_:
+     #+begin_src scala
+       def doSomething(enableA: Boolean, enableB: Boolean): Unit = ???
+
+       doSomething(true, false)
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       def doSomething(enableA: Boolean, enableB: Boolean): Unit = ???
+
+       doSomething(enableA = true, enableB = false)
+     #+end_src
+
+   - *Tip* (_This tip is not only for Scala_)
+     To Make you code
+     + robust --
+       hard to mess up same type parameters
+
+     + be friendly for refactoring --
+       you may need to adjust the order of these parameters in your definition.
+
+     Fully name /boolean parameters/, or even fully name all *same type*
+     /parameters/.
+
+** Example 8
+   - _Before_:
+     #+begin_src scala
+       def doSomething(): Int =
+         a() + b() + c()
+
+       private def a(): Int = 42
+
+       private def b(): Int = {
+         val dataFromDb: Future[Int] = ???
+         Await.result(dataFromDb, Duration.Inf)
+       }
+
+       private def c(): Int = 24
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       def doSomething(): Int =
+         for (resB <- b())
+         yield a + resB + c
+
+       private def a: Int = 42
+
+       private def b(): Future[Int] = {
+         val dataFromDb: Future[Int] = ???
+         dataFromDb
+       }
+
+       private def c: Int = 24
+     #+end_src
+
+   - *Tip*
+     Never ever block ~Future~!
+     If you cannot avoid it, try to do it as late as possible.
+
+   - from Jian:
+     Should I use ~b()~ or ~b~???
+     Is there any side effect?
+
+** Example 9
+   - _Before_:
+     #+begin_src scala
+       def factorial(number: Int): Int = {
+         def loop(n: Int, acc: Int): Int = n match {
+           case 0 => 0
+           case 1 => acc
+           case x => loop(x - 1, x + acc)
+         }
+
+         loop(number, acc = 1)
+       }
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       def factorial(number: Int): Int = {
+         @tailrec
+         def loop(n: Int, acc: Int): Int = n match {
+           case 0 => 0
+           case 1 => acc
+           case x => loop(x - 1, x + acc)
+         }
+
+         loop(number, acc = 1)
+       }
+     #+end_src
+
+   - *Tip*
+     Recursive function?
+     Try to make it /tail recursive/ and use the ~@tailrec~ /annotation/.
+
+** Example 10
+   - _Before_:
+     #+begin_src scala
+       val myMap: Option[Map[String, String]] = ???
+       val myList: Option[List[String]] = ???
+       val myOptOpt: Option[Option[String]] = ???
+       val myBoolean: Option[Boolean] = ???
+     #+end_src
+
+   - _After_:
+     #+begin_src scala
+       val myMap: Map[String, String] = ???
+       val myList: List[String] = ???
+       val myOptOpt: Option[String] = ???
+       val myBoolean: Boolean = ???
+     #+end_src
+     This is true for most the cases you will meet.
+     However, of course, the types in the _Before_ code can be right in some
+     cases.
+
+   - *Tip*
+     Try to *simplify* your types.
+     Do you really need that extra layer in your type?
+
+* Placeholder

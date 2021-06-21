@@ -1,0 +1,450 @@
+s+TITLE: Akka in Action
+#+VERSION: 2017, 1st
+#+AUTHOR: Raymond Roestenburg, Rob Bakker, Rob Williams
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* preface - xi
+* acknowledgments - xii
+* about this book - xiii
+* 1 Introducing Akka - 1
+  - In this chapter
+    + Why scaling is hard
+    + Write once, scale anywhere
+    + Introduction to the actor programming model
+    + Akka actors
+    + What is Akka?
+
+  - History:
+    + Up until the middle of the 90's, just before the internet revolution,
+      most applications would only ever run on a single computer a single CPU.
+
+      At that time, if an app is slow, just wait a free lunch -- the rapid
+      upgrade of hardware.
+
+    + In 2005 Herb Sutter wrote in Dr. Dobb's Journal:
+      http://www.gotw.ca/publications/concurrency-ddj.htm
+
+      In short:
+      a limit to increasing CPU clock speeds has been reached, and the free
+      lunch is over.
+
+    + Call for /concurrency/!
+      /Concurrency/ SHOULD ALSO MEANS to achieve scalability.
+
+    + =TODO= NOTE
+
+    + =TODO= NOTE
+
+** 1.1 What is Akka? - 4
+** TODO 1.2 Actors: a quick overview - 4
+** TODO 1.3 Two approaches to scaling: setting up our example - 6
+** TODO 1.4 Traditional scaling - 7
+*** 1.4.1 Traditional scaling and durability: move everything to the database - 7
+*** 1.4.2 Traditional scaling and interactive use: polling - 10
+*** 1.4.3 Traditional scaling and interactive use: polling - 12 =TODO=
+
+** 1.5 Scaling with Akka - 13
+*** 1.5.1 Scaling with Akka and durability: sending and receiving messages - 13
+*** 1.5.2 Scaling with Akka and interactive use: push messages - 16
+*** 1.5.3 Scaling with Akka and failure: asynchronous decoupling - 16
+*** 1.5.4 The Akka approach: sending and receiving messages - 17
+
+** 1.6 Actors: one programming model to rule up and out - 18
+*** 1.6.1 An asynchronous model - 19
+*** 1.6.2 Actor operations - 20
+
+** 1.7 Akka actors - 23
+*** 1.7.1 ~ActorSystem~ - 23
+*** 1.7.2 ~ActorRef~, mailbox, and actor - 24
+*** 1.7.3 Dispatchers - 25
+*** 1.7.4 Actors and the network - 26
+
+** 1.8 Summary - 27
+
+* 2 Up and running - 28
+** 2.1 Clone, build, and test interface - 29
+   ~git clone https://github.com/RayRoestenburg/akka-in-action.git~
+   We only need the =chapter-up-and-running= part, which is for this chapter.
+
+   - We'll use /sbt/, /Git/, the /Heroku toolbelt/, and ~httpie~ (an easy to use
+     command-line HTTP client) in this chapter.
+
+   - We use sbt 0.13.7, Scala 2.11 and Akka 2.4 (requires Java 8).
+
+   - =from Jian=
+     + I'm not very familiar with sbt, and I won't change it version, though 0.13.7 is old.
+
+     + Use the newest Akka 2.5.16.
+
+     + I modified the _dependency_ part of the =build.sbt= of this project:
+       #+BEGIN_SRC scala
+         enablePlugins(JavaServerAppPackaging)
+
+         name := "goticks"
+
+         version := "1.0"
+
+         scalaVersion := "2.12.6"
+
+         organization := "com.goticks"
+
+         libraryDependencies ++= {
+           val akkaVersion = "2.5.16"
+           Seq(
+             "com.typesafe.akka" %% "akka-actor"      % akkaVersion,
+             "com.typesafe.akka" %% "akka-http-core"  % "10.1.5",
+             "com.typesafe.akka" %% "akka-http-spray-json"  % "10.1.5",
+             "com.typesafe.akka" %% "akka-stream"     % akkaVersion,
+             "com.typesafe.akka" %% "akka-slf4j"      % akkaVersion,
+             "ch.qos.logback"    %  "logback-classic" % "1.2.3",
+             "com.typesafe.akka" %% "akka-testkit"    % akkaVersion    % Test,
+             "org.scalatest"     %% "scalatest"       % "3.2.0-SNAP10" % Test
+           )
+         }
+
+         // Assembly settings
+         mainClass in assembly := Some("com.goticks.Main")
+
+         assemblyJarName in assembly := "goticks.jar"
+       #+END_SRC
+
+     + I also modified the code to coordinate with these changes!!!
+
+   - =sbt assembly=
+
+   - 
+
+*** 2.1.1 Build with sbt - 30
+*** 2.1.2 Fast-forward to the GoTicks.com REST server - 31
+
+** 2.2 Explore the actors in the app - 34
+*** 2.2.1 Structure of the app - 35
+*** 2.2.2 The actor that handles the sale: TicketSeller - 40
+*** 2.2.3 The BoxOffice actor - 41
+*** 2.2.4 ~RestApi~ - 43
+
+** 2.3 Into the cloud - 45
+*** 2.3.1 Create the app on Heroku - 45
+*** 2.3.2 Deploy and run on Heroku - 46
+
+** 2.4 Summary - 48
+
+* 3 Test-driven development with actors - 49
+** DONE 3.1 Testing actors - 50
+   CLOSED: [2018-09-21 Fri 22:01]
+   - First, we'll work on how to _test SENDING and RECEIVING /messages/,_
+     + in fire-and-forget style (one-way)
+     + in by request-response style (two-way) interaction
+
+   - Use ~ScalaTest~ and the Akka testkit.
+
+   - _Testing Actors_ is *more difficult* than testing normal objects for a couple
+     of reasons:
+     + *Timing*
+       Sending messages is /asynchronous/,
+       so it's _DIFFICULT to know WHEN to assert expected values in the unit test_.
+
+     + *Asynchronicity*
+       Actors are meant to be run in parallel on several threads.
+
+       /Multithreaded tests/
+       * are more difficult than single-threaded tests
+       * require concurrency primitives like /locks/, /latches/, and /barriers/ to
+         *synchronize* results from VARIOUS /actors/.
+           _This is exactly the kind of thing you want to get further away from._
+         Incorrect usage of just one barrier can block a unit test, which in
+         turn halts the execution of a full test suite.
+
+     + *Statelessness*
+       An /actor/ *hides* its /internal state/ and does *NOT allow access to
+       this state*. Access should only be possible through the ~ActorRef~.
+         Calling a method on an /actor/ and checking its /state/, which is something
+       you’d like to be able to do when unit testing, is prevented by design.
+
+       =from Jian= This is why we have ~TestActorRef~!!! =TODO=
+
+     + *Collaboration/Integration*
+       If you wanted to do an integration test of a couple of /actors/, you’d need
+       to eavesdrop on the /actors/ to assert that the messages have the expected
+       values.
+
+       It’s _not immediately clear_ how this can be done.
+
+   - The /for test actor systems/ have a special requirement:
+     they should stop after tests are done!
+
+     To make life easier, we create small trait to satisfy this requirement:
+     #+BEGIN_SRC scala
+       import org.scalatest.{ Suite, BeforeAndAfterAll }
+       import akka.testkit.TestKit
+
+       trait StopSystemAfterAll extends BeforeAndAfterAll {
+         this: Testit with Suite =>
+         override protected def afterAll() {
+           super.afterAll()
+           system.shutdown()
+         }
+       }
+     #+END_SRC
+
+** 3.2 One-way messages - 52
+   *We _NO LONGER_ invoke a function and wait on the response!*,
+
+   so
+
+   - the fact that our examples merely send one-way messages with tell is
+     *deliberate*:
+     + This is a fire-and-forget style,
+       we do NOT know
+       1. if a message arrives an /actor/?
+       2. if it arrives, when?
+
+     + The /actors/ can do a lot of things, but if things they done are completely
+       invisible from the outside, we can only check if it handled the messages
+       without any errors. This is mostly way far from enough!!!
+
+       ~TestActorRef~ can help us to look into the state of an /actors/.
+       This kind of operations is NOT allowed by the plain ~ActorRef~.
+
+     ~TestActorRef~ has three variations that we will look at:
+     + ~SilentActor~
+       An actor’s behavior is not directly observable from the outside; it might
+       be an intermediate step that the actor takes to create some internal
+       state. We want to test that the actor at least handled the message and
+       didn’t throw any exceptions. We want to be sure that the actor has
+       finished. We want to test the internal state change.
+
+     + ~SendingActor~
+       An actor sends a message to another actor (or possibly many actors) after
+       it’s done processing the received message. We’ll treat the actor as a
+       black box and inspect the message that’s sent out in response to the
+       message it received
+
+     + ~SideEffectingActor~
+       An actor receives a message and interacts with a normal object in some
+       kind of way. After we send a message to the actor, we’d like to assert if
+       the object was affected.
+
+*** 3.2.1 SilentActor examples - 53
+*** 3.2.2 SendingActor example - 56
+*** 3.2.3 SideEffectingActor example - 61
+
+** 3.3 Two-way messages - 63
+** 3.4 Summary - 64
+
+* 4 Fault tolerance - 66
+** 4.1 What fault tolerance is (and what it isn't) - 66
+*** 4.1.1 Plain old objects and exceptions - 68
+*** 4.1.2 Let it crash - 73
+
+** 4.2 Actor lifecycle - 76
+*** 4.2.1 Start event - 77
+*** 4.2.2 Stop event - 77
+*** 4.2.3 Restart event - 78
+*** 4.2.4 Putting the lifecycle pieces together - 80
+*** 4.2.5 Monitoring the lifecycle - 81
+
+** 4.3 Supervision - 82
+*** 4.3.1 Supervisor hierarchy - 83
+*** 4.3.2 Predefined strategies - 85
+*** 4.3.3 Custom strategies - 86
+
+** 4.4 Summary - 91
+
+* 5 Futures - 92
+** 5.1 Use cases for futures - 93
+** 5.2 In the future nobody blocks - 97
+*** 5.2.1 Promises are promises - 101
+
+** 5.3 Futuristic errors - 104
+** 5.4 Combining futures - 108
+** 5.5 Combining futures with actors - 115
+** 5.6 Summary - 116
+
+* 6 Your first distributed Akka app - 118
+** 6.1 Scaling out - 119
+*** 6.1.1 Common network terminology - 119
+*** 6.1.2 Reasons for a distributed programming model - 121
+
+** 6.2 Scaling out with remoting - 122
+*** 6.2.1 Making the GoTicks.com app distributed - 123
+*** 6.2.2 Remote REPL action - 123
+*** 6.2.3 Remote lookup - 128
+*** 6.2.4 Remote deployment - 135
+*** 6.2.5 Multi-JVM testing - 139
+
+** 6.3 Summary - 145
+
+* 7 Configuration, logging, and deployment 147
+** 7.1 Configuration - 147
+*** 7.1.1 Trying out Akka configuration - 148
+*** 7.1.2 Using defaults - 151
+*** 7.1.3 Akka configuration - 153
+*** 7.1.4 Multiple systems - 154
+
+** 7.2 Logging - 157
+*** 7.2.1 Logging in an Akka application - 157
+*** 7.2.2 Controlling Akka's logging - 160
+
+** 7.3 Deploying actor-based applications - 161
+** 7.4 Summary - 165
+
+* 8 Structural patterns for actors - 166
+** 8.1 Pipes and filters - 167
+*** 8.1.1 Enterprise integration pattern: pipes and filters - 167
+*** 8.1.2 Pipes and filters in Akka - 168
+
+** 8.2 Enterprise integration pattern: scatter-gather - 171
+*** 8.2.1 Applicability - 171
+*** 8.2.2 Parallel tasks with Akka - 173
+*** 8.2.3 Implementing the scatter component using the recipient list pattern - 174
+*** 8.2.4 Implementing the gather component with the aggregator pattern - 175
+*** 8.2.5 Combining the components into the scatter-gather pattern - 180
+
+** 8.3 Enterprise integration pattern: routing slip - 182
+** 8.4 Summary - 187
+
+* 9 Routing messages - 188
+** 9.1 The enterprise integration router pattern - 189
+** 9.2 Balance load using Akka routers - 190
+*** 9.2.1 Akka pool router - 193
+*** 9.2.2 Akka group router - 199
+*** 9.2.3 ConsistentHashing router - 205
+
+** 9.3 Implementing the router pattern using actors - 208
+*** 9.3.1 Content-based routing - 209
+*** 9.3.2 State-based routing - 209
+*** 9.3.3 Router implementations - 211
+
+** 9.4 Summary - 212
+
+* 10 Message channels - 213
+** 10.1 Channel types - 214
+*** 10.1.1 Point-to-point - 214
+*** 10.1.2 Publish-subscribe - 215
+
+** 10.2 Specialized channels - 224
+*** 10.2.1 Dead letter - 224
+*** 10.2.2 Guaranteed delivery - 227
+
+** 10.3 Summary - 231
+
+* 11 Finite-state machines and agents - 233
+** 11.1 Using a finite-state machine - 234
+*** 11.1.1 Quick introduction to finite-state machines - 234
+*** 11.1.2 Creating an FSM model - 235
+
+** 11.2 Implementation of an FSM model - 237
+*** 11.2.1 Implementing transitions - 237
+*** 11.2.2 Implementing the entry actions - 241
+*** 11.2.3 Timers within FSM - 246
+*** 11.2.4 Termination of FSM - 248
+
+** 11.3 Implement shared state using agents - 249
+*** 11.3.1 Simple shared state with agents - 249
+*** 11.3.2 Waiting for the state update - 251
+
+** 11.4 Summary - 252
+
+* 12 System integration - 254
+** 12.1 Message endpoints - 255
+*** 12.1.1 Normalizer - 256
+*** 12.1.2 Canonical data model - 258
+
+** 12.2 Implementing endpoints using Apache Camel - 260
+*** 12.2.1 Implement a consumer endpoint receiving messages from an external system - 261
+*** 12.2.2 Implement a producer endpoint sending messages to an external system - 267
+
+** 12.3 Implementing an HTTP interface - 271
+*** 12.3.1 The HTTP example - 272
+*** 12.3.2 Implementing a REST endpoint with akka-http - 274
+
+** 12.4 Summary - 280
+
+* 13 Streaming - 281
+** 13.1 Basic stream processing - 282
+*** 13.1.1 Copying files with sources and sinks - 286
+*** 13.1.2 Materializing runnable graphs - 289
+*** 13.1.3 Processing events with flows - 294
+*** 13.1.4 Handling errors in streams - 298
+*** 13.1.5 Creating a protocol with a BidiFlow - 299
+
+** 13.2 Streaming HTTP - 302
+*** 13.2.1 Receiving a stream over HTTP - 302
+*** 13.2.2 Responding with a stream over HTTP - 304
+*** 13.2.3 Custom marshallers and unmarshallers for content type and negotiation - 305
+
+** 13.3 Fan in and fan out with the graph DSL - 309
+*** 13.3.1 Broadcasting to flows - 309
+*** 13.3.2 Merging flows - 311
+
+** 13.4 Mediating between producers and consumers - 314
+*** 13.4.1 Using buffers - 315
+
+** 13.5 Rate-detaching parts of a graph - 318
+*** 13.5.1 Slow consumer, rolling up events into summaries - 319
+*** 13.5.2 Fast consumer, expanding metrics - 320
+
+** 13.6 Summary - 320
+
+* 14 Clustering - 322
+** 14.1 Why use clustering? - 323
+** 14.2 Cluster membership - 325
+*** 14.2.1 Joining the cluster - 325
+*** 14.2.2 Leaving the cluster - 325
+
+** 14.3 Clustered job processing - 337
+*** 14.3.1 Starting the cluster - 340
+*** 14.3.2 Work distribution using routers - 341
+*** 14.3.3 Resilient jobs - 344
+*** 14.3.4 Testing the cluster - 349
+
+** 14.4 Summary - 353
+
+* 15 Actor persistence - 354
+** 15.1 Recovering state with event sourcing - 355
+*** 15.1.1 Updating records in place - 356
+*** 15.1.2 Persisting state without updates - 357
+*** 15.1.3 Event sourcing for actors - 358
+
+** 15.2 Persistent actors - 359
+*** 15.2.1 Persistent actor - 360
+*** 15.2.2 Testing - 363
+*** 15.2.3 Snapshots - 365
+*** 15.2.4 Persistence query - 370
+*** 15.2.5 Serialization - 372
+
+** 15.3 Clustered persistence - 376
+*** 15.3.1 Cluster singleton - 380
+*** 15.3.2 Cluster sharding - 383
+
+** 15.4 Summary - 387
+
+* 16 Performance tips - 388
+** 16.1 Performance analysis - 389
+*** 16.1.1 System performance - 389
+*** 16.1.2 Performance parameters - 391
+
+** 16.2 Performance measurement of actors - 393
+*** 16.2.1 Collect mailbox data - 394
+*** 16.2.2 Collecting processing data - 400
+
+** 16.3 Improving performance by addressing bottlenecks - 401
+** 16.4 Configure dispatcher - 403
+*** 16.4.1 Recognizing thread pool problems - 403
+*** 16.4.2 Using multiple instances of dispatchers - 405
+*** 16.4.3 Changing thread pool size statically - 407
+*** 16.4.4 Using a dynamic thread pool size - 409
+
+** 16.5 Changing thread releasing - 411
+*** 16.5.1 Limitations on thread release settings - 412
+
+** 16.6 Summary - 414
+
+* 17 Looking ahead - 416
+** 17.1 akka-typed module - 417
+** 17.2 Akka Distributed Data - 420
+** 17.3 Summary - 420
+
+* index - 423

@@ -1,0 +1,937 @@
+#+TITLE: Understanding ECMAScript 6
+#+SUBTITLE: The Definitive Guide for JavaScript Developers
+#+AUTHOR: Nicholas C. Zakas
+#+YEAR: 2016
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Foreword by Dan Abramov - xvii
+* acknowledgments - xix
+* Introduction - xxi
+** The Road to ECMAScript 6 - xxi
+** About This Book - xxii
+** Browser and Node.js Compatibility - xxiii
+** Who This Book Is For - xxiii
+** Overview - xxiii
+** Conventions Used - xxiv
+** Help and Support - xxv
+
+* DONE 1 Block Bindings - 1
+  CLOSED: [2018-11-10 Sat 22:00]
+** DONE ~var~ Declarations and Hoisting - 2
+   CLOSED: [2018-11-10 Sat 20:52]
+   =from Jian= Don't use ~var~ from ECMAScript 6 on.
+
+** DONE Block-Level Declarations - 3
+   CLOSED: [2018-11-10 Sat 20:52]
+*** ~let~ Declarations - 3
+*** No Redeclaration - 4
+*** ~const~ Declarations - 4
+*** The Temporal Dead Zone - 6
+
+** DONE Block Bindings in Loops - 7
+   CLOSED: [2018-11-10 Sat 21:50]
+   #+BEGIN_SRC javascript
+     for (let i = 0; i < 10; ++i) {
+         process(item[i]);
+     }
+   #+END_SRC
+
+   - Don't use ~var~
+
+*** Functions in Loops - 8
+    *Problematic*
+    #+BEGIN_SRC javascript
+      var funcs = [];
+
+      for (var i = 0; i < 10; ++i) {
+          funcs.push(function() {
+              console.log(i);
+          });
+      }
+
+      funcs.forEach(function(func) {
+          func();  // outputs the number "10" ten times!!!
+      });
+    #+END_SRC
+
+    - NOT closure.
+
+    - Use /immediately invoked function expressions (IIFEs)/ to force a new copy
+      of the variable they want to iterate over to be created, as in this example:
+      #+BEGIN_SRC javascript
+        var funcs = [];
+
+        for (var i = 0; i < 10; ++i) {
+            funcs.push((function(value) {
+                return function() {
+                    console.log(value);
+                }
+            }(i)));
+        }
+
+        funcs.forEach(function(func) {
+            func();  // outputs 0, then 1, then 2, up to 9
+        });
+      #+END_SRC
+      + You don't need to do this from ECMAScript 6 on.
+
+*** ~let~ Declarations in Loops - 9
+    - Use ~let~ can implement right /closure/ behavior:
+      #+BEGIN_SRC javascript
+        var funcs = [];
+
+        for (let i = 0; i < 10; ++i) {
+            funcs.push(function() {
+                console.log(i);
+            });
+        }
+
+        funcs.forEach(function(func) {
+            func();  // outputs the number "10" ten times!!!
+        });
+      #+END_SRC
+
+    - for-in loop:
+      #+BEGIN_SRC javascript
+        let funcs = [],
+            object = {
+                a: true,
+                b: true,
+                c: true
+            };
+
+        for (let key in object) {
+            funcs.push(function() {
+                console.log(key);
+            });
+        }
+        funcs.forEach(function(func) {
+            func();  // outputs "a", then "b", then "c"
+        });
+      #+END_SRC
+
+    - *NOTE*
+      The behavior of ~let~ here doesn't necessarily related to the /non-hoisting
+      characteristics/ of ~let~.
+
+      In fact, _EARLY implementations_ of ~let~ did *NOT* exhibit this behavior,
+      because it was _added later_ in the process.
+
+*** ~const~ Declarations in Loops - 10
+    - You can use ~const~ in the /for loop/, but the first ~++~ operation will
+      trigger an error.
+
+    - ~const~ works well with the /for-in loop/.
+
+** DONE Global Block Bindings - 11
+   CLOSED: [2018-11-10 Sat 21:58]
+   - ~var~ declared global variable can *accidently overwrite* the /property/ on
+     the /global object/ (~window~ in browsers).
+     #+BEGIN_SRC javascript
+       // in a browser
+       var RegExp = "Hello!";
+       console.log(window.RegExp); // "Hello!"
+
+       var ncz = "Hi!";
+       console.log(window.ncz); // "Hi!"
+     #+END_SRC
+
+   - ~let~ and ~const~ won't add their declared variables as the /properties/ to
+     the /global object/.
+     #+BEGIN_SRC javascript
+       // in a browser
+       let RegExp = "Hello!";
+       console.log(RegExp);                   // "Hello!"
+       console.log(window.RegExp === RegExp); // false
+
+       const ncz = "Hi!";
+       console.log(ncz);             // "Hi!"
+       console.log("ncz" in window); // false
+     #+END_SRC
+
+   - *NOTE*
+     You might _STILL want_ to use ~var~ in the /global scope/ if you have code
+     that should be available from the /global object/.
+       This is most common in a browser when you want to _access code across
+     /frames/ or /windows/._
+
+** DONE Emerging Best Practices for Block Bindings - 12
+   CLOSED: [2018-11-10 Sat 21:59]
+** DONE Summary - 12
+   CLOSED: [2018-11-10 Sat 22:00]
+   - The ~let~ and ~const~ /block bindings/ introduce /lexical scoping/ to
+     JavaScript.
+
+* TODO 2 Strings and Regular Expressions - 13
+** TODO Better Unicode Support - 13
+   - ECMAScript 6 use UTF-16 to represent /code units/, or called /code points/.
+
+   - Use ~charAt()~ /method/ to get a character in a string.
+     This method and the ~length~ are all based on the setting of UTF-16.
+
+   - Thanks to the /expanded character set/, 16-bits is no longer enough to contain
+     any character.
+     =TODO= =TODO= =TODO=
+
+*** TODO UTF-16 Code Points - 14
+*** TODO The ~codePointAt()~ Method - 15
+*** DONE The ~String.fromCodePoint()~ Method - 16
+    CLOSED: [2018-11-10 Sat 23:03]
+    ~String.fromCodePoint()~ is a more complete version of ~String.fromCharPoint()~.
+
+    - ~String.fromCodePoint()~ works well with /BMP/ and /surrogate pairs/.
+
+    - ~String.fromCharPoint()~ cannot be used to process /surrogate pairs/, and you
+      will get unexpected results if you use it.
+
+*** TODO The ~normalize()~ Method - 16  
+*** TODO The Regular Expression ~u~ Flag - 18
+**** The ~u~ Flag in Action - 18
+**** Counting Code Points - 18
+**** Determining Support for the u Flag - 19
+
+** TODO Other String Changes - 19
+*** Methods for Identifying Substrings - 19
+*** The ~repeat()~ Method - 20
+
+** TODO Other Regular Expression Changes - 21
+*** The Regular Expression ~y~ Flag - 21
+*** Duplicating Regular Expressions - 23
+*** The flags Property - 24 
+
+** TODO Template Literals - 25
+*** Basic Syntax - 26
+*** Multiline Strings - 26 
+*** Making Substitutions - 28
+*** Tagged Templates - 29 
+
+** TODO Summary - 32
+
+* TODO 3 Functions - 35
+** DONE Functions with Default Parameter Values - 36
+   CLOSED: [2018-11-10 Sat 23:28]
+*** TODO Simulating Default Parameter Values in ECMAScript 5 - 36
+*** DONE Default Parameter Values in ECMAScript 6 - 37
+    CLOSED: [2018-11-10 Sat 23:17]
+    #+BEGIN_SRC javascript
+      function makeRequest(url, timeout = 2000, callback = function() {}) {
+          // the rest of the function
+      }
+
+      // use `makeRequest` with or without default parameter values.
+      makeRequest("/foo");
+
+      makeRequest("/foo", 500);
+
+      makeRequest("/foo", 500, function(body) {
+          doSomething(body);
+      });
+    #+END_SRC
+
+    - =from Jian=
+      The design of ECMAScript 6 is still stupid!!!
+
+      It allows /default parameters/ _NOT at the end_ of the parameter list.
+
+      If you do this, you need to use ~undefined~ to tell the function you want
+      it to use the /default value/! ATTENTION! You *cannot* use ~null~ to do
+      this -- the function will consider ~null~ as value passed in, and _NOT_
+      use the /default value/.
+
+*** TODO How Default Parameter Values Affect the ~arguments~ Object - 38 - =RE-READ=
+*** DONE Default Parameter Expressions - 40
+    CLOSED: [2018-11-10 Sat 23:25]
+    =from Jian=
+    You should avoid using /function call/ with side-effect as the /default value/.
+    You may notice, ECMAScript do this _lazily_, which makes the effect is hard
+    to predict!!!!
+
+*** DONE Default Parameter TDZ - 41
+    CLOSED: [2018-11-10 Sat 23:28]
+
+** DONE Working with Unnamed Parameters - 43
+   CLOSED: [2018-11-11 Sun 00:19]
+*** DONE Unnamed Parameters in ECMAScript 5 - 43
+    CLOSED: [2018-11-11 Sun 00:19]
+    #+BEGIN_SRC javascript
+      function pick(object) {
+          let result = Object.create(null);
+
+          // start at the second parameter
+          for (let i = 1, len = arguments.length; i < len; ++i) {
+              result[arguments[i]] = object[arguments[i]];
+          }
+
+          return result;
+      }
+
+      let book = {
+          title: "Understanding ECMAScript 6",
+          author: "Nicholas C. Zakas",
+          year: 2016,
+      }
+
+      let bookData = pick(book, "author", "year");
+
+      console.log(bookData.author);  // "Nicholas C. Zakas"
+      console.log(bookData.year);    // 2016
+    #+END_SRC
+
+    What is NOT good:
+    - From the header of the definition, you can't know this function is defined
+      with intention to deal with _MULTIPLE_ /unamed parameters/.
+
+    - There is NO a specific object used to save the /unamed arguments/.
+      You have to use the ~arguments~, and iterate from ~1~ (ignore the first
+      parameter, the /named parameter/ one).
+
+*** DONE Rest Parameters - 44
+    CLOSED: [2018-11-11 Sun 00:19]
+    #+BEGIN_SRC javascript
+      function pick(object, ...keys) {
+          let result = Object.create(null);
+
+          for (const name in keys) {
+              result[name] = object[name];
+          }
+
+          return result;
+      }
+    #+END_SRC
+
+    - The /rest parameters/ do _NOT affect_ a /function's ~length~ property/,
+      which indicates the number of named parameters for the function.
+        The value of ~length~ for ~pick()~ in this example is ~1~ because _ONLY_
+      ~object~ counts toward this ~length~ value.
+
+**** DONE Rest Parameters Restrictions - 45
+     CLOSED: [2018-11-11 Sun 00:13]
+     - Two restrictions:
+       + ONLY one /rest parameter/ is allowed for a function.
+         The /rest parameter/ must be the last.
+
+       + The /rest parameters/ *cannot* be used in an /object literal setter/.
+         #+BEGIN_SRC javascript
+           // Syntax Error
+           let object = {
+               // Syntax error: Can't use rest param in setter
+               set name(...value) {
+                   // do something
+               }
+           };
+         #+END_SRC
+
+         This restriction exists because /object literal setters/ are restricted
+         to a *single argument*. /Rest parameters/ are, by definition, an
+         infinite number of arguments, so they're not allowed in this context.
+         =from Jian= _reasonable_.
+
+**** DONE How Rest Parameters Affect the ~arguments~ Object - 45
+     CLOSED: [2018-11-11 Sun 00:19]
+     /Rest parameters/ were *designed to replace* ~arguments~ in JavaScript.
+
+     - HISTORY:
+       ECMAScript 4 eliminated ~arguments~ and add /rest parameters/.
+
+       Though ECMAScript 4 is NEVER standardized, its idea is retained, despite
+       ~arguments~ is NOT being removed from the ECMAScript 6, which has already
+       have /rest parameters/.
+
+     - The ~arguments~ object always correctly reflects the parameters that were
+       passed into a function REGARDLESS of /rest parameter/ usage.
+
+** DONE Increased Capabilities of the Function Constructor - 46 - =Rarely Used=
+   CLOSED: [2018-11-11 Sun 00:22]
+   =from Jian=
+   This feature is rarely used.
+   Review it in the fture if needed.
+
+** DONE The Spread Operator - 47
+   CLOSED: [2018-11-11 Sun 01:19]
+   - In ECMAScript 5 (NO /spread operator/):
+     #+BEGIN_SRC javascript
+       let v1 = 25,
+           v2 = 50;
+
+       console.log(Math.max(v1, v2));
+
+
+       let values = [25, 50, 75, 100];
+       console.log(Math.max.apply(values));
+     #+END_SRC
+
+   - In ECMAScript 6 (Use /spread operator/ ~...~):
+     #+BEGIN_SRC javascript
+       let values = [25, 50, 75, 100]
+       console.log(Math.max(...values));
+     #+END_SRC
+
+   - You can mix /spread operator/ spreaded parameter with normal parameter:
+     #+BEGIN_SRC javascript
+       let values = [-25, -50, -75, -100]
+       console.log(Math.max(...values, 0));  // max value or 0 if all values a negative
+     #+END_SRC
+
+** TODO The ~name~ Property - 48
+*** TODO Choosing Appropriate Names - 48
+*** TODO Special Cases of the name Property - 49
+
+** TODO Clarifying the Dual Purpose of Functions - 50
+*** TODO Determining How a Function Was Called in ECMAScript 5 - 50
+*** TODO The ~new.target~ Metaproperty - 51
+
+** TODO Block-Level Functions - 52
+*** Deciding When to Use Block-Level Functions - 53
+*** Block-Level Functions in Non-Strict Mode - 54
+
+** TODO Arrow Functions - 54
+*** Arrow Function Syntax - 55
+*** Creating Immediately Invoked Function Expressions - 57
+*** No ~this~ Binding - 58
+*** Arrow Functions and Arrays - 60
+*** No arguments Binding - 60
+*** Identifying Arrow Functions - 61
+
+** DONE Tail Call Optimization - 61
+   CLOSED: [2018-11-10 Sat 23:39]
+   =from Jian= NOT many ECMAScript engines support TCO.
+   If was implemented in some version, but not as an standard optimization.
+   Currently, don't expect it will happen.
+
+*** How Tail Calls Are Different in ECMAScript 6 - 62
+*** How to Harness Tail Call Optimization - 63
+
+** TODO Summary - 64
+
+* TODO 4 Expanded Object Functionality - 67
+** TODO Object Categories - 68
+** TODO Object Literal Syntax Extensions - 68
+*** Property Initializer Shorthand - 68
+*** Concise Methods - 69
+*** Computed Property Names - 70
+
+** TODO New Methods - 71
+*** The ~Object.is()~ Method - 72
+*** The ~Object.assign()~ Method - 72
+
+** TODO Duplicate Object Literal Properties - 75
+** TODO Own Property Enumeration Order - 75
+** TODO Enhancements for Prototypes - 76
+*** Changing an Object's Prototype  - 76
+*** Easy Prototype Access with Super References - 77
+
+** TODO A Formal Method Definition - 80
+** TODO Summary - 81
+
+* TODO 5 Destructuring for Easier Data Access - 83
+** TODO Why Is Destructuring Useful? - 84
+** TODO Object Destructuring - 84
+*** TODO Destructuring Assignment - 85
+*** TODO Default Values - 86
+*** TODO Assigning to Different Local Variable Names - 87
+*** TODO Nested Object Destructuring - 88
+
+** TODO Array Destructuring - 90
+*** TODO Destructuring Assignment - 90
+*** TODO Default Values - 92
+*** TODO Nested Array Destructuring - 92
+*** TODO Rest Items - 92
+
+** TODO Mixed Destructuring - 93
+** TODO Destructured Parameters - 94
+*** TODO Destructured Parameters Are Required - 95
+*** TODO Default Values for Destructured Parameters - 96
+
+** TODO Summary - 97
+
+* TODO 6 Symbols and Symbol Properties - 99
+** TODO Creating Symbols - 100
+** TODO Using Symbols - 101
+** TODO Sharing Symbols - 102
+** TODO Symbol Coercion - 103
+** TODO Retrieving Symbol Properties - 104
+** TODO Exposing Internal Operations with Well-Known Symbols - 105
+*** The ~Symbol.hasInstance~ Method - 106
+*** The ~Symbol.isConcatSpreadable~ Property - 107
+*** The ~Symbol.match~, ~Symbol.replace~, ~Symbol.search~, and ~Symbol.split~ Properties - 109
+*** The ~Symbol.toPrimitive~ Method - 111
+*** The ~Symbol.toStringTag~ Property - 112
+*** The ~Symbol.unscopables~ Property - 115
+
+** TODO Summary - 117
+
+* DONE 7 Sets and Maps - 119
+  CLOSED: [2018-11-11 Sun 02:07]
+  - =TODO= NOTES
+  - =TODO= HISTORY
+
+** TODO Sets and Maps in ECMAScript 5 - 120 - =NOT READ=
+** TODO Problems with Workarounds - 121 - =NOT READ=
+** TODO Sets in ECMAScript 6 - 122
+   ECMAScript 6 adds a ~Set~ type that is _an ORDERED LIST of values WITHOUT
+   duplicates._
+
+   - /Sets/ allow fast access to the data they contain, adding a more efficient
+     manner of tracking discrete values.
+
+*** DONE Creating Sets and Adding Items - 122
+    CLOSED: [2018-11-11 Sun 01:48]
+    - Create /sets/ by using ~new Set()~ syntax.
+      Use ~add()~ /method/ to add elements.
+      Use ~size~ /property/ to check how many elements it contains.
+      #+BEGIN_SRC javascript
+        let set = new Set();
+        set.add(5);
+        set.add("5");
+
+        console.log(set.size);  // 2
+      #+END_SRC
+
+    - /Sets/ *do NOT coerce values* to determine whether they're the same.
+      That means ~5~ and ~"5"~ are diffent, and they can co-exist in a /set/.
+
+      =TODO= =TODO=
+      Internally, the comparison uses the ~Object.is()~ /method/ discussed in
+      Chapter 4 to determine if two values are the same.
+      =TODO= =TODO=
+
+    - For /objects/, the /address/ is compared:
+      #+BEGIN_SRC javascript
+        let set = new Set(),
+            key1 = {},
+            key2 = {};
+
+        // `key1` and `key2` are DIFFERENT objects.
+
+        set.add(key1);
+        set.add(key2);
+
+        console.log(set.size);  // 2
+      #+END_SRC
+
+    - Initialize a /set/ with an /array/:
+      ~let set = new Set([1, 2, 3, 4, 5, 5, 5, 5]);~
+
+    - *NOTE*
+      *The ~Set~ /constructor/ actually accepts ANY /iterable/ object as an
+      argument.*
+        /Arrays/ work because they are /iterable/ BY DEFAULT, as are /sets/ and
+      /maps/.
+
+      The ~Set~ /constructor/ uses an /iterator/ to extract values from the
+      argument.
+
+      =TODO=
+      /Iterables/ and /iterators/ are discussed in detail in Chapter 8.
+      =TODO=
+
+    - Use ~has()~ /method/ to do the /existence check/.
+
+*** DONE Removing Items - 123
+    CLOSED: [2018-11-11 Sun 01:36]
+    - Remove one: ~delete()~ /method/.
+
+    - Remove all: ~clear()~ /method/.
+  
+*** DONE The ~forEach()~ Method for Sets - 124 - =Re=Read= =TODAY=
+    CLOSED: [2018-11-11 Sun 01:47]
+    - Note =todo=
+
+    - Example:
+      #+BEGIN_SRC javascript
+        let set = new Set([1, 2]);
+
+        set.forEach((value, key, ownerSet) => {
+            console.log(key + " " + value);
+            console.log(ownerSet === set);
+        });
+
+        // 1 1
+        // true
+        // 2 2
+        // true
+      #+END_SRC
+
+    - =TODO= =TODO= =TODO=
+      ~this~
+      callback
+      =TODO= =TODO= =TODO=
+
+    - You CAN'T access the elements of a /set/ by index.
+      If you want to do this, use /array/.
+
+      =from Jian=
+      I don't understand this setting! As metioned in this book,
+      in ECMAScript 6, /sets/ are /ordered lists without duplicates/.
+      If it is ordered (already NOT /sets/ in math), why NOT just allow the
+      indexing???
+
+*** DONE Converting a Set to an Array - 126
+    CLOSED: [2018-11-11 Sun 01:38]
+    Use the /spread operator (~...~)/.
+    #+BEGIN_SRC javascript
+      let set = new Set([1, 2, 3, 3, 3, 4, 5]),
+          array = [...set];
+    #+END_SRC
+
+*** TODO Weak Sets - 127
+**** TODO Creating Weak Sets - 127
+**** TODO Key Differences Between Set Types - 128
+     - In general, if you _ONLY need_ to *track* /object references/,
+       you should use a /weak set/ instead of a /regular set/.
+
+** TODO Maps in ECMAScript 6 - 129
+   - *Add* items:
+     Call the ~set()~ /method/ and passing it a /key/ and the /value/ to
+     associate with the /key/.
+
+   - *Get* value:
+     ~get()~
+
+   - Example code:
+     #+BEGIN_SRC javascript
+       let map = new Map();
+       map.set("title", "Understanding ECMAScript 6");
+       map.set("year", 2016);
+
+       console.log(map.get("title"));
+       console.log(map.get("year"));
+     #+END_SRC
+
+   - If you use ~map.get(key)~ and the ~key~ here doesn't exist,
+     a ~undefined~ is returned.
+
+*** DONE Map Methods - 130
+    CLOSED: [2018-11-11 Sun 01:54]
+    - ~has(key)~ /method/
+    - ~delete(key)~ /method/
+    - ~clear()~ /method/
+    - ~size~ /property/
+
+*** DONE Map Initialization - 131 
+    CLOSED: [2018-11-11 Sun 01:58]
+    ~let map = new Map([["name", "Nicholas], ["age", 25]]);~
+
+    =from Jian= also use an /array/ (or any iterables) with _right structure
+    (pairs)_.
+
+*** DONE The ~forEach()~ Method for Maps - 131
+    CLOSED: [2018-11-11 Sun 02:01]
+    - Example:
+      #+BEGIN_SRC javascript
+        let map = new Map([["name", "Nicholas"], ["age", 25]]);
+
+        map.forEach(function(value, key, ownerMap) {
+            console.log(key + " " + value);
+            console.log(ownerMap === map);
+        });
+      #+END_SRC
+
+    - *NOTE*
+      =TODO= the second parameter can be ~this~ to indicate =???=
+
+*** TODO Weak Maps - 132
+
+** TODO Summary - 136
+
+* TODO 8 Iterators and Generators - 137
+** DONE The Loop Problem - 138
+   CLOSED: [2018-11-11 Sun 02:19]
+   #+BEGIN_SRC javascript
+     let colors = ["red", "green", "blue"];
+
+     for (let i = 0, len = colors.length; i < len; ++i) {
+         console.log(colors[i]);
+     }
+   #+END_SRC
+
+   - If we can get elements directly, no need to track ~i~!
+     ~i~'s are used to get elements -- the focus is the elements, not the indices.
+
+   - If the variable(s) we track, here only ~i~, get more and more, things can
+     become complicated.
+
+** DONE What Are Iterators? - 138
+   CLOSED: [2018-11-11 Sun 02:40]
+   - /iterators/ are objects with a specific /interface/ designed for /iteration/.
+     + ~next()~ /method/
+     + ~value~ /property/ -- next value
+     + ~done~ /property/ -- if no more element, it will be set to ~true~.
+
+** DONE What Are Generators? - 139
+   CLOSED: [2018-11-11 Sun 02:40]
+   - generator :: a /function/ that returns an /iterator/.
+
+   - /Generator functions/ are indicated by an asterisk (~*~) after the ~function~
+     keyword and use the new ~yield~ keyword.
+     #+BEGIN_SRC javascript
+       // generator
+       function *createIterator() {  // `funciton* createIterator()` also works
+           yield 1;
+           yield 2;
+           yield 3;
+       }
+
+       let iterator = createIterator();
+
+       console.log(iterator.next().value);  // 1
+       console.log(iterator.next().value);  // 2
+       console.log(iterator.next().value);  // 3
+     #+END_SRC
+
+   - *WHERE ~yield~ THROWS ERRORS*
+     Use the ~yield~ OUTSIDE /generators/ will lead to a _syntax error_, including
+     in functions that are inside /generators/, such as:
+     #+BEGIN_SRC javascript
+       function *createIterator(items) {
+           items.forEach(function(item) {
+               // syntax error
+               yield item + 1;
+           });
+       }
+     #+END_SRC
+
+     ~yield~ *can't cross function boundaries!!!*
+
+*** DONE Generator Function Expressions - 141
+    CLOSED: [2018-11-11 Sun 02:35]
+    #+BEGIN_SRC javascript
+      let createIterator = function *(items) {
+          for (let i = 0; i < items.length; ++i) {
+              yield items[i];
+          }
+      }
+
+      let iterator = createIterator([1, 2, 3]);
+
+      console.log(iterator.next());  // "{ value: 1, done: false }"
+      console.log(iterator.next());  // "{ value: 2, done: false }"
+      console.log(iterator.next());  // "{ value: 3, done: false }"
+      console.log(iterator.next());  // "{ value: undefined, done: true }"
+
+      // for all further calls
+      console.log(iterator.next());  // "{ value: undefined, done: true }"
+    #+END_SRC
+
+    - *NOTE*
+      *Creating an /arrow function/ that is also a /generator/ is _NOT possible_.*
+
+*** DONE Generator Object Methods - 142 - =RE-READ=
+    CLOSED: [2018-11-11 Sun 02:40]
+    Because /generators/ are JUST /functions/, you can *add* them to /objects/,
+    too. For example:
+
+    - The ECMAScript 5 style object literal with a function expression.
+      #+BEGIN_SRC javascript
+        let o = {
+            createIterator: function *(items) {
+                for (let i = 0; i < items.length; ++i) {
+                    yield items[i];
+                }
+            }
+        };
+  
+        let iterator = o.createIterator([1, 2, 3]);
+      #+END_SRC
+
+    - ECMAScript 6 /method shorthand/:
+      #+BEGIN_SRC javascript
+        let o = {
+            ,*createIterator(items) {
+                for (let i = 0; i < items.length; ++i) {
+                    yield items[i];
+                }
+            }
+        };
+
+        let iterator = o.createIterator([1, 2, 3]);
+      #+END_SRC
+
+** TODO Iterables and for-of Loops - 142
+*** Accessing the Default Iterator - 143
+*** Creating Iterables - 144
+
+** TODO Built-In Iterators - 145
+*** Collection Iterators - 145
+*** String Iterators - 149
+*** NodeList Iterators - 151
+
+** TODO The Spread Operator and Nonarray Iterables - 151
+** TODO Advanced Iterator Functionality - 152
+*** Passing Arguments to Iterators - 152
+*** Throwing Errors in Iterators - 154
+*** Generator Return Statements - 155
+*** Delegating Generators - 156
+
+** TODO Asynchronous Task Running - 159
+*** A Simple Task Runner - 159
+*** Task Running with Data - 160
+*** An Asynchronous Task Runner - 161
+
+** TODO Summary - 164
+
+* TODO 9 Introducing JavaScript Classes - 165
+** Class-Like Structures in ECMAScript 5 - 166
+** Class Declarations - 166
+*** A Basic Class Declaration - 166
+*** Why Use the Class Syntax? - 167
+
+** Class Expressions - 169
+*** A Basic Class Expression - 169
+*** Named Class Expressions - 170
+
+** Classes as First-Class Citizens - 172
+** Accessor Properties - 173
+** Computed Member Names - 174
+** Generator Methods - 175
+** Static Members - 176
+** Inheritance with Derived Classes - 178
+*** Shadowing Class Methods - 180
+*** Inherited Static Members - 181
+*** Derived Classes from Expressions - 181
+*** Inheriting from Built-Ins - 184
+*** The Symbol.species Property - 185
+
+** Using ~new.target~ in Class Constructors - 188
+** Summary - 189
+
+* TODO 10 Improved Array Capabiuties - 191
+** Creating Arrays - 191
+*** The Array.of() Method - 192  
+*** The Array.from() Method - 193
+
+** New Methods on All Arrays - 196
+*** The ~find()~ and ~findIndex()~ Methods - 196
+*** The ~fill()~ Method - 197
+*** The ~copyWithin()~ Method - 197 
+
+** Typed Arrays - 198
+*** Numeric Data Types - 199
+*** Array Buffers - 199
+*** Manipulating Array Buffers with Views - 200
+
+** Similarities Between Typed and Regular Arrays - 207
+*** Common Methods - 207
+*** The Same Iterators - 208
+*** The of() and from() Methods  - 208
+
+** Differences Between Typed and Regular Arrays - 209
+*** Behavioral Differences - 209
+*** Missing Methods - 210
+*** Additional Methods - 211
+
+** Summary - 212
+
+* TODO 11 Promises and Asynchronous Programming - 213
+** Asynchronous Programming Background - 214
+*** The Event Model - 214
+*** The Callback Pattern - 215
+
+** Promise Basics - 217
+*** The Promise Life Cycle - 217
+*** Creating Unsettled Promises - 219
+*** Creating Settled Promises - 221
+*** Executor Errors - 224
+
+** Global Promise Rejection Handling - 224
+*** Node.js Rejection Handling - 225
+*** Browser Rejection Handling - 227
+
+** Chaining Promises - 228
+*** Catching Errors - 229
+*** Returning Values in Promise Chains  - 230
+*** Returning Promises in Promise Chains - 231
+
+** Responding to Multiple Promises - 233
+*** The ~Promise.all()~ Method  - 234
+*** The ~Promise.race()~ Method - 235 
+
+** Inheriting from Promises - 236
+** Promise-Based Asynchronous Task Running - 237
+** Summary - 241
+
+* TODO 12 Proxies and The Reflection API - 243
+** The Array Problem - 244
+** Introducing Proxies and Reflection - 244
+** Creating a Simple Proxy - 245
+** Validating Properties Using the set Trap - 246
+** Object Shape Validation Using the get Trap - 247
+** Hiding Property Existence Using the has Trap - 249
+** Preventing Property Deletion with the deleteProperty Trap . - 250
+** Prototype Proxy Traps - 252
+*** How Prototype Proxy Traps Work - 252
+*** Why Two Sets of Methods? - 254
+
+** Object Extensibility Traps - 255
+*** Two Basic Examples - 255
+*** Duplicate Extensibility Methods - 256
+
+** Property Descriptor Traps - 257
+*** Blocking Object.defineProperty() - 258
+*** Descriptor Object Restrictions - 259
+*** Duplicate Descriptor Methods - 260
+
+** The ownKeys Trap - 261
+** Function Proxies with the apply and construct Traps - 262
+*** Validating Function Parameters - 264
+*** Calling Constructors Without new - 265
+*** Overriding Abstract Base Class Constructors - 266
+*** Callable Class Constructors - 267
+
+** Revocable Proxies - 268
+** Solving the Array Problem - 269
+*** Detecting Array Indexes - 270
+*** Increasing length When Adding New Elements - 270
+*** Deleting Elements When Reducing length - 272
+*** Implementing the MyArray Class - 273
+
+** Using a Proxy as a Prototype - 275
+*** Using the get Trap on a Prototype - 276
+*** Using the set Trap on a Prototype - 277
+*** Using the has Trap on a Prototype - 278
+*** Proxies as Prototypes on Classes - 279
+
+** Summary - 282
+
+* TODO 13 Encapsulating Code with Modules - 283
+** What Are Modules? - 283
+** Basic Exporting - 284
+** Basic Importing - 285
+*** Importing a Single Binding - 286
+*** Importing Multiple Bindings - 286
+*** Importing an Entire Module - 286
+*** A Subtle Quirk of Imported Bindings - 288
+
+** Renaming Exports and Imports - 288
+** Default Values in Modules - 289
+*** Exporting Default Values - 289
+*** Importing Default Values - 290
+
+** Re-exporting a Binding - 291
+** Importing Without Bindings - 292
+** Loading Modules - 293
+*** Using Modules in Web Browsers - 293
+*** Browser Module Specifier Resolution - 297
+
+** Summary - 298
+
+* TODO A Minor Changes in ECMAScript 6 - 299
+** Working with Integers - 299
+*** Identifying Integers - 300
+*** Safe Integers - 300
+
+** New Math Methods - 301
+** Unicode Identifiers - 302
+** Formalizing the ~__proto__~ Property - 303
+
+* TODO B Understanding ECMAScript 7 (2016) - 305
+** The Exponentiation Operator - 306
+** Order of Operations - 306
+** Operand Restriction - 306
+** The ~Array.prototype.includes()~ Method - 307
+** How to Use ~Array.prototype.includes()~ - 307
+** Value Comparison - 308
+** A Change to Function-Scoped Strict Mode - 308
+
+* INDEX - 311

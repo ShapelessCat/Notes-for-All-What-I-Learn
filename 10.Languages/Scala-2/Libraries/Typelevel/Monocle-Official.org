@@ -1,0 +1,593 @@
+#+TITLE: Optics library for Scala
+#+Maintainers and contributors: Julien Truffaut, Ilan Godik, Naoki Aoyama, Kenji Yoshida, Ken Scambler
+#+Version: --> 2.0.3 (2.1.0)
+#+Date: 2020
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Overview
+  CLOSED: [2019-05-10 Fri 00:10]
+  - maven-central: v1.6.0-M4
+
+  - Monocle is an optics library for Scala and Scala.js strongly INSPIRED BY
+    _Haskell Lens_.
+
+  - Optics are a group of purely functional abstractions to _MANIPULATE (get,
+    set, modify, ...) IMMUTABLE objects_.
+
+** DONE Getting started
+   CLOSED: [2020-10-18 Sun 02:38]
+   - Monocle is published to Maven Central and cross-built for _Scala 2.12,
+     and 2.13_ so you can just add the following to your build:
+     #+begin_src scala
+       val monocleVersion = "2.1.0"
+
+       libraryDependencies ++= Seq(
+         "com.github.julien-truffaut" %%  "monocle-core"  % monocleVersion,
+         "com.github.julien-truffaut" %%  "monocle-macro" % monocleVersion,
+         "com.github.julien-truffaut" %%  "monocle-law"   % monocleVersion % Test
+       )
+     #+end_src
+
+   - If you want to use /macro annotations/ such as ~@Lenses~, you will also need
+     to include:
+     + Scala 2.12:
+       _macro paradise_ plugin
+       #+begin_src scala
+         addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full)
+       #+end_src
+
+     + Scala 2.13:
+       The compiler flag ~-Ymacro-annotations~ instead
+       #+begin_src scala
+         scalacOptions in Global += -Ymacro-annotations
+       #+end_src
+
+** DONE Motivation
+   CLOSED: [2019-05-10 Fri 00:52]
+   It is _PAINFUL_ to _modify_ /immutable nested object/.
+   #+begin_src scala
+     case class Street(number: Int, name: String)
+     case class Address(city: String, street: Street)
+     case class Company(name: String, address: Address)
+     case class Employee(name: String, company: Company)
+
+     // Let's say we have an `employee` and we need to upper case the first character
+     // of his company street name. Here is how we could write it in vanilla Scala:
+     val employee = Employee("john", Company("awesome inc", Address("london", Street(23, "high street"))))
+
+     val employeeAdjusted =
+       employee.copy(
+         company = employee.company.copy(
+           address = employee.company.address.copy(
+             street = employee.company.address.street.copy(
+               name = employee.company.address.street.name.capitalize // luckily capitalize exists
+             )
+           )
+         )
+       )
+   #+end_src
+
+   - In Monocle we do:
+     #+begin_src scala
+       import monocle.Lens
+       import monocle.macros.GenLens
+
+       val company   : Lens[Employee, Company] = GenLens[Employee](_.company)
+       val address   : Lens[Company , Address] = GenLens[Company](_.address)
+       val street    : Lens[Address , Street]  = GenLens[Address](_.street)
+       val streetName: Lens[Street  , String]  = GenLens[Street](_.name)
+
+       val lens = company composeLens address composeLens street composeLens streetName
+       val employeeAdjusted = lens.modify(_.capitalize)(employee)
+       // res4: Employee = Employee(john,Company(awesome inc,Address(london,Street(23,High street))))
+     #+end_src
+     _Here modify *lift* a function ~String => String~ to a function ~Employee => Employee~._
+
+   - Q :: How about if we try to target the first letter of ~streetName~ value directy,
+          rather than target the ~streetName~, and then call its ~capitalize~ /method/?
+
+   - A :: ~Lenses~ required the field they are directed at to be _mandatory_.
+          Since a string can be empty, the first letter of a string is optional.
+          We need another abstraction that would be a sort of *partial* ~Lens~.
+          #+begin_src scala
+            import monocle.function.Cons.headOption // to use headOption (an optic from Cons typeclass)
+
+            val partialLens = (company composeLens address composeLens street composeLens streetName composeOptional headOption)
+            val employeeAdjusted = partialLens.modify(_.toUpper)(employee)
+            // res5: Employee = Employee(john,Company(awesome inc,Address(london,Street(23,High street))))
+          #+end_src
+
+   - Similarly to ~composeLens~, ~composeOptional~ takes two _Optionals_, one from
+     A to B and another from B to C and creates a third _Optional_ from A to C.
+
+     All Lenses can be seen as Optionals where the optional element to zoom into
+     is always present, hence composing an Optional and a Lens always produces
+     an Optional
+     =TODO=
+     (*see class diagram for full inheritance relation between optics*).
+
+   - Monocle offers various /functions/ and /macros/ to _cut the boilerplate EVEN
+     FURTHER_, here is an example:
+     #+begin_src scala
+       import monocle.macros.syntax.lens._
+
+       employee.lens(_.company.address.street.name).composeOptional(headOption).modify(_.toUpper)
+       // res6: Employee = Employee(john,Company(awesome inc,Address(london,Street(23,High street))))
+     #+end_src
+     =TODO=
+     Please consult the documentation or the scaladoc for more details and examples.
+
+** DONE Copyright and license
+* TODO Optics
+  - Here is a diagram to visualise how optics relate to each other:
+    ~Fold~ <---\             /--> ~Setter~
+     /|\        \           /
+      |          \         /
+   ~Getter~      ~Traversal~
+     /|\             /|\
+      |               |
+      |        |--> ~Optional~ <--|  
+      |        |                  |       
+      |        |                  |      
+      |-~Lens~-|                  |- ~Prism~
+         /|\                           /|\
+          |                             |
+          \-------- ~Iso~ --------------/
+
+  - Optic Composition Table
+    _Almost all_ /optics/ *compose* with the OTHER /optics/.
+    The composition of one type and itself results in the *SAME* type of /optic/.
+    =TODO=
+    TABLE
+
+    + =from Jian=
+      optics that can't be composed:
+      * ~Getter~ and ~Setter~
+      * ~Setter~ and ~Fold~
+      * ~Setter~ and ~Getter~
+
+** TODO Iso =NOTE=
+*** TODO Iso Generation
+*** TODO Laws
+    
+** DONE Lens
+   CLOSED: [2019-05-10 Fri 18:12]
+   A ~Lens~ is an optic used to zoom inside a ~Product~, e.g. ~case class~,
+   ~Tuple~, ~HList~ or even ~Map~.
+
+   - ~Lens~'es have *TWO* /type parameters/ generally called ~S~ and ~A~:
+     ~Lens[S, A]~ where ~S~ represents the ~Product~ and ~A~ an element inside
+     of ~S~.
+
+   - Let's take a simple /case class/ with _TWO_ fields:
+     ~case class Address(streetNumber: Int, streetName: String)~
+     1. We can create a ~Lens[Address, Int]~ which zooms from an ~Address~ to its
+        field ~streetNumber~ by supplying a pair of functions:
+        ~get: Address => Int~
+        ~set: Int => Address => Address~
+        #+begin_src scala
+          import monocle.Lens
+          val streetNumber = Lens[Address, Int](_.streetNumber)(n => a => a.copy(streetNumber = n))
+        #+end_src
+
+     2. This case is really straightforward so we _automated the generation_ of
+        ~Lens~'es from /case classes/ using a /macro/:
+        #+begin_src scala
+          import monocle.macros.GenLens
+
+          val streetNumber = GenLens[Address](_.streetNumber)
+        #+end_src
+
+     3. Once we have a ~Lens~, we can use the supplied ~get~ and ~set~ functions
+        (nothing fancy!):
+        #+begin_src scala
+          val address = Address(10, "High Street")
+          // address: Address = Address(10,High Street)
+
+          streetNumber.get(address)
+          // res1: Int = 10
+
+          streetNumber.set(5)(address)
+          // res2: Address = Address(5,High Street)
+        #+end_src
+
+     4. We can also ~modify~ the target of ~Lens~ with a function,
+        this is *equivalent to* _call ~get~ and then ~set~:_
+        #+begin_src scala
+          streetNumber.modify(_ + 1)(address)
+          // res3: Address = Address(11,High Street)
+
+          val n = streetNumber.get(address)
+          // n: Int = 10
+
+          streetNumber.set(n + 1)(address)
+          // res4: Address = Address(11,High Street)
+        #+end_src
+
+     5. We can push the idea even further, with ~modifyF~ we can update the target
+        of a ~Lens~ in a context, cf ~scalaz.Functor~:
+        #+begin_src scala
+          def neighbors(n: Int): List[Int] =
+            if (n > 0) List(n - 1, n + 1) else List(n + 1)
+
+          import scalaz.std.list._ // to get Functor[List] instance
+
+          streetNumber.modifyF(neighbors)(address)
+          // res6: List[Address] = List(Address(9,High Street), Address(11,High Street))
+
+          streetNumber.modifyF(neighbors)(Address(135, "High Street"))
+          // res7: List[Address] = List(Address(134,High Street), Address(136,High Street))
+
+        #+end_src
+
+        This would work with any kind of ~Functor~ and is *especially useful in
+        conjunction with asynchronous APIs* =TODO=, where one has the task to
+        update a deeply nested structure with the result of an asynchronous
+        computation:
+        #+begin_src scala
+          import scalaz.std.scalaFuture._
+          import scala.concurrent._
+          import scala.concurrent.ExecutionContext.Implicits._ // to get global ExecutionContext
+
+          def updateNumber(n: Int): Future[Int] = Future.successful(n + 1)
+          streetNumber.modifyF(updateNumber)(address)
+          // res9: scala.concurrent.Future[Address] = Future(<not completed>)
+        #+end_src
+
+     6. Most importantly, ~Lens~'es *compose together* allowing to _zoom deeper_
+        in a data structure
+        #+begin_src scala
+          case class Person(name: String, age: Int, address: Address)
+          val john = Person("John", 20, address)
+
+          val address = GenLens[Person](_.address)
+
+          (address composeLens streetNumber).get(john)
+          // res11: Int = 10
+
+          (address composeLens streetNumber).set(2)(john)
+          // res12: Person = Person(John,20,Address(2,High Street))
+        #+end_src
+
+*** Other Ways of Lens Composition
+*** Lens Generation
+    - ~Lens~ creation is rather full of boilerplates but we developed a few /macros/ to
+      generate them automatically. All /macros/ are defined in a separate module
+      (see modules). =TODO=
+      #+begin_src scala
+        import monocle.macros.GenLens
+
+        val age = GenLens[Person](_.age)
+      #+end_src
+
+    - ~GenLens~ can also be used to generate ~Lens~ several level deep:
+      #+begin_src scala
+        GenLens[Person](_.address.streetName).set("Iffley Road")(john)
+        // res13: Person = Person(John,20,Address(10,Iffley Road))
+      #+end_src
+
+    - For those who want to push ~Lens~'es generation even further,
+      we created ~@Lenses~ /macro annotation/ which generate ~Lens~'es for *ALL
+      fields of a case class*.
+        The generated ~Lens~'es are in the /companion object/ of the /case
+      class/:
+      #+begin_src scala
+        import monocle.macros.Lenses
+
+        @Lenses final case class Point(x: Int, y: Int)
+        val p = Point(5, 3)
+
+        Point.x.get(p)
+        // res14: Int = 5
+
+        Point.y.get(p)
+        // res14: Int = 3
+      #+end_src
+
+      + You can also *add a prefix* to ~@Lens~'es in order to prefix the *generated*
+        ~Lens~'es: =from Jian= This can help resolving potential conflictions! =IMPORTANT=
+        #+begin_src scala
+          @Lenses("_") case class Point(x: Int, y: Int)
+          val p = Point(5, 3)
+
+          Point._x.get(p)
+          // res16: Int = 5
+        #+end_src
+
+*** Laws
+    - A ~Lens~ must satisfy all properties defined in ~LensLaws~ from the ~core~
+      module.
+
+    - You can check the validity of your own ~Lens~'es using LensTests from the
+      ~law~ module.
+
+    - In particular, a ~Lens~ must respect the ~getSet~ /law/ which states that
+      if you ~get~ a value ~A~ from ~S~ and ~set~ it _BACK_ in, the result is an
+      object _identical to the original one_.
+        A /side effect/ of this /law/ is that ~set~ must only update the ~A~ it
+      points to. For example, it *cannot* _increment a counter_ or _modify
+      another value_.
+      #+begin_src scala
+        def getSet[S, A](l: Lens[S, A], s: S): Boolean =
+          l.set(l.get(s))(s) == s
+      #+end_src
+
+    - On the other hand, the ~setGet~ /law/ states that if you ~set~ a value, you
+      always ~get~ the same value back.
+        This /law/ guarantees that ~set~ is actually updating a value ~A~ inside
+      of ~S~.
+      #+begin_src scala
+        def setGet[S, A](l: Lens[S, A], s: S, a: A): Boolean =
+          l.get(l.set(a)(s)) == a
+      #+end_src
+
+** TODO Prism
+*** Prism Generation
+*** Prism Laws
+
+** TODO Optional
+*** Laws
+
+** TODO Traversal
+*** Laws
+
+* DONE Typeclasses
+  CLOSED: [2019-05-10 Fri 00:51]
+  Monocle defines /typeclasses/ to *fetch* /generic optics/ *implicitly*.
+  _You can find more information about /typeclass pattern/ in /cats/._
+
+  - Here is the list of typeclasses defined in Monocle:
+    + ~At~
+      a /typeclass/ that defines a ~Lens~ from an ~S~ to an ~A~ *at* _an_ _index_ ~I~.
+
+    + ~Cons~
+      a /typeclass/ that defines a ~Prism~ between an ~S~ and its _head_ ~A~ and
+      _tail_ ~S~.
+
+    + ~Cons1~
+      * a /typeclass/ that defines an ~Iso~ between an ~S~ and its _head_ ~H~ and
+        _tail_ ~T~.
+
+      * like ~Cons~ _BUT_ for types that have *always* a _head_ and a _tail_,
+        e.g. a /non empty list/.
+
+    + ~Curry~
+      *LACK of DESCRIPTION*
+
+    + ~Each~
+      A /typeclass/ that defines a ~Traversal~ from a /monomorphic container/
+      ~S~ to *all* of its /elements/ of type ~A~.
+
+    + ~Empty~
+      a /typeclass/ that defines a ~Prism~ from an ~S~ and ITS _EMPTY value_.
+
+    + ~Field1~ to ~Field6~
+      A /typeclass/ that defines a ~Lens~ from an ~S~ to its _Xth element_ (X
+      can be 1 to 6) of type ~A~.
+
+    + ~Index~
+      * A /typeclass/ that defines an ~Optional~ from an ~S~ to an ~A~ at an
+        /index/ ~I~.
+
+      * less powerful than ~At~ as it *cannot* _create_ or _delete_ value.
+
+    + ~Plated~
+      a /typeclass/ for types which can extract their immediate self-similar children.
+
+    + ~Possible~
+      A /typeclass/ that defines an ~Optional~ from a /monomorphic container/ ~S~ to
+      a _possible value_ ~A~. There *must be at most one* ~A~ in ~S~.
+
+    + ~Reverse~
+      *LACK of DESCRIPTION*
+
+    + ~Snoc~
+      A /typeclass/ that defines a ~Prism~ between an ~S~ and its _init_ ~S~ and
+      _last_ ~S~.
+
+    + ~Snoc1~
+      * A /typeclass/ that defines an ~Iso~ between an ~S~ and its _init_ ~H~
+        and _last_ ~T~.
+
+      * like ~Snoc~ BUT for types that have *always* an _init_ and a _last_ element,
+        e.g. a /non empty list/.
+
+* DONE Modules
+  CLOSED: [2019-05-10 Fri 00:16]
+  - In an attempt to be modular, Monocle _is broken up into several modules_:
+    + ~core~ - contains optics (e.g. ~Lens~, ~Prism~, ~Traversal~) and type class
+      definitions (e.g. ~Index~, ~Each~, ~Plated~) and type class instances for
+      standard library types and scalaz data types
+
+    + ~macro~
+      /macros/ to SIMPLIFY the _generation of optics_
+
+    + ~laws~
+      /laws/ for the /optics/ and /type classes/
+
+    + ~generic~
+      /optics/ and /type class instances/ for ~HList~ and ~Coproduct~ from /shapeless/
+
+    + ~state~
+      conversion between /optics/ and ~State~ or ~Reader~
+
+    + ~refined~
+      /optics/ and /type class instances/ using _refinement types_ from
+      ~refined~
+
+    + ~unsafe~ =TODO=
+      /optics/ that *do not fully satisfy* /laws/
+      _but that are very convenient_. More details here =TODO=
+
+    + ~tests~ - tests that check /optics/ and /type class instances/ satisfy /laws/
+
+    + ~bench~ - *benchmarks* using *jmh* to measure optics _performances_
+
+    + ~docs~ - source for this website
+
+  - You can add a module to your build by adding the following line to ~libraryDependencies~:
+    ~"com.github.julien-truffaut"  %%  "monocle-${module}" % ${version}~
+    Here is the complete list of published artifacts:
+    #+begin_src scala
+      libraryDependencies ++= Seq(
+        "com.github.julien-truffaut"  %%  "monocle-core"    % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-generic" % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-macro"   % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-state"   % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-refined" % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-unsafe"  % ${version},
+        "com.github.julien-truffaut"  %%  "monocle-law"     % ${version} % "test"
+      )
+    #+end_src
+    You need to replace ${version} with the version of Monocle you want to use.
+
+* DONE Examples
+  CLOSED: [2019-05-10 Fri 15:56]
+** DONE University Example
+   CLOSED: [2019-05-10 Fri 15:56]
+   Let's take a basic model of a University containing a few Departments where
+   each Department has a budget and a few Lecturers.
+   #+begin_src scala
+     case class Lecturer(firstName: String, lastName: String, salary: Int)
+     case class Department(budget: Int, lecturers: List[Lecturer])
+     case class University(name: String, departments: Map[String, Department])
+
+     val uni = University("oxford", Map(
+      "Computer Science" -> Department(45, List(Lecturer("john"  , "doe", 10),
+                                                Lecturer("robert", "johnson", 16))),
+      "History" -> Department(30, List(Lecturer("arnold", "stones", 20)))
+     ))
+   #+end_src
+
+** DONE How to remove or add elements in a ~Map~
+   CLOSED: [2019-05-10 Fri 15:17]
+   - Remove _History Departments_:
+     1. Find ~departments~
+        #+begin_src scala
+          import monocle.macros.GenLens  // require monocle-macro module
+
+          val departments = GenLens[University](_.departments)
+        #+end_src
+
+     2. Zoom into the ~Map~ at the ~"History"~ key using ~At~ /typeclass/:
+        #+begin_src scala
+          import monocle.function.At.at  // to get `at` Lens
+          import monocle.std.map._       // to get `Map` instances for `At`
+
+          val lens = departments composeLens at("History")
+          lens.set(None)(uni)
+          // res2: University =
+          //   University(oxford,Map(Computer Science -> Department(45,List(Lecturer(john,doe,10), Lecturer(robert,johnson,16)))))
+        #+end_src
+
+   - Add _physics_ department:
+     #+begin_src scala
+       val physics = Department(36, List(
+         Lecturer("daniel", "jones", 12),
+         Lecturer("roger", "smith", 14)
+       ))
+
+       val lens = departments composeLens at("Physics")
+       lens.set(Some(physics))(uni)
+       // res3: University =
+       //   University(oxford,
+       //              Map(Computer Science -> Department(45,List(Lecturer(john,doe,10), Lecturer(robert,johnson,16))),
+       //                  History -> Department(30,List(Lecturer(arnold,stones,20))),
+       //                  Physics -> Department(36,List(Lecturer(daniel,jones,12), Lecturer(roger,smith,14)))))
+     #+end_src
+
+** DONE How to update a field in a nested case class
+   CLOSED: [2019-05-10 Fri 15:48]
+   - Let's have a look at a more positive scenario where _all university lecturers
+     get a salary increase_.
+
+     1. We need to generate a few ~Lens~'es in order to zoom in the interesting
+        fields of our model.
+        #+begin_src scala
+          val lectures = GenLens[Department](_.lectures)
+          val salary = GenLens[Lecturer](_.salary)
+        #+end_src
+
+     2. We want to focus to *ALL* _university lecturers_, for this we can use ~Each~
+        /typeclass/ as it provides a ~Traversal~ which zooms into *ALL* elements
+        of a /container/ (e.g. ~List~, ~Vector~, ~Map~):
+        #+begin_src scala
+          import monocle.function.all._  // to get each and other typeclass based optics such as at or `headOption`
+          import monocle.Traversal
+
+          val allLecturers: Traversal[University, Lecturer] = (departments composeTraversal each composeLens
+                                                                 lectures composeTraversal each)
+          (allLecturers composeLens salary).modify(_ + 2)(uni)
+          // res5: University =
+          //   University(oxford,
+          //              Map(Computer Science -> Department(45,List(Lecturer(john,doe,12), Lecturer(robert,johnson,18))),
+          //                  History -> Department(30,List(Lecturer(arnold,stones,22)))))
+        #+end_src
+
+** DONE How to create your own ~Traversal~
+   CLOSED: [2019-05-10 Fri 15:56]
+   - We realised that our data is not formatted correctly, in particular first and last name are not upper cased. We can reuse the Traversal to all Lecturers we previously created but this time we need to zoom into the first character of both firstName and lastName.
+     You know the drill, first we need to create the Lenses we need.
+     #+begin_src scala
+       val firstName = GenLens[Lecturer](_.firstName)
+       val lastName = GenLens[Lecturer](_.lastName)
+     #+end_src
+
+   - Then, we can use ~Cons~ /typeclass/ which provides both ~headOption~ and
+     ~tailOption~ /optics/.
+     In our case, we want to use ~headOption~ to zoom into the _first character_
+     of a ~String~
+     #+begin_src scala
+       import monocle.std.string._  // to get `String` instance for `Cons`
+
+       val upperCasedFirstName = (allLecturers composeLens firstName composeOptional headOption).modify(_.toUpper)(uni)
+       // upperCasedFirstName: University =
+       //   University(oxford,
+       //              Map(Computer Science -> Department(45,List(Lecturer(John,doe,10), Lecturer(Robert,johnson,16))),
+       //                  History -> Department(30,List(Lecturer(Arnold,stones,20)))))
+
+       (allLecturers composeLens lastName composeOptional headOption).modify(_.toUpper)(upperCasedFirstName)
+       // res6: University =
+       //   University(oxford,
+       //              Map(Computer Science -> Department(45,List(Lecturer(John,Doe,10), Lecturer(Robert,Johnson,16))),
+       //                  History -> Department(30,List(Lecturer(Arnold,Stones,20)))))
+     #+end_src
+
+   - It is annoying that we have to call modify on first name and then repeat the
+     same action on last name.
+       Ideally, we would like to _focus to both_ first and last name.
+
+     _To do that we need to create our own ~Traversal~._
+     #+begin_src scala
+       val firstAndLastNames =
+         Traversal.apply2[Lecturer, String](_.firstName, _.lastName){ case (fn, ln, l) =>
+           l.copy(firstName = fn, lastName = ln)
+         }
+
+       val lens = (allLecturers composeTraversal firstAndLastNames composeOptional headOption)
+
+       lens.modify(_.toUpper)(uni)
+       // res7: University =
+       //   University(oxford,
+       //              Map(Computer Science -> Department(45,List(Lecturer(John,Doe,10), Lecturer(Robert,Johnson,16))),
+       //                  History -> Department(30,List(Lecturer(Arnold,Stones,20)))))
+     #+end_src
+
+* TODO FAQ
+** TODO Which imports are required to use typeclass based optics such as at, each, headOption?
+** TODO What is the difference between at and index? When should I use one or the other?
+* TODO Release Notes
+** 2.0.1
+** 2.0.0 (cats only)
+** 1.6.0 (scalaz only, last major release with scalaz)
+** 1.5.0 and 1.5.0-cats
+** etc.
+
+* TODO Learning Resources
+** Presentations
+** Blog Posts
+** Other Optics Libraries
+** Resources in Japanese
+** Resources in Korean
+

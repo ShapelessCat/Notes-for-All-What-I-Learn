@@ -1,0 +1,546 @@
+#+TITLE: High Performance Spark
+#+SUBTITLE: Best Practices for Scaling and Optimizaing Apache Spark
+#+VERSION: 2017
+#+AUTHOR: Holden Karau, Rachel Warren
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface - ix
+* TODO 1. Introduction to High Performance Spark - 1
+** TODO What Is Spark and Why Performance Matters - 1
+** TODO What You Can Expect to Get from This Book - 2 - =Re-READ=
+** DONE Spark Versions - 3
+   CLOSED: [2018-10-14 Sun 02:01]
+   - Spark follows /semantic versioning/ with the standard
+     *[MAJOR].[MINOR].[MAINTENANCE]*.
+
+   - Spark also tries for /binary API compatibility/ between releases, using MiMa;
+     You generally should NOT need to recompile if you use a stable API of the
+     same major version.
+
+   - *TIP*
+     This book was created using the *Spark 2.0.1 APIs*.
+
+** Why Scala? - 3
+*** To Be a Spark Expert You Have to Learn a Little Scala Anyway - 3
+*** The Spark Scala API Is Easier to Use Than the Java API - 4
+*** Scala Is More Performant Than Python - 4
+*** Why Not Scala? - 4
+*** Learning Scala - 5
+
+** Conclusion - 6
+
+* TODO 2. How Spark Works - 7
+** How Spark Fits into the Big Data Ecosystem - 8
+*** Spark Components - 8
+
+** Spark Model of Parallel Computing: RDDs - 10
+*** Lazy Evaluation - 11
+*** In-Memory Persistence and Memory Management - 13
+*** Immutability and the RDD Interface - 14
+*** Types of RDDs - 16
+*** Functions on RDDs: Transformations Versus Actions - 17
+*** Wide Versus Narrow Dependencies - 17
+
+** Spark Job Scheduling - 19
+*** Resource Allocation Across Applications - 20
+*** The Spark Application - 20
+
+** The Anatomy of a Spark Job - 22
+*** The DAG - 22
+*** Jobs - 23
+*** Stages - 23
+*** Tasks - 24
+
+** Conclusion - 26
+
+* TODO 3. DataFrames, Datasets, and Spark SQL - 27
+  - /Spark SQL/ and its /DataFrames/ and /Datasets/ /interfaces/ are the future of
+    Spark _PERFORMANCE_, with
+    + _MORE efficient storage options_
+    + _advanced optimizer_
+    + _direct operations on serialized data_
+    *These components are super important for getting the best of Spark performance.*
+    Figure 3-1 can illustrate this point!!!
+
+  - These are relatively _NEW_ components:
+    + /Datasets/ were introduced in _Spark 1.6_;
+    + /DataFrames/ in _Spark 1.3_;
+    + /SQL engine/ in _Spark 1.0_.
+
+  - *Chapter Target*
+    This chapter is focused on helping you learn
+    + how to best use /Spark SQL's tools/
+      and
+    + how to *intermix* /Spark SQL/ with _traditional Spark operations_.
+
+  - Like /RDDs/, /DataFrames/ and /Datasets/ represent /distributed collections/,
+    with ADDITIONAL *schema information* NOT FOUND in /RDDs/.
+    + This /additional schema information/ is used to provide a more efficient
+      storage layer (Tungsten), and in the optimizer (Catalyst) to perform
+      additional optimizations.
+
+    + Beyond /schema information/, the operations performed on /Datasets/ and
+      /DataFrames/ are such that the optimizer can inspect the logical meaning
+      rather than arbitrary functions.
+
+    + /DataFrames/ are /Datasets/ of a special ~Row~ object, which does _NOT provide_
+      any /compile-time type/ checking.
+
+    + The /strongly typed/ /Dataset/ API shines especially for use with more RDD-like
+      functional operations.
+
+    + Compared to working with /RDDs/, /DataFrames/ allow Spark's optimizer to
+      better understand our code and our data, which allows for a new class of
+      optimizations we explore in “Query Optimizer” on page 69.
+      =TODO=
+      =TODO=
+
+  - NOTE: TODO
+
+** DONE Getting Started with the ~SparkSession~ (or ~HiveContext~ or ~SQLContext~) - 28
+   CLOSED: [2019-06-04 Tue 23:37]
+   - ~SparkContext~ is the _entry point_ for ALL /Spark applications/;
+     ~StreamingContext~ is for all /streaming applications/;
+     ~SparkSession~ serves as the _entry point_ for /Spark SQL/.
+
+   - TODO
+   - TODO
+   - TODO
+
+   - Note:
+     /Spark shell/ automatically provide a /SparkSession/ called ~spark~ to
+     accompany the ~SparkContext~ called ~sc~.
+
+   - When you work with /Spark SQL/, you usually need some imports
+     Example 3-1. Spark SQL imports
+     #+begin_src scala
+       import org.apache.spark.sql.{Dataset, DataFrame, SparkSession, Row}
+       import org.apache.spark.sql.catalyst.expressions.aggregate._
+       import org.apache.spark.sql.expressions._
+       import org.apache.spark.sql.functions._
+     #+end_src
+
+   - CAUTION:
+     In Scala ~DataFrame~ is ~Dataset[Row]~.
+     This is broken in Java -- use ~Dataset<Row>~ instead.
+
+   - ~SparkSession~ is generally created using the builder pattern, _along with_
+     ~getOrCreate()~, which will return an existing session if one is already
+     running.
+
+** TODO Spark SQL Dependencies - 30
+   - To *enable* _Hive support_ in ~SparkSession~ or use the ~HiveContext~ you
+     will need to add both Spark's _SQL and Hive components_ to your _dependencies_.
+
+   - Add /Spark SQL/ and /Hive/ component to "regular" sbt build
+     #+BEGIN_SRC scala
+       // sbt
+       libraryDependencies ++= Seq(
+         "org.apache.spark" %% "spark-sql" % "2.0.0",
+         "org.apache.spark" %% "spark-hive" % "2.0.0"
+       )
+     #+END_SRC
+
+*** DONE Managing Spark Dependencies - 31
+    CLOSED: [2018-10-14 Sun 14:22]
+    - Use sbt-spark-package plug-in to SIMPLIFY manage Spark dependencies.
+
+      This plug-in is normally used for creating community packages
+      =TODO= (discussed in “Creating a Spark Package” on page 271),
+      BUT also assist in building software that depends on Spark.
+
+      + Including sbt-spark-package in =project/plugins.sbt=
+        #+BEGIN_SRC scala
+          // sbt
+          resolvers += ["Spark Package Main Repo" at "https://dl.bintray.com/spark-packages/mave"]
+
+          addSbtPlugin("org.spark-packages" % "sbt-spark-package" % "0.2.5")
+        #+END_SRC
+
+    - For _spark-packages_ to work you will need to specify
+      + a Spark version
+        and
+      + at least one Spark component (core),
+
+      which can be done in sbt settings
+      #+BEGIN_SRC scala
+        // sbt
+        sparkVersion := "2.1.0"
+        sparkComponents ++ Seq("core")
+      #+END_SRC
+
+    - If you use _sbt-spark-package_ plug-in, you can add SQL and Hive componenets
+      in a simpler way like: =from Jian= *??? without specify in ~libraryDependencies~ ???*
+      ~sparkComponents ++ Seq("sql", "hive", "hive-thriftserver")~
+
+    - You can use existing /Hive Metastore/ to which you wish to connect with Spark by
+      copying your =hive-site.xml= to Spark's =conf/= directory.
+
+    - *TIP* =TODO=
+      Hive Metastore version
+
+*** TODO Avoiding Hive JARs - 32
+
+** DONE Basics of Schemas - 33
+   CLOSED: [2019-06-04 Tue 23:37]
+   - JSON data and its equivalent /case class/
+     + JSON
+       #+BEGIN_SRC json
+         {
+             "name": "mission",
+             "pandas": [{"id":1,"zip":"94110","pt":"giant", "happy":true, "attributes":[0.4,0.5]}]
+         }
+       #+END_SRC
+
+     + Schema
+       #+BEGIN_SRC scala
+         case class RawPanda(id: Long, zip: String, pt: String, happy: Boolean, attributes: Array[Double])
+         case class PandaPlace(name: String, pandas: Array[RawPanda])
+       #+END_SRC
+
+   - Example 3-14. Create a Dataset with the /case classes/:
+     #+BEGIN_SRC scala
+       def createAndPrintSchema() = {
+         val damao = RawPanda(1, "M1B 5K7", "giant", true, Array(0.1, 0.1))
+         val pandaPlace = PandaPlace("toronto", Array(damao))
+         val df = session.createDataFrame(Seq(pandaPlace))
+         df.printSchema()
+       }
+
+       //  root
+       //   |-- name: string (nullable = true)
+       //   |-- pandas: array (nullable = true)
+       //   |    |-- element: struct (containsNull = true)
+       //   |    |    |-- id: long (nullable = false)
+       //   |    |    |-- zip: string (nullable = true)
+       //   |    |    |-- pt: string (nullable = true)
+       //   |    |    |-- happy: boolean (nullable = false)
+       //   |    |    |-- attributes: array (nullable = true)
+       //   |    |    |    |-- element: double (containsNull = false)
+     #+END_SRC
+
+   - Table 3-1. Basic Spark SQL types
+     |------------------------+-----------------+--------------------------------------------------------------------|
+     | Scala type             | SQL type        | Details                                                            |
+     |------------------------+-----------------+--------------------------------------------------------------------|
+     | ~Byte~                 | ~ByteType~      | 1-byte signed integers (-128, 127)                                 |
+     | ~Short~                | ~ShortType~     | 2-byte signed integers (–32768,32767)                              |
+     | ~Int~                  | ~IntegerType~   | 4-byte signed integers (–2147483648,2147483647)                    |
+     | ~Long~                 | ~LongType~      | 8-byte signed integers (–9223372036854775808, 9223372036854775807) |
+     | ~java.math.BigDecimal~ | ~DecimalType~   | Arbitrary precision signed decimals                                |
+     | ~Float~                | ~FloatType~     | 4-byte floating-point number                                       |
+     | ~Double~               | ~DoubleType~    | 8-byte floating-point number                                       |
+     | ~Array[Byte]~          | ~BinaryType~    | Array of bytes                                                     |
+     | ~Boolean~              | ~BooleanType~   | true/false                                                         |
+     | ~java.sql.Date~        | ~DateType~      | Date without time information                                      |
+     | ~java.sql.Timestamp~   | ~TimestampType~ | Date with time information (second precision)                      |
+     | ~String StringType~    | ~Character~     | string values (stored as UTF8)                                     |
+     |------------------------+-----------------+--------------------------------------------------------------------|
+
+   - Table 3-2. Complex Spark SQL types
+     - Schema: Scala type, SQL type, Details, Example
+     - Row:
+       + ~Array[T]~,
+         ~ArrayType(elementType, containsNull)~,
+         same type values,
+         ~Array[Int] => ArrayType(IntegerType, true)~
+
+       + ~Map[K, V]~,
+         ~MapType(elementType, valueType, valueContainsNull)~,
+         Key/value map,
+         ~Map[String, Int] => MapType(StringType, IntegerType, ture)~
+
+       + ~case class~,
+         ~StructType(List[StructFields])~,
+         possible heterogeneous types (similar to /case class/ or JavaBean),
+         ~case class Panda(name: String,~
+
+     - Tips:
+       As you saw, you can nest ~StructField~'s and all of the complex Spark SQL types.
+
+     - Tips:
+       /Spark SQL schemas/ are *eagerly evaluated*, unlike the data underneath.
+       So in the shell you can fill free to print the /schema/ _WITHOUT_ any fear
+       about triggering content data evaluation.
+
+** ~DataFrame~ API - 36
+   - /Spark SQL/'s ~DataFrame~ API allows us to work with ~DataFrame~'s
+     *WITHOUT* having to
+     + register temporary tables
+       or
+     + generate SQL expressions.
+
+     The ~DataFrame~ API has both /transformations/ and /actions/.
+
+   - The /transformations/ on /DataFrame/'s are more relational in nature, with
+     the /Dataset/ API (covered next) offering a more functional-style API.
+
+*** TODO Transformations - 36
+    - *CAUTION*
+      /Spark SQL transformations/ are only *PARTIALLY* /lazy/ -- the /schema/ is
+      *eagerly evaluated*.
+
+**** Simple ~DataFrame~ transformations and SQL expressions - 37
+     - Simple ~DataFrame~ /transformations/ allow us to do most of the standard
+       things one can do when working a row at a time.2
+       + footnote 2: A row at a time allows for narrow transformations with no shuffle.
+         =TODO= =???= =TODO=
+
+     - ~DataFrame~ /functions/, like ~filter~, accept /Spark SQL expressions/,
+       which allow the optimizer to understand what the condition represents,
+       INSTEAD OF /lambdas/.
+
+     - Example 3-18. Simple filter for unhappy pandas
+       #+begin_src scala
+         pandaInfo.filter(pandaInfo("happ") =!= true)
+       #+end_src
+
+     - Tips:
+       To look up the column, we can either provide the column name on the
+       specific ~DataFrame~ or use the _implicit_ ~$~ /operator/ for _column
+       lookup_.
+
+       + This is especially useful when the ~DataFrame~ is anonymous.
+         _USE CASE_
+         The ~!~ binary negation function can be used together with ~$~ to
+         simplify our expression from Example 3-18 down to ~df.filter(!$("happy"))~.
+
+     - This illustrates how to access a specific column from a DataFrame.
+       For accessing other structures inside of DataFrames, like nested structs,
+       keyed maps, and array elements, use the same apply syntax. So, if the
+       first element in the attributes array represent squishiness, and you only
+       want very squishy pandas, you can access that element by writing
+       df("attributes")(0) >= 0.5.
+
+     - Our expressions need not be limited to a single column. You can compare multiple
+       columns in our “filter” expression. Complex filters like that shown in
+       Example 3-19 are more difficult to push down to the storage layer, so you
+       may not see the same speedup over RDDs that you see with simpler filters.
+
+     - Example 3-19. More complex filter
+       #+begin_src scala
+         pandaInfo.filter(
+           pandaInfo("happy").and(pandaInfo("attributes")(0) > pandaInfo("attributes")(1))
+         )
+       #+end_src
+
+     - CAUTION:
+       Spark SQL's /column operators/ are defined on the /column class/, so a
+       filter containing the expression ~0 >= df.col("friends")~ will _not compile_
+       since Scala will use the ~>=~ defined on ~0~.
+         Instead you would write ~df.col("friend") <= 0~ or convert ~0~ to a
+       /column/ literal with ~lit~.
+       + footnote 3: A /column literal/ is a _column with a fixed value_ that
+         does NOT change between rows (i.e., constant).
+
+**** Specialized ~DataFrame~ transformations for missing and noisy data - 42
+     -
+
+**** Beyond row-by-row transformations - 42
+**** Aggregates and ~groupBy~ - 43
+**** Windowning - 46
+**** Sorting - 48
+
+*** TODO Multi-DataFrame Transformations - 48
+**** Set-like operations - 48
+
+*** TODO Plain Old SQL Queries and Interacting with Hive Data - 49
+
+** Data Representation in ~DataFrame~'s and ~Dataset~'s - 49
+*** Tungsten - 50
+
+** Data Loading and Saving Functions - 51
+*** ~DataFrameWriter~ and ~DataFrameReader~ - 51
+*** Formats - 52
+*** Save Modes - 61
+*** Partitions (Discovery and Writing) - 61
+
+** ~Dataset~'s - 62
+*** Interoperability with RDDs, DataFrames, and Local Collections - 62
+*** Compile-Time Strong Typing - 64
+*** Easier Functional (RDD “like”) Transformations - 64
+*** Relational Transformations - 64
+*** Multi-Dataset Relational Transformations - 65
+*** Grouped Operations on Datasets - 65
+
+** Extending with User-Defined Functions and Aggregate Functions (UDFs, UDAFs) - 66
+** Query Optimizer - 69
+*** Logical and Physical Plans - 69
+*** Code Generation - 69
+*** Large Query Plans and Iterative Algorithms - 70
+
+** Debugging Spark SQL Queries - 70
+** JDBC/ODBC Server - 70
+** Conclusion - 72
+
+* TODO 4. Joins (SQL and Core) - 73
+** Core Spark Joins - 73
+*** Choosing a Join Type - 75
+*** Choosing an Execution Plan - 76
+
+** Spark SQL Joins - 79
+*** DataFrame Joins - 79
+*** Dataset Joins - 83
+
+** Conclusion - 84
+
+* TODO 5. Effective Transformations - 85
+** Narrow Versus Wide Transformations - 86
+*** Implications for Performance - 88
+*** Implications for Fault Tolerance - 89
+*** The Special Case of coalesce - 89
+
+** What Type of RDD Does Your Transformation Return? - 90
+** Minimizing Object Creation - 92
+*** Reusing Existing Objects - 92
+*** Using Smaller Data Structures - 95
+
+** Iterator-to-Iterator Transformations with mapPartitions - 98
+*** What Is an Iterator-to-Iterator Transformation? - 99
+*** Space and Time Advantages - 100
+*** An Example - 101
+
+** Set Operations - 104
+** Reducing Setup Overhead - 105
+*** Shared Variables - 106
+*** Broadcast Variables - 106
+*** Accumulators - 107
+
+** Reusing RDDs - 112
+*** Cases for Reuse - 112
+*** Deciding if Recompute Is Inexpensive Enough - 115
+*** Types of Reuse: Cache, Persist, Checkpoint, Shuffle Files - 116
+*** Alluxio (nee Tachyon) - 120
+*** LRU Caching - 121
+*** Noisy Cluster Considerations - 122
+*** Interaction with Accumulators - 123
+
+** Conclusion - 124
+
+* TODO 6. Working with Key/Value Data - 125
+** The Goldilocks Example - 127
+*** Goldilocks Version 0: Iterative Solution - 128
+*** How to Use PairRDDFunctions and OrderedRDDFunctions - 130
+
+** Actions on Key/Value Pairs - 131
+** What’s So Dangerous About the groupByKey Function - 132
+*** Goldilocks Version 1: groupByKey Solution - 132
+
+** Choosing an Aggregation Operation - 136
+*** Dictionary of Aggregation Operations with Performance Considerations - 136
+
+** Multiple RDD Operations - 139
+*** Co-Grouping - 139
+
+** Partitioners and Key/Value Data - 140
+*** Using the Spark Partitioner Object - 142
+*** Hash Partitioning - 142
+*** Range Partitioning - 142
+*** Custom Partitioning - 143
+*** Preserving Partitioning Information Across Transformations - 144
+*** Leveraging Co-Located and Co-Partitioned RDDs - 144
+*** Dictionary of Mapping and Partitioning Functions PairRDDFunctions - 146
+
+** Dictionary of OrderedRDDOperations - 147
+*** Sorting by Two Keys with SortByKey - 149
+
+** Secondary Sort and repartitionAndSortWithinPartitions - 149
+*** Leveraging repartitionAndSortWithinPartitions for a Group by Key and Sort Values Function - 150
+*** How Not to Sort by Two Orderings - 153
+*** Goldilocks Version 2: Secondary Sort - 154
+*** A Different Approach to Goldilocks - 157
+*** Goldilocks Version 3: Sort on Cell Values - 162
+
+** Straggler Detection and Unbalanced Data - 163
+*** Back to Goldilocks (Again) - 165
+*** Goldilocks Version 4: Reduce to Distinct on Each Partition - 165
+
+** Conclusion - 171
+
+* TODO 7. Going Beyond Scala - 173
+** Beyond Scala within the JVM - 174
+** Beyond Scala, and Beyond the JVM - 178
+*** How PySpark Works - 179
+*** How SparkR Works - 187
+*** Spark.jl (Julia Spark) - 189
+*** How Eclair JS Works - 190
+*** Spark on the Common Language Runtime (CLR)—C# and Friends - 191
+
+** Calling Other Languages from Spark - 191
+*** Using Pipe and Friends - 191
+*** JNI - 193
+*** Java Native Access (JNA) - 196
+*** Underneath Everything Is FORTRAN - 196
+*** Getting to the GPU - 198
+
+** The Future - 198
+** Conclusion - 198
+
+* TODO 8. Testing and Validation - 201
+** Unit Testing - 201
+*** General Spark Unit Testing - 202
+*** Mocking RDDs - 206
+
+** Getting Test Data - 208
+*** Generating Large Datasets - 208
+*** Sampling - 209
+
+** Property Checking with ScalaCheck - 211
+*** Computing RDD Difference - 211
+
+** Integration Testing - 214
+*** Choosing Your Integration Testing Environment - 214
+
+** Verifying Performance - 215
+*** Spark Counters for Verifying Performance - 215
+*** Projects for Verifying Performance - 216
+
+** Job Validation - 216
+** Conclusion - 217
+
+* TODO 9. Spark MLlib and ML - 219
+** Choosing Between Spark MLlib and Spark ML - 219
+** Working with MLlib - 220
+*** Getting Started with MLlib (Organization and Imports) - 220
+*** MLlib Feature Encoding and Data Preparation - 221
+*** Feature Scaling and Selection - 226
+*** MLlib Model Training - 226
+*** Predicting - 227
+*** Serving and Persistence - 228
+*** Model Evaluation - 230
+
+** Working with Spark ML - 231
+*** Spark ML Organization and Imports - 231
+*** Pipeline Stages - 232
+*** Explain Params - 233
+*** Data Encoding - 234
+*** Data Cleaning - 236
+*** Spark ML Models - 237
+*** Putting It All Together in a Pipeline - 238
+*** Training a Pipeline - 239
+*** Accessing Individual Stages - 239
+*** Data Persistence and Spark ML - 239
+*** Extending Spark ML Pipelines with Your Own Algorithms - 242
+*** Model and Pipeline Persistence and Serving with Spark ML - 250
+
+** General Serving Considerations - 250
+** Conclusion - 251
+
+* TODO 10. Spark Components and Packages - 253
+** Stream Processing with Spark - 255
+*** Sources and Sinks - 255
+*** Batch Intervals - 257
+*** Data Checkpoint Intervals - 258
+*** Considerations for DStreams - 259
+*** Considerations for Structured Streaming - 260
+*** High Availability Mode (or Handling Driver Failure or Checkpointing) - 268
+
+** GraphX - 269
+** Using Community Packages and Libraries - 269
+*** Creating a Spark Package - 271
+
+** Conclusion - 272
+
+* TODO A. Tuning, Debugging, and Other Things Developers Like to Pretend Don’t Exist - 273
+* TODO Index - 323

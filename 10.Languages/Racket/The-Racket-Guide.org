@@ -1,0 +1,4493 @@
+#+TITLE: The Racket Guide
+#+VERSION: v.8.0
+#+AUTHOR: Matthew Flatt, Robert Bruce Findler, and PLT
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE 1 Welcome to Racket
+  CLOSED: [2020-10-22 Thu 14:23]
+  - Racket's main tools are
+    + ~racket~:
+      the /core compiler/, /interpreter/, and /run-time system/;
+
+    + DrRacket:
+      the programming environment
+
+    + ~raco~:
+      a command-line tool for executing *Ra*-cket *co*-mmands that
+      * install packages,
+      * build libraries,
+      * and more.
+
+** DONE 1.1 Interacting with Racket
+   CLOSED: [2020-10-22 Thu 02:59]
+** DONE 1.2 Definitions and Interactions
+   CLOSED: [2020-10-22 Thu 03:05]
+   - When using DrRacket, we usually
+     1. Put definitions in the /definition area/;
+     2. Use the definitions in the REPL.
+
+   - When using command-line ~racket~ instead of DrRacket,
+     you'd
+     1. *SAVE* the defintions text in a file.
+     2. If you save it as _"extract.rkt"_,
+        then after starting ~racket~ in the _same directory_, you'd evaluate the
+        following sequence:
+        #+begin_src racket
+          (enter! "extract.rkt")
+          (extract "the gal out of the city")
+        #+end_src
+        + Here the ~enter!~ form both
+          * *loads* the code and
+          * *switches* the /evaluation context/ to the *inside* of the /module/,
+            just like DrRacket's *Run* button.
+     
+** DONE 1.3 Creating Executables
+   CLOSED: [2020-10-22 Thu 14:23]
+   - One way to run a Racket program: ~racket <src-filename>~
+
+   - To package the program as an _executable_, you have a few options:
+     + In DrRacket, you can select the *Racket|Create Executable...* menu item.
+
+     + From a command-line prompt, run =raco exe ‹src-filename›=,
+       where =‹src-filename›= contains the program. See "raco exe: Creating
+       Stand-Alone Executables" for more information.
+
+     + In *nix sytems,
+       1. insert the line ~#! /user/bin/env racket~ at the very beginning of the
+          file;
+          * Rememver to put a space after ~#!~ 
+       2. ~chmod +x <filename>~.
+     
+** DONE 1.4 A Note to Readers with Lisp/Scheme Experience
+   CLOSED: [2020-10-22 Thu 03:16]
+   If you already know something about Scheme or Lisp, you might be tempted to
+   put just
+   #+begin_src racket
+     (define (extract str)
+       (substring str 4 7))
+   #+end_src
+   
+   into _"extract.rktl"_ and run ~racket~ with
+   
+   #+begin_src racket
+     (define (extract str)
+       (substring str 4 7))
+   #+end_src
+   
+   - Conclusion:
+     It works, because ~racket~ is willing to *imitate* a traditional Lisp
+     environment,
+     + _BUT_ don't do that!!!!!!!!! The reasons:
+       * Writing definitions *outside* of a /module/ leads to
+         - bad error messages,
+         - bad performance, and
+         - awkward scripting to combine and run programs.
+
+       * The problems are NOT specific to ~racket~;
+         =from Jian= Try to learn more!!!!!!!!! =TODO=
+         they're *fundamental limitations* of the TRADITIONAL *top-level
+         environment*, which Scheme and Lisp implementations have historically
+         fought with ad hoc command-line flags, compiler directives, and build
+         tools.
+         - The /module system/ is designed to *avoid* these problems, so start
+           with ~#lang~, and you'll be happier with Racket in the long run.
+
+     + =from Jian=
+       You may notice the extension used above is _.rktl_.
+       The _.rktl_ and _.rkts_ /file extensions/ are used for files meant to be
+       *loaded at the top-level* that are *NOT modules.*
+       + They
+         * *don't necessarily* have a ~#lang ....~ line at the top,
+         * *must be loaded* in some external environment with ~load~ INSTEAD OF
+           imported with ~require~.
+       
+* DONE 2 Racket Essentials
+  CLOSED: [2020-10-08 Thu 03:56]
+  This chapter provides a quick introduction to Racket as background for the
+  rest of the guide. Readers with some Racket experience can safely skip to
+  Built-In Datatypes.
+
+** DONE 2.1 Simple Values
+   CLOSED: [2020-10-04 Sun 23:34]
+   - /Racket values/ include /numbers/, /booleans/, /strings/, and /byte strings/.
+
+   - In DrRacket and documentation examples (when you read the documentation in
+     color), _value expressions are shown in green._
+
+   - /Numbers/ are written in the usual way, including /fractions/ and /imaginary
+     numbers/:
+     #+begin_src racket
+       1
+       1/2
+       1+2i
+
+       3.14
+       6.02e+23
+       9999999999999999999999
+     #+end_src
+     + =TODO= More about /Numbers/ later.
+
+   - /Booleans/ are ~#t~ for /true/ and ~#f~ for /false/.
+     In conditionals, however, _all /non-~#f~ values/ are treated as /true/._
+     + =TODO= More about /Booleans/ later.
+
+   - /Strings/ are written between doublequotes.
+     Within a string, backslash is an /escaping character/;
+     #+begin_src racket
+       "Hello, world!"
+       "Benjamin \"Bugsy\" Siegel"
+       "λx:(μα.α→α).xx"
+     #+end_src
+
+     + for example, a backslash followed by a doublequote includes a /literal
+       doublequote/ in the string.
+
+     + _EXCEPT_ for an *unescaped* doublequote or backslash,
+       ANY Unicode character can appear in a /string constant/.
+
+     + =TODO= More about /Strings (Unicode)/ later.
+
+   - In REPL, the /string literal/ will be displayed in normalized form
+     #+begin_src racket
+       "Bugs \u0022Figaro\u0022 Bunny"
+       ;; "Bugs \"Figaro\" Bunny"
+     #+end_src
+
+** DONE 2.2 Simple Definitions and Expressions
+   CLOSED: [2020-10-08 Thu 03:56]
+   - A /program module/ is written as
+     #+begin_src racket
+       #lang <langname> <topform>*
+     #+end_src
+     + A ~<topform>~ is
+       * either a ~<definition>~
+       * or an ~<expr>~
+
+     + The REPL also evaluates ~<topform>~'s.
+
+   - In syntax specifications,
+     + text with a _gray background_:
+       such as ~#lang~, represents /literal text/.
+
+     + _Whitespace_ must appear between such /literals/ and /nonterminals/ like
+       ~<id>~, except that _whitespace_ is not required BEFORE or AFTER ~(~, ~)~,
+       ~[~, or ~]~.
+
+     + A comment:
+       starts with ~;~ and _runs until the end of the line_, is treated the SAME AS
+       _whitespace_.
+       * The "Reading Comments" section in _The Racket Reference_ provides _MORE
+         on DIFFERENT forms_ of /comments/.
+
+   - Following the usual conventions,
+     + ~*~ in a grammar:
+       *ZERO or more repetitions* of the preceding element,
+
+     + ~+~:
+       *ONE or more repetitions* of the preceding element,
+
+     + ~{}~ *groups* _a sequence_ AS AN element for repetition.
+
+*** DONE 2.2.1 Definitions
+    CLOSED: [2020-10-08 Thu 03:20]
+    - Bind ~<id>~ to the result of ~<expr>~:
+      #+begin_src racket
+        ( define <id> <expr> )
+      #+end_src
+
+    - Bind ~<id>~ to a /function/ (also called a /procedure/) that takes /arguments/
+      as _named by_ the remaining ~<id>~'s.
+      #+begin_src racket
+        ( define ( <id> <id>* ) <expr>+ )
+      #+end_src
+      + When the /function/ is called, it returns the result of the *LAST* ~<expr>~.
+        Mostly, all the other ~<expr>~'s are there for /side effect/.
+
+    - "Definitions: define" (later in this guide) explains more about definitions.
+
+*** DONE 2.2.2 An Aside on Indenting Code
+    CLOSED: [2020-10-08 Thu 03:23]
+*** DONE 2.2.3 Identifiers
+    CLOSED: [2020-10-08 Thu 03:26]
+    - Racket's syntax for /identifiers/ is especially LIBERAL.
+      *Excluding* the special characters:
+      + (
+      + )
+
+      + [
+      + ]
+
+      + {
+      + }
+
+      + "
+      + '
+      + `
+
+      + ,
+      + ;
+      + #
+      + |
+      + \
+
+    - "Identifiers and Binding" (later in this guide) explains more about identifiers.
+
+*** DONE 2.2.4 Function Calls (Procedure Applications)
+    CLOSED: [2020-10-08 Thu 03:29]
+    - /Function Calls/ \equiv{} /Procedure Applications/
+      /Procedure Applications/ is a more traditional terminology.
+
+    - Syntax:
+      #+begin_src racket
+        ( <id> <expr>* )
+      #+end_src
+
+    - "Function Calls" (later in this guide) explains more about function calls.
+
+*** DONE 2.2.5 Conditionals with ~if~, ~and~, ~or~, and ~cond~
+    CLOSED: [2020-10-08 Thu 03:39]
+    Syntax:
+    #+begin_src racket
+      ( if ‹expr› ‹expr› ‹expr› )
+
+      ( and ‹expr›* )
+      ( or ‹expr›* )
+
+      ( cond {[ ‹expr› ‹expr›* ]}* )
+      ;; The last clause can use `else` as a synonym for a `#t` test expression.
+    #+end_src
+    + ~[~ and ~]~ are interchangeable with ~(~ and ~)~, as long as ~(~ can matche ~)~,
+      and ~[~ can matche ~]~. Their usages in the ~cond~ sytnax are the convention
+      of Racket.
+
+*** DONE 2.2.6 Function Calls, Again
+    CLOSED: [2020-10-08 Thu 03:45]
+    The grammar of /function calls/ in the previous section 2.2.4 is
+    _oversimplified_. The general syntax is:
+    #+begin_src racket
+      ( <expr> <expr>* )
+    #+end_src
+
+*** DONE 2.2.7 Anonymous Functions with ~lambda~
+    CLOSED: [2020-10-08 Thu 03:50]
+    Syntax
+    #+begin_src racket
+      ( lambda ( <id>* ) <expr>+ )
+    #+end_src
+    - *if possible*, the compiler *infers* a _NAME_, anyway,
+      TO make printing and error reporting as informative as possible.
+      #+begin_src racket
+        (define (louder s)
+          (string-append s "!"))
+
+        (define louder
+          (lambda (s)
+            (string-append s "!")))
+      #+end_src
+      When evaluate ~louder~ from each of the definitions above, we can get
+      ~#<procedure:louder>~.
+
+*** DONE 2.2.8 Local Binding with ~define~, ~let~, and ~let*~
+    CLOSED: [2020-10-08 Thu 03:56]
+
+    - /Local binding/ with ~define~
+      #+begin_src racket
+        ( define ( ‹id› ‹id›* ) ‹definition›* ‹expr›+ )
+        ( lambda ( ‹id›* ) ‹definition›* ‹expr›+ )
+      #+end_src
+
+    - /Local binding/ with ~let~:
+      #+begin_src racket
+        ( let ( {[ ‹id› ‹expr› ]}* ) ‹expr›+ )
+      #+end_src
+      The bindings of a ~let~ form are available *ONLY* in the BODY of the ~let~.
+      * ~let*~, in contrast, allows LATER /binding clauses/ to use EARLIER /bindings/.
+
+** DONE 2.3 Lists, Iteration, and Recursion
+   CLOSED: [2020-10-08 Thu 10:46]
+   - /List/ construction: ~list~
+
+   - ~length~, ~list-ref~, ~append~, ~reverse~, and ~member~
+
+*** DONE 2.3.1 Predefined List Loops
+    CLOSED: [2020-10-08 Thu 10:34]
+    - ~map~
+
+    - ~andmap~ and ~ormap~
+
+    - ~map~, ~andmap~, and ~ormap~ can handle multiple /lists/:
+      #+begin_src racket
+        (map (lambda (s n) (substring s 0 n))
+             (list "peanuts" "popcorn" "crackerjack")
+             (list 6 3 7))
+      #+end_src
+
+    - ~filter~
+
+    - ~foldl~
+      #+begin_src racket
+        (foldl (lambda (elem v)
+                 (+ v (* elem elem)))
+               0
+               '(1 2 3))
+      #+end_src
+
+    - =TODO=
+      /List comprehensions/ and related _iteration forms_ are described in
+      "Iterations and Comprehensions".
+
+*** DONE 2.3.2 List Iteration from Scratch
+    CLOSED: [2020-10-08 Thu 10:37]
+    - A /Racket list/ is a /linked list/, the _two_ core operation on a _non-empty_
+      /list/ are:
+      + ~first~
+      + ~rest~
+
+    - ~cons~
+
+    - ~empty?~ and ~cons?~
+
+*** DONE 2.3.3 Tail Recursion
+    CLOSED: [2020-10-08 Thu 10:41]
+*** DONE 2.3.4 Recursion versus Iteration
+    CLOSED: [2020-10-08 Thu 10:45]
+
+** DONE 2.4 Pairs, Lists, and Racket Syntax - =RE-READ=
+   CLOSED: [2020-10-22 Thu 20:56]
+   - ~cons~ can accept *ANY* TWO values, *NOT* just a /list/ for the _second_
+     argument.
+
+   - In general, the results of ~cons~ are /pairs/.
+     + Of course, /lists/ are /paris/.
+
+   - If a /pair/ is not a /list/, it will be printed with dots.
+
+   - The more traditional name for the ~cons?~ is ~pair?~.
+
+   - Racket's /pair/ _datatype_ and its relation to /lists/ is essentially a
+     _historical curiosity_, along with the /dot notation/ for printing and the
+     funny names ~car~ and ~cdr~.
+       /Pairs/ are deeply wired into to the culture, specification, and
+     implementation of Racket, however, so they survive in the language.
+     + You are perhaps most likely to encounter a /non-list pair/ *when making a
+       mistake*
+
+     + /Non-list pairs/ are used _intentionally_, sometimes.
+       * For example, =TODO= =???=
+         the ~make-hash~ function takes a /list/ of /pairs/, where
+         - the ~car~ of each /pair/ is a _key_
+         - the ~cdr~ is an arbitrary value.
+
+   - The only thing more confusing to new Racketeers than /non-list pairs/ is
+     _the printing convention for /pairs/_ where the _SECOND_ element is a
+     /pair/, but is *NOT* a /list/:
+     #+begin_src racket
+       (cons 0 (cons 1 2))
+       ;; '(0 1 . 2)
+     #+end_src
+     + In general, the rule for printing a /pair/ is as follows:
+       use the /dot notation/ unless the dot is immediately followed by an open
+       parenthesis.
+         In that case, remove the dot, the open parenthesis, and the matching
+       close parenthesis. Thus, ~'(0 . (1 . 2))~ becomes ~'(0 1 . 2)~, and
+       ~'(1 . (2 . (3 . ())))~ becomes ~'(1 2 3)~.
+       - =from Jian=
+         I think the rule described above is not very clear. I rephrase it _from
+         the point of view of reduction_ as:
+         A dot notation can be removed TOGETHER with its immediately following
+         open parenthesis.
+
+*** DONE 2.4.1 Quoting Pairs and Symbols with ~quote~
+    CLOSED: [2020-10-08 Thu 11:19]
+    - A /list/ prints with a _quote mark_ BEFORE it,
+      BUT if an element of a /list/ is ITSELF a /list/,
+      then *no* _quote mark_ is printed for the INNER /list/:
+      #+begin_src racket
+        (list (list 1) (list 2 3) (list 4))
+        ;; '((1) (2 3) (4))
+      #+end_src
+
+    - For /nested lists/, especially, the /quote form/ lets you write a /list/ as
+      an /expression/ in essentially *the same way that the /list/ PRINTS*:
+      #+begin_src racket
+        (quote ("red" "green" "blue"))
+        ; '("red" "green" "blue")
+
+        (quote ((1) (2 3) (4)))
+        ; '((1) (2 3) (4))
+
+        (quote ())
+        ; '()
+      #+end_src
+
+    - The ~quote~ form works with the /dot notation/, too:
+      #+begin_src racket
+        (quote (1 . 2))
+        ; '(1 . 2)
+
+        (quote (0 . (1 . 2)))
+        ; '(0 1 . 2)
+      #+end_src
+
+    - Symbol :: A value that prints like a /quoted identifier/
+
+    - ~symbol?~
+
+    - Indeed, the intrinsic value of a /symbol/ is _NOTHING MORE THAN_ its character
+      content. In this sense, /symbols/ and /strings/ are _ALMOST the same thing_, and
+      the MAIN *difference* is _how they print_.
+      + ~symbol -> string~
+      + ~string -> symbol~
+
+    - ~quote~ for a /list/ AUTOMATICALLY applies itself to /nested lists/,
+    - ~quote~ on a _parenthesized sequence_ of /identifiers/ AUTOMATICALLY applies
+      itself to the /identifiers/ to *create* _a /list/ of /symbols/._
+      
+    - When a /symbol/ is *inside* a /list/ that is printed with ', the ' on the
+      /symbol/ is *omitted*, since ' is doing the job already:
+      #+begin_src racket
+        (quote (road map)
+        ; '(road map)
+      #+end_src
+
+    - The ~quote~ form has *no effect* on a /literal expression/
+      such as a /number/ or /string/.
+
+*** DONE 2.4.2 Abbreviating ~quote~ with ~'~
+    CLOSED: [2020-10-08 Thu 11:24]
+    - In the *documentation*, ' within an /expression/ is printed _in green along
+      with the form after it_, since the combination is an /expression/ that is a
+      /constant/.
+
+    - In *DrRacket*, _ONLY the ' is colored green_. DrRacket is more precisely
+      correct, because the meaning of /quote/ can vary depending on the context of
+      an expression.
+        In the documentation, however, we routinely assume that standard bindings
+      are in scope, and so we paint /quoted forms/ in green for extra clarity.
+
+    - A ~'~ expands to a ~quote~ form in _quite a literal way_.
+      You can see this if you put a ~'~ in front of a form that has a ~'~:
+      #+begin_src racket
+        (car ''road)
+        ;; 'quote
+
+        (car '(quote road))
+        ;; 'quote
+      #+end_src
+      From the second expression we know, ~''road~ is expanded as
+      ~(quote (quote road))~, which is a /list/ that has _TWO_ element ~'quote~
+      and ~'road~.
+
+*** DONE 2.4.3 Lists and Racket Syntax
+    CLOSED: [2020-10-22 Thu 20:22]
+    - The syntax of Racket is *NOT* defined directly in terms of /character streams/.
+      Instead, the syntax is determined by *TWO layers*:
+      + a *reader layer*, which *turns* _a sequence of characters_ *into* /lists/,
+        /symbols/, and _other constants_; and
+
+      + an *expander layer*, which processes the /lists/, /symbols/, and _other
+        constants_ to *parse* them *as* an /expression/.
+
+    - One consequence of the *read layer* for /expressions/ is that you can use
+      the dot notation in expressions that are not quoted forms:
+      #+begin_src racket
+        (+ 1 . (2))  ; 3
+      #+end_src
+      + It is practically *NEVER a good idea* to write application expressions
+        using this _dot notation_; it's just a consequence of the way Racket's
+        syntax is defined.
+        
+      + Normally, ~.~ is allowed by the /reader/
+        * ONLY with a _parenthesized sequence_,
+        * ONLY *BEFORE the last element* of the _sequence_.
+
+      + However, a /pair/ of ~.~'s can also appear around a _SINGLE element_ in a
+        _parenthesized sequence_, as long as the element is *NOT* first or last.
+        Such a /pair/ triggers a /reader/ conversion that moves the element between
+        ~.~'s *to the front* of the /list/.
+
+      + The conversion enables a kind of general infix notation:
+        #+begin_src racket
+          (1 . < . 2)   ; #t
+          '(1 . < . 2)  ; '(< 1 2)
+        #+end_src
+
+* DONE 3 Built-In Datatypes
+  CLOSED: [2020-10-23 Fri 02:39]
+** DONE 3.1 Booleans
+   CLOSED: [2020-10-15 Thu 21:41]
+   - False: ~#f~ (preferred) and ~#F~
+
+   - True: ~#t~ (preferred) and ~#T~
+
+   - ~boolean?~
+
+** DONE 3.2 Numbers
+   CLOSED: [2020-10-17 Sat 23:32]
+   - A Racket /number/ is either /exact/ or /inexact/:
+     + An /exact number/ is either
+       * An _ARBITRARILY_ large or small /integer/;
+       * A /rational/ that is exactly the ratio of two _ARBITRARILY_ /integers/;
+       * A /complex number/ with *exact* /real/ and /imaginary/ parts (where the
+         imaginary part is not zero).
+
+     + An /inexact number/ is either
+       * _an *IEEE floating-point representation* of a /number/,_ such as ~2.0~
+         or ~3.14e+87~, where the IEEE /infinities/ and /not-a-number/ are written
+         ~+inf.0~, ~-inf.0~, and ~+nan.0~ (or ~-nan.0~);
+
+       * a /complex number/ with /real/ and /imaginary/ parts that are /IEEE
+         floating-point representations/. AS a special case, an /inexact complex
+         number/ can have an *exact* ZERO /real/ part with an *inexact*
+         /imaginary/ part.
+
+   - /Inexact numbers/ print WITH a _decimal point_ or _exponent specifier_, and
+     /exact numbers/ print _AS_ _integers_ and _fractions_.
+     + The same conventions apply for reading /number constants/,
+       but ~#e~ or ~#i~ can PREFIX a number to *force* its parsing as an /exact/
+       or /inexact/ number. For example, ~#e0.5~.
+
+     + The prefixes ~#b~, ~#o~, and ~#x~ specify _binary_, _octal_, and _hexadecimal_
+       interpretation of digits. For example, ~#x03BB~ is ~995~.
+   
+   - Computations that involve *an inexact number produce inexact results*, so that
+     inexactness acts as a kind of taint on numbers.
+
+   - The procedures ~exact->inexact~ and ~inexact->exact~ convert between the
+     two types of numbers.
+     #+begin_src racket
+       (inexact->exact 0.1)
+       ; 3602879701896397/36028797018963968
+     #+end_src
+     
+   - /Inexact results/ are also produced by procedures such as ~sqrt~, ~log~, and
+     ~sin~ when an /exact result/ would require representing /real numbers/ that
+     are _NOT_ /rational/.
+       Racket can represent only /rational numbers/ and /complex numbers/ with
+     _rational parts_.
+     #+begin_src racket
+       (sin 0)  ; rational...
+       ; 0
+
+       (sin 1/2)  ; not rational...
+       ; 0.479425538604203
+     #+end_src
+     
+   - In terms of _PERFORMANCE_,
+     #+begin_src racket
+       (define (sigma f a b)
+         (if (= a b)
+             0
+             (+ (f a) (sigma f (+ a 1) b))))
+
+       (time (round (sigma (lambda (x) (/ 1 x)) 1 2000)))
+       ;; cpu time: 182 real time: 111 gc time: 0
+       ; 8
+
+       (time (round (sigma (lambda (x) (/ 1.0 x)) 1 2000)))
+       ;; cpu time: 0 real time: 0 gc time: 0
+       ; 8.0
+     #+end_src
+     + Typically the *fastest*:
+       computations with _SMALL integers_, where "small" means that the number
+       fits into *one bit less than* the /machine's word-sized representation/
+       for /signed numbers/.
+
+     + Computation with _VERY LARGE EXACT integers_ or with _NON-INTEGER EXACT
+       numbers_ can be *much more expensive than* computation with _INEXACT
+       numbers_.
+   
+   - The number categories /integer/, /rational/, /real (always rational)/, and
+     /complex/ are defined in the usual way, and are recognized by the procedures
+     ~integer?~, ~rational?~, ~real?~, and ~complex?~, in addition to the generic
+     ~number?~.
+     + A few mathematical procedures accept only /real numbers/,
+       but most implement standard extensions to /complex numbers/.
+
+   - Comparison:
+     #+begin_src racket
+       (= 1 1.0)
+       ; #t
+
+       (eqv? 1 1.0)
+       ; #f
+     #+end_src
+     + ~=~ procedure compares numbers for /numerical equality/:
+       If it is given both _/inexact/ and /exact/ numbers_ to compare,
+       it essentially *converts* the /inexact numbers/ to /exact/ *BEFORE
+       comparing*.
+     
+     + ~eqv?~ (and therefore ~equal?~) procedure, in contrast, compares numbers
+       considering both /exactness/ and /numerical equality/.
+       
+   - Beware of comparisons involving /inexact numbers/, which by their nature can
+     have _SURPRISING behavior_.
+     =from Jian=
+     This is true for all programming languages that use /IEEE floating-point
+     number standard/.
+     #+begin_src racket
+       (= 1/2 0.5)
+       ; #t
+
+       (= 1/10 0.1)
+       ; #f
+
+       (inexact->exact 0.1)
+       ; 1/2
+
+       (inexact->exact 0.1)
+       ; 3602879701896397/36028797018963968
+     #+end_src
+     A *base-2* /IEEE floating-point number/ can *represent 1/2 exactly*,
+     it can only *approximate 1/10*:
+       
+** DONE 3.3 Characters
+   CLOSED: [2020-10-18 Sun 00:17]
+   - A /Racket character/ corresponds to a /Unicode scalar value/.
+     + Roughly, a /scalar value/ is an /unsigned integer/ whose representation
+       fits into *21 bits*, and that maps to some notion of a natural-language
+       character or piece of a character.
+
+     + Technically, a /scalar value/ is a simpler notion than the concept called a
+       "character" in the Unicode standard, but it's an approximation that works
+       well for many purposes.
+         For example, any accented Roman letter can be represented as a /scalar
+       value/, as can any common Chinese character.
+   
+   - Although *each Racket character corresponds to an integer*,
+     the character datatype is separate from numbers.
+     + Procedures convert between scalar-value numbers and the corresponding
+       character:
+       * ~char->integer~
+       * ~integer->char~ 
+     
+   - View when printing:
+     #+begin_src racket
+       (integer->char 65)       ; #\A
+       (char->integer #\A)      ; 65
+       #\λ                      ; #\λ
+       #\u03BB                  ; #\λ
+
+       (integer->char 17)       ; #\u0011
+
+       (char->integer #\space)  ; 32
+     #+end_src
+     + _A printable character_ normally prints as ~#\~ followed by the represented
+       character.
+       #+begin_src racket
+         (integer->char 65)       ; #\A
+         (char->integer #\A)      ; 65
+         #\λ                      ; #\λ
+         #\u03BB                  ; #\λ
+       #+end_src
+
+     + _An unprintable character_ normally prints as ~#\u~ followed by the scalar
+       value as hexadecimal number.
+       #+begin_src racket
+         (integer->char 17)       ; #\u0011
+       #+end_src
+
+     + A few characters are printed *specially*;
+       for example, the /space/ and /linefeed/ characters print as ~#\space~ and
+       ~#\newline~, respectively.
+       #+begin_src racket
+         (char->integer #\space)  ; 32
+       #+end_src
+     
+   - ~display~:
+     Directly WRITES a /character/ TO the /current output port/ (see "Input and
+     Output"), =TODO= =???= in contrast to the /character-constant/ syntax used
+     to print a character result. =???=
+
+   - Racket provides several /classification/ and /conversion/ /procedures/ on
+     characters.
+       Beware, however, that conversions on some /Unicode characters/ work as a
+     human would expect _ONLY_ when they are in a string (e.g., upcasing "ß" or
+     downcasing "Σ"). =TODO= =???= =TODO= =???=
+     + Examples:
+       #+begin_src racket
+         (char-alphabetic? #\A)        ; #t
+         (char-numeric? #\0)           ; #t
+         (char-whitespace? #\newline)  ; #t
+
+         (char-downcase #\A)  ; #\a
+         (char-upcase #\ß)    ; #\ß
+       #+end_src
+     
+   - Characters comparison (compare two or more):  
+     - ~char=?~
+
+     - ~char-ci=?~
+       Compare characters ignoring case
+
+     - The ~eqv?~ and ~equal?~ procedures behave the same as ~char=?~ on characters;
+       use ~char=?~ when you want to more specifically declare that the values
+       being compared are characters.
+
+** DONE 3.4 Strings (Unicode)
+   CLOSED: [2020-10-21 Wed 01:25]
+   A /string/ is a *fixed-length array of characters*.
+
+   - A /string/ prints using _doublequotes_,
+     where _doublequote_ and _backslash_ characters within the /string/ are
+     *escaped* with _backslashes_.
+
+   - Other COMMON /string escapes/ are supported, including
+     + ~\n~ for a /linefeed/,
+     + ~\r~ for a /carriage return/,
+     + /octal escapes/ using ~\~ followed by up to *three* octal digits
+     + /hexadecimal escapes/ with ~\u~ (up to *four* digits).
+     + /Unprintable characters/ in a /string/ are normally shown with ~\u~ when
+       the /string/ is printed.
+   
+   - The ~display~ procedure directly *writes* (=from Jian= side effect) the
+     characters of a string to the _CURRENT_ /output port/ (see Input and Output),
+     in contrast to the /string-constant syntax/ used to print a string result.
+     #+begin_src racket
+       "Apple"            ; "Apple"
+       "\u03BB"           ; "λ"
+
+       (display "Apple")  ;; Apple
+
+       (display "a \"quoted\" thing")  ;; a "quoted" thing
+
+       (display "two\nlines")
+       ;; two
+       ;; lines
+
+       (display "\u03BB")  ;; λ
+     #+end_src
+     
+   - A /string/ can be _mutable_ *OR* _immutable_;
+     + strings written directly as expressions are *immutable*,
+     + BUT _MOST_ other /strings/ are *mutable*.
+
+   - The ~make-string~ procedure *creates* a /mutable string/ given a _length_ and
+     _optional fill character_.
+
+   - The ~string-ref~ procedure *accesses* a character from a /string/:
+     #+begin_src racket
+       (string-ref "Apple" 0)  ; #\A
+     #+end_src
+
+   - The ~string-set!~ procedure *changes* _ONE_ character in a /mutable string/:
+     #+begin_src racket
+       (define s (make-string 5 #\.))
+       s  ; "....."
+
+       (string-set! s 2 #\λ)
+       s  ; "..λ.."
+     #+end_src
+     
+   - String operations can be *locale-INDEPENDENT* or *locale-DEPENDENT*
+     #+begin_src racket
+       (string<? "apple" "Banana")     ; #f
+       (string-ci<? "apple" "Banana")  ; #t
+
+       (string-upcase "Straße")  ; "STRASSE"
+
+       (parameterize ([current-locale "C"])
+         (string-locale-upcase "Straße"))
+       ; "STRAßE"
+     #+end_src
+     + /String ordering/ and /case operations/ are generally *locale-INDEPENDENT*;
+       that is, they work the same for all users.
+       * For example,
+        use ~string<?~ or ~string-ci<?~ to *sort* /strings/.
+
+     + A few *locale-DEPENDENT* operations are provided that allow the way that
+       strings are _case-folded_ and sorted to depend on the end-user's /locale/.
+       * For example,
+        use ~string-locale<?~ or ~string-locale-ci<?~ to *sort* /strings/.
+
+   - For
+     working with _plain ASCII_,
+     working with /raw bytes/, or
+     encoding/decoding Unicode strings as /bytes/,
+     *use /byte strings/.* =SEE NEXT SECTION=
+   
+** DONE 3.5 Bytes and Byte Strings - =RE-READ=
+   CLOSED: [2020-10-23 Fri 01:27]
+   - A /byte/ is an exact integer between _0 and 255_, *inclusive*.
+
+   - The ~byte?~ predicate recognizes numbers that represent /bytes/.
+     #+begin_src racket
+       (byte? 0)    ; #t
+       (byte? 256)  ; #f
+     #+end_src
+
+   - A /byte string/ IS SIMILAR TO a /string/ -- see Strings (Unicode) --
+     BUT its content is a _sequence of bytes_ *instead of characters*.
+     
+   - /Byte strings/ can be used in _applications that process pure ASCII_
+     instead of Unicode text.
+
+   - The *printed form* of a /byte string/ supports such uses in particular,
+     because a /byte string/ prints like the ASCII decoding of the /byte string/,
+     BUT *prefixed with a ~#~.*
+
+   - /Unprintable ASCII characters/ or /non-ASCII bytes/ in the /byte string/ are
+     written with /octal notation/.
+     + Examples:
+       #+begin_src racket
+         #"Apple"  ; #"Apple"
+
+         (bytes-ref #"Apple" 0)  ; 65
+
+         (make-bytes 3 65)  ; #"AAA"
+
+         (define b (make-bytes 2 0))
+
+         b  ; #"\0\0"
+
+         (bytes-set! b 0 1)
+         (bytes-set! b 1 255)
+         b  ; #"\1\377"
+       #+end_src
+     
+   - The ~display~ form of a /byte string/ writes its _raw bytes_ to the CURRENT
+     /output port/ (see "Input and Output").
+
+   - Technically,
+     + ~display~ of a /normal (i.e,. character) string/ prints the UTF-8 encoding
+       of the string to the CURRENT /output port/, since output is ultimately
+       defined in terms of bytes;
+
+     + ~display~ of a /byte string/, however, writes the _raw bytes_ with *no
+       encoding*.
+     
+   - Examples: =TODO= =TODO= =TODO= =???=
+     #+begin_src racket
+       (display #"Apple")  ; Apple
+
+       (display "\316\273")  ; Î»  ;; same as "Î»"
+
+       (display #"\316\273")  ; λ ;; UTF-8 enconding of λ
+     #+end_src
+     
+   - For EXPLICITLY *converting between /strings/ and /byte strings/,* Racket
+     supports _THREE_ kinds of encodings DIRECTLY:
+     + /UTF-8/,
+     + /Latin-1/, and
+     + the /current locale's encoding/.
+
+   - General facilities for byte-to-byte conversions (especially to and from /UTF-8/)
+     fill the gap to support arbitrary string encodings.
+     
+   - Examples: =TODO= =TODO= =TODO=
+     #+begin_src racket
+       (bytes->string/utf-8 #"\316\273")  ; "λ"
+
+       (bytes->string/latin-1 #"\316\273")  ; "Î»"
+
+       (parametrize ([current-locale "C"])    ; C locale supports ASCII,
+         (bytes->string/locale #"\316\273"))  ; only, so...
+       ;; bytes->string/locale: byte string is not a valid encoding
+       ;; for the current locale
+       ;;   byte string: #"\316\273"
+
+       (let ([cvt (bytes-open-converter "cp1253" ; Greek code page
+                                        "UTF-8")]
+             [dest (make-bytes 2)])
+             (bytes-convert cvt #"\353" 0 1 dest)
+             (bytes-close-converter cvt)
+             (bytes-string/utf-8 dest))
+       ; "λ"
+     #+end_src
+     
+** DONE 3.6 Symbols
+   CLOSED: [2020-10-23 Fri 02:39]
+   A /symbol/ is an /atomic value/ that prints like an _identifier preceded with
+   ~'~._
+
+   - An expression that starts with ~'~ and continues with an /identifier/ produces
+     a /symbol value/.
+
+   - ~symbol?~
+
+   - For any sequence of characters, *exactly ONE* corresponding /symbol/ is
+     interned.
+
+   - To produce an /interned symbol/: 
+     + calling the ~string->symbol~ /procedure/,
+       OR
+     + ~read~-ing a syntactic identifier
+
+   - Since /interned symbols/ can be cheaply compared with ~eq?~ (and thus ~eqv?~
+     or ~equal?~), *they serve as a convenient values to use for /tags/ and
+     /enumerations/.* =IMPORTANT= =USAGE=
+     
+   - /Symbols/ are *case-sensitive*.
+     By using a ~#ci~ prefix or in other ways, the reader can be made to case-fold
+     character sequences to arrive at a /symbol/, but *the /reader/ PRESERVES CASE
+     BY DEFAULT.*
+     + Example:
+       #+begin_src racket
+         (eq? 'a 'a)                    ; #t
+         (eq? 'a (string->symbol "a"))  ; #t
+         (eq? 'a 'b)                    ; #f
+         (eq? 'a 'A)                    ; #f
+         #ci'A                          ; 'a
+       #+end_src
+       
+   - *ANY* /string/ (i.e., any character sequence) can be supplied to ~string->symbol~
+     to obtain the corresponding /symbol/.
+       For _reader_ input, any character can appear directly in an identifier,
+     *except* for
+     + _whitespace_ and
+
+     + the following special characters:
+       * (
+       * )
+       * [
+       * ]
+       * {
+       * }
+       * "
+       * ,
+       * '
+       * `
+       * ;
+       * #
+       * |
+       * \
+
+     + Actually,
+       * ~#~ is *disallowed*
+         - only at the beginning of* a /symbol/, and
+         - then only if *NOT followed by ~%~;*
+
+       * otherwise, ~#~ is *allowed*, too.
+       
+     + Also, ~.~ _by itself_ is *not* a /symbol/.
+
+   - /Whitespace/ or /special characters/ can be included in an /identifier/ by
+     *quoting* them with ~|~ or ~\~.
+     + These /quoting mechanisms/ are used in the printed form of /identifiers/
+       that contain
+       * /special characters/
+         OR
+       * that might otherwise look like _numbers_.
+
+     + Examples:
+       #+begin_src racket
+         (string->symbol "one, two")  ; '|one, two|
+         (string->symbol "6")         ; '|6|
+       #+end_src
+
+   - Examples:
+     #+begin_src racket
+       (write 'Apple)    ; Apple
+       (display 'Apple)  ; Apple
+       (write '|6|)      ; |6|
+       (display '|6|)    ; 6
+     #+end_src
+     + The ~write~ function prints a /symbol/ *without* a ' prefix.
+     + The ~display~ form of a /symbol/ is the same as the corresponding /string/.
+
+   - Examples:
+     #+begin_src racket
+       (define s (gensym))
+       s                                         ; 'g42
+       (eq? s 'g42)                              ; #f
+       (eq? 'a (string->uninterned-symbol "a"))  ; #f
+     #+end_src
+     + The ~gensym~ and ~string->uninterned-symbol~ procedures *generate*
+       _fresh uninterned symbols_ that are *NOT equal (according to ~eq?~) to ANY*
+       previously /interned or uninterned symbol/.
+
+     + /Uninterned symbols/ are useful as _FRESH_ /tags/ that *cannot* be confused
+       with any other value.
+       =TODO= =MORE REAL WORLD Use cases???= =???=
+
+** DONE 3.7 Keywords - =RE-READ=
+   CLOSED: [2020-10-18 Sun 00:34]
+   A /keyword value/ is similar to a /symbol/ (see Symbols),
+   but its printed form is prefixed with ~#:~.
+   
+   - Examples:
+     #+begin_src racket
+       (string->keyword "apple")                 ; '#:apple
+       '#:apple                                  ; '#:apple
+       (eq? '#:apple (string->keyword "apple"))  ; #t
+     #+end_src
+     
+   - More precisely,
+     a /keyword/ _is analogous to_ an /identifier/;
+     in the same way that
+     an /identifier/ can be _QUOTED_ to produce a /symbol/,
+     a /keyword/ can be /quoted/ to produce a /value/.
+     
+   - The same term "keyword" is used in both cases, but we sometimes use /keyword
+     value/ to refer more specifically to the result of a /quote-keyword expression/
+     or of ~string->keyword~.
+
+   - An /unquoted keyword/ is *not* an /expression/, just as an /unquoted identifier/
+     does *not* produce a /symbol/:
+     + Examples:
+       #+begin_src racket
+         not-a-symbol-expression
+         ; not-a-symbol-expression: undefined;
+         ;  cannot reference an identifier before its definition
+         ;   in module: top-level
+
+         #:not-a-symbol-expression
+         ; eval:2:0: #%datum: keyword misused as an expression
+         ;   at: #:not-a-keyword-expression
+       #+end_src
+       
+   - Despite their similarities, /keywords/ *are used in a different way* than
+     /identifiers/ or /symbols/.
+     #+begin_src racket
+       (define dir (find-system-path 'temp-dir))  ; not '#:temp-dir
+
+       (with-output-to-file (build-path dir "stuff.txt")
+         (lambda () (printf "example\n"))
+         ; optional #:mode argument can be 'text or 'binary
+         #:mode 'text
+         ; optional #:exists argument can be 'replace, 'truncate, ...
+         #:exists 'replace)
+     #+end_src
+     /Keywords/ are intended for use (_unquoted_) AS *special markers* _in
+     /argument lists/ and in CERTAIN syntactic forms._
+     + For /run-time flags/ and /enumerations/, use /symbols/ instead of /keywords/.
+     + The example above illustrates the DISTINCT roles of /keywords/ and /symbols/.
+   
+** DONE 3.8 Pairs and Lists
+   CLOSED: [2020-10-18 Sun 01:49]
+   - A /pair/ joins two arbitrary values.
+     + ~cons~
+     + ~car~ and ~cdr~
+     + ~pair?~
+     
+   - A /list/ is a combination of /pairs/ that creates a /linked list/.
+     + More precisely, a /list/ is
+       * EITHER the /empty list/ ~null~,
+       * OR it is a /pair/:
+         - whose FIRST element is a /list element/
+         - whose SECOND element is a /list/.
+
+     + The ~list?~ /predicate/ recognizes /lists/.
+     + The ~null?~ /predicate/ recognizes the /empty list/.
+     
+   - A /list/ or /pair/ prints using ~list~ or ~cons~ when one of its elements
+     *CANNOT* be written as a /quoted value/.
+       For example, a value constructed with ~srcloc~ *CANNOT* be written using
+     /quote/, and it prints using ~srcloc~ (=from Jian= Learn more about ~srcloc~):
+     #+begin_src racket
+       (srcloc "file.rkt" 1 0 1 (+ 4 4))
+       ; (sorloc "file.rkt" 1 0 1 8)
+
+       (list 'here (srcloc "file.rkt" 1 0 1 8) 'there)
+       ; (list 'here (srcloc "file.rkt" 1 0 1 8) 'there)
+
+       (cons 1 (srcloc "file.rkt" 1 0 1 8))
+       ; (cons 1 (srcloc "file.rkt" 1 0 1 8))
+
+       (cons 1 (cons 2 (srcloc "file.rkt" 1 0 1 8)))
+       ; (list* 1 1 (srcloc "file.rkt" 1 0 1 8))
+     #+end_src
+     As shown in the last example, ~list*~ is used to abbreviate a series of
+     ~cons~'es that *CANNOT* be abbreviated using ~list~.
+     + =from Jian=
+       From "The Racket Reference":
+       * ~list*~ is like ~list~,
+         BUT the _last argument_ is used _as the /tail/_ of the result, _INSTEAD
+         OF the final element_.
+       * The result of a ~list*~ expression is a /list/ *iff* the _last argument_
+         is a /list/.
+     
+   - The ~write~ and ~display~ functions _PRINT_ a /pair/ or /list/ _WITHOUT_ a
+     leading ~'~, ~cons~, ~list~, or ~list*~.
+       There is *NO DIFFERENCE* between ~write~ and ~display~ for a /pair/ or
+     /list/, *EXCEPT as they apply to elements of the /list/*:
+     #+begin_src racket
+       (write (cons 1 2))        ; (1 . 2)
+       (display (cons 1 2))      ; (1 . 2)
+       (write null)              ; ()
+       (display null)            ; ()
+
+       ;; Be careful about their difference!!!
+       (write (list 1 2 "3"))    ; (1 2 "3")
+       (display (list 1 2 "3"))  ; (1 2 3)
+     #+end_src
+     
+   - Among the most important _PREDEFINED_ /procedures/ on /lists/ are those that
+     iterate through the /list/'s elements:
+     #+begin_src racket
+       (map (lambda (i) (/ 1 i))
+            '(1 2 3))
+       ; '(1 1/2 1/3)
+
+
+       (andmap (lambda (i) (i . < . 3))
+               '(1 2 3))
+       ; #f
+
+
+       (ormap (lambda (i) (i . < . 3))
+              '(1 2 3))
+       ; #t
+
+
+       (filter (lambda (i) (i . < . 3))
+               '(1 2 3))
+       ; '(1 2)
+
+
+       (foldl (lambda (v i) (+ v i))
+              10
+              '(1 2 3))
+       ; 16
+
+
+       (for-each (lambda (i) (display i))
+                 '(1 2 3))
+       ; 123
+
+
+       (member "Keys"
+               '("Florida" "Keys" "U.S.A."))
+       ; '("Keys" "U.S.A.")
+
+
+       (assoc 'where
+              '((when "3:30") (where "Florida") (who "Mickey")))
+       ; '(where "Florida")
+     #+end_src
+     
+   - /Pairs/ are *immutable* (*contrary* to _Lisp tradition_), and ~pair?~ and
+     ~list?~ recognize *immutable* /pairs/ and /lists/, ONLY.
+
+   - The ~mcons~ procedure _CREATES_ a /mutable pair/, which works with ~set-mcar!~
+     and ~set-mcdr!~, as well as ~mcar~ and ~mcdr~. A /mutable pair/ prints using
+     ~mcons~, while ~write~ and ~display~ print /mutable pairs/ with ~{~ and ~}~:
+     #+begin_src racket
+       (define p (mcons 1 2))
+       p  ; (mcons 1 2)
+
+       (pair? p)   ; #f
+       (mpair? p)  ; #t
+
+       (set-mcar! p 0)
+       p  ; (mcons 0 2)
+
+       (write p)  ; {0 . 2}
+     #+end_src
+     
+** DONE 3.9 Vectors
+   CLOSED: [2020-10-09 Fri 01:40]
+   /Vectors/ are like /lists/, but prefixed with ~'#~
+
+** DONE 3.10 Hash Tables - =TODO=
+   CLOSED: [2020-10-09 Fri 02:56]
+   - /Keys/ are *compared* using ~equal?~, ~eqv?~, or ~eq?~,
+     _DEPENDING ON_ whether the /hash table/ is created with ~make-hash~,
+     ~make-hasheqv~, or ~make-hasheq~.
+     + Example:
+       #+begin_src racket
+         (define ht (make-hash))
+
+         (hash-set! ht "apple" '(red round))
+         (hash-set! ht "banana" '(yellow long))
+         (hash-ref ht "apple")  ;; '(red round)
+
+         (hash-ref ht "coconut")
+         ;; hash-ref: no value found for key
+         ;;   key: "coconut"
+         (hash-ref ht "coconut" "not there")  ;; "not there"
+       #+end_src
+
+   - The ~hash~, ~hasheqv~, and ~hasheq~ functions create /immutable hash tables/
+     from an initial set of /keys/ and /values/, in which each /value/ is provided
+     as an argument *after* its /key/. /Immutable hash tables/ can be extended with
+     ~hash-set~, which produces a *NEW* /immutable hash table/ in *CONSTANT time*.
+     + Example:
+       #+begin_src racket
+         (define ht (hash "apple" 'red "banana" 'yellow))
+         (hash-ref ht "apple")  ;; 'red
+         (define ht2 (hash-set ht "coconut" 'brown))
+         (hash-ref ht2 "coconut")  ;; 'brown
+       #+end_src
+
+   - A /literal immutable hash table/ can be written as an /expression/ by using
+     ~#hash~ (for an ~equal?~-based table), ~#hasheqv~ (for an ~eqv?~-based table),
+     or ~#hasheq~ (for an ~eq?~-based table).
+       A parenthesized sequence must _immediately follow_ ~#hash~, ~#hasheq~, or
+     ~#hasheqv~, where EACH element is a /dotted key–value pair/. The ~#hash~, etc.
+     forms *implicitly quote* their /key/ and /value/ sub-forms.
+     + Example:
+       #+begin_src racket
+         (define ht #hash(("apple" . red)
+                          ("banana" . yellow)))
+
+         (hash-ref ht "apple")  ;; 'red
+       #+end_src
+
+   - How does Racket _DISPLAY_ of /hash tables/:
+     _BOTH_ *mutable* and *immutable* /hash tables/ _PRINT LIKE_ /immutable hash
+     tables/,
+     #+begin_src racket
+       #hash(("apple" . red)
+             ("banana" . yellow))
+       ;; '#hash(("apple" . red) ("banana" . yellow))
+
+       (hash 1 (srcloc "file.rkt" 1 0 1 (+ 4 4)))
+       ;; (hash 1 (srcloc "file.rkt" 1 0 1 8))
+     #+end_src
+     + using a quoted ~#hash~, ~#hasheqv~, or ~#hasheq~ form
+        IF all /keys/ and /values/ can be expressed with ~quote~
+       OR
+     + using ~hash~, ~hasheq~, or ~hasheqv~ otherwise
+
+   - A /mutable hash table/ can optionally retain its keys weakly, so each mapping
+     is retained only so long as the key is retained elsewhere.
+     + Examples:
+       #+begin_src racket
+         (define ht (make-weak-hasheq))
+         (hash-set! ht (gensym) "can you see me?")
+         (collect-garbage)
+         (hash-count ht)  ;; 0
+       #+end_src
+
+   - =TODO= =???= =TODO= - =TODO= =???= =TODO= - =TODO= =???= =TODO= - =TODO= =???= =TODO=
+     Beware that even a weak hash table retains its values strongly, as long as
+     the corresponding key is accessible. This creates a catch-22 dependency
+     when a value refers back to its key, so that the mapping is retained
+     permanently. To break the cycle, map the key to an ephemeron that pairs the
+     value with its key (in addition to the implicit pairing of the hash table).
+     #+begin_src racket
+       (define ht (make-weak-hasheq))
+
+       (let ([g (gensym)])
+         (hash-set! ht g (list g)))
+
+       (collect-garbage)
+       (hash-count ht)
+       ;; 1
+
+
+       (define ht (make-weak-hasheq))
+
+       (let ([g (gensym)])
+           (hash-set! ht g (make-ephemeron g (list g))))
+
+       (collect-garbage)
+       (hash-count ht)
+       ;; 0
+     #+end_src
+
+** DONE 3.11 Boxes - =TODO=
+   CLOSED: [2020-10-09 Fri 03:01]
+   A /box/ is LIKE a /single-element vector/.
+
+   - It can _PRINT as_
+     a *quoted* ~#&~ followed by the printed form of the /boxed value/.
+
+   - A ~#&~ form can also be used as an /expression/, but since the resulting /box/
+     is constant, *it has practically NO use.* =TODO= =???= =TODO=
+   - Example:
+     #+begin_src racket
+       (define b (box "apple"))
+       b  ;; '#&"apple"
+
+       (unbox b)
+       ;; "apple"
+
+       (set-box! b '(banana boat))
+       b  ;; '#&(banana boat)
+     #+end_src
+
+** DONE 3.12 Void and Undefined
+   CLOSED: [2020-10-09 Fri 03:10]
+   - #<void>
+     + When the _result_ of an /expression/ is simply ~#<void>~,
+       the REPL does *NOT* print anything.
+
+     + The ~void~ /procedure/
+       1. TAKES _ANY number of arguments_
+       2. RETURNS ~#<void>~.
+       (That is, the /identifier/ ~void~ is _bound to_ a /procedure/ that *returns*
+       ~#<void>~, INSTEAD OF being bound directly to ~#<void>~.)
+
+     + Examples:
+       #+begin_src racket
+         (void)
+         (void 1 2 3)
+         (list (void))  ;; '(#<void>)
+       #+end_src
+
+   - #<undefined>
+     The ~undefined~ constant, which prints as ~#<undefined>~, is sometimes used
+     as the result of a reference whose /value/ is *not yet available*.
+     + Before version Racket 6.1:
+       referencing a /local binding/ *too early* produced ~#<undefined>~; /too-early
+       references/ now raise an /exception/, instead.
+
+     #+begin_src racket
+       (define (fails)
+         (define x x)
+         x)
+
+
+       (fails)
+       ;; x: undefined;
+       ;;  cannot use before initialization
+     #+end_src
+
+* TODO 4 Expressions and Definitions - _READING_
+** DONE 4.1 Notation - =TODO= =NOTE=
+   CLOSED: [2020-10-14 Wed 02:14]
+
+** DONE 4.2 Identifiers and Binding - =TODO= =RE-READ= =CONCEPTS=
+   CLOSED: [2020-10-14 Wed 02:28]
+   - A _module-level_ ~define~, which is *DIFFERENT FROM* _local binding_, can
+     BIND *only* identifiers that are
+     + *NOT already defined*
+       OR
+     + *NOT required into* the /module/.
+
+   - A _module-level_ ~define~ can *shadow* a /binding/ from the _module's language
+     (the ~#lang ...~ mentioned in the first line)_.
+     + For example, ~(define cons 1)~ in a racket module *shadows* the ~cons~ that
+       is _provided by_ racket.
+
+     + Intentionally *shadowing* a language /binding/ is *RARELY a good idea*.
+
+   - Even /identifiers/ like ~define~ and ~lambda~ get their meanings from
+     /bindings/, though they have /transformer bindings/ (which means that they
+     indicate /syntactic forms/) _instead of_ /value bindings/.
+     + Since ~define~ has a /transformer binding/, the identifier ~define~
+       #+begin_src racket
+         define
+         ; eval:1:0: define: bad syntax
+         ;   in: define
+
+         (let ([define 5]) define)  ; 5
+       #+end_src
+       * _cannot_ be used by itself to get a value.
+       * _can_ be used for the /normal binding/ for ~define~ can be *shadowed*.
+
+** DONE 4.3 Function Calls (Procedure Applications)
+   CLOSED: [2020-10-15 Thu 01:49]
+   An expression of the form
+   #+begin_src text
+     (proc-expr arg-expr ...)
+   #+end_src
+    - ~proc-expr~ *MUSTN'T* be an identifier that is bound as a /syntax transformer/
+      (such as ~if~ or ~define~).
+
+*** DONE 4.3.1 Evaluation Order and Arity
+    CLOSED: [2020-10-14 Wed 02:48]
+    - A /function call/ is evaluated by evaluating
+      1. the ~proc-expr~
+      2. ALL ~arg-exprs~ in order (left to right).
+
+    - A /function's arity/ is the *number of arguments* that it accepts.
+
+*** DONE 4.3.2 Keyword Arguments
+    CLOSED: [2020-10-14 Wed 02:53]
+    SYNTAX:
+    #+begin_src text
+      (proc-expr arg ...)
+
+        arg	=	arg-expr
+            |	arg-keyword arg-expr
+    #+end_src
+
+    - Example:
+      #+begin_src racket
+        (go "super.rkt" #:mode 'fast)
+      #+end_src
+
+    - A /keyword/ is IMPLICITLY *paired with* the /expression/ that _FOLLOWS_ it.
+      + Since a /keyword/ by itself is _NOT_ an /expression/, then
+        #+begin_src racket
+          (go "super.rkt" #:mode #:fast)
+        #+end_src
+
+    - The *order of /keyword args/* determines the *order* in which ~arg-expr~'s
+      are evaluated, _BUT_ a function accepts /keyword arguments/ *independent* of
+      their POSITION in the /argument list/.
+
+*** DONE 4.3.3 The ~apply~ Function - =TODO= =RE-READ=
+    CLOSED: [2020-10-14 Wed 03:07]
+    - ~apply~
+      + The most general usage:
+        #+begin_src racket
+          (apply + '(1 2 3))    ; 6
+        #+end_src
+
+      + With an extra argument:
+        #+begin_src racket
+          (apply - 0 '(1 2 3))  ; -6
+          ;; is equivalent to
+          (apply - (cons 0 '(1 2 3)))  ; -6
+        #+end_src
+        ALWAYS like ~cons~ first.
+
+      + /Keyword arguments/ and ~apply~
+        #+begin_src racket
+          ;; SAME
+          (apply go #:mode 'fast '("super.rkt"))
+          (apply go '("super.rkt") #:mode 'fast)
+        #+end_src
+
+    - /Keywords/ that are included in ~apply~'s /list argument/ *DO NOT count as*
+      /keyword arguments/ for the _called_ /function/; instead, *ALL arguments
+      in this list are treated as /by-position arguments/.*
+
+    - To pass _a list of_ /keyword arguments/ to a /function/,
+      USE the ~keyword-apply~ /function/, which accepts a /function/ to ~apply~
+      and *THREE lists*.
+      #+begin_src racket
+        (keyword-apply go
+                       '(#:mode)
+                       '(fast)
+                       '("super.rkt"))
+      #+end_src
+
+      + The _FIRST TWO_ /lists/ are in PARALLEL, where the _FIRST_ /list/ contains
+        /keywords/ (sorted by ~keyword<?~), and the _SECOND_ /list/ contains a
+        _CORRESPONDING_ /argument/ for EACH /keyword/.
+
+      + The _THIRD_ /list/ contains by-position function arguments, as for apply.
+
+** DONE 4.4 Functions (Procedures): ~lambda~
+   CLOSED: [2020-10-15 Thu 03:06]
+   SYNTAX
+   #+begin_src racket
+     (lambda (arg-id ...)
+       body ...+)
+   #+end_src
+
+*** DONE 4.4.1 Declaring a Rest Argument
+    CLOSED: [2020-10-15 Thu 02:34]
+    #+begin_src racket
+      (lambda rest-id
+        body ...+)
+    #+end_src
+    This form define a ~lambda~ that accept *ANY number* of arguments, and the
+    arguments are put into a /list/ bound to ~rest-id~.
+
+    - Examples:
+      #+begin_src racket
+        ((lambda x x)
+         1 2 3)
+        ; '(1 2 3)
+
+
+        ((lambda x x))
+        ; '()
+
+
+        ((lambda x (car x))
+         1 2 3)
+        ; 1
+      #+end_src
+
+    - Functions with a rest-id often use apply to call another function that
+      accepts any number of arguments.
+      + Examples:
+        #+begin_src racket
+          (define max-mag
+            (lambda nums
+              (apply max (map magnitude nums))))
+
+
+          (max 1 -2 0)      ; 1
+          (max-mag 1 -2 0)  ; 2
+        #+end_src
+
+    - The ~lambda~ form also supports
+      required arguments COMBINED WITH a ~rest-id~:
+      #+begin_src racket
+        (lambda (arg-id ...+ . rest-id)
+          body ...+)
+      #+end_src
+      + A ~rest-id~ variable is sometimes called a /rest argument/,
+        because it accepts the *"rest"* of the function arguments.
+
+      + Examples:
+        #+begin_src racket
+          (define max-mag
+            (lambda (num . nums)
+              (apply max (map magnitude (cons num nums)))))
+
+          (max-mag 1 -2 0)  ; 2
+        #+end_src
+
+*** DONE 4.4.2 Declaring Optional Arguments
+    CLOSED: [2020-10-15 Thu 02:42]
+    #+begin_src text
+      (lambda gen-formals
+        body ...+)
+
+        gen-formals = (arg ...)
+                    | rest-id
+                    | (arg ...+ . rest-id)
+
+                arg = arg-id
+                    | [arg-id default-expr]
+    #+end_src
+
+    - An argument of the form ~[arg-id default-expr]~ is *optional*.
+      _WHEN_ the argument is _NOT_ supplied in an application, ~default-expr~
+      produces the *default value*.
+      + The ~default-expr~ can refer to *ANY preceding* ~arg-id~
+      + _EVERY FOLLOWING_ ~arg-id~ *MUST have a default* as well.
+
+    - Examples:
+      #+begin_src racket
+        (define greet
+          (lambda (given [surname "Smith"])
+            (string-append "Hello, " given " " surname)))
+
+        (greet "John")        ; "Hello, John Smith"
+        (greet "John" "Doe")  ; "Hello, John Doe"
+
+
+        (define greet
+          (lambda (given [surname (if (equal? given "John")
+                                      "Doe"
+                                      "Smith")])
+            (string-append "Hello, " given " " surname)))
+
+        (greet "John")  ; "Hello, John Doe"
+        (greet "Adam")  ; "Hello, Adam Smith"
+      #+end_src
+
+*** DONE 4.4.3 Declaring Keyword Arguments
+    CLOSED: [2020-10-15 Thu 03:05]
+    A lambda form can declare an argument to be passed by keyword, instead of
+    position. Keyword arguments can be mixed with by-position arguments, and
+    default-value expressions can be supplied for either kind of argument:
+    #+begin_src text
+      (lambda gen-formals
+        body ...+)
+
+        gen-formals =	(arg ...)
+                    |	rest-id
+                    |	(arg ...+ . rest-id)
+
+        arg =	arg-id
+            |	[arg-id default-expr]
+            |	arg-keyword arg-id
+            |	arg-keyword [arg-id default-expr]
+    #+end_src
+
+    - Examples (the ~arg-keyword arg-id~ form):
+      #+begin_src racket
+        (define greet
+          (lambda (given #:last surname)
+            (string-append "Hello, " given " " surname)))
+
+        (greet "John" #:last "Smith")  ; "Hello, John Smith"
+        (greet #:last "Doe" "John" )   ; "Hello, John Doe"
+      #+end_src
+
+    - Examples (the ~arg-keyword [arg-id default-expr]~ form):
+      #+begin_src racket
+        (define greet
+          (lambda (#:hi [hi "Hello"] given #:last [surname "Smith"])
+            (string-append hi ", " given " " surname)))
+
+        (greet "John")                                 ; "Hello, John Smith"
+        (greet "Karl" #:last "Marx")                   ; "Hello, Karl Marx"
+        (greet "John" #:hi "Howdy")                    ; "Howdy, John Smith"
+        (greet "Karl" #:last "Marx" #:hi "Guten Tag")  ; "Guten Tag, Karl Marx"
+      #+end_src
+
+    - The ~lambda~ form does *NOT DIRECTLY support* the creation of a /function/
+      that accepts *"rest"* /keywords/.
+        To construct a /function/ that accepts ALL /keyword arguments/, use
+      ~make-keyword-procedure~. The /function/ supplied to ~make-keyword-procedure~
+      receives /keyword arguments/ through /parallel lists/ in the *first two
+      (by-position) arguments*, and then ALL /by-position arguments/ from an
+      application as the remaining by-position arguments.
+      + Examples:
+        #+begin_src racket
+          (define (trace-wrap f)
+            (make-keyword-procedure
+             (lambda (kws kw-args . rest)
+               (printf "Called with ~s ~s ~s\n" kws kw-args rest)
+               (keyword-apply f kws kw-args rest))))
+
+          ((trace-wrap greet) "John" #:hi "Howdy")
+          ;;;; Called with (#:hi) ("Howdy") ("John")
+          "Howdy, John Smith"
+        #+end_src
+
+*** DONE 4.4.4 Arity-Sensitive Functions: ~case-lambda~
+    CLOSED: [2020-10-15 Thu 03:04]
+    /The ~case~-~lambda~ form/ creates a function that can have completely
+    different behaviors _DEPENDING ON_ the *number of arguments* that are
+    supplied.
+    #+begin_src racket
+      (case-lambda
+        [formals body ...+]
+        ...)
+
+        formals =	(arg-id ...)
+                |	rest-id
+                |	(arg-id ...+ . rest-id)
+    #+end_src
+
+    - Each ~[formals body ...+]~ is ANALOGOUS TO ~(lambda formals body ...+)~.
+
+    - Examples:
+      #+begin_src racket
+        (define greet
+          (case-lambda
+            [(name)          (string-append "Hello, " name)]
+            [(given surname) (string-append "Hello, " given " " surname)]))
+
+        (greet "John")          ; "Hello, John"
+        (greet "John" "Smith")  ; "Hello, John Smith"
+      #+end_src
+
+    - A /case-lambda function/ *cannot directly support* /optional or keyword
+      arguments/.
+
+** DONE 4.5 Definitions: ~define~
+   CLOSED: [2020-10-15 Thu 03:36]
+   A Basic definition has the form
+   #+begin_src racket
+     (define id expr)
+   #+end_src
+
+*** DONE 4.5.1 Function Shorthand
+    CLOSED: [2020-10-15 Thu 03:11]
+    #+begin_src racket
+      (define (id arg ...) body ...+)
+    #+end_src
+
+    which is a SHORTHAND for
+    #+begin_src racket
+      (define id (lambda (arg ...) body ...+))
+    #+end_src
+
+    - Support to /rest argument/:
+      #+begin_src racket
+        (define (id arg ... . rest-id) body ...+)
+      #+end_src
+
+      which is a SHORTHAND for
+      #+begin_src racket
+        (define id (lambda (arg ... . rest-id) body ...+))
+      #+end_src
+
+*** DONE 4.5.2 Curried Function Shorthand
+    CLOSED: [2020-10-15 Thu 03:36]
+    Use the syntax we learned before, we can define /curried functions/:
+    #+begin_src racket
+      (define make-add-suffix
+        (lambda (s2)
+          (lambda (s) (string-append s s2))))
+
+      (define (make-add-suffix s2)
+        (lambda (s) (string-append s s2)))
+    #+end_src
+
+    - Racket support another shorthand, and use it to re-write the above definition
+      of the /curried function/ ~make-add-suffix~:
+      #+begin_src racket
+        (define ((make-add-suffix s2) s)
+          (string-append s s2))
+      #+end_src
+
+    - SYNTAX:
+      #+begin_src racket
+        (define (head args) body ...+)
+
+          head = id
+               | (head args)
+
+          args = arg ...
+               | arg ... . rest-id
+      #+end_src
+      The expansion of this shorthand has one /NESTED lambda form/ for *EACH*
+      ~head~ in the definition, where *the _INNERMOST head_ corresponds to the
+      _OUTERMOST lambda_.*
+
+*** DONE 4.5.3 Multiple Values and ~define-values~
+    CLOSED: [2020-10-15 Thu 03:17]
+    - Multiple-valued functions can be implemented in terms of the ~values~ function:
+      #+begin_src racket
+        (values 1 2 3)
+        ; 1
+        ; 2
+        ; 3
+      #+end_src
+      This can be use as the last expression in the body of a function definition
+      to return MULTIPLE values.
+      #+begin_src racket
+        (define (split-name name)
+          (let ([parts (regexp-split " " name)])
+            (if (= (length parts) 2)
+                (values (list-ref parts 0) (list-ref parts 1))
+                (error "not a <first> <last> name"))))
+
+        (split-name "Adam Smith")
+        ; "Adam"
+        ; "Smith"
+      #+end_src
+
+    - The ~define-values~ form
+      *binds* _MULTIPLE identifiers_ AT ONCE
+      *to* _MULTIPLE results_ produced
+      *from* a SINGLE expression:
+      #+begin_src racket
+        (define-values (given surname) (split-name "Adam Smith"))
+        given    ; "Adam"
+        surname  ; "Smith"
+      #+end_src
+
+*** DONE 4.5.4 Internal Definitions
+    CLOSED: [2020-10-15 Thu 03:29]
+    When the grammar for a /syntactic form/ specifies _body_, then the corresponding
+    form can be _EITHER_ a /definition/ _OR_ an /expression/.
+
+    - A /definition/ as a _body_ is an /internal definition/.
+
+    - /Expressions/ and /internal definitions/ in a _body sequence_ *can be mixed*,
+      as long as *the last body is an /expression/.*
+
+    - /Internal definitions/ in a particular _body sequence_ are *mutually recursive*;
+      that is, ANY /definition/ can *refer to* ANY OTHER /definition/ -- AS LONG AS
+      the _reference *isn't* actually evaluated *before* its /definition/ takes place_.
+      If a definition is referenced too early, an error occurs.
+      #+begin_src racket
+        (lambda (f n)              ; two definitions
+          (define (call m)
+            (if (zero? m)
+                (log-it "done")
+                (begin
+                  (log-it "running")
+                  (f m)
+                  (call (- m 1)))))
+
+          (define (log-it what)
+            (printf "~a\n" what))
+
+          (call n))
+      #+end_src
+
+    - A SEQUENCE of /internal definitions/ using just define is _easily translated
+      to_ an equivalent ~letrec~ form (as introduced in the next section).
+      + However, other /definition/ forms can appear as a _body_, including
+        * ~define-values~,
+        * ~struct~ (see Programmer-Defined Datatypes)
+        * ~define-syntax~ (see Macros)
+
+** DONE 4.6 Local Binding
+   CLOSED: [2020-10-10 Sat 01:38]
+*** DONE 4.6.1 Parallel Binding: ~let~
+    CLOSED: [2020-10-10 Sat 01:03]
+    Syntax: ~(let ([id expr] ...) body ...+)~
+
+    - Restriction:
+      The ~id~'s must be different from each other.
+
+    - The characterization of ~let~ bindings as *"parallel"* is NOT meant to imply
+      concurrent evaluation.
+        The ~expr~'s are _evaluated in order_, EVEN THOUGH the /bindings/ are _delayed
+      until_ ALL ~expr~'s are evaluated.
+      + =from Jian=
+        Assume /bindings/ created simutaneously, and they can't refer each other.
+
+*** DONE 4.6.2 Sequential Binding: ~let*~
+    CLOSED: [2020-10-10 Sat 01:03]
+    Syntax: ~(let* ([id expr] ...) body ...+)~
+
+    - ~id~'s need *NOT* be _distinct_, and the most recent /binding/ is the visible
+      one.
+
+    - Each ~id~ is *available* for use in *later* ~expr~'s.
+      + In other words, a ~let*~ form is equivalent to *NESTED* ~let~ forms.
+
+*** DONE 4.6.3 Recursive Binding: ~letrec~
+    CLOSED: [2020-10-10 Sat 01:13]
+    Syntax: ~(letrec ([id expr] ...) body ...+)~
+
+    - ~letrec~ makes its /bindings/ *available to ALL OTHER ~expr~'s*
+      -- even earlier ones. In other words, ~letrec~ /bindings/ are /recursive/.
+
+    - The ~expr~'s in a ~letrec~ form are most often ~lambda~ forms for /recursive/
+      and /mutually recursive/ /functions/:
+      #+begin_src racket
+        (letrec ([swing
+                  (lambda (t)
+                    (if (eq? (car t) 'tarzan)
+                        (cons 'vine
+                              (cons 'tarzan (cddr t)))
+                        (cons (car t)
+                              (swing (cdr t)))))])
+          (swing '(vine tarzan vine vine)))
+
+        ;; '(vine vine tarzan vine)
+      #+end_src
+
+    - While the ~expr~'s of a ~letrec~ form are *typically* /lambda expressions/,
+      they *can be ANY* /expression/.
+      #+begin_src racket
+        (letrec ([quicksand quicksand])
+          quicksand)
+
+        #| ERRORS |#
+        ;; quicksand: undefined;
+        ;;  cannot use before initialization
+      #+end_src
+      1. The /expressions/ are _evaluated IN ORDER_,
+      2. after each value is obtained, it is immediately associated with its
+         corresponding ~id~.
+      3. If an ~id~ is referenced before its value is ready, an error is raised,
+         just as for internal definitions.
+
+*** DONE 4.6.4 Named ~let~ - =RE-READ=
+    CLOSED: [2020-10-10 Sat 01:38]
+    A NAMED ~let~ is an /iteration/ and /recursion/ form.
+    #+begin_src racket
+      (let proc-id ([arg-id init-expr] ...)
+        body ...)
+    #+end_src
+
+    - A NAMED ~let~ uses the same syntactic keyword ~let~ as for /local binding/,
+      but an /identifier/ after the ~let~ (instead of an immediate open parenthesis)
+      triggers a different parsing.
+
+    - A NAMED ~let~ form is equivalent to
+      #+begin_src racket
+        (letrec ([proc-id (lambda (arg-id ...)
+                            body ...+)])
+          (proc-id init-expr ...))
+      #+end_src
+
+    - That is, a NAMED ~let~ *binds* a /function identifier/ that is visible only in
+      the /function's body/, and it implicitly calls the function with the values
+      of some *initial* expressions.
+
+    - Examples:
+      #+begin_src racket
+        (define (duplicate pos lst)
+          (let dup ([i 0]
+                    [lst lst])
+            (cond
+              [(= i pos) (cons (car lst) lst)]
+              [else      (cons (car lst) (dup (+ i 1) (cdr lst)))])))
+
+        (duplicate 1 (list "apple" "cheese burger!" "banana"))
+        ;; '("apple" "cheese burger!" "cheese burger!" "banana")
+      #+end_src
+
+*** DONE 4.6.5 Multiple Values: ~let-values~, ~let*-values~, ~letrec-values~
+    CLOSED: [2020-10-10 Sat 01:18]
+    #+begin_src racket
+      (let-values ([(id ...) expr] ...)
+        body ...+)
+
+      (let*-values ([(id ...) expr] ...)
+        body ...+)
+
+      (letrec-values ([(id ...) expr] ...)
+        body ...+)
+    #+end_src
+    Each ~expr~ must produce *as many values as* corresponding ~id~'s.
+
+    - This syntax is similar to ~define-values~.
+
+    - Example:
+      #+begin_src racket
+        (let-values ([(q r) (quotient/remainder 14 3)])
+          (list q r))
+
+        ;; '(4, 2)
+      #+end_src
+
+** DONE 4.7 Conditionals
+   CLOSED: [2020-10-14 Wed 02:08]
+   /Racket's branching forms/ treat *ANY value other than ~#f~ as /true/.*
+   We say a /true/ value to mean ANY value other than ~#f~.
+
+   - For example,
+     the ~member~ function serves *double duty*. It can be used to:
+     #+begin_src racket
+       (member "Groucho" '("Harpo" "Zeppo"))            ; #f
+       (member "Groucho" '("Harpo" "Groucho" "Zeppo"))  ; '("Groucho" "Zeppo")
+
+       (if (member "Groucho" '("Harpo" "Zeppo"))
+           'yep
+           'nope)
+       ; 'nope
+
+
+       (if (member "Groucho" '("Harpo" "Groucho" "Zeppo"))
+           'yep
+           'nope)
+       ; 'yep
+     #+end_src
+     + *find* _the TAIL of a /list/ that STARTS WITH a particular item_;
+     + *check* whether an item is present in a /list/.
+
+*** DONE 4.7.1 Simple Branching: ~if~
+    CLOSED: [2020-10-14 Wed 01:51]
+    SYNTAX
+    #+begin_src racket
+      (if test-expr then-expr else-expr)
+    #+end_src
+
+    - An if form *MUST have both* a ~then-expr~ and an ~else-expr~;
+      the latter is *NOT optional*.
+
+    - To _perform_ (or _skip_) /side-effects/ based on a ~test-expr~,
+      use ~when~ or ~unless~, which we describe later in "Sequencing" =TODO=.
+
+*** DONE 4.7.2 Combining Tests: ~and~ and ~or~
+    CLOSED: [2020-10-14 Wed 01:56]
+    Racket's ~and~ and ~or~ are /syntactic forms/, rather than /functions/ --
+    like other languages.
+    =from Jian= Here the description only consider /eager evaluation functions/.
+
+    - SYNTAX
+      #+begin_src racket
+        (and expr ...)
+
+        (or expr ...)
+      #+end_src
+
+*** DONE 4.7.3 Chaining Tests: ~cond~
+    CLOSED: [2020-10-14 Wed 02:08]
+    The cond form chains a series of tests to select a result expression. To a
+    first approximation, the syntax of cond is as follows:
+    #+begin_src racket
+      (cond [test-expr body ...+]
+            ...)
+    #+end_src
+
+    - The last ~test-expr~ in a cond can be replaced by ~else~.
+      In terms of evaluation, ~else~ serves as a /synonym/ for ~#t~, but it
+      clarifies that the last clause is meant to CATCH ALL remaining cases.
+      + If ~else~ is NOT used,
+        then it is possible that none of ~test-expr~'s can produce a ~#t~; in
+        that case, the result of /the ~cond~ expression/ is ~#<void>~.
+
+    - The *FULL* syntax of ~cond~ includes _TWO MORE_ kinds of /clauses/:
+      #+begin_src text
+        (cond cond-clause ...)
+
+        cond-clause	=	[test-expr then-body ...+]
+                    |	[else then-body ...+]
+                    |	[test-expr => proc-expr]
+                    |	[test-expr]
+      #+end_src
+      + ~=>~:
+        If the LHS of ~=>~ is considered as /true/, its value will be passed to
+        the RHS ~proc-expr~. Here ~proc-expr~ must be a function that accepts
+        *ONLY one* argument!
+        #+begin_src racket
+          (define (after-groucho lst)
+            (cond
+              [(member "Groucho" lst) => cdr]
+              [else (error "not there")]))
+
+          (after-groucho '("Harpo" "Groucho" "Zeppo"))
+          ; '("Zeppo")
+
+          (after-groucho '("Harpo" "Zeppo"))
+          ; not there
+        #+end_src
+
+      + ONLY ~test-expr~:
+        RARELY used, simplify return ~test-expr~ when its boolean value
+        considered as /true/.
+        #+begin_src racket
+          (cond
+            [(member "Groucho" lst)]
+            ['("not there")])
+        #+end_src
+
+** DONE 4.8 Sequencing
+   CLOSED: [2020-10-10 Sat 01:44]
+*** DONE 4.8.1 Effects Before: ~begin~
+    CLOSED: [2020-10-10 Sat 01:44]
+    Return the *last* /expression/.
+
+*** DONE 4.8.2 Effects After: ~begin0~
+    CLOSED: [2020-10-10 Sat 01:44]
+    Return the *first* /expression/.
+
+*** DONE 4.8.3 Effects If...: ~when~ and ~unless~
+    CLOSED: [2020-10-10 Sat 01:44]
+    Syntax:
+    #+begin_src racket
+      (when test-expr then-body ...+)
+
+      (unless test-expr then-body ...+)
+    #+end_src
+
+    - ~when~ is like ~if~ without ~else~
+
+    - ~unless~ is like ~when~, but revert the condition.
+
+** DONE 4.9 Assignment: ~set!~
+   CLOSED: [2020-10-11 Sun 01:22]
+   SYNTAX:
+   #+begin_src racket
+     (set! id expr)
+   #+end_src
+   - The result of ~set!~ expression is ~#<void>~
+
+   - Example 1:
+     #+begin_src racket
+       (define greeted null)
+
+       (define (greet name)
+         (set! greeted (cons name greeted))
+         (string-append "Hello, " name))
+
+       (greet "Athos")
+       ;; "Hello, Athos"
+
+       (greet "Porthos")
+       ;; "Hello, Porthos"
+
+       (greet "Aramis")
+       ;; "Hello, Aramis"
+
+       greeted
+       ;; '("Aramis" "Porthos" "Athos")
+     #+end_src
+
+   - Example 2:
+     #+begin_src racket
+       (define (make-running-total)
+         (let ([n 0])
+           (lambda ()
+             (set! n (+ n 1))
+             n)))
+       (define win (make-running-total))
+       (define lose (make-running-total))
+
+       (win)  ;; 1
+       (win)  ;; 2
+
+       (lose)  ;; 1
+
+       (win)  ;; 3
+     #+end_src
+
+*** DONE 4.9.1 Guidelines for Using Assignment - =READ-READ=
+    CLOSED: [2020-10-11 Sun 01:21]
+    EXMAPLES =TODO= NOTE =TODO=
+
+*** DONE 4.9.2 Multiple Values: ~set!-values~
+    CLOSED: [2020-10-11 Sun 01:02]
+    SYNTAX:
+    #+begin_src racket
+      (set!-values (id ...) expr)
+    #+end_src
+
+    - Example:
+      #+begin_src racket
+        (define game
+          (let ([w 0]
+                [l 0])
+            (lambda (win?)
+              (if win?
+                  (set! w (+ w 1))
+                  (set! l (+ l 1)))
+              (begin0
+                (values w l)
+                ; swap sides...
+                (set!-values (w l) (values l w))))))
+
+        (game #t)
+        ;; 1
+        ;; 0
+
+        (game #t)
+        ;; 1
+        ;; 1
+
+        (game #f)
+        ;; 1
+        ;; 2
+      #+end_src
+
+** DONE 4.10 Quoting: ~quote~ and ~'~
+   CLOSED: [2020-10-10 Sat 01:56]
+   /The ~quote~ form/ produces a constant ~(quote datum)~
+
+   - The syntax of a ~datum~ is technically specified as ANYTHING that the ~read~
+     function parses as _a single element_.
+
+   - The value of /the ~quote~ form/ is the _same value_ that ~read~ would produce
+     given ~datum~.
+
+   - The ~datum~ can be a /symbol/, a /boolean/, a /number/, a /(character or byte)
+     string/, a /character/, a /keyword/, an /empty list/, a /pair (or list)/
+     containing more SUCH values, a /vector/ containing more SUCH values, a /hash
+     table/ containing more SUCH values, or a /box/ containing another SUCH value.
+     + =from Jian=
+       Here _SUCH_ means the values mentioned before in this paragraph.
+
+   - A ~datum~ *cannot be* a printed representation that starts with ~#<~,
+     so it *cannot be* ~#<void>~, ~#<undefined>~, or a /procedure/.
+
+** DONE 4.11 Quasiquoting: ~quasiquote~ and ~`~ - =RE-READ=
+   CLOSED: [2020-10-23 Fri 03:55]
+   The ~quasiquote~ form is similar to ~quote~:
+   #+begin_src racket
+     (quasiquote datum)
+   #+end_src
+   
+   - However, for each ~(unquote expr)~ that appears within the _datum_, the _expr_
+     is evaluated to produce a value that *takes the place of* _the ~unquote~
+     sub-form._
+     + Example:
+       #+begin_src racket
+         (quasiquote (1 2 (unquote (+ 1 2)) (unquote (- 5 1))))
+         ; '(1 2 3 4)
+       #+end_src
+
+   - This form can be used to write functions that
+     *build* /lists/ *according to* certain patterns.
+     + Example:
+       #+begin_src racket
+         (define (deep n)
+           (cond
+             [(zero? n) 0]
+             [else      (quasiquote ((unquote n) (unquote (deep (- n 1)))))]))
+
+         (deep 8)
+         ; '(8 (7 (6 (5 (4 (3 (2 (1 0))))))))
+       #+end_src
+       =from Jian=
+       This is just a illustration, no the best solution.
+         At least, the expression ~(list n (deep1 (- n 1)))~ can be used to
+       replace the _quasiquote expression_ above, and it is looks simpler.
+
+   - Or even to cheaply construct expressions programmatically. (Of course, 9 times
+     out of 10, you should be using a /macro/ to do this (the 10th time being when
+     you're working through a textbook like PLAI).)
+     + Example:
+       #+begin_src racket
+         (define (build-exp n)
+           (add-lets n (make-sum n)))
+
+         (define (add-lets n body)
+           (cond
+             [(zero? n) body]
+             [else
+              (quasiquote
+               (let ([(unquote (n->var n)) (unquote n)])
+                 (unquote (add-lets (- n 1) body))))]))
+
+         (define (make-sum n)
+           (cond
+             [(= n 1) (n->var 1)]
+             [else
+              (quasiquote (+ (unquote (n->var n))
+                             (unquote (make-sum (- n 1)))))]))
+
+         (define (n->var n) (string->symbol (format "x~a" n)))
+
+         (build-exp 3)
+         ; '(let ((x3 3)) (let ((x2 2)) (let ((x1 1)) (+ x3 (+ x2 x1)))))
+       #+end_src
+     
+   - The ~unquote-splicing~ form is similar to unquote, but
+     + its _expr_ *must* produce a /list/, and
+     + the ~unquote-splicing~ form *must* appear in a context that produces either
+       a /list/ or a /vector/.
+
+   - As the name suggests, the resulting /list/ is *spliced into* the context of
+     its use.
+     + Example:
+       #+begin_src racket
+         (quasiquote (1 2 (unquote-splicing (list (+ 1 2) (- 5 1))) 5))
+         ; '(1 2 3 4 5)
+       #+end_src
+
+   - Using /splicing/ we can REVISE the construction of our example expressions
+     above to have just a _SINGLE ~let~ expression_ and a _single ~+~ expression_.
+     + Examples:
+       #+begin_src racket
+         (define (build-exp n)
+           (add-lets
+            n
+            (quasiquote (+ (unquote-splicing
+                            (build-list
+                             n
+                             (λ (x) (n->var (+ x 1)))))))))
+
+         (define (add-lets n body)
+           (quasiquote
+            (let (unquote
+                  (build-list
+                   n
+                   (λ (n)
+                     (quasiquote
+                      [(unquote (n->var (+ n 1))) (unquote (+ n 1))]))))
+              (unquote body))))
+
+         (define (n->var n) (string->symbol (format "x~a" n)))
+
+         (build-exp 3)
+         ; '(let ((x1 1) (x2 2) (x3 3)) (+ x1 x2 x3))
+       #+end_src
+
+   - If a ~quasiquote~ form appears *within an enclosing* ~quasiquote~ form, then
+     the *inner* ~quasiquote~ effectively *CANCELS* _one layer_ of ~unquote~ and
+     ~unquote-splicing~ forms, so that a *second* ~unquote~ or ~unquote-splicing~
+     is needed.
+     + Examples:
+       #+begin_src racket
+         (quasiquote (1 2 (quasiquote (unquote (+ 1 2)))))
+         ; '(1 2 (quasiquote (unquote (+ 1 2))))
+       
+         (quasiquote (1 2 (quasiquote (unquote (unquote (+ 1 2))))))
+         ; '(1 2 (quasiquote (unquote 3)))
+       
+         (quasiquote (1 2 (quasiquote ((unquote (+ 1 2)) (unquote (unquote (- 5 1)))))))
+         ; '(1 2 (quasiquote ((unquote (+ 1 2)) (unquote 4))))
+       #+end_src
+
+     + *The evaluations above will not actually print as shown.*
+       Instead, the _SHORTHAND form_ of ~quasiquote~ and ~unquote~ will be used:
+       ~`~ (i.e., a backquote) and ~,~ (i.e., a comma).
+       The same _shorthands_ can be used in expressions:
+       * Example:
+         #+begin_src racket
+           `(1 2 `(,(+ 1 2) ,,(- 5 1)))
+           ; '(1 2 `(,(+ 1 2) ,4))
+         #+end_src
+
+       * The _SHORTHAND_ form of ~unquote-splicing~ is ~,@~:
+         - Example:
+           #+begin_src racket
+             `(1 2 ,@(list (+ 1 2) (- 5 1)))
+             '(1 2 3 4)
+           #+end_src
+       
+** DONE 4.12 Simple Dispatch: ~case~
+   CLOSED: [2020-10-10 Sat 02:10]
+   /The ~case~ form/ dispatches to a clause by *matching* the result of an
+   /expression/ to the values for the clause:
+   #+begin_src racket
+     (case expr
+       [(datum ...+) body ...+]
+       ...)
+   #+end_src
+
+   - Each ~datum~ will be compared to the result of ~expr~ using ~equal?~,
+     and then the CORRESPONDING ~body~'s are evaluated.
+       /The ~case~ form/ can *dispatch* to the _correct clause_ in *O(log N)*
+     time for *N* ~datum~'s.
+
+   - Multiple ~datum~'s can be supplied for each clause, and the corresponding
+     ~body~'s are evaluated if any of the ~datum~'s match.
+
+   - Example:
+     #+begin_src racket
+       (let ([v (random 6)])
+         (printf "~a\n" v)
+         (case v
+           [(0) 'zero]
+           [(1) 'one]
+           [(2) 'two]
+           [(3 4 5) 'many]))
+       ;; 3
+       ;; 'many
+     #+end_src
+
+   - The _LAST clause_ of /a ~case~ form/ can use ~else~, just like ~cond~:
+     #+begin_src racket
+       (case (random 6)
+         [(0) 'zero]
+         [(1) 'one]
+         [(2) 'two]
+         [else 'many])
+
+       ;; 'many
+     #+end_src
+
+   - /The ~case~ form/ is more restricted than /GENERAL pattern matching/,
+     but it has the *dispatch-time guarantee*, which /GENERAL pattern matching/
+     doesn't have.
+
+** TODO 4.13 Dynamic Binding: ~parameterize~
+
+* TODO 5 Programmer-Defined Datatypes
+  New datatypes are normally created with /the ~struct~ form/
+
+  - The /class-based object system/, which we defer to /Classes/ and /Objects/,
+    offers an _ALTERNATE_ mechanism for *creating* /NEW datatypes/, BUT even
+    /classes/ and /objects/ are implemented _IN TERMS OF /structure types/._
+
+** DONE 5.1 Simple Structure Types: ~struct~
+   CLOSED: [2020-10-12 Mon 01:31]
+   SYNTAX:
+   #+begin_src racket
+     (struct struct-id (field-id ...))
+   #+end_src
+
+   - To a first *APPROXIMATION*, the syntax of struct is
+     + Examples
+     #+begin_src racket
+       (struct posn (x y))
+     #+end_src
+
+     + ~struct-id~: a /constructor function/
+       #+begin_src racket
+         (posn 1 2)  ;; #<posn>
+       #+end_src
+
+     + ~struct-id?~: a _predicate_ function that takes a single argument and check
+       if its type is ~struct-id~.
+       #+begin_src racket
+         (posn? 3)  ;; #f
+         (posn? (posn 1 2))  ;; #t
+       #+end_src
+
+     + ~field-id~'s: arguments used to construct a /struct/.
+
+     + ~struct-id-field-id~: an accessor for ~field-id~.
+       #+begin_src racket
+         (posn-x (posn 1 2))  ;; 1
+         (posn-y (posn 1 2))  ;; 2
+       #+end_src
+
+     + ~struct:struct-id~: a /structure type descriptor/, which is a /value/ that
+       represents the /structure type/ as a /first-class value/ (with ~#:super~, as
+       discussed later in "More Structure Type Options"). =TODO=
+
+   - A ~struct~ form places _no constraints_ on the kinds of values that can appear
+     for /fields/ in an instance of the /structure type/.
+     + For example,
+       ~(posn "apple" #f)~ produces an instance of ~posn~, even though ~"apple"~
+       and ~#f~ are *not valid coordinates* for the obvious uses of ~posn~ /instances/.
+       * /Contracts/ can be used to enforce /constraints/ on field values.
+
+** DONE 5.2 Copying and Update
+   CLOSED: [2020-10-12 Mon 01:38]
+   The ~struct-copy~ form is a kind of /functional update/ for /structs/.
+   #+begin_src racket
+     (struct-copy struct-id struct-expr [field-id expr] ...)
+   #+end_src
+
+   - The ~struct-id~ that appears after ~struct-copy~ *must be* a /structure type
+     name/ bound by ~struct~ (i.e., the name that cannot be used directly as an
+     expression =TODO= =???=).
+
+   - Examples:
+     #+begin_src racket
+       (define p1 (posn 1 2))
+       (define p2 (struct-copy posn p1 [x 3]))
+       (list (posn-x p2) (posn-y p2))  ; '(3 2)
+       (list (posn-x p1) (posn-y p1))  ; '(1 2)
+     #+end_src
+
+** DONE 5.3 Structure Subtypes
+   CLOSED: [2020-10-12 Mon 01:47]
+   An extended form of struct can be used to define a structure subtype, which
+   is a structure type that extends an existing structure type:
+   #+begin_src racket
+     (struct struct-id super-id (field-id ...))
+   #+end_src
+
+   - The ~super-id~ must be a structure type name bound by struct (i.e., the name
+     that cannot be used directly as an expression).
+
+   - Examples:
+     #+begin_src racket
+       (struct posn (x y))
+       (struct 3d-posn posn (z))
+     #+end_src
+
+   - The /subtype constructor/ accepts the values for the /subtype fields/ *after*
+     values for the /supertype fields/.
+
+   - An instance of a /structure subtype/ can be used with the /predicate/ and
+     /accessors/ of the /supertype/.
+     + A /structure subtype/ *can ONLY* access its /supertype fields/ with its
+       /supertype field accessors/.
+
+   - Examples: =IMPORTANT=
+     #+begin_src racket
+       (define p (3d-posn 1 2 3))
+       p              ; #<3d-posn>
+       (posn? p)      ; #t
+       (3d-posn-z p)  ; 3
+
+       ; a 3d-posn has an x field, but there is no 3d-posn-x selector:
+       (3d-posn-x p)
+       ;; 3d-posn-x: undefined;
+       ;;  cannot reference an identifier before its definition
+       ;;   in module: top-level
+
+       ; use the supertype's posn-x selector to access the x field:
+       (posn-x p)  ; 1
+     #+end_src
+
+** DONE 5.4 Opaque versus Transparent Structure Types
+   CLOSED: [2020-10-12 Mon 02:00]
+   - An /structure type/ instance _BY DEFAULT_ does not show any information about
+     its fields' names and values -- /structure types/ by default are /OPAQUE/.
+
+   - If the /accessors/ and /mutators/ of a /structure type/ are kept _private_
+     to a /module/, then _no other /module/ can rely on the representation of the
+     /type/'s /instances/._
+
+   - To make a /structure type/ /TRANSPARENT/, use the ~#:transparent~ /keyword/
+     _AFTER_ the /field-name sequence/:
+     #+begin_src racket
+       (struct posn (x y) #:transparent)
+
+       (posn 1 2)  ;; (posn 1 2)
+     #+end_src
+
+   - A /transparent structure type/ also *allows* /reflective operations/, such
+     as ~struct?~ and ~struct-info~, to be used on its /instances/ (see
+     "Reflection and Dynamic Evaluation"). =TODO= =???= =TODO=
+
+   - /Structure types/ are /OPAQUE/ *BY DEFAULT*, because /opaque structure instances/
+     provide _MORE /encapsulation/ GUARANTEES._
+
+   - That is, a library can use an /opaque structure/ to *encapsulate* data, and
+     clients of the library _CANNOT_ manipulate the data in the structure EXCEPT
+     as allowed by the library.
+
+** TODO 5.5 Structure Comparisons - =TODO= =???= =TODO=
+   - A /generic ~equal?~ comparison/
+     + AUTOMATICALLY _recurs_ on the /fields/ of a /transparent structure type/
+     + MERE INSTANCE IDENTITY for /opaque structure types/
+
+   - Examples:
+     #+begin_src racket
+       (struct glass (width height) #:transparent)
+       (equal? (glass 1 2) (glass 1 2))  ; #t
+
+       (struct lead (width height))
+       (define slab (lead 1 2))
+       (equal? slab slab)        ;; #t
+       (equal? slab (lead 1 2))  ;; #f
+     #+end_src
+
+   - To support /instances comparisons/ via ~equal?~ without making the /structure
+     type transparent/, you can use the ~#:methods~ /keyword/, ~gen:equal+hash~,
+     and implement _THREE_ /methods/:
+
+     =from Jian= =TODO= =???= Learn more about ~gen:equal+hash~!!!!!!!!!!!!
+
+     #+begin_src racket
+       (struct lead (width height)
+         #:methods
+         gen:equal+hash
+         [(define (equal-proc a b equal?-recur)
+            ; compare a and b
+            (and (equal?-recur (lead-width a) (lead-width b))
+                 (equal?-recur (lead-height a) (lead-height b))))
+
+          (define (hash-proc a hash-recur)
+            ; compute primary hash code of a
+            (+ (hash-recur (lead-width a))
+               (* 3 (hash-recur (lead-height a)))))
+
+          (define (hash2-proc a hash2-recur)
+            ; compute secondary hash code of a
+            (+ (hash2-recur (lead-width a))
+               (hash2-recur (lead-height a))))])
+
+
+       (equal? (lead 1 2) (lead 1 2))  ;; #t
+     #+end_src
+
+     - The _first_ function in the list implements the ~equal?~ test on TWO ~lead~'s;
+       + the _third argument_ to the function is used instead of ~equal?~ for
+         _recursive equality testing_, so that data cycles can be handled correctly.
+
+       + The other two functions compute primary and secondary hash codes for use
+         with hash tables:
+         #+begin_src racket
+           > (define h (make-hash))
+           > (hash-set! h (lead 1 2) 3)
+           > (hash-ref h (lead 1 2))
+           3
+
+           > (hash-ref h (lead 2 1))
+           hash-ref: no value found for key
+
+           key: #<lead>
+         #+end_src
+
+     - The first function provided with gen:equal+hash is not required to recursively
+       compare the fields of the structure. For example, a structure type
+       representing a set might implement equality by checking that the members of
+       the set are the same, independent of the order of elements in the internal
+       representation. Just take care that the hash functions produce the same
+       value for any two structure types that are supposed to be equivalent.
+
+** DONE 5.6 Structure Type Generativity
+   CLOSED: [2020-10-12 Mon 02:58]
+   EACH TIME that a ~struct~ form is _evaluated_, it generates a /structure type/
+   that is *distinct* from ALL EXISTING /structure types/, even if some other
+   /structure type/ has the SAME _name_ and _fields_.
+   =from Jian=
+   This is the same as any other well designed modern programming languages.
+
+   - BEWARE of placing a ~struct~ form in positions that are _evaluated MULTIPLE
+     times_.
+
+   - Examples:
+     + Wrong design:
+       #+begin_src racket
+         (define (add-bigger-fish lst)
+           (struct fish (size) #:transparent)  ; new every time
+
+           (cond
+             [(null? lst) (list (fish 1))]
+             [else (cons (fish (* 2 (fish-size (car lst))))
+                         lst)]))
+
+         (add-bigger-fish null)  ; (list (fish 1))
+       #+end_src
+       * This is usually not expected!
+         #+begin_src racket
+           (add-bigger-fish (add-bigger-fish null))
+           ;; fish-size: contract violation;
+           ;;  given value instantiates a different structure type with
+           ;; the same name
+           ;;   expected: fish?
+           ;;   given: (fish 1)
+         #+end_src
+
+     + Correct design:
+       #+begin_src racket
+         (struct fish (size) #:transparent)
+
+         (define (add-bigger-fish lst)
+           (cond
+             [(null? lst) (list (fish 1))]
+             [else (cons (fish (* 2 (fish-size (car lst))))
+                         lst)]))
+
+
+         (add-bigger-fish (add-bigger-fish null))  ; (list (fish 2) (fish 1))
+       #+end_src
+
+** TODO 5.7 Prefab Structure Types
+   - Although a transparent structure type prints in a way that shows its content,
+     the printed form of the structure cannot be used in an expression to get
+     the structure back, unlike the printed form of a number, string, symbol, or
+     list.
+
+   - A prefab (“previously fabricated”) structure type is a built-in type that is
+     known to the Racket printer and expression reader. Infinitely many such
+     types exist, and they are indexed by name, field count, supertype, and
+     other such details. The printed form of a prefab structure is similar to a
+     vector, but it starts #s instead of just #, and the first element in the
+     printed form is the prefab structure type’s name.
+
+   - The following examples show instances of the sprout prefab structure type that
+     has one field. The first instance has a field value 'bean, and the second has
+     field value 'alfalfa:
+
+** TODO 5.8 More Structure Type Options
+   FULL SYNTAX
+   #+begin_src racket
+     (struct struct-id maybe-super (field ...)
+       struct-option ...)
+
+     maybe-super =
+     | super-id
+
+     field	 = field-id
+     | [field-id field-option ...]
+   #+end_src
+
+   - The *FULL SYNTAX* of ~struct~ supports many options,
+     BOTH
+     + at the /structure-type level/
+     + at /the level of individual fields/:
+
+   - A ~struct-option~ ALWAYS _starts with_ a keyword:
+     + ~#:mutable~
+     + ~#:transparent~
+     + ~#:inspector inspector-expr~
+     + ~#:prefab~
+     + ~#:auto-value auto-expr~
+     + ~#:guard guard-expr~
+     + ~#:methods interface-expr [body ...]~
+     + ~#:property prop-expr val-expr~
+     + ~#:super super-expr~
+
+* TODO 6 Modules
+  /Modules/ let you
+  - organize Racket code into multiple _files_
+  - reusable libraries
+
+** TODO 6.1 Module Basics
+   Each Racket /module/ _TYPICALLY_ resides in its own file.
+
+   - For example, suppose the file "cake.rkt" contains the following /module/:
+     #+begin_src racket
+       #lang racket
+       ;; cake.rkt
+
+       (provide print-cake)
+
+       ; draws a cake with n candles
+       (define (print-cake n)
+         (show "   ~a   " n #\.)
+         (show " .-~a-. " n #\|)
+         (show " | ~a | " n #\space)
+         (show "---~a---" n #\-))
+
+       (define (show fmt n ch)
+         (printf fmt (make-string n ch))
+         (newline))
+     #+end_src
+     + The ~provide~ EXPLICITLY *exports* the definition ~print-cake~.
+     + Since ~show~ is NOT exported, it is *private* to "cacke.rkt".
+
+   - The following _"random-cake.rkt"_ /module/ imports _"cake.rkt"_:
+     #+begin_src racket
+       #lang racket
+       ;; random-cake.rkt
+
+       (require "cake.rkt")
+
+       (print-cake (random 30))
+     #+end_src
+     + The *RELATIVE reference* _"cake.rkt"_ in the import ~(require "cake.rkt")~
+       works if the _"cake.rkt"_ and _"random-cake.rkt"_ /modules/ are in the *SAME
+       directory*.
+
+     + Unix-style /relative paths/ are used for /relative module references/ on all
+       platforms, much like relative URLs in HTML pages.
+
+*** DONE 6.1.1 Organizing Modules
+    CLOSED: [2020-10-22 Thu 02:23]
+    - The _"cake.rkt"_ and _"random-cake.rkt"_ example demonstrates the _MOST
+      COMMON WAY_ to organize a program into /modules/:
+      1. put ALL /module files/ in *a SINGLE directory* (perhaps with subdirectories),
+      2. then have the /modules/ reference each other through /relative paths/.
+
+    - _A directory of /modules/_ can act as a /project/, since it can be moved
+      around on the filesystem or copied to other machines, and /relative paths/
+      preserve the connections among /modules/.
+      
+    - Another Example: Build a _candy-sorting program_.
+      =from Jian= Check the offical document, there is a figure.
+      + You might have a *MAIN _"sort.rkt"_ /module/* that uses OTHER /modules/
+         to _ACCESS a candy database_ and a _CONTROL sorting machine_.
+      
+        * If the _candy-database /module/_ itself is organized into /sub-modules/
+          that _handle barcode_ and _manufacturer information_, then the _database
+          /module/_ could be _"db/lookup.rkt"_ that uses HELPER /modules/
+          _"db/barcodes.rkt"_ and _"db/makers.rkt"._
+
+        * Similarly, the _sorting-machine driver_ _"machine/control.rkt"_ might use
+          HELPER /modules/ _"machine/sensors.rkt"_ and _"machine/actuators.rkt"_.
+
+      + Code
+        * "sort.rkt"
+          #+begin_src racket
+            #lang racket
+            (require "db/lookup.rkt" "machine/control.rkt")
+          #+end_src
+          
+        * "dp/lookup.rkt"
+          #+begin_src racket
+            #lang racket
+            (require "barcode.rkt" "makers.rkt")
+          #+end_src
+          
+        * "machine/control.rkt"
+          #+begin_src racket
+            #lang racket
+            (require "sensors.rkt" "actuators.rkt")
+          #+end_src
+          
+      + How to run it:
+        * ~racket sort.rkt~
+          Racket tools all work AUTOMATICALLY with /relative paths/.
+          
+        * ~raco make sort.rkt~
+          ~racket sort.rkt~
+          With a large enough program, compilation from source can take too long,
+          so
+          1. use the first command to compile "sort.rkt" and all its /dependencies/
+             to _bytecode files_.
+
+          2. run it with the second command, it will automatically use _bytecode files_
+             when they are present.
+    
+*** DONE 6.1.2 Library Collections
+    CLOSED: [2020-10-22 Thu 02:36]
+    A /collection/ is *a HIERARCHICAL GROUPING of INSTALLED library /modules/.*
+
+    - A /module/ in a /collection/ is referenced through an /unquoted, suffixless
+      path/. 
+      + For example,
+        #+begin_src racket
+          #lang racket
+
+          (require racket/date)
+
+          (printf "Today is ~s\n"
+                  (date->string (second->date (current-seconds))))
+        #+end_src
+        
+    - In the online Racket documentation,
+      The search results indicate the /module/ that provides each /binding/.
+      Hover over the /binding/ name to find out which /modules/ provide it.
+
+    - A /module reference/ like ~racket/date~ looks LIKE an identifier, BUT it is
+      NOT treated in the same way as ~printf~ or ~date->string~.
+        Instead, when ~require~ sees a /module reference/ that is *unquoted*, it
+      _CONVERTS_ the reference to a /collection-based module path/:
+      1. if the /unquoted path/ contains no ~/~, then ~require~ AUTOMATICALLY
+         *adds* a ~"/main"~ to the reference.
+         + For example,
+           ~(require slideshow)~ is equivalent to ~(require slideshow/main)~.
+
+      2. ~require~ IMPLICITLY *adds* a ~".rkt"~ suffix to the path.
+
+      3. ~require~ *resolves* the path *by searching* among /INSTALLED collections/,
+        *INSTEAD of* treating the path as relative to the enclosing module's path.
+        
+    - To a first approximation, a /collection/ is implemented as a filesystem
+      directory.
+      + For example,
+        the ~"racket"~ /collection/ is mostly located in a ~"racket"~ directory
+        within the /Racket installation's "collects" directory/, as reported by
+        #+begin_src racket
+          #lang racket
+
+          (require setup/dirs)
+
+          (build-path (find-collects-dir)  ; main collection directory
+                    "racket")
+        #+end_src
+        
+      + The /Racket installation's "collects" directory/, however, is _only one
+        place_ that require looks for /collection/ DIRECTORIES.
+        * Other places include the /user-specific directory/ reported by
+          ~(find-user-collects-dir)~ and _directories configured_ through the
+          ~PLTCOLLECTS~ search path.
+        * Finally, and *most typically*, /collections/ are found through /installed
+          packages/.
+    
+*** TODO 6.1.3 Packages and Collections
+*** TODO 6.1.4 Adding Collections
+
+** TODO 6.2 Module Syntax
+*** TODO 6.2.1 The ~module~ Form
+*** TODO 6.2.2 The ~#lang~ Shorthand
+*** TODO 6.2.3 Submodules
+*** TODO 6.2.4 Main and Test Submodules
+
+** TODO 6.3 Module Paths
+** TODO 6.4 Imports: ~require~
+** TODO 6.5 Exports: ~provide~
+   *By default*, ALL of a /module/'s definitions are *private* to the /module/.
+   The ~provide~ form specifies definitions to be made available where the /module/
+   is *required*.
+
+   - SYNTAX:
+     #+begin_src racket
+       (provide provide-spec ...)
+     #+end_src
+
+   - A ~provide~ form can *only* appear *at /module/ level* (i.e., in the *IMMEDIATE
+     body* of a ~module~).
+     + Specifying MULTIPLE =provide-spec='s in a SINGLE ~provide~
+       *is exactly the same as*
+       using MULTIPLE ~provide~'s each with a SINGLE =provide-spec=.
+
+   - Each ~identifier~ can be exported *at most once* from a ~module~ across ALL
+     ~provide~'s within the ~module~. More precisely,
+     + the EXTERNAL NAME for each *export* must be _DISTINCT_;
+
+     + the SAME internal /binding/ _can be *exported* MULTIPLE times with
+       DIFFERENT external names._
+
+   - The allowed shape of a =provide-spec= is defined _RECURSIVELY_:
+     + ~identifier~
+       In its simplest form, a =provide-spec= indicates a /binding/ within its
+       ~module~ to be *exported*. The /binding/ can be from either a /local
+       definition/, or from an /import/.
+
+     + ~(rename-out [orig-id export-id] ...)~
+       A rename-out form is similar to just specifying an identifier, but the
+       exported binding orig-id is given a different name, export-id, to
+       importing modules.
+
+     + ~(struct-out struct-id)~
+       A struct-out form exports the bindings created by
+       ~(struct struct-id ....)~.
+
+     + ~(all-defined-out)~
+       + The all-defined-out shorthand exports all bindings that are defined within
+         the exporting module (as opposed to imported).
+
+       + Use of the all-defined-out shorthand is generally discouraged, because
+         it makes less clear the actual exports for a module, and because Racket
+         programmers get into the habit of thinking that definitions can be
+         added freely to a module without affecting its public interface (which
+         is not the case when all-defined-out is used).
+
+     + ~(all-from-out module-path)~
+       * The all-from-out shorthand exports all bindings in the module that were
+         imported using a require-spec that is based on module-path.
+
+       * Although different module-paths could refer to the same file-based module,
+         re-exporting with all-from-out is based specifically on the module-path
+         reference, and not the module that is actually referenced.
+
+     + ~(except-out provide-spec id ...)~
+       Like =provide-spec=, but omitting the export of each id, where id is the
+       external name of the binding to omit.
+
+     + ~(prefix-out prefix-id provide-spec)~
+       Like =provide-spec=, but adding prefix-id to the beginning of the external
+       name for each exported binding.
+
+** TODO 6.6 Assignment and Redefinition
+** TODO 6.7 Modules and Macros
+
+* TODO 7 Contracts - _READING_
+  This chapter provides a GENTLE introduction to /Racket's contract system/.
+
+** DONE 7.1 Contracts and Boundaries
+   CLOSED: [2020-10-10 Sat 21:32]
+   A /software contract/ is an agreement between two parties.
+   The agreement specifies _obligations_ and _guarantees_ for each "product" (or
+   value) that is handed from one party to the other.
+
+   - A /contract/ thus establishes a _boundary between the two parties_.
+     Whenever a value crosses this boundary, _the /contract/ monitoring system_
+     performs /contract/ checks, making sure the partners abide by the established
+     /contract/.
+
+   - In this spirit, *Racket _ENCOURAGES_ /contracts/ mainly at _module boundaries_.*
+     Specifically, programmers may attach /contracts/ to ~provide~ clauses and thus
+     impose CONSTRAINTS and PROMISES on the use of *exported values*.
+     For example, the export specification
+     #+begin_src racket
+       #lang racket
+
+       (provide (contract-out [amount positive?]))
+       (deinfe amount ...)
+     #+end_src
+
+   - _The /contracts/ library_ is built into the Racket language,
+     BUT if you wish to use ~racket/base~, you can EXPLICITLY ~require~ the
+     ~contracts~ library like this:
+     #+begin_src racket
+       #lang racket/base
+
+       (require racket/contract)  ;; now we can write contracts
+
+       (provide (contract-out [amount positive?]))
+       (define amount ...)
+     #+end_src
+
+*** DONE 7.1.1 Contract Violations
+    CLOSED: [2020-10-10 Sat 17:41]
+    If we bind ~amount~ to a number that is not positive,
+
+    - The /contract/ for ~amount~ given above PROMISES it's a _positive number_,
+      HOWEVER, if define the value of ~amount~ with a non-number value, the error
+      message is misleading -- it comes from the _contract system_, but from the
+      /contract/ ~positive?~ instead of ~amount~. In general, this is not expected!
+        We make the /contract/ capture our intensions for all Racket values, we
+      can ensure that the value is *BOTH* a /number/ AND is /positive/, *combining*
+      the two contracts with ~and/c~:
+      #+begin_src racket
+        (provide (contract-out [amount (and/c number? positive?)]))
+      #+end_src
+
+*** DONE 7.1.2 Experimenting with Contracts and Modules
+    CLOSED: [2020-10-10 Sat 18:04]
+    To experiment with /contracts/, we can use /submodules/, which can help us
+    make experiments simple and use one SINGLE file or DrRacket's /definition
+    area/.
+    #+begin_src racket
+      #lang racket
+
+      (module+ server
+        (provide (contract-out [amount (and/c number? positive?)]))
+        (define amount 150))
+
+      (module+ main
+        (require (submod ".." server))
+        (+ amount 10))
+    #+end_src
+
+*** DONE 7.1.3 Experimenting with Nested Contract Boundaries
+    CLOSED: [2020-10-10 Sat 21:32]
+    Use /contracts/ at a finer granularity than /modules/.
+
+    - Example:
+      #+begin_src racket
+        #lang racket
+
+        (define/contract amount
+          (and/c number? positive?)
+          150)
+
+        (+ amount 10)
+      #+end_src
+      + In this example, the define/contract form establishes a contract boundary
+        between the definition of amount and its surrounding context.
+
+    - =TODO= =TODO= =TODO=
+      Forms that create these /nested contract boundaries/ _can sometimes be *subtle*
+      to use_ because they may
+      + have _unexpected performance implications_
+        OR
+      + blame a party that may _seem unintuitive_.
+
+    - These _subtleties_ are explained in
+      + "Using ~define/contract~ and ~->~"
+        AND
+      + "Contract boundaries and ~define/contract~"
+
+** DONE 7.2 Simple Contracts on Functions
+   CLOSED: [2020-10-11 Sun 00:46]
+   - A ~->~ by itself is NOT a /contract/;
+     it is a /contract combinator/, which *combines* other /contracts/ *to form*
+     a /contract/.
+
+   - ~->~ is used create contracts for functions, and it combines
+     /contracts/ between /domain/ and /range/:
+     #+begin_src racket
+       #lang racket
+
+       (provide (contract-out
+                 [deposite (-> number? any)]
+                 [balance  (-> number?)]))
+
+       (define amount 0)
+       (define (deposite a) (set! amount (+ amount a)))
+       (define (balance) amount)
+     #+end_src
+
+*** DONE 7.2.1 Styles of ~->~
+    CLOSED: [2020-10-10 Sat 21:41]
+    If you are used to mathematical functions, you may prefer a /contract arrow/
+    to appear *between* the /domain/ and the /range/ of a function, not at the
+    beginning.
+    #+begin_src racket
+      (provide (contract-out
+                [deposite (number? . => . any)]))
+    #+end_src
+
+*** DONE 7.2.2 Using ~define/contract~ and ~->~
+    CLOSED: [2020-10-10 Sat 21:50]
+    #+begin_src racket
+      (define/contract (deposite amount)
+        (-> number? any)
+        ; implementation goes here
+        ...)
+    #+end_src
+    This kind of /contracts/ have _TWO_ potentially important impacts on the use
+    of ~deposite~:
+    1. Performance degradation because possible frequently use inside a /module/;
+
+    2. Too strict for ~deposite~ when it is used in the same /module/, in which
+       case a more lax set of inputs may also be acceptable.
+
+*** DONE 7.2.3 ~any~ and ~any/c~
+    CLOSED: [2020-10-10 Sat 23:05]
+    - The ~any~ /contract/ used for deposit matches _any kind of result_, and it
+      can _ONLY be used in the /range/ position_ of a /function contract/.
+      + The /contract monitoring system/ doesn't try to check function results
+        that have ~any~.
+
+      + In the example in section 7.2.2 that uses ~any~, we know its result is
+        ~void?~, however, if we write ~void?~, the /contract monitoring system/
+        will check everytime.
+
+    - The ~any/c~ /contract/ is *SIMILAR* to ~any~, in that it makes no demands on
+      a value.
+      *UNLIKE* ~any~, ~any/c~ indicates a single value, and it is suitable for
+      use as an /argument contract/. Using ~any/c~ as a /range contract/ imposes
+      a *CHECK* that the function produces a _SINGLE_ value.
+      + For example, for function
+        #+begin_src racket
+          (define (f x) (values (+ x 1) (- x 1)))
+        #+end_src
+        can have contract ~(-> integer? any)~, NOT ~(-> integer? any/c)~.
+
+    - Use ~any/c~ as a /result contract/ when it is *particularly important* to
+      _promise a single result_ from a function.
+
+    - Use ~any~ when you want to
+      promise *as little as possible* (and *incur as little checking as
+      possible*) for a function's result.
+
+*** DONE 7.2.4 Rolling Your Own Contracts - =TODO= =TODO=
+    CLOSED: [2020-10-11 Sun 00:46]
+    - The ~deposit~ function adds the given number to the value of ~amount~.
+      The /function's contract/
+      + *prevents* clients from applying it to _non-numbers_,
+      + still *allows* them to apply the function to /complex numbers/, /negative
+         numbers/, or /inexact numbers/, _none of which sensibly represent
+        amounts of money._
+
+    - The contract system allows programmers to define their own /contracts/ as
+      functions:
+      #+begin_src racket
+        #lang racket
+
+        (define (amount? a)
+          (and (number? a) (integer? a) (exact? a) (>= a 0)))
+
+        (provide (contract-out
+                  ; an amount is a natural number of cents
+                  ; is the given number an amount?
+                  [deposit (-> amount? any)]
+                  [amount? (-> any/c boolean?)]
+                  [balance (-> amount?)]))
+
+        (define amount 0)
+        (define (deposit a) (set! amount (+ amount a)))
+        (define (balance) amount)
+      #+end_src
+      + We can also use the built-in ~natural-number/c~ in place of ~amount?~.
+
+    - Every function that accepts one argument can be treated as a predicate and
+      thus used as a contract. For combining existing checks into a new one,
+      however, contract combinators such as and/c and or/c are often useful. For
+      example, here is yet another way to write the contracts above:
+      #+begin_src racket
+        (define amount/c
+          (and/c number? integer? exact? (or/c positive? zero?)))
+
+        (provide (contract-out
+                  [deposit (-> amount/c any)]
+                  [balance (-> amount/c)]))
+      #+end_src
+
+    - Other values also serve DOUBLE duty _AS_ /contracts/.
+      For example,
+      + ~(or/c positive? zero?)~ can be re-written as ~(or/c positive? 0)~
+
+      + If use a /regular expression/ as a /contract/, the /contract/ accepts
+        /strings/ and /byte strings/ that *match* this /regular expression/.
+
+    - Naturally, you can mix your own contract-implementing functions with
+      /combinators/ like ~and/c~.
+        Here is a /module/ for creating /strings/ from banking records:
+      #+begin_src racket
+        #lang racket
+
+        (define (has-decimal? str)
+          (define L (string-length str))
+          (and (>= L 3)
+               (char=? #\. (string-ref str (- L 3)))))
+
+        (provide (contract-out
+                  ; convert a random number to a string
+                  [format-number (-> number? string?)]
+
+                  ; convert an amount into a string with a decimal
+                  ; point, as in an amount of US currency
+                  [format-nat (-> natural-number/c
+                                  (and/c string? has-decimal?))]))
+
+      #+end_src
+
+    - =TODO=
+    - =TODO=
+    - =TODO=
+    - =TODO=
+    - =TODO=
+
+*** DONE 7.2.5 Contracts on Higher-order Functions
+    CLOSED: [2020-10-11 Sun 00:16]
+    For example,
+    #+begin_src racket
+      (-> integer? (-> integer? integer?))
+    #+end_src
+
+*** DONE 7.2.6 Contract Messages with “???” - =TODO=
+    CLOSED: [2020-10-11 Sun 00:34]
+    Give a name to a /contract/ to avoid the =???= in error messages.
+
+    - We will see =???= if we use this definition:
+      #+begin_src racket
+        (module bank-server racket
+          (provide
+           (contract-out
+            [deposit (-> (λ (x)
+                           (and (number? x) (integer? x) (>= x 0)))
+                         any)]))
+
+          (define total 0)
+          (define (deposit a) (set! total (+ a total))))
+      #+end_src
+      + When violation happens
+        #+begin_src racket
+          (require 'bank-server)
+          (deposit -10)
+          ;; deposit: contract violation
+          ;;   expected: ???
+          ;;   given: -10
+          ;;   in: the 1st argument of
+          ;;       (-> ??? any)
+          ;;   contract from: bank-server
+          ;;   blaming: top-level
+          ;;    (assuming the contract is correct)
+          ;;   at: eval:2.0
+        #+end_src
+
+    - Use /flat named contracts/.
+      #+begin_src racket
+        (module improved-bank-server racket
+          (provide
+           (contract-out
+            [deposit (-> (flat-named-contract
+                          'amount
+                          (λ (x)
+                            (and (number? x) (integer? x) (>= x 0))))
+                         any)]))
+
+          (define total 0)
+          (define (deposit a) (set! total (+ a total))))
+      #+end_src
+      + When violation happens
+        #+begin_src racket
+          (require 'bank-server)
+          (deposit -10)
+          ;; deposit: contract violation
+          ;;   expected: amount
+          ;;   given: -10
+          ;;   in: the 1st argument of
+          ;;       (-> amount any)
+          ;;   contract from: improved-bank-server
+          ;;   blaming: top-level
+          ;;    (assuming the contract is correct)
+          ;;   at: eval:5.0
+        #+end_src
+
+    - Then meaning of /flat named contracts/: =TODO= =???= =TODO=
+      + The use of “contract” in this term shows that /contracts/ are *first-class
+        values*.
+
+      + The “flat” means that the collection of data is a subset of the /built-in
+        atomic classes/ of data; they are described by a /predicate/ that _consumes_
+        ALL /Racket values/ and _produces_ a /boolean/.
+
+      + The “named” part says what we want to do, which is to *name* the /contract/
+        so that error messages become intelligible:
+
+*** DONE 7.2.7 Dissecting a contract error message - =TODO=
+    CLOSED: [2020-10-11 Sun 00:45]
+    In general, each contract error message consists of six sections:
+    - a _name_ for the /function/ or /method/ associated with the /contract/ and
+      either the phrase ="contract violation"= or ="broke its contract"=
+      depending on whether the /contract/ was violated by the _client_ or the
+      _server_; e.g. in the previous example:
+      #+begin_src text
+        deposit: contract violation
+      #+end_src
+      + =TODO=
+        Need an example of ="broke its contract"=!
+
+    - a description of the precise aspect of the /contract/ that was violated,
+      #+begin_src text
+        expected: amount
+        given: -10
+      #+end_src
+
+    - the _COMPLETE_ /contract/ plus a _path_ into it showing which aspect was
+      violated,
+      #+begin_src text
+        in: the 1st argument of
+        (-> amount any)
+      #+end_src
+
+    - the ~module~ where the /contract/ was put (or, more generally, the boundary
+      that the /contract/ mediates),
+      #+begin_src text
+        contract from: improved-bank-server
+      #+end_src
+
+    - who was blamed,
+      #+begin_src text
+        blaming: top-level
+        (assuming the contract is correct)
+      #+end_src
+
+    - and the source location where the /contract/ appears.
+      #+begin_src text
+        at: eval:5.0
+      #+end_src
+      =TODO= =???=
+
+** TODO 7.3 Contracts on Functions in General
+*** 7.3.1 Optional Arguments
+*** 7.3.2 Rest Arguments
+*** 7.3.3 Keyword Arguments
+*** 7.3.4 Optional Keyword Arguments
+*** 7.3.5 Contracts for ~case-lambda~
+*** 7.3.6 Argument and Result Dependencies
+*** 7.3.7 Checking State Changes
+*** 7.3.8 Multiple Result Values
+*** 7.3.9 Fixed but Statically Unknown Arities
+
+** TODO 7.4 Contracts: A Thorough Example
+** TODO 7.5 Contracts on Structures
+*** 7.5.1 Guarantees for a Specific Value
+*** 7.5.2 Guarantees for All Values
+*** 7.5.3 Checking Properties of Data Structures
+
+** TODO 7.6 Abstract Contracts using ~#:exists~ and ~#:∃~
+** TODO 7.7 Additional Examples
+*** 7.7.1 A Customer-Manager Component
+*** 7.7.2 A Parameteric (Simple) Stack
+*** 7.7.3 A Dictionary
+*** 7.7.4 A Queue
+
+** TODO 7.8 Building New Contracts
+*** 7.8.1 Contract Struct Properties
+*** 7.8.2 With all the Bells and Whistles
+
+** TODO 7.9 Gotchas
+*** 7.9.1 Contracts and ~eq?~
+*** 7.9.2 Contract boundaries and ~define/contract~
+*** 7.9.3 Exists Contracts and Predicates
+*** 7.9.4 Defining Recursive Contracts
+*** 7.9.5 Mixing ~set!~ and ~contract-out~
+
+* TODO 8 Input and Output
+  A Racket port represents a source or sink of data, such as a file, a terminal,
+  a TCP connection, or an in-memory string. Ports provide sequential access in
+  which data can be read or written a piece of a time, without requiring the
+  data to be consumed or produced all at once. More specifically, an /input port/
+  represents a source from which a program can read data, and an /output port/
+  represents a sink to which a program can write data.
+  
+** 8.1 Varieties of Ports
+   Various /functions/ create _various kinds of_ /ports/.
+   Here are a few examples:
+   
+   - *Files*:
+     The ~open-output-file~ function opens a file *for writing*, and
+     the ~open-input-file~ opens a file *for reading*.
+
+     - Examples:
+       #+begin_src racket
+         (define out (open-output-file "data"))
+         (display "hello" out)
+         (close-output-port out)
+         (define in (open-input-file "data"))
+         (read-line in)  ; "hello"
+         (close-input-port in)
+       #+end_src
+
+     - =TODO=
+     - =TODO=
+     - =TODO=
+     - =TODO=
+     - =TODO=
+     - =TODO=
+     - =TODO=
+     - =TODO=
+   
+** 8.2 Default Ports
+** 8.3 Reading and Writing Racket Data
+** 8.4 Datatypes and Serialization
+** 8.5 Bytes, Characters, and Encodings
+** 8.6 I/O Patterns
+
+* TODO 9 Regular Expressions
+** 9.1 Writing Regexp Patterns
+** 9.2 Matching Regexp Patterns
+** 9.3 Basic Assertions
+** 9.4 Characters and Character Classes
+*** 9.4.1 Some Frequently Used Character Classes
+*** 9.4.2 POSIX character classes
+
+** 9.5 Quantifiers
+** 9.6 Clusters
+*** 9.6.1 Backreferences
+*** 9.6.2 Non-capturing Clusters
+*** 9.6.3 Cloisters
+
+** 9.7 Alternation
+** 9.8 Backtracking
+** 9.9 Looking Ahead and Behind
+*** 9.9.1 Lookahead
+*** 9.9.2 Lookbehind
+
+** 9.10 An Extended Example
+
+* TODO 10 Exceptions and Control
+  Racket provides an especially rich set of control operations -- not only
+  operations for *raising* and *catching* /exceptions/, but also operations for
+  *grabbing* and *restoring* portions of a computation.
+  
+** DONE 10.1 Exceptions
+   CLOSED: [2020-10-20 Tue 23:45]
+   To *catch* an /exception/, use the ~with-handlers~ form: 
+   #+begin_src racket
+     (with-handlers ([predicate-expr handler-expr] ...)
+       body ...+)
+   #+end_src
+   
+   - Each _predicate-expr_ in a handler determines a kind of /exception/ that is
+     caught by the ~with-handlers~ form, and the value representing the /exception/
+     is passed to the handler procedure produced by _handler-expr_.
+     + The result of the _handler-expr_ is the result of the ~with-handlers~
+       expression.
+     
+   - For example,
+     a _divide-by-zero error_ raises an instance of the
+     ~exn:fail:contract:divide-by-zero~ /structure type/:
+     #+begin_src racket
+       (with-handlers ([exn:fail:contract:divide-by-zero?
+                        (lambda (exn) +inf.0)])
+         (/ 1 0))
+       ; +inf.0
+
+
+       (with-handlers ([exn:fail:contract:divide-by-zero?
+                        (lambda (exn) +inf.0)])
+         (car 17))
+       ;; car: contract violation
+       ;;   expected: pair?
+       ;;   given: 17
+     #+end_src
+     
+   - The ~error~ function is one way to *raise* your own /exception/.
+     It packages _an error message_ and _other information_ into an ~exn:fail~
+     structure:
+     #+begin_src racket
+       (error "crash!")
+       ; crash!
+
+       (with-handlers ([exn:fail? (lambda (exn) 'air-bag)])
+         (error "crash!"))
+       ; 'air-bag
+     #+end_src
+     
+   - The ~exn:fail:contract:divide-by-zero~ and ~exn:fail~ /structure types/ are
+     /sub-types/ of the ~exn~ /structure type/.
+     
+   - /Exceptions/ raised _by core forms and functions_ *ALWAYS* raise an instance
+     of ~exn~ or one of its /sub-types/.
+
+   - However, an /exception/ *does not have to be* represented by a /structure/.
+     *The /raise/ function lets you raise ANY VALUE as an /exception/*:
+     #+begin_src racket
+       (raise 2)
+       ;; uncaught exception: 2
+
+
+       (with-handlers ([(lambda (v) (equal? v 2)) (lambda (v) 'two)])
+         (raise 2))
+       ; 'two
+
+
+       (with-handlers ([(lambda (v) (equal? v 2)) (lambda (v) 'two)])
+         (/ 1 0))
+       ;; /: division by zero
+     #+end_src
+     
+   - Multiple _predicate-exprs_ in a ~with-handlers~ form let you handle different
+     kinds of exceptions in different ways.
+       The /predicates/ are tried *in order*, and if none of them match, then
+     the /exception/ is propagated to enclosing contexts.
+     #+begin_src racket
+       (define (always-fail n)
+         (with-handlers ([even? (lambda (v) 'even)]
+                         [positive? (lambda (v) 'positive)])
+           (raise n)))
+
+       (always-fail 2)
+       ; 'even
+
+       (always-fail 3)
+       ; 'positive
+
+       (always-fail -3)
+       ;; uncaught exception: -3
+
+       (with-handlers ([negative? (lambda (v) 'negative)])
+         (always-fail -3))
+       ; 'negative
+     #+end_src
+    
+   - Using ~(lambda (v) #t)~ as a /predicate/ *captures all* /exceptions/, of
+     course:
+     #+begin_src racket
+       (with-handlers ([(lambda (v) #t) (lambda (v) 'oops)])
+         (car 17))
+       ; 'oops
+     #+end_src
+     *Capturing all exceptions is usually a bad idea*, HOWEVER.
+     + For example,
+       if the user types Ctl-C in a terminal window or clicks the Stop button in
+       DrRacket to interrupt a computation, then normally the ~exn:break~
+       /exception/ *should NOT be caught*.
+
+     + To catch *ONLY* /exceptions/ that represent /errors/, use ~exn:fail?~ as
+       the /predicate/:
+       #+begin_src racket
+         (with-handlers ([exn:fail? (lambda (v) 'oops)])
+           (car 17))
+         ; 'oops
+
+
+         (with-handlers ([exn:fail? (lambda (v) 'oops)])
+           (break-thread (current-thread))  ; simulate Ctl-C
+           (car 17))
+         ;; user break
+       #+end_src
+     
+   - /Exceptions/ carry information about the error that occurred.
+     #+begin_src racket
+       (with-handlers ([exn:fail?
+                        (lambda (v)
+                          ((error-display-handler) (exn-message v) v))])
+         (car 17))
+
+       ;; car: contract violation
+       ;;   expected: pair?
+       ;;   given: 17
+       ;;   context...:
+       ;;    eval-one-top
+       ;;    /home/scheme/pltbuild/racket/racket/collects/racket/private/more-scheme.rkt:148:2: call-with-break-parameterization
+       ;;    /home/scheme/pltbuild/racket/build/user/7.8/pkgs/sandbox-lib/racket/sandbox.rkt:882:7
+       ;;    /home/scheme/pltbuild/racket/build/user/7.8/pkgs/sandbox-lib/racket/sandbox.rkt:878:5: loop
+     #+end_src
+     + The ~exn-message~ /accessor/ provides a *descriptive message* for the
+       /exception/.
+
+     + The ~exn-continuation-marks~ /accessor/ provides information about the point
+       where the /exception/ was raised.
+   
+** TODO 10.2 Prompts and Aborts
+** TODO 10.3 Continuations
+
+* DONE 11 Iterations and Comprehensions
+  CLOSED: [2020-10-20 Tue 18:11]
+  The ~for~ family of /syntactic forms/ support /iteration/ over /sequences/.
+  /Lists/, /vectors/, /strings/, /byte strings/, /input ports/, and /hash
+  tables/ can all be used as /sequences/, and /constructors/ like ~in-range~
+  offer even more kinds of /sequences/.
+  
+  - Variants of ~for~ /accumulate iteration/ results in different ways, but they
+    all have the _SAME syntactic shape_. Simplifying FOR NOW, the syntax of ~for~
+    is
+    #+begin_src racket
+      (for ([id sequence-expr] ...)
+        body ...+)
+    #+end_src
+  
+  - A ~for~ loop iterates through the sequence produced by the /sequence-expr/.
+    For each element of the sequence, ~for~ *binds* the element to ~id~, and
+    then it *evaluates the bodys for /side effects/.*
+    #+begin_src racket
+      (for ([i '(1 2 3)])
+        (display i))
+      ; 123
+
+
+      (for ([i "abc"])
+        (printf "~a..." i))
+      ; a...b...c...
+
+
+      (for ([i 4])
+        (display i))
+      ; 0123
+    #+end_src
+    
+  - The ~for/list~ variant of ~for~ is more Racket-like.
+    In more technical terms, ~for/list~ implements a /list comprehension/.
+    #+begin_src racket
+      (for/list ([i '(1 2 3)])
+        (* i i))
+      ; '(1 4 9)
+
+
+      (for/list ([i "abc"])
+        i)
+      ; '(#\a #\b #\c)
+
+
+      (for/list ([i 4])
+        i)
+      ; '(0 1 2 3)
+    #+end_src
+
+    + It
+      1. accumulates body results into a /list/,
+      2. instead of evaluating body only for side effects.
+
+  - The _full syntax_ of ~for~ _accommodates MULTIPLE sequences_ to iterate *in
+    parallel*,
+    AND
+    the ~for*~ variant _NESTS the iterations_ *INSTEAD OF running them in
+    parallel*.
+    + More variants of ~for~ and ~for*~ accumulate body results in different ways.
+      In all of these variants, /predicates/ that _prune iterations_ can be included
+      along with /bindings/.
+
+  - Before details on the variations of ~for~, though,
+    it's best to see the kinds of /sequence generators/ that make interesting
+    examples.
+
+** DONE 11.1 Sequence Constructors
+   CLOSED: [2020-10-19 Mon 03:35]
+   - ~in-range~ function *generates* a sequence of numbers, GIVEN
+     + an *optional* _starting_ number (which *defaults* to ~0~),
+     + a number BEFORE which the sequence _ends_, and
+     + an *optional* _step_ (which defaults to 1).
+
+   - Using a *non-negative integer* ~k~ DIRECTLY _AS a sequence_ is
+     a _SHORTHAND_ for ~(in-range k)~.
+     
+   - ~in-range~ examples:
+     #+begin_src racket
+       (for ([i 3])
+         (display i))
+       ; 012
+
+
+       (for ([i (in-range 3)])
+         (display i))
+       ; 012
+
+
+       (for ([i (in-range 1 4)])
+         (display i))
+       ; 123
+
+
+       (for ([i (in-range 1 4 2)])
+         (display i))
+       ; 13
+
+
+       (for ([i (in-range 4 1 -1)])
+         (display i))
+       ; 432
+
+
+       (for ([i (in-range 1 4 1/2)])
+         (printf " ~a " i))
+       ; 1 3/2 2 5/2 3 7/2
+     #+end_src
+     
+   - The ~in-naturals~ function is SIMILAR,
+     *EXCEPT* that
+     + the _starting number_ *must be* an /exact non-negative integer/ (which
+       *defaults* to ~0~),
+     + the /step/ is *always* ~1~, and
+     + there is *no* _upper limit_.
+
+   - A ~for~ loop using just ~in-naturals~ will *never terminate* UNLESS a ~body~
+     expression *raises an exception* or *otherwise escapes*.
+     =TODO= What does "escapes" here mean?????????
+     #+begin_src racket
+       (for ([i (in-naturals)])
+         (if (= i 10)
+             (error "too much!")
+             (display i))
+       ; 0123456789
+       ;; too much!
+     #+end_src
+     
+   - The ~stop-before~ and ~stop-after~ functions *construct* a new /sequence/
+     + GIVEN
+       * a /sequence/
+         AND
+       * a /predicate/.
+     
+     + _The result NEW /sequence/_ is LIKE the GIVEN /sequence/,
+       BUT *truncated* either immediately *BEFORE* _OR_ immediately *AFTER* the
+       first element for which the /predicate/ returns /true/.
+       #+begin_src racket
+         (for ([i (stop-before "abc def"
+                               char-whitespace?)])
+           (display i))
+         ; abc
+       #+end_src
+     
+   - /Sequence constructors/ like ~in-list~, ~in-vector~ and ~in-string~ simply
+     make *EXPLICIT* the use of a /list/, /vector/, or /string/ AS a /sequence/.
+     + Along with ~in-range~,
+       #+begin_src racket
+         (for ([i (in-string "abc")])
+           (display i))
+         ; abc
+
+
+         (for ([i (in-string '(1 2 3))])
+           (display i))
+         ;; in-string: contract violation 
+         ;;   expected: string
+         ;;   given: '(1 2 3)
+       #+end_src
+       * these /constructors/ *raise an exception* WHEN given the WRONG kind of value,
+         AND
+       * SINCE they otherwise avoid a /run-time dispatch/ to determine the /sequence
+         type/, they ENABLE *more efficient code generation*;
+         =TODO= see Iteration Performance for more information.
+     
+** DONE 11.2 ~for~ and ~for*~
+   CLOSED: [2020-10-20 Tue 03:07]
+   #+begin_src text
+     (for (clause ...)
+       body ...+)
+
+       clause = [id sequence-expr]
+              | #:when boolean-expr
+              | #:unless boolean-expr
+   #+end_src
+   
+   - For ~for~, if multiple ~[id sequence-expr]~ classes are provided,
+     the corresponding sequences are traversed *in PARALLEL*:
+     #+begin_src racket
+       (for ([i (in-range 1 4)]
+             [chapter '("Intro" "Details" "Conclusion")])
+         (printf "Chapter ~a. ~a\n" i chapter))
+
+       ; Chapter 1. Intro
+       ; Chapter 2. Details
+       ; Chapter 3. Conclusion
+     #+end_src
+
+   - This traversed *in PARALLEL* is like, in other languages, zip sequnces
+     first and traverse them.
+     + The lenght of zipped sequnce depends on the *SHORTEST* sequnce.
+
+     + This behavior allows ~in-naturals~.
+       #+begin_src racket
+         (for ([i (in-naturals 1)]
+               [chapter '("Intro" "Details" "Conclusion")])
+           (printf "Chapter ~a. ~a\n" i chapter))
+
+         ; Chapter 1. Intro
+         ; Chapter 2. Details
+         ; Chapter 3. Conclusion
+       #+end_src
+     
+   - For ~for*~, if multiple ~[id sequence-expr]~ classes are provided,
+     *nests* multiple sequences INSTEAD OF running them *in PARALLEL*:
+     #+begin_src racket
+       (for* ([book '("Guide" "Reference")]
+              [chapter '("Intro" "Details" "Conclusion")])
+         (printf "Chapter ~a. ~a\n" book chapter))
+
+       ; Guide Intro
+       ; Guide Details
+       ; Guide Conclusion
+       ; Reference Intro
+       ; Reference Details
+       ; Reference Conclusion
+     #+end_src
+     Thus, ~for*~ is a _SHORTHAND_ for /nested ~for~'s/ in the SAME WAY that
+     ~let*~ is a _SHORTHAND_ for /nested ~let~'s/.
+     
+   - /The ~#:when boolean-expr~ form/ of a clause is another _SHORTHAND_.
+     It allows the bodys to evaluate *only when* the boolean-expr produces *a
+     /true/ value*: =from Jian= like a /filter/
+     #+begin_src racket
+       (for* ([book '("Guide" "Reference")]
+              [chapter '("Intro" "Details" "Conclusion")]
+              #:when (not (equal? chapter "Details")))
+         (printf "~a ~a\n" book chapter))
+
+       ; Guide Intro
+       ; Guide Conclusion
+       ; Reference Intro
+       ; Reference Conclusion
+     #+end_src
+     + A ~boolean-expr~ with ~#:when~ *CAN refer* to ANY of the *preceding*
+       iteration /bindings/.
+         In a ~for~ form, this scoping makes sense only if the test is nested in
+       the iteration of the preceding bindings; THUS, /bindings/ separated by
+       ~#:when~ are mutually *nested*, INSTEAD OF *in parallel*, _even with ~for~:_
+       #+begin_src racket
+         (for ([book '("Guide" "Reference" "Notes")]
+               #:when (not (equal? book "Notes"))
+               [i (in-naturals 1)]
+               [chapter '("Intro" "Details" "Conclusion" "Index")]
+               #:when (not (equal? chapter "Index")))
+           (printf "~a Chapter ~a. ~a\n" book i chapter))
+
+         ; Guide Chapter 1. Intro
+         ; Guide Chapter 2. Details
+         ; Guide Chapter 3. Conclusion
+         ; Reference Chapter 1. Intro
+         ; Reference Chapter 2. Details
+         ; Reference Chapter 3. Conclusion
+       #+end_src
+       * =from Jian=
+         I think I understand how does ~for~ combined with ~#:when~'s work, but
+         I don't quite understand the last sentence before the above example code.
+
+   - An ~#:unless~ clause is _ANALOGOUS_ to a ~#:when~ clause,
+     _BUT_ the bodys evaluate *only when* the boolean-expr produces *a /false/
+     value*.
+     
+** DONE 11.3 ~for/list~ and ~for*/list~
+   CLOSED: [2020-10-20 Tue 03:42]
+   /List comprehension/. Same syntax as ~for~ and ~for*~. Results are /lists/.
+   
+   - Example:
+     #+begin_src racket
+       (for/list ([i (in-naturals 1)]
+                  [chapter '("Intro" "Details" "Conclusion")])
+         (string-append (number->string i) ". " chapter))
+       ; '("1. Intro" "2. Details" "3. Conclusion")
+     #+end_src
+
+   - Example:
+     #+begin_src racket
+       (for/list ([i (in-naturals 1)]
+                  [chapter '("Intro" "Details" "Conclusion")]
+                  #:when (odd? i))
+         chapter)
+       ; '("Intro" "Conclusion")
+
+
+       (for/list ([i (in-naturals 1)]
+                  [chapter '("Intro" "Details" "Conclusion")])
+         (when (odd? i) chapter))
+       '("Intro" #<void> "Conclusion")
+     #+end_src
+     This pruning behavior of ~#:when~ is _more useful_ with ~for/list~ _THAN_
+     ~for~.
+       Whereas a plain ~when~ form normally suffices with ~for~, it doesn't have
+     the pruning (=from Jian= filtering) functionality, and it will introduce
+     ~#<void>~.
+   
+   - The ~for*/list~ form is LIKE ~for*~, *nesting* multiple iterations:
+     #+begin_src racket
+       (for*/list ([book '("Guide" "Ref.")]
+                   [chapter '("Intro" "Details")])
+         (string-append book " " chapter))
+       ; '("Guide Intro" "Guide Details" "Ref. Intro" "Ref. Details")
+     #+end_src
+     + A ~for*/list~ form is *NOT quite the SAME thing as* /nested ~for/list~
+       forms/:
+       _Nested_ ~for/list~'s would produce _a list of lists_, instead of _one
+       *flattened* list_.
+
+     + Much like ~#:when~, then, the *nesting* of ~for*/list~ is more useful than
+       the nesting of ~for*~.
+       =TODO= =TODO= =???= =TODO= =TODO=
+     
+** DONE 11.4 ~for/vector~ and ~for*/vector~
+   CLOSED: [2020-10-20 Tue 03:42]
+   - Similar to ~for/list~ and ~for*/list~, but generate /vectors/.
+     
+   - The ~for/vector~ and ~for*/vector~ forms also allow the _length_ of the /vector/
+     to be constructed to BE SUPPLIED IN ADVANCE.
+       The resulting iteration can be performed *more efficiently than* plain
+     ~for/vector~ or ~for*/vector~:
+     #+begin_src racket
+       (let ([chapters '("Intro" "Details" "Conclusion")])
+         (for/vector #:length (length chapters) ([i (in-naturals 1)]
+                                                 [chapter chapters])
+           (string-append (number->string i) ". " chapter)))
+       ; '#("1. Intro" "2. Details" "3. Conclusion")
+     #+end_src
+     + If a _length_ is provided, the iteration *STOPS WHEN* _the /vector/ is filled
+       or the requested iterations are complete, whichever comes first._
+
+     + If the provided _length_ *exceeds* the requested number of iterations, then
+       the remaining slots in the /vector/ *are initialized to the _default argument_
+       of ~make-vector~.*
+       =TODO= =from Jian= What is the _default argument_ of ~make-vector~???
+     
+** DONE 11.5 ~for/and~ and ~for/or~
+   CLOSED: [2020-10-20 Tue 03:47]
+   They all stop as soon as possible.
+   
+   - Example:
+     #+begin_src racket
+       (for/and ([chapter '("Intro" "Details" "Conclusion")])
+         (equal? chapter "Intro"))
+       ; #f
+
+
+       (for/or ([chapter '("Intro" "Details" "Conclusion")])
+         (equal? chapter "Intro"))
+       ; #t
+     #+end_src
+   
+   - As usual, the ~for*/and~ and ~for*/or~ forms provide the same facility with
+     *nested* iterations.
+   
+** DONE 11.6 ~for/first~ and ~for/last~
+   CLOSED: [2020-10-20 Tue 03:53]
+   - The ~for/first~ form *returns* the result of the *first* time that the bodys
+     are evaluated, *skipping* further iterations.
+     *This form is MOST USEFUL with a ~#:when~ clause.*
+     #+begin_src racket
+       (for/first ([chapter '("Intro" "Details" "Conclusion" "Index")]
+                   #:when (not (equal? chapter "Intro")))
+         chapter)
+       ; "Details"
+     #+end_src
+     If the /bodys/ are evaludated *zero* times, then the result is ~#f~.
+
+   - The ~for/last~ form runs *all* iterations, *returning* the value of the *last*
+     iteration (or ~#f~ if no iterations are run):
+     #+begin_src racket
+       (for/last ([chapter '("Intro" "Details" "Conclusion" "Index")]
+                  #:when (not (equal? chapter "Index")))
+         chapter)
+       ; "Conclusion"
+     #+end_src
+     
+   - As usual, the ~for*/first~ and ~for*/last~ forms provide the same facility
+     with *nested* iterations:
+     #+begin_src racket
+       (for*/first ([book '("Guide" "Reference")]
+                    [chapter '("Intro" "Details" "Conclusion" "Index")]
+                    #:when (not (equal? chapter "Intro")))
+         (list book chapter))
+       ; '("Guide" "Details")
+
+
+       (for*/last ([book '("Guide" "Reference")]
+                   [chapter '("Intro" "Details" "Conclusion" "Index")]
+                   #:when (not (equal? chapter "Index")))
+         (list book chapter))
+       ; '("Reference" "Conclusion")
+     #+end_src
+   
+** DONE 11.7 ~for/fold~ and ~for*/fold~
+   CLOSED: [2020-10-20 Tue 17:04]
+   The ~for/fold~ form is a VERY GENERAL WAY to *combine* iteration results.
+
+   - ~for/fold~ syntax is *slightly different* than the syntax of ~for~,
+     because /accumulation variables/ *must be declared* _at the beginning_:
+     #+begin_src racket
+       (for/fold ([accum-id init-expr] ...)
+                 (clause ...)
+         body ...+)
+     #+end_src
+     
+   - In the simple case, only one ~[accum-id init-expr]~ is provided, and the result
+     of the ~for/fold~ is the final value for _accum-id_, which starts out with the
+     value of _init-expr_. In the _clauses_ and _bodys_, _accum-id_ can be
+     referenced to get its current value, and the *LAST* ~body~ provides the value
+     of _accum-id_ for the next iteration.
+     #+begin_src racket
+       (for/fold ([len 0])
+                 ([chapter '("Intro" "Conclusion")])
+         (+ len (string-length chapter)))
+       ; 15
+
+
+       (for/fold ([prev #f])
+                 ([i (in-naturals 1)]
+                  [chapter '("Intro" "Details" "Details" "Conclusion")]
+                  #:when (not (equal? chapter prev)))
+         (printf "~a. ~a\n" i chapter)
+         chapter)
+       ;; 1. Intro
+       ;; 2. Details
+       ;; 4. Conclusion
+       ; "Conclusion"
+     #+end_src
+
+   - When MULTIPLE _accum-ids_ are specified,
+     then the LAST _body_ *must* produce _MULTIPLE values_, one for each _accum-id_.
+     The ~for/fold~ expression itself produces _MULTIPLE values_ for the results.
+     #+begin_src racket
+       (for/fold ([prev #f]
+                  [counter 1])
+                 ([chapter '("Intro" "Details" "Details" "Conclusion")]
+                  #:when (not (equal? chapter prev)))
+         (printf "~a. ~a\n" counter chapter)
+         (values chapter
+                 (add1 counter)))
+       ;; 1. Intro
+       ;; 1. Intro
+       ;; 1. Intro
+       ; "Conclusion"
+       ; 4
+     #+end_src
+   
+** DONE 11.8 Multiple-Valued Sequences
+   CLOSED: [2020-10-20 Tue 18:07]
+   - In the same way that a function or expression can produce multiple values,
+     individual iterations of a sequence can produce multiple elements.
+
+   - For example,
+     a /hash table/ as a sequence generates two values for each iteration:
+     a _key_ and a _value_.
+
+   - In the same way that ~let-values~ binds multiple results to multiple identifiers,
+     ~for~ can *bind* multiple sequence elements to multiple iteration identifiers:
+     #+begin_src racket
+       (for ([(k v) #hash(("apple" . 1) ("banana" . 3))])
+         (printf "~a count: ~a\n" k v))
+       ; banana count: 3
+       ; apple count: 1
+     #+end_src
+     
+   - This extension to /multiple-value bindings/ works for *ALL* ~for~ variants.
+     For example, ~for*/list~ nests iterations, builds a /list/, and also works
+     with /multiple-valued sequences/:
+     #+begin_src racket
+       (for*/list ([(k v) #hash(("apple" . 1) ("banana" . 3))]
+                   [(i) (in-range v)])
+         k)
+       ; '("banana" "banana" "banana" "apple")
+     #+end_src
+     
+** DONE 11.9 Breaking an Iteration
+   CLOSED: [2020-10-20 Tue 18:04]
+   An even more complete syntax of ~for~ is
+   #+begin_src text
+     (for (clause ...)
+       body-or-break ... body)
+
+              clause = [id sequence-expr]
+                     | #:when boolean-expr
+                     | #:unless boolean-expr
+                     | break
+
+       body-or-break = body
+                     | break
+
+               break = #:break boolean-expr
+                     | #:final boolean-expr
+   #+end_src
+   
+   - That is, a ~#:break~ or ~#:final~ clause can be included AMONG
+     + the /binding clauses/
+     + body of the iteration.
+
+   - Among the /binding clauses/, ~#:break~ is like ~#:unless~ but when its
+     _boolean-expr_ is /true/, all sequences within the for are stopped.
+
+   - Among the /bodys/, ~#:break~ has the same effect on sequences when its
+     _boolean-expr_ is /true/, and it also *prevents* _later bodys_ *from* evaluation
+     in the current iteration.
+
+   - For example, while using ~#:unless~ between clauses effectively *skips* _later
+     sequences_ as well as the _body_,
+     #+begin_src racket
+       (for ([book '("Guide" "Story" "Reference")]
+             #:unless (equal? book "Story")
+             [chapter '("Intro" "Details" "Conclusion")])
+         (printf "~a ~a\n" book chapter))
+       ;; Guide Intro
+       ;; Guide Details
+       ;; Guide Conclusion
+       ;; Reference Intro
+       ;; Reference Details
+       ;; Reference Conclusion
+     #+end_src
+     
+   - using ~#:break~ causes the entire ~for~ iteration to termination:
+     #+begin_src racket
+       (for ([book '("Guide" "Story" "Reference")]
+             #:break (equal? book "Story")
+             [chapter '("Intro" "Details" "Conclusion")])
+         (printf "~a ~a\n" book chapter))
+       ;; Guide Intro
+       ;; Guide Details
+       ;; Guide Conclusion
+
+
+       (for* ([book '("Guide" "Story" "Reference")]
+              [chapter '("Intro" "Details" "Conclusion")])
+         #:break (and (equal? book "Story")
+                      (equal? chapter "Conclusion"))
+         (printf "~a ~a\n" book chapter))
+       ;; Guide Intro
+       ;; Guide Details
+       ;; Guide Conclusion
+       ;; Story Intro
+       ;; Story Details
+     #+end_src
+     
+   - A ~#:final~ clause is SIMILAR TO ~#:break~,
+     BUT it does *NOT immediately terminate* the iteration.
+     Instead, it allows
+     + at most *ONE MORE element to be drawn for each sequence*
+       AND
+     + at most *ONE MORE evaluation of the bodys*.
+     #+begin_src racket
+       (for* ([book '("Guide" "Story" "Reference")]
+              [chapter '("Intro" "Details" "Conclusion")])
+         #:final (and (equal? book "Story")
+                      (equal? chapter "Conclusion"))
+         (printf "~a ~a\n" book chapter))
+       ;; Guide Intro
+       ;; Guide Details
+       ;; Guide Conclusion
+       ;; Story Intro
+       ;; Story Details
+       ;; Story Conclusion
+
+
+       (for ([book '("Guide" "Story" "Reference")]
+             #:final (equal? book "Story")
+             [chapter '("Intro" "Details" "Conclusion")])
+         (printf "~a ~a\n" book chapter))
+       ;; Guide Intro
+       ;; Guide Details
+       ;; Guide Conclusion
+       ;; Story Intro
+     #+end_src
+   
+** TODO 11.10 Iteration Performance - =RE-READ= =TODO=
+
+* DONE 12 Pattern Matching
+  CLOSED: [2020-10-15 Thu 21:38]
+  SYNTAX
+  #+begin_src racket
+    (match target-expr
+      [pattern expr ...+] ...)
+  #+end_src
+  The ~match~ form takes the result of ~target-expr~ and tries to *match* each
+  /pattern/ in order. As soon as it finds a _matched pattern_, it evaluates the
+  corresponding ~expr~ sequence to obtain the result for the ~match~ form.
+
+  - If /pattern/ includes /pattern variables/, they are treated like /wildcards/,
+    and EACH /variable/ is *bound* in the ~expr~ *to* the _input fragments that it
+    matched._
+
+  - Examples:
+    + Literal expression patterns:
+      #+begin_src racket
+        (match 2
+          [1 'one]
+          [2 'two]
+          [3 'three])
+        ; 'two
+      #+end_src
+
+    + Constructor patterns:
+      #+begin_src racket
+        (match '(1 2)
+          [(list 0 1) 'one]
+          [(list 1 2) 'two])
+        ; 'two
+      #+end_src
+
+    + ~struct~ patterns:
+      #+begin_src racket
+        (struct shoe (size color))
+        (struct hat (size style))
+
+        (match (hat 23 'bowler)
+          [(shoe 10 'white) "bottom"]
+          [(hat 23 'bowler) "top"])
+        ; "top"
+      #+end_src
+
+    + *Unquoted, non-constructor identifiers* in a /pattern/ are /pattern variables/
+      that are BOUND IN the /result expressions/, except ~_~, which does _NOT bind_
+      (and thus is usually used as a *catch-all*):
+      #+begin_src racket
+        (match '(1 2)
+          [(list x) (+ x 1)]
+          [(list x y) (+ x y)])
+        ; 3
+
+        (match (hat 11 'cowboy)
+          [(shoe sz 'black) 'a-good-shoe]
+          [(hat sz 'bowler) 'a-good-hat]
+          [_                'something-else])
+        ; 'something-else
+      #+end_src
+
+    + Ellipsis, ~...~, acts like a /Kleene start/ within a /list or vector pattern/:
+      #+begin_src racket
+        (match '(1 1 1)
+          [(list 1 ...) 'ones]
+          [_            'other])
+        ; 'ones
+
+
+        (match '(1 1 2)
+          [(list 1 ...) 'ones]
+          [_            'other])
+        ; 'other
+
+
+        (match '(1 2 3 4)
+          [(list 1 x ... 4) x])
+        ; '(2 3)
+
+
+        (match (list (hat 23 'bowler) (hat 22 'pork-pie))
+          [(list (hat sz styl) ...) (apply + sz)])
+        ; 45
+      #+end_src
+      * /Ellipses/ can be _nested_ to *match* _nested repetitions_, and in that
+        case, /pattern variables/ can be bound to /lists of lists/ of _matches_:
+        #+begin_src racket
+          (match '((! 1) (! 2 2) (! 3 3 3))
+            [(list (list '! x ...) ...) x])
+          '((1) (2 2) (3 3 3))
+        #+end_src
+
+    + The /quasiquote/ form (see "Quasiquoting": /quasiquote/ and ~`~ for more
+      about it) can also be used to build /patterns/. While /unquoted/ portions
+      of a normal /quasiquoted/ form mean regular racket evaluation, here
+      /unquoted/ portions mean go back to regular /pattern matching/.
+        So, in the example below, the with expression is the pattern and it gets
+      rewritten into the application expression, using /quasiquote/ as a pattern
+      in the first instance and /quasiquote/ to build an expression in the second.
+      #+begin_src racket
+        (match `{with {x 1} {+ x 1}}
+          [`{with {,id ,rhs} ,body}
+           `{{lambda {,id} ,body} ,rhs}])
+        ; '((lambda (x) (+ x 1)) 1)
+      #+end_src
+
+    + =TODO= For information on many more pattern forms, see ~racket/match~.
+
+    + Forms like ~match-let~ and ~match-lambda~ support /patterns/ in positions
+      that otherwise must be identifiers. =TODO= =TODO= =TODO=
+      * For example, ~match-let~ generalizes ~let~ to a /destructing bind/:
+        #+begin_src racket
+          (match-let ([(list x y z) '(1 2 3)])
+            (list z y x))
+          ; '(3 2 1)
+        #+end_src
+        =TODO= For info on these additional forms, see ~racket/match~.
+
+* TODO 13 Classes and Objects
+** 13.1 Methods
+** 13.2 Initialization Arguments
+** 13.3 Internal and External Names
+** 13.4 Interfaces
+** 13.5 Final, Augment, and Inner
+** 13.6 Controlling the Scope of External Names
+** 13.7 Mixins
+*** 13.7.1 Mixins and Interfaces
+*** 13.7.2 The ~mixin~ Form
+*** 13.7.3 Parameterized Mixins
+
+** 13.8 Traits
+*** 13.8.1 Traits as Sets of Mixins
+*** 13.8.2 Inherit and Super in Traits
+*** 13.8.3 The ~trait~ Form
+
+** 13.9 Class Contracts
+*** 13.9.1 External Class Contracts
+*** 13.9.2 Internal Class Contracts
+
+* TODO 14 Units (Components)
+** 14.1 Signatures and Units
+** 14.2 Invoking Units
+** 14.3 Linking Units
+** 14.4 First-Class Units
+** 14.5 Whole-~module~ Signatures and Units
+** 14.6 Contracts for Units
+*** 14.6.1 Adding Contracts to Signatures
+*** 14.6.2 Adding Contracts to Units
+
+** 14.7 ~unit~ versus ~module~
+
+* TODO 15 Reflection and Dynamic Evaluation
+** 15.1 ~eval~
+*** 15.1.1 Local Scopes
+*** 15.1.2 Namespaces
+*** 15.1.3 Namespaces and Modules
+
+** 15.2 Manipulating Namespaces
+*** 15.2.1 Creating and Installing Namespaces
+*** 15.2.2 Sharing Data and Code Across Namespaces
+
+** 15.3 Scripting Evaluation and Using ~load~
+** 15.4 Code Inspectors for Trusted and Untrusted Code
+
+* TODO 16 Macros - _READING_
+  - A /macro/ is a /syntactic form/ with an _associated transformer_ that
+    *expands* the original form *into* existing forms.
+
+  - To put it another way,
+    a macro is an extension to the Racket compiler.
+
+  - Most of the /syntactic forms/ of ~racket/base~ and ~racket~ are actually /macros/
+    that *expand into* a small set of _core constructs_.
+
+  - Like many languages,
+    Racket provides /pattern-based macros/ that make simple transformations easy
+    to implement and reliable to use.
+
+  - Racket also supports arbitrary /macro transformers/ that are implemented in
+    Racket -- or in a macro-extended variant of Racket.
+    =TODO= ??? =TODO=
+
+  - This chapter provides an introduction to Racket macros, but see _Fear of Macros_
+    for an introduction from a different perspective.
+
+** 16.1 Pattern-Based Macros
+*** DONE 16.1.1 ~define-syntax-rule~
+    CLOSED: [2020-10-04 Sun 17:46]
+   The simplest way to create a macro is to use define-syntax-rule:
+   #+begin_src racket
+     (define-syntax-rule pattern template)
+   #+end_src
+
+   - Example:
+     #+begin_src racket
+       (define-syntax-rule (swap x y)
+         (let ([tmp x])
+           (set! x y)
+           (set! y tmp)))
+     #+end_src
+
+*** DONE 16.1.2 Lexical Scope
+    CLOSED: [2020-10-04 Sun 17:46]
+    Racket macro system knows how to maintain lexical scope.
+
+    - Example 1:
+      #+begin_src racket
+        (let ([tmp 5]
+              [other 6])
+          (swap tmp other)
+          (list tmp other))
+      #+end_src
+
+      will be translated to (not exactly in identifiers, just approximation)
+
+      #+begin_src racket
+        (let ([tmp 5]
+              [other 6])
+          (let ([tmp_1 tmp])
+            (set! tmp other)
+            (set! other tmp_1))
+          (list tmp other))
+      #+end_src
+
+
+    - Example 2:
+      #+begin_src racket
+        (let ([set! 5]
+              [other 6])
+          (swap set! other)
+          (list set! other))
+      #+end_src
+
+      will be translated to (not exactly in identifiers, just approximation)
+
+      #+begin_src racket
+        (let ([set!_1 5]
+              [other 6])
+          (let ([tmp set!_1])
+            (set! set!_1 other)
+            (set! other tmp))
+          (list set!_1 other))
+      #+end_src
+
+*** DONE 16.1.3 ~define-syntax~ and ~syntax-rules~
+    CLOSED: [2020-10-04 Sun 18:13]
+    - Racket's macro system supports /transformers/ that _match *multiple* patterns_
+      starting with the _SAME identifier_.
+      + The ~define-syntax-rule~ form that binds a macro that _matches a *single*
+        pattern_ is just a special case of the more general macros, and it will be
+        expanded into ~define-syntax~ with a ~syntax-rules~ form.
+
+    - The more general ~define-syntax~ form along with the ~syntax-rules~ /transformer/
+      form:
+      #+begin_src racket
+        (define-syntax id
+          (syntax-rules (literal-id ...)
+            [pattern template]
+            ...))
+      #+end_src
+
+    - If we want a functionality ~rotate~ that generalizes ~swap~ defined in the
+      last section:
+      #+begin_src racket
+        (let ([red 1] [green 2] [blue 3])
+          (rotate red green)      ; swaps
+          (rotate red green blue) ; rotates left
+          (list red green blue))
+      #+end_src
+
+      we can define a /macro/
+      #+begin_src racket
+        (define-syntax rotate
+          (syntax-rules ()
+            [(rotate a b) (swap a b)]
+            [(rotate a b c) (begin
+                              (swap a b)
+                              (swap b c))]))
+      #+end_src
+
+*** DONE 16.1.4 Matching Sequences
+    CLOSED: [2020-10-04 Sun 23:10]
+    A better ~rotate~ /macro/ would allow any number of identifiers, instead of just
+    two or three.
+
+    - To match a use of ~rotate~ with *any number* of identifiers, we need a pattern
+      form that has something like a /Kleene star/.
+      + In a /Racket macro pattern/, a /star/ is written as ~...~.
+
+    - To implement *rotate* with ~...~, we need
+      1. a /base case/ to handle a single identifier,
+      2. an /inductive case/ to handle more than one identifier:
+      #+begin_src racket
+        (define-syntax rotate
+          (syntax-rules ()
+            [(rotate a) (void)]
+            [(rotate a b c ...) (begin
+                                  (swap a b)
+                                  (rotate b c ...))]))
+      #+end_src
+      + When a /pattern variable/ like ~c~ is followed by ~...~ in a /pattern/, then
+        it *MUST* be followed by ~...~ in a /template/, too.
+
+      + The /pattern variable/ effectively matches a sequence of *zero or more* forms,
+        and it is replaced in the /template/ by the same sequence.
+
+    - We can use ~...~ patterns to implement the *more efficient* variant using a
+      /helper macro/:
+      #+begin_src racket
+        (define-syntax rotate
+          (syntax-rules ()
+            [(rotate a c ...)
+             (shift-to (c ... a) (a c ...))]))
+
+        (define-syntax shift-to
+          (syntax-rules ()
+            [(shift-to (from0 from ...) (to0 to ...))
+             (let ([tmp from0])
+               (set! to from) ...
+               (set! to0 tmp))]))
+      #+end_src
+      + In the ~shift-to~ /macro/, ~...~ in the /template/ follows ~(set! to from)~,
+        which causes the ~(set! to from)~ expression to be duplicated as many times
+        as necessary to use each identifier matched in the ~to~ and ~from~ sequences.
+        (The number of ~to~ and ~from~ matches *must be the same*, otherwise the
+        /macro expansion/ fails with an error.)
+
+*** TODO 16.1.5 Identifier Macros
+*** TODO 16.1.6 ~set!~ Transformers
+*** TODO 16.1.7 Macro-Generating Macros
+*** TODO 16.1.8 Extended Example: Call-by-Reference Functions
+
+** 16.2 General Macro Transformers
+*** 16.2.1 Syntax Objects
+*** 16.2.2 Macro Transformer Procedures
+*** 16.2.3 Mixing Patterns and Expressions: ~syntax-case~
+*** 16.2.4 ~with-syntax~ and ~generate-temporaries~
+*** 16.2.5 Compile and Run-Time Phases
+*** 16.2.6 General Phase Levels
+**** 16.2.6.1 Phases and Bindings
+**** 16.2.6.2 Phases and Modules
+
+*** 16.2.7 Code Inspectors and Syntax Taints
+
+** 16.3 Module Instantiations and Visits
+*** 16.3.1 Declaration versus Instantiation
+*** 16.3.2 Compile-Time Instantiation
+*** 16.3.3 Visiting Modules
+*** 16.3.4 Lazy Visits via Available Modules
+
+* TODO 17 Creating Languages
+** 17.1 Module Languages
+*** 17.1.1 Implicit Form Bindings
+*** 17.1.2 Using ~#lang s-exp~
+
+** 17.2 Reader Extensions
+*** 17.2.1 Source Locations
+*** 17.2.2 Readtables
+
+** 17.3 Defining new ~#lang~ Languages
+*** 17.3.1 Designating a ~#lang~ Language
+*** 17.3.2 Using ~#lang reader~
+*** 17.3.3 Using ~#lang s-exp syntax/module-reader~
+*** 17.3.4 Installing a Language
+*** 17.3.5 Source-Handling Configuration
+*** 17.3.6 Module-Handling Configuration
+
+* TODO 18 Concurrency and Synchronization
+** 18.1 Threads
+** 18.2 Thread Mailboxes
+** 18.3 Semaphores
+** 18.4 Channels
+** 18.5 Buffered Asynchronous Channels
+** 18.6 Synchronizable Events and ~sync~
+** 18.7 Building Your Own Synchronization Patterns
+
+* TODO 19 Performance
+** 19.1 Performance in DrRacket
+** 19.1 Racket Virtual Machine Implementations
+** 19.3 Bytecode, Machine Code, and Just-in-Time (JIT) Compilers
+** 19.4 Modules and Performance
+** 19.5 Function-Call Optimizations
+** 19.6 Mutation and Performance
+** 19.7 ~letrec~ Performance
+** 19.8 Fixnum and Flonum Optimizations
+** 19.9 Unchecked, Unsafe Operations
+** 19.10 Foreign Pointers
+** 19.11 Regular Expression Performance
+** 19.12 Memory Management
+** 19.13 Reachability and Garbage Collection
+** 19.14 Weak Boxes and Testing
+** 19.15 Reducing Garbage Collection Pauses
+
+* TODO 20 Parallelism
+** 20.1 Parallelism with Futures
+** 20.2 Parallelism with Places
+** 20.3 Distributed Places
+
+* TODO 21 Running and Creating Executables
+** 21.1 Running ~racket~ and ~gracket~
+*** 21.1.1 Interactive Mode
+*** 21.1.2 Module Mode
+*** 21.1.3 Load Mode
+
+** 21.2 Scripts
+*** 21.2.1 Unix Scripts
+*** 21.2.2 Windows Batch Files
+
+** 21.3 Creating Stand-Alone Executables
+
+* TODO 22 More Libraries
+** 22.1 Graphics and GUIs
+** 22.2 The Web Server
+** 22.3 Using Foreign Libraries
+** 22.4 And More
+
+* TODO 23 Dialects of Racket and Scheme
+** 23.1 More Rackets
+** 23.2 Standards
+*** 23.2.1 R^{5}RS
+*** 23.2.2 R^{6}RS
+
+** 23.3 Teaching
+
+* TODO 24 Command-Line Tools and Your Editor of Choice
+** 24.1 Command-Line Tools
+*** 24.1.1 Compilation and Configuration: ~raco~
+*** 24.1.2 Interactive evaluation
+*** 24.1.3 Shell completion
+
+** 24.2 Emacs
+*** 24.2.1 Major Modes
+*** 24.2.2 Minor Modes
+*** 24.2.3 Packages specific to Evil Mode
+
+** 24.3 Vim
+** 24.4 Sublime Text
+
+* Bibliography
+* Index

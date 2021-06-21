@@ -1,0 +1,308 @@
+#+TITLE: typing - Support for type hints
+#+VERSION: 3.9.0 - Since 3.5
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+- NOTE:
+  The /Python runtime/ does NOT enforce function and variable /type annotations/.
+  They can be used by third party tools such as /type checkers/, IDEs, linters, etc.
+
+- This /module/ provides _runtime support_ for /type hints/ as specified by
+  * PEP 484 
+  * PEP 526 
+  * PEP 544 
+  * PEP 586 
+  * PEP 589
+  * PEP 591
+
+- The most fundamental support consists of the /types/:
+  * ~Any~
+  * ~Union~
+  * ~Tuple~
+  * ~Callable~
+  * ~TypeVar~
+  * ~Generic~
+
+- For full specification please see _PEP 484_.
+  For a simplified introduction to /type hints/ see _PEP 483_.
+
+* DONE Type aliases
+  CLOSED: [2020-11-07 Sat 23:29]
+  - For example,
+    #+begin_src python
+      Vector = list[float]
+    #+end_src
+
+  - NOTE:
+    ~None~ as a /type hint/ is a special case and is replaced by ~type(None)~.
+  
+* DONE ~NewType~
+  CLOSED: [2020-11-07 Sat 23:29]
+  # New in version 3.5.2
+  
+  Use the ~NewType()~ helper function to create *DISTINCT* /types/.
+  The /static type checker/ will treat the _new type_ as if it were a /subclass/
+  of the original /type/. =from Jian= This is like Haskell's ~newtype~.
+  
+  - ~NewType~ is useful in helping catch logical errors:
+    #+begin_src python
+      from typing import NewType
+
+      UserId = NewType('UserId', int)
+
+
+      def get_user_name(user_id: UserId) -> str:
+          # ...
+
+      # typechecks
+      user_a = get_user_name(UserId(42351))
+
+      # does NOT typeheck; an int is not a UserId
+      user_b = get_user_name(-1)
+    #+end_src
+
+  - ~UserId~ can be used as ~int~:
+    #+begin_src python
+      # 'output' is of type 'int', not 'UserId'
+      output = UserId(23413) + UserId(54341)
+    #+end_src
+
+  - Note:
+    * These checks are enforced *only* by the /static type checker/.
+
+    * At _runtime_, the statement ~Derived = NewType('Derived', Base)~ will make
+      ~Derived~ a function that immediately returns whatever parameter you pass
+      it.
+      + That means the expression ~Derived(some_value)~ does NOT create a new
+        class or introduce any overhead beyond that of a regular function call.
+        =from Jian=
+        Even a regular function call is a overhead. WHY NOT inline it???
+  
+  - A ~NewType~ doesn't really create a new /class/, which means it is NOT
+    available to create a /subclass/ of it.
+    #+begin_src python
+      # Fails at runtime and does not typecheck
+      class AdminUserId(UserId): pass
+    #+end_src
+
+  - It is legal to create a ~NewType()~ based on a 'derived' ~NewType()~:
+    #+begin_src python
+      from typing import NewType
+
+      UserId = NewType('UserId', int)
+      ProUserId = NewType('ProUserId', UserId)
+    #+end_src
+
+  - See *PEP 484* for more details.
+    =TODO=
+    
+* DONE ~Callable~
+  CLOSED: [2020-11-07 Sat 23:34]
+  Frameworks expecting callback functions of specific signatures might be type
+  hinted using ~Callable[[Arg1Type, Arg2Type], ReturnType]~.
+
+  - It is possible to declare the /return type/ of a callable *WITHOUT specifying the
+    call signature* by substituting a _literal ellipsis_ for the list of arguments
+    in the /type hint/: ~Callable[..., ReturnType]~.
+  
+* DONE ~Generics~
+  CLOSED: [2020-11-07 Sat 23:37]
+  - ~Sequence[Employee]~
+
+  - /Generics/ can be parameterized by using a new factory available in typing
+    called ~TypeVar~.
+    #+begin_src python
+      from typing import Sequence, TypeVar
+
+      T = TypeVar('T')  # Declare type variable
+
+      def first(l: Sequence[T]) -> T:  # Generic function
+          return l[0]
+    #+end_src
+    
+* DONE User-defined generic types
+  CLOSED: [2020-11-08 Sun 02:52]
+  A /user-defined class/ can be defined as a /generic class/.
+  #+begin_src python
+    from typing import TypeVar, Generic
+    from logging import Logger
+
+
+    T = TypeVar('T')
+
+
+    class LoggedVar(Generic[T]):
+        def __init__(self, value: T, name: str, logger: Logger) -> None:
+            self.name = name
+            self.logger = logger
+            self.value value
+
+        def set(self, new: T) -> None:
+            self.log(f"Set {rep(self.value)}")
+            self.value = new
+
+        def get(self) -> T:
+            self.log(f"Get {rep(self.value)}")
+            self.value = new
+
+        def log(self, message: str) -> None:
+            self.logger.info(f"{self.name}: {message}")
+  #+end_src
+  - =from Jian=
+    This is like declare a /generic class/ in Scala as ~class LoggedVar[T]~
+
+  - The ~Generic~ /base class/ defines ~__class_getitem__()~ so that ~LoggedVar[t]~
+    is VALID as a /type/:
+    #+begin_src python
+      from collections.abs import Iterable
+
+
+      def zero_all_vars(vars: Iterable[LoggedVar[int]]) -> None:
+          for var in vars:
+              var.set(0)
+    #+end_src
+
+  - A /generic type/ can have any number of /type variables/, and /type variables/
+    may be constrained:
+    #+begin_src python
+      from typing import TypeVar, Generic
+
+      # ...
+
+      T = TypeVar('T')
+      S = TypeVar('S', int, str)
+
+
+      class StrangePair(Generic[T, S]):
+          # ...
+    #+end_src
+
+  - Each /type variable argument/ to ~Generic~ *must be DISTINCT*.
+    This is thus *INVALID*:
+    #+begin_src python
+      from typing import TypeVar, Generic
+
+
+      T = TypeVar('T')
+
+
+      class Pair(Generic[T, T]):  # INVALID
+          # ...
+    #+end_src
+
+  - You can use mutiple inheritance with ~Generic~:
+    #+begin_src python
+      from collections.abc import Sized
+      from typing import TypeVar, Generic
+
+
+      T = TypeVar('T')
+
+
+      class LinkedList(Sized, Generic[T]):
+          # ...
+    #+end_src
+
+  - When *inheriting from* /generic classes/, some /type variables/ could be fixed:
+    #+begin_src python
+      from collection.abc import Mapping
+      from typing import TypeVar
+
+
+      T = TypeVar('T')
+
+
+      class MyDict(Mapping[str, T]):
+          # ...
+    #+end_src
+
+  - Using a /generic class/ *WITHOUT* specifying /type parameters/ assumes ~Any~
+    for each position. In the following example, ~MyIterable~ is _NOT EXPLICITLY
+    declared generic_ BUT _IMPLICITLY_ *inherits from* ~Iterable[Any]~:
+    #+begin_src python
+      from collections.abc import Iterable
+
+      class MyIterable(Iterable):  # Same as `Iterable[Any]`
+          # ...
+    #+end_src
+    
+  - User defined /generic type aliases/ are also supported. Examples:
+    #+begin_src python
+      from collections.abc import Iterable
+      from typing import TypeVar, Union
+
+
+      S = TypeVar('S')
+      Response = Union[Iterable[S] int]
+
+
+      # Return type here is same as `Union[Iterable[str], int]`
+      def response(query: str) -> Response[str]:
+          # ...
+
+
+      T = TypeVar('T', int, float, complex)
+      Vec = Iterable[tuple[T, T]]
+
+
+      def inproduct(v: Vec[T]) -> T:  # Same as `Iterable[tuple[T, T]]`
+          return sum(x*y for x, y in v)
+    #+end_src
+
+  - =TODO= =???= =TODO=
+    Changed in version 3.7: ~Generic~ no longer has a custom /metaclass/.
+    * A /user-defined generic class/ can have /ABC/'s as /base classes/ WITHOUT a
+      /metaclass/ CONFLICT.
+      /Generic metaclasses/ are *not supported*.
+      
+    * The outcome of /parameterizing generics/ is *cached*, and most /types/ in
+      the ~typing~ module are /hashable/ and /comparable for equality/.
+  
+* DONE The ~Any~ type
+  CLOSED: [2020-11-08 Sun 03:00]
+  - A special kind of type is ~Any~.
+    A /static type checker/ will
+    * treat EVERY /type/ as being *compatible* with ~Any~
+    * treat ~Any~ as being *compatible* with EVERY /type/.
+
+  - A variable typed as ~Any~ is possible to perform *any* _operation_ or _method
+    call_ on a value of type ~Any~ and assign it to any variable:
+
+  - ~object~ and ~Any~ are different!!!
+    * Similar to ~Any~, EVERY type is a /subtype/ of ~object~.
+
+    * _HOWEVER_, unlike ~Any~, the reverse is NOT true:
+      ~object~ is *not* a /subtype/ of EVERY OTHER /type/.
+      + This means when the /type/ of a value is ~object~, a /type checker/ will
+        _REJECT_ almost all operations on it, and assigning it to a variable (or
+        using it as a return value) of a more specialized type is a /type error/.
+
+  - Use ~object~ to indicate that a value could be *ANY* /type/ _in a typesafe
+    manner_.
+
+  - Use ~Any~ to indicate that a value is _dynamically typed_.
+    
+* TODO Nominal vs structural subtyping
+* TODO Module contents
+** Special typing primitives
+*** Special types
+*** Special forms
+*** Building generic types
+*** Other special directives
+    
+** Generic concrete collections
+*** Corresponding to built-in types
+*** Corresponding to types in ~collections~
+*** Other concrete types
+    
+** Abstract Base Classes
+*** Corresponding to collections in ~collections.abc~
+*** Corresponding to other types in ~collections.abc~
+*** Asynchronous programming
+*** Context manager types
+    
+** Protocols
+** Functions and decorators
+** Introspection helpers
+** Constant
+   

@@ -1,0 +1,748 @@
+#+TITLE: Effective Java
+#+VERSION: 3rd, 2018
+#+INFO: Covers Java SE 9
+#+AUTHOR:
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Foreword - xiii
+* Preface - xv
+* Acknowledgments - xix
+* 1 Introduction - 1
+  - THIS book is designed to help you make the most effective use of
+    + the Java™ programming language
+
+    + its fundamental libraries:
+      * ~java.lang~, ~java.util~, and ~java.io~
+      * subpackages such as ~java.util.concurrent~ and ~java.util.function~
+
+  - Book structure:
+    + 90 /items/, each of which conveys one rule.
+    + /items/ are lossely grouped into 11 /chapters/ -- each describes one broad
+      aspect of software design.
+
+  - The book is *NOT* intended to be read from cover to cover:
+    each item stands on its own, more or less.
+
+    However, they are heavily cross-referenced.
+
+  - This book is *NOT* for beginners.
+
+  - This table shows you where to go for primary coverage of key features:
+    | Feature                       | Items       | Release |
+    |-------------------------------+-------------+---------|
+    | Lambdas                       | Items 42–44 | Java 8  |
+    | Streams                       | Items 45–48 | Java 8  |
+    | Optionals                     | Item 55     | Java 8  |
+    | Default methods in interfaces | Item 21     | Java 8  |
+    | try-with-resources            | Item 9      | Java 7  |
+    | ~@SafeVarargs~                | Item 32     | Java 7  |
+    | Modules                       | Item 15     | Java 9  |
+
+  - For the _most_ part, this book
+    + is *NOT* about _performance_, though they are also discussed.
+
+    + is about writing programs that are
+      =TODO= _If you can do that, it’s usually a relatively simple matter to get
+      the performance you need (Item 67)._
+      * clear
+      * correct
+      * usable
+      * robust
+      * flexible
+      * maintainable
+
+  - Java Versions (mostly this book uses _Engineering Version Number_)
+    | Official Release Name                    | Nicknaem |
+    |------------------------------------------+----------|
+    | JDK 1.0.x                                | Java 1.0 |
+    | JDK 1.1.x                                | Java 1.1 |
+    | Java 2 Platform, Standard Edition, v 1.2 | Java 2   |
+    | Java 2 Platform, Standard Edition, v 1.3 | Java 3   |
+    | Java 2 Platform, Standard Edition, v 1.4 | Java 4   |
+    | Java 2 Platform, Standard Edition, v 5.0 | Java 5   |
+    | Java Platform, Standard Edition 6        | Java 6   |
+    | Java Platform, Standard Edition 7        | Java 7   |
+    | Java Platform, Standard Edition 8        | Java 8   |
+    | Java Platform, Standard Edition 9        | Java 9   |
+
+  - When reading examples in this book, always add the ~import~ statements below:
+    #+BEGIN_SRC java
+      import java.util.*;
+      // import java.util.concurrent.*;
+      import java.io.*;
+    #+END_SRC
+
+  - Complete code (I can't find it, and the URL below is redirected to the
+    tweeter of the author):
+    http://joshbloch.com/effectivejava
+
+  - Terminology in this book:
+    =TODO=
+
+* 2 Creating and Destroying Objects - 5
+  THIS chapter concerns creating and destroying objects:
+  + when and how to *create* them;
+  + when and how to *avoid creating* them;
+  + how to ensure they are *destroyed in a timely manner*;
+  + how to manage any cleanup actions that *must precede* their destruction.
+
+** DONE Item 1: Consider static factory methods instead of constructors - 5
+   CLOSED: [2018-01-31 Wed 14:18]
+   - To obtain an instance of a class, besides the traditional way of using
+     /public constructor/, you can
+     _Use a public static factory method_.
+     Example,
+     #+BEGIN_SRC java
+       // The boxed primitive class of `boolean`
+       public static Boolean valueOf(boolean b)
+       {
+           return b ? Boolean.TRUE : Boolean.FALSE;
+       }
+     #+END_SRC
+
+   - NOTE:
+     /static factory method/ is *NOT* the /Factory Method pattern/ for Design
+     Patterns [Gamma95].
+
+   - Providing a /static factory method/ *instead* of a /public constructor/ has
+     both _advantages_ and _disadvantages_.
+     + *ADVANTAGES*
+       * One advantage :: /static factory methods/ is that, _UNLIKE_ /construc-
+                          tors/, *they have names*.
+
+         - =Comment from Jian=
+           + Of course, you can say a /constructor/ has its name, in the sense that
+             you can identify a /constructor/ in the body of a /class/ by finding
+             something has the same "name" as this /class/.
+
+           + However, this is not a a real "name":
+             * You CANNOT pick *ANY* name you want for a /constructor/ -- it must
+               be the same as its /class name/, which is more like a kind of id for
+               a group of things, rather than for a specific thing.
+
+             * This "name" doesn't have enough information that can help the
+               programmer. If we can, we prefer a more informative name.
+
+         - A /static factory/ with a _well-chosen name_ is
+           1. easier to use
+           2. and the resulting client code easier to read
+
+         - Example:
+           This is a /constructor/ in ~BigInteger~, which *should never be used*
+           since Java 4: ~BigInteger(int bitLength, int certainty, Random rnd)~,
+           which is documented as =Constructs a randomly generated positive
+           BigInteger that is probably prime, with the specified bitLength.=
+
+           You CANNOT get the information in this document from the name of the
+           /constructor/ -- the name ~BigInteger~, even with its type signature,
+           includes no info about _probably prime_!
+
+           The RIGHT choice since Java 4 is a /static factory method/ named
+           ~BigInteger.probablePrime(int bitLength, Random rnd)~, which is
+           documented as =Returns a positive BigInteger that is probably prime,
+           with the specified bitLength.=
+
+         - A class can have ONLY a *SINGLE* /constructor/ _with a given
+           signature_.
+
+           Programmers have been known to get around this restriction by
+           providing two constructors whose parameter lists _differ only in the
+           order_ of their parameter types.
+           *This is a really _BAD idea_.*
+
+           It is not reasonable that you can expect the user can REMEMBER all the
+           details, especially something like this kind -- the order of different
+           type parameters.
+
+           =Comment From Jian=
+           A good API should NOT force the API users to REMEMBER too much thing.
+           The designer should choose good names for the API, which is an
+           important part of API design, and save useful info inside names.
+
+           Because they have names, /static factory methods/ do *NOT* share the
+           restriction of /constructors/.
+
+           =Conclusion=
+           In cases where a /class/ seems to require *MULTIPLE* /constructors/
+           with the same signature
+           1. replace the /constructors/ with /static factory methods/
+           2. carefully chosen names to highlight their differences.
+
+       * A second advantage :: UNLIKE /constructors/, /static factory methods/
+            are *NOT* required to create a new object each time they're invoked.
+
+         - This allows /immutable classes/ (Item 17) =TODO= to use preconstructed
+           instances, or to cache instances as they're constructed, and dispense
+           them repeatedly to _avoid_ creating unnecessary duplicate objects.
+
+           =TODO= This technique is similar to the /Flyweight pattern [Gamma95]/
+
+         - The ability of static factory methods to return the same object from
+           repeated invocations allows classes to maintain strict control over
+           what instances exist at any time.
+
+           Classes that do this are said to be /instance-controlled/.
+
+           There are several reasons to write instance-controlled classes.
+           + Instance control allows a class to GUARANTEE that it is a /singleton/
+             (Item 3) =TODO= or /noninstantiable/ (Item 4) =TODO=.
+
+           + Also, it allows an immutable value class (Item 17) =TODO= to make the
+             GUARANTEE that *NO two equal instances exist*: ~a.equals(b)~ iff ~a
+             \equal{}\equal{} b~. This is the basis of the /Flyweight pattern [Gamma95]/ =TODO=.
+             ~Enum~ types (Item 34) =TODO= provide this guarantee.
+
+       * A third advantage :: UNLIKE /constructors/, /static factory methods/ can
+            return an object of *ANY SUBTYPE* of their return type.
+
+            This gives you great flexibility in choosing the class of the
+            returned object.
+
+         - /interface-based frameworks/ (Item 20)
+           =TODO=
+           =TODO=
+
+         - Prior to Java 8, interfaces couldn’t have static methods.
+           By convention, use /noninstantiable companion class/ (Item 4) =TODO=
+
+         - For Java 8 or later:
+           + Java 8 /interfaces/ can have ~public static~ /method/.
+
+           + Java 9 /interfaces/ can have both ~public static~ /method/ and
+             ~private static~ /method/.
+
+           + There are still restrictions about /inteface/ ~static~ /members/ for
+             Java 9: ~static~ /fields/ and ~static class~'s still *MUST be*
+             ~public~.
+
+
+       * A fourth advantage :: the /class/ of the returned object can *VARY* from
+            call to call as a function of the input parameters.
+
+         - Any /subtype/ of the _declared return type_ is PERMISSIBLE. The
+           /class/ of the returned object can also *VARY from release to release*.
+
+         - Example:
+           The ~EnumSet~ /class/ (Item 36 =TODO=) has *NO* /public constructors/,
+           *ONLY* /static factories/.
+
+           + *In the OpenJDK (NOT the Oracle JDK)* (=From Jian= which version?),
+             they return an instance of one of _TWO_ /subclasses/
+             * ~RegularEnumSet~ for the sets contain <= 64 elements, which is
+               backed by a single ~long~.
+
+             * ~JumboEnumSet~ for the sets contain > 64 elements, which is backed
+               by a ~long~ array.
+
+           + This implementation can evolve:
+             * If ~RegularEnumSet~ ceased to offer performance advantages for
+               small enum types, it could be eliminated from a future release
+               _with NO ill effects_.
+
+             * If more /subclasses/ are required for performance, they can be
+               added _with NO ill effects_
+
+             Both cases clients neither know nor care about the class of the
+             object they get back from the factory; they care only that it is
+             some /subclass/ of ~EnumSet~.
+
+       * A fifth advantage :: the /class/ of the returned object need not exist
+            when the class containing the method is written.
+         =TODO=
+         =Comment from Jian= As I understand (the paragraphes in the book is NOT
+            straightforward): Since the returned type of a /static factories/ is
+            usually an /interface/, the returned types of runtime can be any
+            implementation of this /interface/ or /sub-interfaces/
+         =TODO=
+
+       * *DISADVANTAGES*
+         * The main limitation :: /classes/ without ~public~ or ~protected~
+              /constructors/ CANNOT be subclassed.
+
+           + For example, it is impossible to subclass any of the convenience
+             implementation classes in the Collections Framework.
+
+             *ARGUABLY* this can be a blessing in disguise
+             BECAUSE
+             - it encourages programmers to use composition instead of inheritance (Item 18), =TODO=
+             - it is required for immutable types (Item 17) =TODO=.
+
+         * A second shortcoming :: they are hard for programmers to find.
+
+           + They are not like /constructors/ which have a separate section in
+             Javadoc, and, even without this help, they can be found by searching
+             the /class/ name.
+
+           + The Javadoc tool may someday draw attention to /static factory
+             methods/, but it haven't.
+
+           What you can do is:
+           1. Many /static factories/ are located in /noninstantiable companion
+              classes/.
+
+           2. Pay attention to /interface static methods/, they might be (=TODO=
+              =???= mostly always be) /static factories/.
+
+           3. Pay attention to /static members/ to find out the /static
+              factories/.
+
+           4. Adhere to *common naming conventions*.
+              Here is a far from exhaustive list:
+              - ~from~
+                A *type-conversion* method that takes a single parameter and
+                returns a corresponding instance of this type, for example:
+                ~Date d = Date.from(instant);~
+
+              - ~of~
+                An *aggregation* method that takes multiple parameters and
+                returns an instance of this type that incorporates them, for
+                example:
+                ~Set<Rank> faceCards = EnumSet.of(JACK, QUEEN, KING);~
+
+              - ~valueOf~
+                A more verbose alternative to ~from~ and ~of~ (for boxed types,
+                ~valueOf~ is used to replace something like ~new Integer(3)~,
+                which is DEPRECATED), for example:
+                ~BigInteger prime = BigInteger.valueOf(Integer.MAX_VALUE);~
+
+              - ~instance~ or ~getInstance~ =TODO= =???=
+                Returns an instance that is described by its parameters (if any)
+                but cannot be said to have the same value, for example:
+                ~StackWalker luke = StackWalker.getInstance(options);~
+
+              - ~create~ or ~newInstance~
+                LIKE ~instance~ or ~getInstance~, except that the method
+                *guarantees that each call returns a new instance*, for example:
+                ~Object newArray = Array.newInstance(classObject, arrayLen);~
+
+              - ~get<Type>~ =TODO= =???=
+                LIKE ~getInstance~, but used if the factory method is in a
+                different class. Type is the type of object returned by the
+                factory method, for example:
+                ~FileStore fs = Files.getFileStore(path);~
+
+              - ~new<Type>~
+                LIKE ~newInstance~, but used if the factory method is in a
+                different class. Type is the type of object returned by the
+                factory method, for example:
+                ~BufferedReader br = Files.newBufferedReader(path);~
+
+              - ~<type>~
+                A concise alternative to ~getType~ and ~newType~, for example:
+                ~List<Complaint> litany = Collections.list(legacyLitany);~
+
+   - *SUMMARY*
+     + Often /static factories/ are *PREFERABLE*!
+
+       Avoid the reflex to provide /public constructors/ without first
+       considering /static factories/.
+
+** TODO Item 2: Consider a builder when faced with many constructor parameters - 11
+   - /Static factories/ and /constructors/ share a *LIMITATION*:
+     *they do not scale well to large numbers of optional parameters*.
+
+   - Use an example to illustrate -- *Nutrition Facts label object*
+     It has REQUIRED fields and OPTIONAL fields, and the total number of fields
+     is very large. We must consider the /scalability/ for constructing.
+
+   - TWO defective ways:
+     + /telescoping constructor/ pattern
+       #+BEGIN_SRC java
+         // Telescoping constructor pattern - does not scale well!
+         public class NutritionFacts {
+             private final int servingSize; // (mL) required
+             private final int servings; // (per container) required
+             private final int calories; // (per serving) optional
+             private final int fat; // (g/serving) optional
+             private final int sodium; // (mg/serving) optional
+             private final int carbohydrate; // (g/serving) optional
+
+             public NutritionFacts(int servingSize, int servings)
+             {
+                 this(servingSize, servings, 0);
+             }
+
+             public NutritionFacts(int servingSize, int servings, int calories)
+             {
+                 this(servingSize, servings, calories, 0);
+             }
+
+             public NutritionFacts(int servingSize, int servings, int calories, int fat)
+             {
+                 this(servingSize, servings, calories, fat, 0);
+             }
+
+             public NutritionFacts(int servingSize, int servings, int calories, int fat,
+                                   int sodium)
+             {
+                 this(servingSize, servings, calories, fat, sodium, 0);
+             }
+
+             public NutritionFacts(int servingSize, int servings, int calories, int fat,
+                                   int sodium, int carbohydrate)
+             {
+                 this.servingSize = servingSize;
+                 this.servings = servings;
+                 this.calories = calories;
+                 this.fat = fat;
+                 this.sodium = sodium;
+                 this.carbohydrate = carbohydrate;
+             }
+         }
+
+         // Somewhere in a class -- Construction
+         NutritionFacts cocaCola = new NutritionFacts(240, 8, 100, 0, 35, 27);
+       #+END_SRC
+
+       * *Limitations*:
+         Typically even the shortest /constructor/ that can fullfill your
+         requirement includes many parameters that you do NOT want to set, but
+         you're forced to pass a value for them anyway (even if a default
+         setting is already there). In this case, it is the ~0~ for ~fat~.
+
+       * In short,
+         the /telescoping constructor/ pattern works, but
+         + it is HARD to _write client code_ when there are many parameters
+
+         + it is HARDER still to _read_ it
+           If you accidentally reverses two such parameters, the compiler CANNOT
+           help you to identify the bug.
+
+     + JavaBeans pattern
+       #+BEGIN_SRC java
+         // JavaBeans Pattern - allows inconsistency, mandates mutability
+         public class NutritionFacts {
+             // Parameters initialized to default values (if any)
+             private int servingSize = -1; // Required; no default value
+             private int servings = -1;    // Required; no default value
+             private int calories = 0;
+             private int fat = 0;
+             private int sodium = 0;
+             private int carbohydrate = 0;
+
+             // TODO (From Jian): I don't think we need this constructor for the
+             //      reason that if there is no constructor defined, Java will
+             //      help to create a DEFAULT CONSTRUCTOR as this one.
+             public NutritionFacts() { }
+
+             // Setters
+             public void setServingSize(int val) { servingSize = val; }
+             public void setServings(int val) { servings = val; }
+             public void setCalories(int val) { calories = val; }
+             public void setFat(int val) { fat = val; }
+             public void setSodium(int val) { sodium = val; }
+             public void setCarbohydrate(int val) { carbohydrate = val; }
+         }
+
+         // Somewhere in a class -- Construction
+         NutritionFacts cocaCola = new NutritionFacts();
+         cocaCola.setServingSize(240);
+         cocaCola.setServings(8);
+         cocaCola.setCalories(100);
+         cocaCola.setSodium(35);
+         cocaCola.setCarbohydrate(27);
+       #+END_SRC
+       * This pattern has _NONE of the disadvantages_ of the /telescoping
+         constructor/ pattern.
+         - It is easy, if *a bit wordy*, to *create* instances
+         - It is easy to *read* the resulting code
+
+       * Unfortunately, the JavaBeans pattern has serious disadvantages of its own:
+         + Because construction is split across multiple calls,
+
+           a JavaBean may be in an *inconsistent state partway through its
+           construction*.
+
+           =Comment from Jian= We hope the /construction/ is a kind of /atomic
+           operation/, at one statment, which can be multisteps /fluent style/
+           operation.
+
+         +
+
+** TODO Item 3: Enforce the singleton property with a private constructor or an enum type - 17
+** TODO Item 4: Enforce noninstantiability with a private constructor - 19
+** TODO Item 5: Prefer dependcy injection to hardwiring resources - 20
+** TODO Item 6: Avoid creating unnecessary objects - 22
+** TODO Item 7: Eliminate obsolete object references - 26
+** TODO Item 8: Avoid finalizers and cleaners - 29
+** TODO Item 9: Prefer ~try~-with-resources to ~try-finally~ - 34
+
+* 3 Methods Common to All Objects - 37
+  - Although ~Object~ is a /concrete class/, _it is designed primarily for extension_.
+    All of its nonfinal methods (~equals~, ~hashCode~, ~toString~, ~clone~, and
+    ~finalize~) have explicit general /contracts/ because they are designed to be
+    overridden.
+
+    + *It is the responsibility of any class overriding these methods to obey their
+      general contracts;*
+        failure to do so will prevent other classes that depend on the contracts
+      (such as ~HashMap~ and ~HashSet~) from functioning properly in conjunction
+      with the /class/.
+
+  - This chapter tells you _when_ and _how_ to /override/ _the *nonfinal* ~Object~
+    /methods/._
+
+    + The ~finalize~ method is omitted from this chapter because it was discussed
+      in Item 8.
+
+    + While *NOT* an ~Object~ /method/, ~Comparable.compareTo~ is discussed in this
+      chapter because it has a SIMILAR character.
+
+** Item 10: Obey the general contract when overriding ~equals~ - 37
+** Item 11: Always override ~hashCode~ when you override ~equals~ - 50
+** Item 12: Always override ~toString~ - 55
+** Item 13: Override ~clone~ judiciously - 58
+** Item 14: Consider implementing ~Comparable~ - 66
+
+* 4 Classes and Interfaces - 73
+** Item 15: Minimize the accessibility of classes and members - 73
+** Item 16: In public classes, use accessor methods, not public fields - 78
+** Item 17: Minimize mutability - 80
+** Item 18: Favor composition over inheritance - 87
+** Item 19: Design and document for inheritance or else prohibit it - 93
+** Item 20: Prefer interfaces to abstract classes - 99
+** Item 21: Design interfaces for posterity - 104
+** Item 22: Use interfaces only to define types - 107
+** Item 23: Prefer class hierarchies to tagged classes - 109
+** Item 24: Favor static member classes over nonstatic - 112
+** Item 25: Limit source files to a single top-level class - 115
+
+* 5 Generics - 117
+** Item 26: Don't use raw types - 117
+** Item 27: Eliminate unchecked warnings - 123
+** Item 28: Prefer lists to arrays - 126
+** Item 29: Favor generic types - 130
+** Item 30: Favor generic methods - 135
+** Item 31: Use bounded wildcards to increase API flexibility - 139
+** Item 32: Combine generics and varargs judiciously - 146
+** Item 33: Consider typesafe heterogeneous containers - 151
+
+* 6 Enums and Annotations - 157
+  This chapter discusses best practices of using two special-purpose families of
+  /reference types/:
+  - /enum type/, a kind of /class/
+  - /annotation type/, a kind of /interface/
+
+** Item 34: Use enums instead of ~int~ constants - 157
+   - _BEFORE_ introducing /enums/, the common pattern of defining enumeration values
+     was to declare a group of named ~int~ constants, one for each member of the
+     type:
+     #+begin_src java
+       // The int enum pattern - severely deficient!
+       public static final int APPLE_FUJI         = 0;
+       public static final int APPLE_PIPPIN       = 1;
+       public static final int APPLE_GRANNY_SMITH = 2;
+
+       public static final int ORANGE_NAVEL = 0;
+       public static final int ORANGE_TEMPLE = 1;
+       public static final int ORANGE_BLOOD = 2;
+     #+end_src
+     + Shortcomings:
+       + NO type safety
+         Example:
+         You can by accident do
+         #+begin_src java
+           // Tasty citrus flavored applesauce!
+           int i = (APPLE_FUJI - ORANGE_TEMPLE) / APPLE_PIPPIN;
+         #+end_src
+         Calculation between different groups of enums are usually meaningless.
+         It is mostly a typo.
+
+       + Less expressive power
+
+     + Wrong hot unplug/plug
+       Programs that use /int enums/ are _brittle_.
+       Because /int enums/ are /constant variables/ [JLS, 4.12.4], their int
+       values are compiled into the clients that use them [JLS, 13.1].
+         If the value associated with an int enum is changed, its clients *MUST
+       be recompiled*. If not, the clients will still run, but their behavior
+       will be incorrect.
+
+     + TODO
+       from 3rd paragraph on!
+
+** Item 35: Use instance fields instead of ordinals - 168
+** Item 36: Use ~EnumSet~ instead of bit fields - 169
+** Item 37: Use ~EnumMap~ instead of ordinal indexing - 171
+** Item 38: Emulate extensible enums with interfaces - 176
+** Item 39: Prefer annotations to naming patterns - 180
+** Item 40: Consistently use the ~Override~ annotation - 188
+** Item 41: Use marker interfaces to define types - 191
+
+* 7 Lambdas and Streams - 193
+** Item 42: Prefer lambdas to anonymous classes - 193
+** Item 43: Prefer method references to lambdas - 197
+** Item 44: Favor the use of standard functional interfaces - 199
+** Item 45: Use streams judiciously - 203
+** Item 46: Prefer side-effect-free functions in streams - 210
+** Item 47: Prefer Collection to Stream as a return type - 216
+** Item 48: Use caution when making streams parallel - 222
+
+* 8 Methods - 227
+** Item 49: Check parameters for validity - 227
+** Item 50: Make defensive copies when needed - 231
+** Item 51: Design method signatures carefully - 236
+** Item 52: Use overloading judiciously - 238
+** Item 53: Use varargs judiciously - 245
+** Item 54: Return empty collections or arrays, not nulls - 247
+** Item 55: Return optionals judiciously - 249
+** Item 56: Write doc comments for all exposed API elements - 254
+
+* 9 General Programming - 261
+** Item 57: Minimize the scope of local variables - 261
+** Item 58: Prefer for-each loops to traditional for loops - 264
+** Item 59: Know and use the libraries - 267
+** Item 60: Avoid float and double if exact answers are required - 270
+** Item 61: Prefer primitive types to boxed primitives - 273
+** Item 62: Avoid strings where other types are more appropriate - 276
+** Item 63: Beware the performance of string concatenation - 279
+** Item 64: Refer to objects by their interfaces - 280
+** Item 65: Prefer interfaces to reflection - 282
+** Item 66: Use native methods judiciously. - 285
+** Item 67: Optimize judiciously - 286
+** Item 68: Adhere to generally accepted naming conventions - 289
+
+* TODO 10 Exceptions - 293
+** DONE Item 69: Use exceptions only for exceptional conditions - 293 - TODO =RE-READ=
+   CLOSED: [2020-01-08 Wed 02:07]
+   #+begin_quote
+   Exceptions are, as their name implies, to be used only for exceptional
+   conditions; they should never be used for ordinary control flow.
+   #+end_quote
+   =from Jian= Right for Java, but may not always right in other languages
+   (Python, etc).
+
+   An example that is a horrible abuse of exceptions. *Don't ever do this!*
+   #+begin_src java
+     try {
+         int i = 0;
+         while(true)
+             range[i++].climb();
+     } catch (ArrayIndexOutOfBoundsException e) {
+     }
+   #+end_src
+
+   - The code doesn't have an obvious meaning.
+     TODO See Item 67
+
+   - It use an /exception/ to stop a loop.
+     This can be done with a more readible and efficient way:
+     #+begin_src java
+       for (Mountain m : range)
+           m.climb();
+     #+end_src
+
+   - People who write the expcetion-based idioms may have some guesses like:
+     TODO TODO TODO TODO TODO TODO
+     However, there are three things wrong with this reasoning:
+     + Because exceptions are designed for exceptional circumstances, there is
+       _little incentive_ for JVM implementors to _make them as fast as_
+       explicit tests.
+
+     + Placing code inside a try-catch block _inhibits certain optimizations_ that
+       JVM implementations might otherwise perform.
+
+     + The standard idiom for looping through an array doesn't necessarily result
+       in redundant checks. _Many JVM implementations optimize them away_.
+
+   - Author provide a concrete example.
+     Loop a 100 elements array and the _exception-based idiom_ is about
+     _twice as slow_ as the _standard one_.
+
+   - Other reasons:
+     + They ~try~ block may inlucde some other code can generate /excpetions/ the
+       ~catch~ block will catch -- it can guarantee the catched one is the one and
+       the expected functionality (in the ~try~ block) is done.
+         Worsely, even exceptions happen, the user may think the expceted work is
+       done -- if the exception throwed be catched (i.e. match the given) try
+       blocked executed, expected exceptions are triggered and catched. The
+       whole ~try .. catch~ block is finished.
+
+   - *Principle for API design*
+     _A well-designed API must not force its clients to use /excpetions/ for ordinary
+     control flow._
+
+   - A class with a /"state-dependent" method/ that can be invoked only under certain
+     unpredictable conditions should generally have a separate /"state-testing"
+     method/ indicating whether it is appropriate to invoke the /state-dependent
+     method/. For example,
+     + ~Iterator~ interface.
+       * _WITHOUT_ the /"state-testing" method/ ~hasNext~:
+         #+begin_src java
+           // Do not use this hideous code for iteration over a collection!
+           try {
+               Iterator<Foo> i = collection.iterator();
+               while(true) {
+                   Foo foo = i.next();
+                   // ...
+               }
+           } catch (NoSuchElementException e) {
+           }
+         #+end_src
+
+       * _WITH_ the /"state-testing" method/ ~hasNext~:
+         the foreach loop syntatic sugar):
+         #+begin_src java
+           for (Iterator<Foo> i = collection.iterator(); i.hasNext();) {
+               Foo foo = i.next();
+               // ...
+           }
+         #+end_src
+
+     + An alternative to providing a separate /state-testing method/ is to have
+       the /state dependent method/ return an /empty optional/ (Item 55) or a
+       _distinguished value_ such as ~null~ if it cannot perform the desired
+       computation.
+       * Q :: How to choose a proper one in different situations?
+       * A ::
+         - Situation 1:
+           If an object is to be accessed _concurrently_ _WITHOUT external
+           synchronization_ or _is subject to externally induced state
+           trasitions_,
+           *you MUST use the ~optional~ or _distinguished return value_ way.*
+           /state-testing method/ can't promise that after its checking and
+           before/during the /state dependent operation/, no critical data
+           changed by other threads.
+
+         - Other situations: =RE-READ= =RE-NOTE=
+           Both ways are applicable, and the /state testing method/ is mildly
+           preferable, with which errors may be easier to detect: just let
+           the /state dependent method/ throw an exception when people forget to
+           call the /state testing method/ first.
+
+   - Summary
+     + Exceptions are designed for exceptional conditions.
+
+     + Don't use them for ordinary control flow, and don't write APIs that force
+       others to do so.
+
+** TODO Item 70: Use checked exceptions for recoverable conditions and runtime exceptions for programming errors - 296
+** Item 71: Avoid unnecessary use of checked exceptions - 298
+** Item 72: Favor the use of standard exceptions - 300
+** Item 73: Throw exceptions appropriate to the abstraction - 302
+** Item 74: Document all exceptions thrown by each method - 304
+** Item 75: Include failure-capture information in detail messages - 306
+** Item 76: Strive for failure atomicity - 308
+** Item 77: Don’t ignore exceptions - 310
+
+* 11 Concurrency - 311
+** Item 78: Synchronize access to shared mutable data - 311
+** Item 79: Avoid excessive synchronization - 317
+** Item 80: Prefer executors, tasks, and streams to threads - 323
+** Item 81: Prefer concurrency utilities to wait and notify - 325
+** Item 82: Document thread safety - 330
+** Item 83: Use lazy initialization judiciously - 333
+** Item 84: Don’t depend on the thread scheduler - 336
+
+* 12 Serialization - 339
+** Item 85: Prefer alternatives to Java serialization - 339
+** Item 86: Implement Serializable with great caution - 343
+** Item 87: Consider using a custom serialized form - 346
+** Item 88: Write readObject methods defensively - 353
+** Item 89: For instance control, prefer enum types to readResolve - 359
+** Item 90: Consider serialization proxies instead of serialized instances - 363
+
+* Items Corresponding to Second Edition - 367
+* References. - 371
+* Index - 377

@@ -1,0 +1,982 @@
+#+TITLE: PowerShell for SYSADMINS
+#+SUBTITLE: Workflow Automation Made Easy
+#+VERSION: 2020
+#+AUTHOR: Adam Bertram
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* ACKNOWLEDGMENTS - xix
+* INTRODUCTION - xxi
+** Why PowerShell? - xxii
+** Who This Book Is For - xxii
+** About This Book - xxii
+   
+* PART I: FUNDAMENTALS - 1
+* DONE 1 GETTING STARTED - 3
+  CLOSED: [2020-11-09 Mon 04:15]
+  - The name PowerShell refers to two things:
+    * A command line shell
+    * A scripting language
+
+  - Together they refer to one framework that can be used to automate everything.
+
+  - In the first chapters of this book,
+    1. you'll use the PowerShell console to become familiar with the basics of
+       PowerShell.
+
+    2. Once you've covered the basics, you'll graduate to more advanced topics
+       including writing scripts, functions, and custom modules.
+
+  - This chapter covers the basics:
+    * some fundamental commands
+    * how to find and read help pages
+  
+** DONE Opening the PowerShell Console - 4
+   CLOSED: [2020-11-09 Mon 02:28]
+   - This book use PowerShell v5.1.
+
+   - Newer versions have more features and bug fixes,
+     BUT the basic syntax and core functionality of PowerShell _hasn't changed
+     dramtically since version 2_.
+   
+** DONE Using DOS Commands - 4
+   CLOSED: [2020-11-09 Mon 02:53]
+   You can use DOS commands, which are actually aliases to PowerShell commands.
+   
+   - *Using TAB Completion*
+     * TAB:
+       try to complete the command, and keep hitting TAB to move *forward* through
+       possible commands.
+
+     * SHIFT-TAB:
+       like TAB, but move *backward*.
+     
+   - Alghough the majority do, not all commands in cmd.exe exist in PowerShell.
+     Try to run ~Get-Alias~ for details.
+
+** DONE Exploring PowerShell Commands - 6
+   CLOSED: [2020-11-09 Mon 03:23]
+   - Like nearly all languages, PowerShell has /commands/, the _generic term_ for
+     /named executable expressions/.
+
+   - Run ~Get-Command~ to see a list of EVERY command PowerShell is aware of by default.
+
+   - Most commands's names follow the same scheme: Verb-Noun.
+     * To keep the language as intuitive as possible, Microsoft has set guidelines
+       for command names.
+         Alghough following this naming convention is _OPTIONAL_, it is _highly
+       recommended_ for creating your own commands.
+
+   - PowerShell commands come in a few flavors:
+     * cmdlets
+     * functions
+     * aliases
+     * external scripts
+
+   - _MOST_ of the /built-in/ commands from Microsoft are /cmdlets/, which are
+     typically commands written in other languages like C#.
+
+   - By running the ~Get-Command~, you'll see a ~CommandType~ field in the output:
+     #+begin_src powershell
+       Get-Command -Name Get-Alias
+
+       # CommandType    Name         Version    Source
+       # -----------    ----         -------    ------
+       # Cmdlet         Get-Alias    3.1.0.0    Microsoft.PowerShell.Utility
+     #+end_src
+
+   - /Functions/ are /commands/ _written in PowerShell_.
+     /Cmdlets/ and /functions/ are the *most common* command types you'll be
+     working with in PowerShell.
+
+   - You'll use the ~Get-Command~ command to explore the plethora of /cmdlets/ and
+     /functions/ available in PowerShell.
+
+   - A lot of /commands/ in PowerShell have /parameters/, which are values you
+     give (or pass) to a command to customize its behavior.
+     * For instance,
+       ~Get-Command~ has various /parameters/ that allow you to return only
+       specific commands instead of all of them.
+
+   - The ~Get~ commands get information and the others modify information.
+     
+   - /Parameters/ of ~Get-Command~:
+     * You can see that ~Get-Command~ allows you to separate out the verb and noun.
+       + ~Verb~,
+         limit that huge list of commands to only those that use certain verb like ~Get~:
+         #+begin_src powershell
+           Get-Command -Verb Get
+         #+end_src
+
+       + ~Noun~,
+         combine with ~-Noun~
+         #+begin_src powershell
+           Get-Command -Noun Content
+         #+end_src
+
+       + Combine ~Verb~ and ~Noun~
+         #+begin_src powershell
+           Get-Command -Verb Get -Noun Content
+         #+end_src
+
+     * If you'd rather define the entire command as one unit, you can use the ~Name~
+       parameter instead and specify the entire command name:
+         #+begin_src powershell
+           Get-Command -Name Get-Content
+         #+end_src
+
+   - You can learn a /command's parameters/ by using the robust _PowerShell help system_.
+     
+** DONE Getting Help - 8
+   CLOSED: [2020-11-09 Mon 04:15]
+   In this section, you’ll learn
+   - how to display command help pages in the prompt window,
+   - get more general information on the language via About topics,
+   - update your documentation with ~Update-Help~.
+
+*** DONE Displaying the Docs - 8
+    CLOSED: [2020-11-09 Mon 03:58]
+    Similar to the ~man~ /command/ in Linux, PowerShell has the ~help~ command and
+    the ~Get-Help~ /cmdlet/.
+
+    - If you're interested in seeing what one of those =Content= /cmdlets/ does,
+      you can pass that command name to the ~Get-Help~ command to retrieve the
+      standard =SYNOPSIS=, =SYNTAX=, =DESCRIPTION=, =RELATED LINKS=, and =REMARKS=
+      help _sections_. Listing 1-7 displays the documentation for the ~Add-Content~
+      /command/.
+      #+begin_src powershell
+        Get-Help Add-Content
+
+        # NAME
+        #     Add-Content
+        #
+        # SYNOPSIS
+        #     Appends content, such as words or data, to a file.
+        #
+        # --snip--
+      #+end_src
+      * The most helpful part of this content is the ~Examples~ /parameter/.
+        This /parameter/ shows examples of real-world uses of the /command/ in a
+        variety of scenarios.
+          Try ~Get-Help CommmandName -Examples~ on any /command/ and notice that
+        nearly ALL /built-in commands/ have examples to help you understand what
+        they do. For example,
+        #+begin_src powershell
+          Get-Help Add-Content -Examples
+
+          # NAME
+          #     Add-Content
+          #
+          # SYNOPSIS
+          #     Appends content, such as words or data, to a file.
+          #
+          # -------------------------- EXAMPLE 1 --------------------------
+          #
+          # C:\PS>Add-Content -Path *.txt -Exclude help* -Value "END"
+          #
+          # Description
+          #
+          # -----------
+          #
+          # This command adds "END" to all text files in the current directory,
+          # except for those with file names that begin with "help."
+          # --snip--
+        #+end_src
+
+    - If you want more information, the ~Get-Help~ /cmdlet/ also has the ~Detailed~ and
+      ~Full~ /parameters/, which give you a complete rundown on what that /command/ does.
+
+*** DONE Learning About General Topics - 9
+    CLOSED: [2020-11-09 Mon 04:15]
+    - In addition to help content for individual commands, the PowerShell help
+      system provides About topics, which are help snippets for broader subjects
+      and specific commands. For example, in this chapter you’re learning about
+      some of PowerShell’s core commands. Microsoft has created an About topic
+      that gives an overall explanation of these commands. To see it, you run
+      ~Get-Help about_Core_Commands~, as shown in Listing 1-9.
+
+    - To get a complete list of all the About topics available, use a wildcard
+      for the ~Name~ /parameter/. In PowerShell, the wildcard character, an asterisk
+      (*), can be used as a placeholder for zero or more characters. You can use
+      a wildcard with the ~Get-Help~ command's ~Name~ /parameter/, as in Listing 1-10.
+      #+begin_src powershell
+        Get-Help -Name About*
+      #+end_src
+
+    - By appending the wildcard to About, you’re asking PowerShell to search for
+      all possible topics that start with About. If there are multiple matches,
+      PowerShell will display a list, with brief information about each. To get
+      the full information about one of the matches, you’ll have to pass it into
+      ~Get-Help~ directly, as shown previously in Listing 1-9.
+
+    - Although the Get-Help command has a ~Name~ /parameter/, you can pass the
+      /parameter/ argument directly to it by entering -Name, as shown in Listing
+      1-10. This is known as using a positional parameter, which determines the
+      value you’re passing in based on its (you guessed it) position in the
+      command. Positional parameters are a shortcut that many PowerShell
+      commands have, allowing you to reduce the number of keystrokes.
+    
+** DONE Updating the Docs - 10
+   CLOSED: [2020-11-09 Mon 04:15]
+   - The _help system_ in PowerShell is a great asset for anyone who wants to learn
+     more about the language, but one key feature makes this _help system_ much
+     better: *it's dynamic!*
+
+     * Problem :: Documentation tends to get stale after a while. A product ships
+       with documentation, bugs creep in, new features get released, but the
+       documentation on the system stays the same.
+
+     * PowerShell addresses this problem with updatable help, which allows the
+       /built-in PowerShell cmdlets/ and ANY OTHER /cmdlets/ -- or /functions/
+       built by others -- to point to an _internet URI_ in order to host up-to-date
+       documentation.
+       + Simply enter ~Update-Help~, and PowerShell will begin reading the help on
+         your system and checking it against the various online locations.
+
+   - Note that although updatable help is included with all /built-in PowerShell
+     cmdlets/, it isn't required for any third-party commands.
+     
+   - Finally, you may occasionally receive an error when running ~Update-Help~ if
+     the location where the help is stored is not available anymore.
+       In short, don't expect ~Update-Help~ to always show the latest help
+     content for every command in PowerShell.
+
+   - *RUNNING POWERSHELL AS ADMINISTRATOR*
+     In Start menu, right click Windows PowerShell and then clicking
+     "Run as Administrator".
+     
+** DONE Summary - 11
+   CLOSED: [2020-11-09 Mon 03:24]
+   
+* TODO 2 BASIC POWERSHELL CONCEPTS - 13
+  - This chapter covers _FOUR_ basic concepts in PowerShell:
+    * variables
+    * data types
+    * objects
+    * data structures
+
+  - Those above mentioned concepts are fundamental to just about every common
+    programming language,
+    _BUT_ there's something that makes PowerShell distinctive: *EVERYTHING in
+    PowerShell is an /object/.*
+      
+** DONE Variables - 13
+   CLOSED: [2020-11-10 Tue 03:37]
+*** DONE Displaying and Changing a Variable - 14
+    CLOSED: [2020-11-09 Mon 04:26]
+    - ALL /variables/ in PowerShell START WITH a _dollar sign_ (~$~), which
+      indicates to PowerShell that
+      you are calling a /variable/ and *NOT* a /cmdlet/, /function/, /script
+      file/, or /executable file/.
+      * Example:
+        #+begin_src powershell
+          $MaximumHistoryCount
+          # 4096
+
+          $MaximumHistoryCount = 200
+        #+end_src
+        =from Jian=
+        + CAUTION:
+          Run this assignment in a PowerShell console doesn't automatically save
+          the value to a persistent configuration file.
+
+    - /Variables/ in PowerShell come in _TWO_ broad /classes/:
+      * user-defined variables :: created by the user;
+      * automatic variables :: already exist in PowerShell.
+
+*** DONE User-Defined Variables - 14
+    CLOSED: [2020-11-10 Tue 02:18]
+    A /variable/ needs to exist before you can use it.
+
+    - If you can't see error messsages when you use a non-exist /variable/, you'd
+      better turn on strict mode:
+      #+begin_src powershell
+        Set-StrictMode -Version Latest
+      #+end_src
+      =important= =!!!=
+
+    - This BOOK:
+      #+begin_src powershell
+        $color
+        # The variable '$color' cannot be retrieved because it has not been set.
+        #
+        # At line:1 char:1
+        # + $color
+        # + ~~~~
+        # + CategoryInfo          : InvalidOperation: (color:String) [], RuntimeException
+        # + FullyQualifiedErrorId : VariableIsUndefined
+      #+end_src
+
+    - Assignment with equal sign is equivalent to do with the ~Set-Variable~ command.
+      Evaluate a /variable/ through ~$~ is equivalent to do with the ~Get-Variable~
+      command.
+      #+begin_src powershell
+        Set-Variable -Name color -Value blue
+
+        Get-Variable -Name color
+        #
+        # Name        Value
+        # ----        -----
+        # color       blue
+      #+end_src
+    
+    - You can also use ~Get-Variable~ to return all available variables:
+      #+begin_src powershell
+        Get-Variable
+
+        # Name    Value
+        # ----    -----
+        # $       Get-PSDrive
+        # ?       True
+        # ^       Get-PSDrive
+        # args    {}
+        # color   blue
+        # --snip--
+      #+end_src
+      
+*** DONE Automatic Variables - 16
+    CLOSED: [2020-11-10 Tue 03:37]
+    - /Automatic variables/ are premade variables that PowerShell itself uses.
+      * PowerShell *allows* you to _CHANGE_ SOME of these /variables/
+
+      * I typically advise against it because unexpected consequences can arise.
+        In general, you should *treat /automatic variables/ as _READ-ONLY_.*
+
+    - This section covers a few of the /automatic variables/ that you're likely
+      to use:
+      * the ~$null~ variable
+      * ~$LASTEXITCODE~
+      * the /preference variables/.
+
+**** DONE The ~$null~ Variable - 16
+     CLOSED: [2020-11-10 Tue 02:42]
+     - Assign a ~$null~ to a /variable/ is like declare a /variable/ with a default
+       empty initialization.
+     
+     - Evaluate this /variable/ in PowerShell, and nothing won't be printed out.
+       Also there is no error for /variables/ that were never set.
+     
+**** DONE The ~LASTEXITCODE~ Variable - 17
+     CLOSED: [2020-11-10 Tue 02:55]
+     ~LASTEXITCODE~ references the value of the LAST /exit code/, or /return code/
+     of an /EXTERNAL applications/. Typically,
+     - 0 indicates success
+     - anything else means either a failure or another anomaly.
+     
+**** DONE The Preference Variables - 18
+     CLOSED: [2020-11-10 Tue 03:37]
+     - PowerShell has a type of /automatic variable/ referred to as /preference
+       variables/. These variables control the _default behavior_ of various output
+       streams:
+       * ~Error~
+       * ~Warning~
+       * ~Verbose~
+       * ~Debug~
+       * ~Information~
+
+     - *List* all of the /preference variables/ by running ~Get-Variable~
+       and *filtering* for all variables ending in =Preference=, as shown here:
+       #+begin_src powershell
+         Get-Variable -Name *Preference
+
+         # Name                     Value
+         # ----                     -----
+         # ConfirmPreference        High
+         # DebugPreference          SilentlyContinue
+         # ErrorActionPreference    Continue
+         # InformationPreference    SilentlyContinue
+         # ProgressPreference       Continue
+         # VerbosePreference        SilentlyContinue
+         # WarningPreference        Continue
+         # WhatIfPreference         False
+       #+end_src
+       * These variables can be used to configure the various types of output
+         PowerShell can return.
+         For example, if you've ever made a mistake and seen that ugly red text,
+         you've seen the ~Error~ output stream. Run the following command to
+         generate an error message:
+         #+begin_src powershell
+           Get-Variable -Name 'doesnotexist'
+           # Get-Variable : Cannot find a variable with the name 'doesnotexist'.
+           # At line:1 char:1
+           # + Get-Variable -Name 'doesnotexist'
+           # + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           #     + CategoryInfo          : ObjectNotFound: (doesnotexist:String) [Get-Variable],
+           #                               ItemNotFoundException
+           #     + FullyQualifiedErrorId : VariableNotFound,Microsoft.PowerShell.Commands.GetVariableCommand
+         #+end_src
+
+       * You should have gotten a similar error message, as this is the default
+         behavior for the ~Error~ stream.
+
+         If for whatever reason you didn't want to be bothered by this error
+         text, and would rather nothing happen, you could redefine the
+         ~$ErrorActionPreference~ variable to ~SilentlyContinue~ or ~Ignore~,
+         either of which will tell PowerShell not to output any error text:
+         #+begin_src powershell
+           $ErrorActionPreference = 'SilentlyContinue'
+           Get-Variable -Name 'doesnotexist'
+           # 
+         #+end_src
+
+       * For more information on /preference variables/, check out the ~about_help~
+         content by running ~Get-Help about_Preference_Variables~.
+         =TODO= =TODO= =TODO=
+     
+** DONE Data Types - 19
+   CLOSED: [2020-11-14 Sat 03:42]
+*** DONE Boolean Values - 20
+    CLOSED: [2020-11-14 Sat 02:58]
+    In PowerShell, /booleans/ are called /bools/.
+
+    - The _TWO_ /boolean values/ are represented by the /automatic variables/
+      ~$true~ and ~$false~.
+
+    - These /automatic variables/ are hardcoded into PowerShell and *can't be
+      changed*.
+    
+    - Example:
+      #+begin_src powershell
+        $isOn = $true
+        $isOne
+        # True
+      #+end_src
+    
+*** DONE Integers and Floating Points - 20
+    CLOSED: [2020-11-14 Sat 03:36]
+    Represent numbers in PowerShell in _two main ways_:
+    - via /integer/
+    - via /floating-point data types/
+    
+**** DONE Integer Types - 20
+     CLOSED: [2020-11-14 Sat 03:22]
+     - /Integer data types/ hold ONLY /whole numbers/ and will *round* any /decimal/
+       input to the _nearest_ (=???=) /integer/. /Integer data types/ come in
+       /signed and unsigned types/.
+
+     - By default, PowerShell stores /integers/ by using the /32-bit signed ~Int32~
+       type/.
+       
+     - ~Int32~: -2,147,483,648 to 2,147,483,647.
+
+     - ~Int64~: –9,223,372,036,854,775,808 to 9,223,372,036,854,775,807.
+       * For numbers outside that range of ~Int32~, you can use the /64-bit signed
+         ~Int64~ type/, which has a range of
+       
+
+     - Example (~Int32~ type):
+       #+begin_src powershell
+         $num = 1
+         $num
+         # 1
+
+         $num.GetType().name
+         # Int32
+
+         $num = 1.5
+         $num.GetType().name
+         # Double
+
+         [Int32]$num
+         # 2
+       #+end_src
+       * You can see the /casting/ syntax, and it *rounds the value up*.
+
+**** DONE Floating-Point Types - 21
+     CLOSED: [2020-11-14 Sat 03:36]
+     - The ~Double~ type belongs to the broader class of variables known as
+       /floating-point variables/.
+       * Although they can be used to represent /whole numbers/, /floating-point
+         variables/ are most often used to represent /decimals/.
+
+     - The other main /type/ of /floating-point variable/ is ~Float~.
+       * This book won't go into the /internal representation/ of the ~Float~ and
+         ~Double~ /types/.
+
+     - Example:
+       #+begin_src powershell
+         $num = 0.1234567910
+         $num.GetType().name
+         # Double
+
+         $num + $num
+         # 0.2469135782
+
+         [Float]$num + [Float]$num
+         # 0.246913582086563
+       #+end_src
+       As you can see, PowerShell uses the ~Double~ /type/ _by default_.
+       But notice what happens when you add ~$num~ to itself but *cast* both as a
+       ~Float~ -- you get a strange answer.
+       * Again, the reasons are beyond the scope of this book, but be aware that
+         errors like this can happen when using ~Float~ and ~Double~.
+         =TODO= =???= =TODO=
+         =TODO= =???= =TODO=
+         =TODO= =???= =TODO=
+     
+*** DONE Strings - 21
+    CLOSED: [2020-11-14 Sat 03:42]
+    Single and double quotes, both are the delimiter of string values, are
+    _DIFFERENT_ in PowerShell.
+    
+**** Combining Strings and Variables - 22
+     #+begin_src powershell
+       $sentence = "Today, you learned that PowerShell loves the color blue"
+       $sentence
+       # Today, you learned that PowerShell loves the color blue
+
+       $language = 'PowerShell'
+       $color = 'blue'
+       $sentence = "Today, you learned that $language loves the color $color"
+       $sentence
+       # Today, you learned that PowerShell loves the color blue
+
+
+       $sentence = 'Today, you learned that $language loves the color $color'
+       $sentence
+       # Today, you learned that $language loves the color $color
+     #+end_src
+       
+**** Using Double vs. Single Quotes - 22
+     If a string is delimited by _double quotes_, /variable interpolations/, or
+     /variable expansion/, can be done.
+     
+** TODO Objects - 23
+   *In PowerShell, everything is an /object/.*
+
+   - In technical terms, an /object/ is an individual instance of a specific
+     template, called a /class/.
+
+   - A /class/ specifies the kinds of things an /object/ will contain.
+
+   - An /object/'s /class/ determines its /methods/, or /actions/ that can be
+     taken on that /object/.
+       Likewise, an /object/'s /class/ determines its /properties/, the /object's
+     variables/.
+
+*** TODO Inspecting Properties - 24
+    First, let’s make a simple object so you can dissect it and uncover the
+    various facets of a PowerShell object.
+    #+begin_src powershell
+      $color = 'red'
+      $color
+      # red
+    #+end_src
+    
+    - Notice that when you call ~$color~, you get ONLY the _variable's value_.
+      _BUT_ typically, because they're /objects/, /variables/ have MORE
+      information than just their value.
+      * They also have /properties/.
+
+    - To look at an /object's properties/,
+      you'll use _the ~Select-Object~ command_ and _the ~Property~ /parameter/._
+      You'll pass the ~Property~ an /asterisk argument/, to tell PowerShell to
+      return *everything* it finds.
+      #+begin_src powershell
+        Select-Object -InputObject $color -Property *
+
+        # Length
+        # ------
+        #      3
+      #+end_src
+      * As you can see, the ~$color~ /string/ has *ONLY* a single /property/,
+        called ~Length~.
+
+      * You can directly reference the ~Length~ /property/ by using /dot notation/:
+        ~$color.Length~
+
+*** TODO Using the Get-Member cmdlet - 25
+    Using Select-Object, you discovered that the $color string has only a single
+    property. But recall that objects sometimes have methods as well. To take a
+    look at all the methods and properties that exist on this string object, you can
+    use the Get-Member cmdlet (Listing 2-20); this cmdlet will be your best friend
+    for a long time. It’s an easy way to quickly list all of a particular object’s properties
+    and methods, collectively referred to as an object’s members.
+    
+    - Example:
+      #+begin_src powershell
+
+      #+end_src
+      Now we’re talking! It turns out that your simple string object has quite a
+      few methods associated with it. There are lots more to explore, but not all
+      are shown here. The number of methods and properties an object will have
+      depends on its parent class.
+    
+*** TODO Calling Methods - 25
+    You can reference methods with dot notation. However, unlike a property, a
+    method will always end in a set of opening and closing parentheses and can
+    take one or more parameters.
+    
+    - For example, suppose you want to remove a character in your ~$color~ variable.
+      You can remove characters from a string by using the ~Remove()~ method.
+      Let’s isolate /$color/'s ~Remove()~ method with the code in Listing 2-21.
+      #+begin_src powershell
+        Get-Member -InputObject $color –Name Remove
+        # Name   MemberType Definition
+        # ----   ---------- ----------
+        # Remove Method     string Remove(int startIndex, int count), string Remove(int startIndex)
+      #+end_src
+
+    - As you can see, there are two definitions. This means you can use the method
+      in two ways: either with ~startIndex~ and the ~count~ parameter, or with just
+      ~startIndex~.
+
+    - So to remove the second character in $color, you specify the place of the
+      character where you’d like to start removing, which we call the index.
+      Indexes start from 0, so the first letter has a starting place of 0, the
+      second an index of 1, and so on. Along with an index, you can provide the
+      number of characters you’d like to remove by using a comma to separate the
+      parameter arguments, as in Listing 2-22.
+      #+begin_src powershell
+        $color.Remove(1, 1)
+        # Rd
+
+        $color
+        # red
+      #+end_src
+
+    - Using an index of 1, you’ve told PowerShell that you want to remove
+      characters starting with the string’s second character; the second argument
+      tells PowerShell to remove just one character. So you get Rd. But notice that
+      the Remove() method doesn’t permanently change the value of a string variable.
+      If you’d like to keep this change, you’d need to assign the output of
+      the Remove() method to a variable, as shown in Listing 2-23.
+      #+begin_src powershell
+        $newColor = $color.Remove(1,1)
+        $newColor
+        # Rd
+      #+end_src
+
+    - NOTE:
+      If you need to know whether a method returns an object (as ~Remove()~ does)
+      or modifies an existing object, you can check its description. As you can
+      see in Listing 2-21, ~Remove()~'s definition has the word ~string~ in front
+      of it; this means that the function returns a new string. Functions with the
+      word ~void~ in front typically modify existing objects. Chapter 6 covers
+      this topic in more depth.
+    
+** TODO Data Structures - 26
+*** TODO Arrays - 26
+**** Defining Arrays - 27
+**** Reading Array Elements - 27
+**** Modifying Elements in an Array - 28
+**** Adding Elements to an Array - 28
+     
+*** TODO ArrayLists - 29
+**** Adding Elements to an ArrayList - 30
+**** Removing Elements from an ArrayList - 31
+     
+*** TODO Hashtables - 31
+**** Reading Elements from Hashtables - 32
+**** Adding and Modifying Hashtable Items - 32
+**** Removing Items from a Hashtable - 33
+    
+** TODO Creating Custom Objects - 33
+** TODO Summary - 35
+
+* TODO 3 COMBINING COMMANDS - 37
+** TODO Starting a Windows Service - 37
+** TODO Using the Pipeline - 38
+*** TODO Piping Objects Between Commands - 38
+*** TODO Piping Arrays Between Commands - 39
+*** TODO Looking at Parameter Binding - 40
+    
+** TODO Writing Scripts - 42
+*** TODO Setting the Execution Policy - 42
+    - *SCRIPT SIGNING*
+      
+*** TODO Scripting in PowerShell - 44
+**** TODO Using the PowerShell ISE - 44
+**** TODO Writing Your First Script - 46
+     
+** TODO Summary - 46
+   
+* TODO 4 CONTROL FLOW - 47
+** TODO Understanding Control Flow - 48
+** TODO Using Conditional Statements - 49
+*** Building Expressions by Using Operators - 49
+*** The ~if~ Statement - 50
+*** The ~else~ Statement - 51
+*** The ~elseif~ Statement - 51
+*** The ~switch~ Statement - 52
+    
+** TODO Using Loops - 54
+*** The ~foreach~ Loop - 54
+**** The ~foreach~ Statement - 55
+**** The ~ForEach-Object~ cmdlet - 55
+**** The ~foreach()~ Method - 56
+     
+*** The ~for~ Loop - 57
+*** The ~while~ Loop - 58
+*** The ~do/while~ and ~do/until~ Loops - 58
+    
+** TODO Summary - 59
+   
+* TODO 5 ERROR HANDLING - 61
+** TODO Working with Exceptions and Errors - 62
+** TODO Handling Nonterminating Errors - 63
+** TODO Handling Terminating Errors - 64
+** TODO Exploring the $Error Automatic Variable - 66
+** TODO Summary - 67
+   
+* TODO 6 WRITING FUNCTIONS - 69
+** TODO Functions vs. Cmdlets - 70
+** TODO Defining a Function - 70
+** TODO Adding Parameters to Functions - 71
+*** TODO Creating a Simple Parameter - 72
+*** TODO The Mandatory Parameter Attribute - 73
+*** TODO Default Parameter Values - 74
+*** TODO Adding Parameter Validation Attributes - 74  
+
+** TODO Accepting Pipeline Input - 76
+*** TODO Adding Another Parameter - 76
+*** TODO Making the Function Pipeline Compatible - 77
+*** TODO Adding a process Block - 77
+    
+** TODO Summary - 78
+
+* TODO 7 EXPLORING MODULES - 79
+** TODO Exploring Default Modules - 80
+*** TODO Finding Modules in Your Session - 80
+*** TODO Finding Modules on Your Computer - 81
+*** TODO Importing Modules - 82
+    
+** TODO The Components of a PowerShell Module - 84
+*** TODO The .psm1 File - 84
+*** TODO The Module Manifest - 84
+    
+** TODO Working with Custom Modules - 86
+*** TODO Finding Modules - 86
+*** TODO Installing Modules - 87
+*** TODO Uninstalling Modules - 88
+    
+** TODO Creating Your Own Module - 88
+** TODO Summary - 89
+    
+* TODO 8 RUNNING SCRIPTS REMOTELY - 91
+** TODO Working with Scriptblocks - 92
+*** TODO Using Invoke-Command to Execute Code on Remote Systems - 93
+*** TODO Running Local Scripts on Remote Computers - 94
+*** TODO Using Local Variables Remotely - 95
+**** Passing Variables with the ArgumentList Parameter - 95
+**** Using the $Using Statement to Pass Variable Values - 96
+    
+** TODO Working with Sessions - 96
+*** TODO Creating a New Session - 97
+*** TODO Invoking Commands in a Session - 98
+*** TODO Opening Interactive Sessions - 98
+*** TODO Disconnecting from and Reconnecting to Sessions - 99
+*** TODO Removing Sessions with Remove-PSSession - 101
+    
+** TODO Understanding PowerShell Remoting Authentication - 101
+*** TODO The Double Hop Problem - 102
+*** TODO Double Hopping with CredSSP - 103
+    
+** TODO Summary - 105
+    
+* TODO 9 TESTING WITH PESTER - 107
+** TODO Introducing Pester - 108
+** TODO Pester Basics - 108
+*** TODO A Pester File - 108
+*** TODO The describe Block - 109
+*** TODO The context Block - 109
+*** TODO The it Block - 110
+*** TODO Assertions - 110
+    
+** TODO Executing a Pester Test - 111
+** TODO Summary - 112
+
+* PART II: AUTOMATING DAY-TO-DAY TASKS - 113
+* TODO 10 PARSING STRUCTURED DATA - 117
+** TODO CSV Files - 118
+*** TODO Reading CSV Files - 118
+**** Using Import-Csv to Process Data - 119
+**** Turning Raw Data into Objects - 120
+**** Defining Your Own Header - 121
+    
+*** TODO Creating CSV Files - 122
+*** TODO Project 1: Building a Computer Inventory Report - 123
+    
+** TODO Excel Spreadsheets - 126
+*** TODO Creating Excel Spreadsheets - 126
+*** TODO Reading Excel Spreadsheets - 127
+*** TODO Adding to Excel Spreadsheets - 128
+*** TODO Project 2: Creating a Windows Service Monitoring Tool - 129
+    
+** TODO JSON Data - 131
+*** TODO Reading JSON - 131
+*** TODO Creating JSON Strings - 132
+*** TODO Project 3: Querying and Parsing a REST API - 134
+    
+** TODO Summary - 136
+    
+* TODO 11 AUTOMATING ACTIVE DIRECTORY - 137
+** TODO Prerequisites - 138
+** TODO Installing the ActiveDirectory PowerShell Module - 138
+** TODO Querying and Filtering AD Objects - 139
+*** TODO Filtering Objects - 139
+*** TODO Returning Single Objects - 141
+*** TODO Project 4: Finding User Accounts That Haven’t Changed Their Password in 30 Days - 141
+    
+** TODO Creating and Changing AD Objects - 143
+*** TODO Users and Computers - 143
+*** TODO Groups - 145
+*** TODO Project 5: Creating an Employee Provisioning Script - 146
+    
+** TODO Syncing from Other Data Sources - 149
+*** TODO Project 6: Creating a Syncing Script - 150
+*** TODO Mapping Data Source Attributes - 150
+*** TODO Creating Functions to Return Similar Properties - 151
+*** TODO Finding Matches in Active Directory - 153
+*** TODO Changing Active Directory Attributes - 155
+    
+** TODO Summary - 156
+    
+* 12 WORKING WITH AZURE - 157
+** Prerequisites - 157
+** Azure Authentication - 158
+*** Creating a Service Principal - 158
+*** Noninteractively Authenticating with Connect-AzAccount - 160
+    
+** Creating an Azure Virtual Machine and All Dependencies - 161
+*** Creating a Resource Group - 161
+*** Creating the Network Stack - 162
+*** Creating the Operating System Image - 164
+*** Wrapping Up - 166
+*** Automating the VM Creation - 167
+    
+** Deploying an Azure Web App - 167
+*** Creating an App Service Plan and Web App - 167
+    
+** Deploying an Azure SQL Database - 168
+*** Creating an Azure SQL Server - 168
+*** Creating the Azure SQL Database - 169
+*** Creating the SQL Server Firewall Rule - 170
+*** Testing Your SQL Database - 171
+*** Summary - 172
+    
+* 13 WORKING WITH AWS - 173
+** Prerequisites - 174
+** AWS Authentication - 174
+*** Authenticating with the Root User - 174
+*** Creating an IAM User and Role - 175
+*** Authenticating Your IAM User - 177
+    
+** Creating an AWS EC2 Instance - 178
+*** The Virtual Private Cloud - 178
+*** The Internet Gateway - 179
+*** Routes - 180
+*** Subnet - 180
+*** Assigning an AMI to Your EC2 Instance - 181
+*** Wrapping Up - 182
+    
+** Deploying an Elastic Beanstalk Application - 184
+*** Creating the Application - 184
+*** Deploying a Package - 186
+    
+** Creating a SQL Server Database in AWS - 188
+** Summary - 191
+    
+* 14 CREATING A SERVER INVENTORY SCRIPT - 193
+** Prerequisites - 194
+** Creating the Project Script(s) - 194
+** Defining the Final Output - 194
+** Discovery and Script Input - 194
+** Querying Each Server - 196
+** Thinking Ahead: Combining Different Types of Information - 196
+** Querying Remote Files - 199
+** Querying Windows Management Instrumentation - 201
+*** Disk Free Space - 202
+*** Operating System Information - 202
+*** Memory - 203
+*** Network Information - 205
+    
+** Windows Services - 208
+** Script Cleanup and Optimization - 210
+** Summary - 212
+    
+* PART III: BUILDING YOUR OWN MODULE - 213
+* TODO 15 PROVISIONING A VIRTUAL ENVIRONMENT - 217
+** TODO PowerLab Module Prerequisites - 218
+** TODO Creating the Module - 219
+*** Creating a Blank Module - 219
+*** Creating a Module Manifest - 219
+*** Using Built-In Prefixes for Function Names - 220
+*** Importing the New Module - 220
+    
+** TODO Automating Virtual Environment Provisioning - 221
+*** Virtual Switches - 221
+**** Creating Virtual Switch Manually - 221
+**** Automating VM Switch Creation - 222
+     
+*** Creating Virtual Machines - 223
+**** Creating a VM Manually - 223
+**** Automating VM Creation - 224
+     
+*** Virtual Hard Disks - 225
+**** Creating a VHD Manually - 225
+**** Automating VHD Creation - 226
+**** Executing the New-PowerLabVhd Function - 228
+     
+** TODO Testing the New Functions with Pester - 228
+** TODO Summary - 229
+    
+* TODO 16 INSTALLING AN OPERATING SYSTEM - 231
+** Prerequisites - 231
+** OS Deployments - 232
+*** Creating the VHDX - 232
+*** Attaching the VM - 234
+    
+** Automating OS Deployments - 235
+** Storing Encrypted Credentials on Disk - 237
+** PowerShell Direct - 238
+** Pester Tests - 239
+** Summary - 240
+    
+* TODO 17 DEPLOYING ACTIVE DIRECTORY - 241
+** Prerequisites - 242
+** Creating an Active Directory Forest - 242
+** Building the Forest - 242
+*** Saving Secure Strings to Disk - 243
+*** Automating Forest Creation - 244
+*** Populating the Domain - 246
+**** Handling Your Object Spreadsheet - 246
+**** Creating a Plan - 247
+**** Creating the AD Objects - 248
+     
+** Building and Running Pester Tests - 250
+** Summary - 252
+    
+* TODO 18 CREATING AND CONFIGURING A SQL SERVER - 253
+** Prerequisites - 253
+** Creating the Virtual Machine - 254
+** Installing the Operating System - 254
+** Adding a Windows Unattended Answer File - 255
+** Adding the SQL Server to a Domain - 256
+*** Installing the SQL Server - 257
+*** Copying Files to the SQL Server - 257
+*** Running the SQL Server Installer - 259
+    
+** Automating the SQL Server - 259
+** Running Pester Tests - 263
+** Summary - 263
+    
+* TODO 19 REFACTORING YOUR CODE - 265
+** TODO A Second Look at New-PowerLabSqlServer - 266
+** TODO Using Parameter Sets - 269
+** TODO Summary - 272
+    
+* TODO 20 CREATING AND CONFIGURING AN IIS WEB SERVER - 275
+** Prerequisites - 275
+** Installation and Setup - 276
+** Building Web Servers from Scratch - 277
+** The WebAdministration Module - 277
+*** Websites and Application Pools - 278
+**** Websites - 279
+**** Application Pools - 280
+
+** Configuring SSL on a Website - 281
+** Summary - 284
+    
+* INDEX 285
+

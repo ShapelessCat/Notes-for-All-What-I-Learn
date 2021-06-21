@@ -1,0 +1,709 @@
+#+TITLE: Advanced R
+#+VERSION: 2nd, 2019
+#+AUTHOR: Hadley Wickham
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Welcome
+  CLOSED: [2020-02-22 Sat 04:55]
+** License
+** Other books
+   - Advanced R solutions
+   - R for Data Science
+   - R Packages
+
+* TODO Preface
+* TODO 1. Introduction
+** 1.1 Why R?
+** 1.2 Who should read this book
+** 1.3 What you will get out of this book
+** 1.4 What you will not learn
+** 1.5 Meta-techniques
+** 1.6 Recommended reading
+** 1.7 Getting help
+** 1.8 Acknowledgments
+** 1.9 Conventions
+** 1.10 Colophon
+
+* TODO I Foundations
+** TODO Introduction
+** TODO 2. Names and values - 2.6, 2.7, etc.
+   The goal of this chapter is to help you understand the distinction between
+   names and values, and when R will copy an object.
+
+*** TODO 2.1 Introduction
+**** Quiz
+**** Outline
+**** DONE Prerequisites
+     CLOSED: [2020-02-22 Sat 17:23]
+     Dig into the internal representation of R objects in memory with
+     the ~lobstr~ package (~library(lobstr)~).
+
+**** Sources
+
+*** DONE 2.2 Binding basics
+    CLOSED: [2020-02-22 Sat 15:56]
+    - Use ~lobstr::obj_addr(variable)~ to check the /address/ of the passed-in
+      _variable_.
+
+**** DONE 2.2.1 Non-syntactic names
+     CLOSED: [2020-02-22 Sat 15:26]
+     - A /syntactic name/ must consist of
+       (=from Jian=
+        _The author slightly simplified the rules, check 2.2.2 Exercises -
+        question 5 solution_)
+       + letters (tricky, related to locale, keep using ASCII for simplicity)
+       + digits (can't be the head)
+       + ~.~
+       + ~_~ (can't be the head)
+
+     - A /syntatctic name/ can't be /reserved words/.
+       Use ~?Reserved~ to show the /reserved words/ doc.
+
+     - A /non-syntactic name/ is a name that does NOT follow these rules.
+
+     - It's possible to override these rules and use any name,
+       i.e., any sequence of characters, by surrounding it with backticks:
+       #+begin_src r
+         `_abc` <- 1
+         `_abc`
+         #> [1] 1
+
+         `if` <- 10
+         `if`
+         #> [1] 10
+       #+end_src
+       Usually people don't create this kind of (crazy) names.
+       However, when you load data that has been created outside of R, you may
+       come across this kind of names.
+       =from Jian=
+       It seems R can dynamically generate names from loaded non source code
+       files, and create this kind of files. TODO Verify this guess.
+
+**** DONE 2.2.2 Exercises - TODO =REDO=
+     CLOSED: [2020-02-22 Sat 15:41]
+     1. DONE - as expected
+     2. DONE - as expected
+     3. TODO - =re-read solution=
+     4. TODO - =re-read solution=
+        =from Jian= Suggestion: should switch the order of 3 and 4
+     5.
+
+*** DONE 2.3 Copy-on-modify
+    CLOSED: [2020-02-22 Sat 16:57]
+    Mostly R objects are /copy-on-modify/.
+    The author try to avoid the /immutable/, though its *MOSTLY* right (only
+    *MOSTLY*), because there are some *exceptions* (TODO they are addressed in
+    Section 2.5 TODO).
+
+    - When exploring copy-on-modify behaviour interactively, there are something
+      different in RStudio. This is the limitation for RStudio to display the
+      environment.
+      + Because of this, the author suggests:
+        For experimentation (=from Jian= to check the real memory info of
+        objects), I recommend either running R directly from the terminal, or
+        using RMarkdown (like this book)
+
+      + =from Jian=
+        TODO I don't quite understand this. Need example and more details!!!
+
+**** DONE 2.3.1 ~tracemem()~
+     CLOSED: [2020-02-22 Sat 16:24]
+     Trace the memory change with ~base::tracemem(variable)~
+     - Example:
+       #+begin_src r
+         x <- c(1, 2, 3)
+         cat(tracemem(x), "\n")
+         #> <0x7f80c0e0ffc8>
+
+         y <- x
+         y[[3]] <- 4L
+         #> tracemem[0x7f80c0e0ffc8 -> 0x7f80c4427f40]
+       #+end_src
+
+     - If there is only one copy, R will optimize the modification process, and
+       stop making a copy on modification -- =from Jian= reasonable.
+       #+begin_src r
+         y[[3]] <- 5L
+         # You can see nothing from `tracememe()`
+       #+end_src
+
+     - Use ~untracememe(variable)~ to stop tracing.
+
+**** DONE 2.3.2 Function calls
+     CLOSED: [2020-02-22 Sat 16:30]
+     R is smart enough to not copy when a function doesn't modify the passed in
+     parameter (objects).
+
+**** DONE 2.3.3 Lists
+     CLOSED: [2020-02-22 Sat 16:34]
+     - Like /vectors/, /lists/ use copy-on-modify behaviour.
+       This, however, is a /SHALLOW copy/.
+
+     - For R version < 3.1.0, *copies were ALWAYS /deep copies/.*
+
+     - To see values that are shared across lists, use ~lobstr::ref(obj1, obj2)~.
+       #+begin_src r
+         ref(l1, l2)
+         #> █ [1:0x37f23e8] <list>
+         #> ├─[2:0x1fa2918] <dbl>
+         #> ├─[3:0x1fa28e0] <dbl>
+         #> └─[4:0x1fa28a8] <dbl>
+         #>
+         #> █ [5:0x48cd908] <list>
+         #> ├─[2:0x1fa2918]
+         #> ├─[3:0x1fa28e0]
+         #> └─[6:0x71de5c0] <dbl>
+       #+end_src
+
+**** DONE 2.3.4 Data frames
+     CLOSED: [2020-02-22 Sat 16:38]
+     - Data frame :: /lists/ of /vectors/.
+       + The /vectors/ are _columns_.
+
+     - Because the R /data frames/ are organized by _columns_,
+       + when modify a column, in the returned object only the reference to this column is changed.
+       + when modify a row, in the returned object all references will be changed.
+
+**** DONE 2.3.5 Character vectors
+     CLOSED: [2020-02-22 Sat 16:43]
+     - Character vectors :: a vector of strings
+       + =from Jian= ??? A extremely confusing name and definition
+
+     - Example:
+       #+begin_src r
+         x <- c("a", "a", "abc", "d")
+       #+end_src
+
+     - CAUTION: remember the /global string pool/.
+
+     - Check the shared objects:
+       #+begin_src r
+         ref(x, character = TRUE)
+         #> █ [1:0x7a3b088] <chr>
+         #> ├─[2:0x133f808] <string: "a">
+         #> ├─[2:0x133f808]
+         #> ├─[3:0x8216060] <string: "abc">
+         #> └─[4:0x14d0328] <string: "d">
+       #+end_src
+
+     - The /global string pool/ is very important for R's implementation and
+       optimization, but not very import for the users who write code without
+       performance optimization requirement.
+
+     - *Convention of this book*:
+       The author will draw /character vectors/ as if the strings lived inside a
+       vector.
+
+**** DONE 2.3.6 Exercises - TODO
+     CLOSED: [2020-02-22 Sat 16:57]
+     1. DONE
+     2. DONE -- the solution doesn't list the second memory copy of the example code
+     3. DONE
+     4. TODO -- =RE-READ SOLUTION=
+
+*** DONE 2.4 Object size
+    CLOSED: [2020-02-22 Sat 16:18]
+    You canfind out how much memory an object takes with ~lobstr::obj_size()~.
+    - Example:
+      #+begin_src r
+        lobstr::obj_size(letters)
+        #> 1,712 B
+
+        lobstr::obj_size(ggplot2::diamonds)
+        #> 3,456,344 B
+      #+end_src
+      32-bit R and 64-bit R have different result.
+
+    - Of course, /references/ are saved in collections, and the memory used by a
+      collection is often much smaller than total memory size of the elements it
+      refers.
+
+    - Since *R uses a global string pool*,
+      /character vectors/ take up less memory than you might expect: repeating a
+      string 100 times does not make it take up 100 times as much memory.
+
+    - R version >= 3.5.0:
+      There is /ALTREP/, short for /alternative representation/.
+      It allows R to represent _certain types of VECTORS_ very compatcly.
+      + Example:
+        The number range with ~:~, it only saves the start and end number.
+        =from Jian= effective lazy evaluation.
+
+**** 2.4.1 Exercises
+     1. DONE
+     2. DONE - I don't quite understand what does the "misleading" after reading the solution.
+     3. TODO
+
+*** DONE 2.5 Modify-in-place
+    CLOSED: [2020-02-22 Sat 17:21]
+    There are _two_ exceptions of *not* copy-on-modify:
+    - Objects with a single binding get a special performance optimisation.
+    - Environments, a special type of object, are always modified in place.
+
+**** DONE 2.5.1 Objects with a single binding - TODO NOTE =re-read=
+     CLOSED: [2020-02-22 Sat 17:15]
+**** DONE 2.5.2 Environments - TODO NOTE =re-read=
+     CLOSED: [2020-02-22 Sat 17:15]
+**** DONE 2.5.3 Exercises - TODO 2
+     CLOSED: [2020-02-22 Sat 17:21]
+     1. DONE
+     2. TODO
+     3. DONE - Re-Read solution
+
+*** TODO 2.6 Unbinding and the garbage collector
+*** TODO 2.7 Quiz answers
+
+** TODO 3. Vectors
+*** TODO 3.1 Introduction
+**** Quiz
+**** Outline
+
+*** TODO 3.2 Atomic vectors
+**** 3.2.1 Scalars
+**** 3.2.2 Making longer vectors with ~c()~
+**** 3.2.3 Missing values
+**** 3.2.4 Testing and coercion
+**** 3.2.5 Exercises
+
+*** TODO 3.3 Attributes
+**** 3.3.1 Getting and setting
+**** 3.3.2 Names
+**** 3.3.3 Dimensions
+**** 3.3.4 Exercises
+
+*** TODO 3.4 S3 atomic vectors
+**** 3.4.1 Factors
+**** 3.4.2 Dates
+**** 3.4.3 Date-times
+**** 3.4.4 Durations
+**** 3.4.5 Exercises
+
+*** TODO 3.5 Lists
+**** 3.5.1 Creating
+**** 3.5.2 Testing and coercion
+**** 3.5.3 Matrices and arrays
+**** 3.5.4 Exercises
+
+*** TODO 3.6 Data frames and tibbles
+**** 3.6.1 Creating
+**** 3.6.2 Row names
+**** 3.6.3 Printing
+**** 3.6.4 Subsetting
+**** 3.6.5 Testing and coercing
+**** 3.6.6 List columns
+**** 3.6.7 Matrix and data frame columns
+**** 3.6.8 Exercises
+
+*** TODO 3.7 ~NULL~
+*** TODO 3.8 Quiz answers
+
+** TODO 4. Subsetting
+*** TODO 4.1 Introduction
+**** Quiz
+**** Outline
+
+*** TODO 4.2 Selecting multiple elements
+**** 4.2.1 Atomic vectors
+**** 4.2.2 Lists
+**** 4.2.3 Matrices and arrays
+**** 4.2.4 Data frames and tibbles
+**** 4.2.5 Preserving dimensionality
+**** 4.2.6 Exercises
+
+*** TODO 4.3 Selecting a single element
+**** 4.3.1 ~[[~
+**** 4.3.2 ~$~
+**** 4.3.3 Missing and out-of-bounds indices
+**** 4.3.4 ~@~ and ~slot()~
+**** 4.3.5 Exercises
+
+*** TODO 4.4 Subsetting and assignment
+*** TODO 4.5 Applications
+**** 4.5.1 Lookup tables (character subsetting)
+**** 4.5.2 Matching and merging by hand (integer subsetting)
+**** 4.5.3 Random samples and bootstraps (integer subsetting)
+**** 4.5.4 Ordering (integer subsetting)
+**** 4.5.5 Expanding aggregated counts (integer subsetting)
+**** 4.5.6 Removing columns from data frames (character)
+**** 4.5.7 Selecting rows based on a condition (logical subsetting)
+**** 4.5.8 Boolean algebra versus sets (logical and integer)
+**** 4.5.9 Exercises
+
+*** 4.6 Quiz answers
+
+** TODO 5. Control flow
+*** TODO 5.1 Introduction
+**** Quiz
+**** Outline
+
+*** TODO 5.2 Choices
+**** 5.2.1 Invalid inputs
+**** 5.2.2 Vectorised if
+**** 5.2.3 ~switch()~ statement
+**** 5.2.4 Exercises
+
+*** TODO 5.3 Loops
+**** 5.3.1 Common pitfalls
+**** 5.3.2 Related tools
+**** 5.3.3 Exercises
+
+*** TODO 5.4 Quiz answers
+
+** TODO 6. Functions
+*** TODO 6.1 Introduction
+**** Quiz
+**** Outline
+
+*** TODO 6.2 Function fundamentals
+**** 6.2.1 Function components
+**** 6.2.2 Primitive function
+**** 6.2.3 First-class functions
+**** 6.2.4 Invoking a function
+**** 6.2.5 Exercise
+
+*** TODO 6.3 Function composition
+*** TODO 6.4 Lexical scoping
+**** 6.4.1 Name masking
+**** 6.4.2 Functions versus variables
+**** 6.4.3 A fresh start
+**** 6.4.4 Dynamic lookup
+**** 6.4.5 Exercises
+
+*** TODO 6.5 Lazy evaluation
+**** 6.5.1 Promises
+**** 6.5.2 Default arguments
+**** 6.5.3 Missing arguments
+**** 6.5.4 Exercises
+
+*** TODO 6.6 ... (dot-dot-dot)
+**** 6.6.1 Exercises
+
+*** TODO 6.7 Exiting a function
+**** 6.7.1 Implicit versus explicit returns
+**** 6.7.2 Invisible values
+**** 6.7.3 Errors
+**** 6.7.4 Exit handlers
+**** 6.7.5 Exercises
+
+*** TODO 6.8 Function forms
+**** 6.8.1 Rewriting to prefix form
+**** 6.8.2 Prefix form
+**** 6.8.3 Infix functions
+**** 6.8.4 Replacement functions
+**** 6.8.5 Special forms
+**** 6.8.6 Exercises
+
+*** TODO 6.9 Quiz answers
+
+** TODO 7. Environments
+*** TODO 7.1 Introduction
+**** Quiz
+**** Outline
+
+*** TODO 7.2 Environment basics
+**** 7.2.1 Basics
+**** 7.2.2 Important environments
+**** 7.2.3 Parents
+**** 7.2.4 Super assignment, ~<<-~
+**** 7.2.5 Getting and setting
+**** 7.2.6 Advanced bindings
+**** 7.2.7 Exercises
+
+*** TODO 7.3 Recursing over environments
+**** 7.3.1 Exercises
+
+*** TODO 7.4 Special environments
+**** 7.4.1 Package environments and the search path
+**** 7.4.2 The function environment
+**** 7.4.3 Namespaces
+**** 7.4.4 Execution environments
+**** 7.4.5 Exercises
+
+*** TODO 7.5 Call stacks
+**** 7.5.1 Simple call stacks
+**** 7.5.2 Lazy evaluation
+**** 7.5.3 Frames
+**** 7.5.4 Dynamic scope
+**** 7.5.5 Exercises
+
+*** TODO 7.6 As data structures
+*** TODO 7.7 Quiz answers
+
+** TODO 8. Conditions
+*** TODO 8.1 Introduction
+**** Quiz
+**** Outline
+**** 8.1.1 Prerequisites
+
+*** TODO 8.2 Signalling conditions
+**** 8.2.1 Errors
+**** 8.2.2 Warnings
+**** 8.2.3 Messages
+**** 8.2.4 Exercises
+
+*** TODO 8.3 Ignoring conditions
+*** TODO 8.4 Handling conditions
+**** 8.4.1 Condition objects
+**** 8.4.2 Exiting handlers
+**** 8.4.3 Calling handlers
+**** 8.4.4 Call stacks
+**** 8.4.5 Exercises
+
+*** TODO 8.5 Custom conditions
+**** 8.5.1 Motivation
+**** 8.5.2 Signalling
+**** 8.5.3 Handling
+**** 8.5.4 Exercises
+
+*** TODO 8.6 Applications
+**** 8.6.1 Failure value
+**** 8.6.2 Success and failure values
+**** 8.6.3 Resignal
+**** 8.6.4 Record
+**** 8.6.5 No default behaviour
+**** 8.6.6 Exercises
+
+*** 8.7 Quiz answers
+
+* TODO II Functional programming
+** TODO Introduction
+*** Functional programming languages
+*** Functional style
+
+** TODO 9. Functionals
+*** TODO 9.1 Introduction
+**** Outline
+**** Prerequisites
+
+*** TODO 9.2 My first functional: ~map()~
+**** 9.2.1 Producing atomic vectors
+**** 9.2.2 Anonymous functions and shortcuts
+**** 9.2.3 Passing arguments with ...
+**** 9.2.4 Argument names
+**** 9.2.5 Varying another argument
+**** 9.2.6 Exercises
+
+*** TODO 9.3 Purrr style
+*** TODO 9.4 Map variants
+**** 9.4.1 Same type of output as input: modify()
+**** 9.4.2 Two inputs: map2() and friends
+**** 9.4.3 No outputs: walk() and friends
+**** 9.4.4 Iterating over values and indices
+**** 9.4.5 Any number of inputs: pmap() and friends
+**** 9.4.6 Exercises
+
+*** TODO 9.5 Reduce family
+**** 9.5.1 Basics
+**** 9.5.2 Accumulate
+**** 9.5.3 Output types
+**** 9.5.4 Multiple inputs
+**** 9.5.5 Map-reduce
+
+*** TODO 9.6 Predicate functionals
+**** 9.6.1 Basics
+**** 9.6.2 Map variants
+**** 9.6.3 Exercises
+
+*** TODO 9.7 Base functionals
+**** 9.7.1 Matrices and arrays
+**** 9.7.2 Mathematical concerns
+**** 9.7.3 Exercises
+
+** TODO 10. Function factories
+*** TODO 10.1 Introduction
+**** Outline
+**** Prerequisites
+
+*** TODO 10.2 Factory fundamentals
+**** 10.2.1 Environments
+**** 10.2.2 Diagram conventions
+**** 10.2.3 Forcing evaluation
+**** 10.2.4 Stateful functions
+**** 10.2.5 Garbage collection
+**** 10.2.6 Exercises
+
+*** TODO 10.3 Graphical factories
+**** 10.3.1 Labelling
+**** 10.3.2 Histogram bins
+**** 10.3.3 ~ggsave()~
+**** 10.3.4 Exercises
+
+*** TODO 10.4 Statistical factories
+**** 10.4.1 Box-Cox transformation
+**** 10.4.2 Bootstrap generators
+**** 10.4.3 Maximum likelihood estimation
+**** 10.4.4 Exercises
+
+*** TODO 10.5 Function factories + functionals
+**** 10.5.1 Exercises
+
+** TODO 11. Function operators
+*** TODO 11.1 Introduction
+**** Outline
+**** Prerequisites
+
+*** TODO 11.2 Existing function operators
+**** 11.2.1 Capturing errors with purrr::safely()
+**** 11.2.2 Caching computations with memoise::memoise()
+**** 11.2.3 Exercises
+
+*** TODO 11.3 Case study: Creating your own function operators
+**** 11.3.1 Exercises
+
+* III Object-oriented programming
+** Introduction
+** 12. Base types
+*** 12.1 Introduction
+*** 12.2 Base versus OO objects
+*** 12.3 Base types
+
+** 13. S3
+*** 13.1 Introduction
+*** 13.2 Basics
+*** 13.3 Classes
+*** 13.4 Generics and methods
+*** 13.5 Object styles
+*** 13.6 Inheritance
+*** 13.7 Dispatch details
+
+** 14. R6
+*** 14.1 Introduction
+*** 14.2 Classes and methods
+*** 14.3 Controlling access
+*** 14.4 Reference semantics
+*** 14.5 Why R6?
+
+** 15. S4
+*** 15.1 Introduction
+*** 15.2 Basics
+*** 15.3 Classes
+*** 15.4 Generics and methods
+*** 15.5 Method dispatch
+*** 15.6 S4 and S3
+
+** 16. Trade-offs
+*** 16.1 Introduction
+*** 16.2 S4 versus S3
+*** 16.3 R6 versus S3
+
+* IV Metaprogramming
+** Introduction
+** 17. Big picture
+*** 17.1 Introduction
+*** 17.2 Code is data
+*** 17.3 Code is a tree
+*** 17.4 Code can generate code
+*** 17.5 Evaluation runs code
+*** 17.6 Customising evaluation with functions
+*** 17.7 Customising evaluation with data
+*** 17.8 Quosures
+
+** 18. Expressions
+*** 18.1 Introduction
+*** 18.2 Abstract syntax trees
+*** 18.3 Expressions
+*** 18.4 Parsing and grammar
+*** 18.5 Walking AST with recursive functions
+*** 18.6 Specialised data structures
+
+** 19. Quasiquotation
+*** 19.1 Introduction
+*** 19.2 Motivation
+*** 19.3 Quoting
+*** 19.4 Unquoting
+*** 19.5 Non-quoting
+*** 19.6 ... (dot-dot-dot)
+**** 19.6.1 Examples
+**** 19.6.2 ~exec()~
+**** 19.6.3 ~dots_list()~
+**** 19.6.4 With base R
+**** 19.6.5 Exercises
+
+*** 19.7 Case studies
+*** 19.8 History
+
+** 20. Evaluation
+*** 20.1 Introduction
+*** 20.2 Evaluation basics
+*** 20.3 Quosures
+*** 20.4 Data masks
+*** 20.5 Using tidy evaluation
+*** 20.6 Base evaluation
+
+** 21. Translating R code
+*** 21.1 Introduction
+*** 21.2 HTML
+*** 21.3 LaTeX
+
+* TODO V Techniques
+** TODO Introduction
+** TODO 22. Debugging
+*** TODO 22.1 Introduction
+**** Outline
+
+*** TODO 22.2 Overall approach
+*** TODO 22.3 Locating errors
+**** 22.3.1 Lazy evaluation
+
+*** TODO 22.4 Interactive debugger
+**** 22.4.1 ~browser()~ commands
+**** 22.4.2 Alternatives
+**** 22.4.3 Compiled code
+
+*** TODO 22.5 Non-interactive debugging
+**** 22.5.1 ~dump.frames()~
+**** 22.5.2 Print debugging
+**** 22.5.3 RMarkdown
+
+*** TODO 22.6 Non-error failures
+
+** TODO 23. Measuring performance
+*** TODO 23.1 Introduction
+**** Outline
+**** Prerequisites
+
+*** TODO 23.2 Profiling
+**** 23.2.1 Visualising profiles
+**** 23.2.2 Memory profiling
+**** 23.2.3 Limitations
+**** 23.2.4 Exercises
+
+*** TODO 23.3 Microbenchmarking
+**** 23.3.1 bench::mark() results
+**** 23.3.2 Interpreting results
+**** 23.3.3 Exercises
+
+** TODO 24. Improving performance
+*** TODO 24.1 Introduction
+**** Outline
+**** Prerequisites
+
+*** TODO 24.2 Code organisation
+*** TODO 24.3 Checking for existing solutions
+**** 24.3.1 Exercises
+
+*** TODO 24.4 Doing as little as possible
+**** 24.4.1 ~mean()~
+**** 24.4.2 ~as.data.frame()~
+**** 24.4.3 Exercises
+
+*** TODO 24.5 Vectorise
+**** 24.5.1 Exercises
+
+*** TODO 24.6 Avoiding copies
+*** TODO 24.7 Case study: t-test
+*** TODO 24.8 Other techniques
+
+** 25. Rewriting R code in C++
+*** 25.1 Introduction
+*** 25.2 Getting started with C++
+*** 25.3 Other classes
+*** 25.4 Missing values
+*** 25.5 Standard Template Library
+*** 25.6 Case studies
+*** 25.7 Using Rcpp in a package
+*** 25.8 Learning more
+*** 25.9 Acknowledgments
+
+* References

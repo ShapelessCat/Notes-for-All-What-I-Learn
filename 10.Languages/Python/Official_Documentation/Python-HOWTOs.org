@@ -1,0 +1,266 @@
+#+TITLE: Python HOWTOs
+#+VERSION: 3.8.6
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+Python HOWTOs are documents that cover a single, specific topic, and attempt to
+cover it fairly completely. Modelled on the Linux Documentation Project's HOWTO
+collection, this collection is an effort to foster documentation that’s more
+detailed than the Python Library Reference.
+
+Currently, the HOWTOs are:
+
+* Porting Python 2 Code to Python 3
+* Porting Extension Modules to Python 3
+* Curses Programming with Python
+* Descriptor HowTo Guide
+* Functional Programming HOWTO
+* TODO Logging HOWTO
+  # Author: Vinay Sajip <vinay\under{}sajip at red-dove dot com>
+** TODO Basic Logging Tutorial
+*** When to use logging
+*** A simple example
+*** Logging to a file
+*** Logging from multiple modules
+*** Logging variable data
+*** Changing the format of displayed messages
+*** Displaying the date/time in messages
+*** Next Steps
+
+** TODO Advanced Logging Tutorial
+*** Logging Flow
+*** DONE Loggers
+    CLOSED: [2020-10-03 Sat 16:49]
+    - ~Logger~ objects have a _THREEFOLD_ job:
+      1. they *expose* several /methods/ to application code so that applications
+         can log messages at runtime.
+
+      2. /logger objects/ determine which log messages to act upon based upon
+         /severity/ (the default filtering facility) or /filter objects/.
+
+      3. /logger objects/ pass along relevant log messages to all interested
+         /log handlers/.
+
+    - The MOST WIDELY USED /methods/ on /logger objects/ fall into _TWO_ categories:
+      + configuration
+      + message sending
+
+    - These are the most common configuration methods:
+      + ~Logger.setLevel()~ specifies the _lowest-severity_ log message a /logger/
+        will handle.
+        * _built-in severity level_:
+          - DEBUG is the *lowest* built-in /severity level/
+          - CRITICAL is the *highest* built-in /severity level/
+
+        * For example,
+          if the /severity level/ is ~INFO~, the logger will handle only ~INFO~,
+          ~WARNING~, ~ERROR~, and ~CRITICAL~ messages and will ignore ~DEBUG~
+          messages.
+
+      + ~Logger.addHandler()~ and ~Logger.removeHandler()~ *add* and *remove*
+        /handler objects/ from the /logger object/.
+        * =TODO= Handlers are covered in more detail in the Handlers section.
+
+      + ~Logger.addFilter()~ and ~Logger.removeFilter()~ *add* and *remove*
+        /filter objects/ from the /logger object/.
+        * Filters are covered in more detail in the Filter Objects section.
+
+    - With the logger object configured, the following methods create log messages:
+      + ~Logger.debug()~, ~Logger.info()~, ~Logger.warning()~, ~Logger.error()~,
+        and ~Logger.critical()~ all create log records with a message and a level
+        that corresponds to their respective method names.
+        * ~*args~:
+          The message is actually a /format string/ (old-style), which may
+          contain the /standard string substitution syntax/ of ~%s~, ~%d~, ~%f~,
+          and so on.
+          + ~logging~ was created much ealier than new-style format string.
+            Of course, you can use ~f"{var_name_0}   {var_name_1}"~, but remember
+            then don't pass ~*args~.
+
+        * ~**kwargs~:
+          the /logging methods/ care only about a /keyword/ of ~exc_info~ and use
+          it to determine whether to log exception information.
+
+      + ~Logger.exception()~ is similar to ~Logger.error()~.
+        * The _DIFFERENCE_:
+          ~Logger.exception()~ *dumps a stack trace* along with it.
+          =TODO= =???= Call this /method/ ONLY from an /exception handler/.
+
+      + ~Logger.log()~ takes a /log level/ as an *explicit argument*.
+        * _this is how to log at *custom log levels*._
+
+    - ~getLogger()~ returns a reference to a /logger instance/ *with the specified
+      name* if it is provided, or =root= if not.
+      + The _names_ are period-separated hierarchical structures.
+        =from Jian= if ~__name__~ is used.
+
+      + Multiple calls to ~getLogger()~ with the *same* _name_ will return a
+        reference to the *same* /logger object/.
+
+      + Loggers that are further down in the hierarchical list are _children_ of
+        loggers higher up in the list.
+        * For example,
+          given a /logger/ with a _name_ of ~foo~,
+          /loggers/ with _names_ of ~'foo.bar'~, ~foo.bar.baz~, and ~foo.bam~ are
+          all descendants of ~foo~.
+
+    - Loggers have a concept of /effective level/.
+      + If a level is not explicitly set on a logger, the level of its parent is
+        used instead as its /effective level/.
+          This SEARCH will *keep going up* in the hierarchical structures of
+        loggers in current project *until* an explicitly set level is found
+
+      + The /root logger/ *ALWAYS* has an EXPLICIT level set (~WARNING~ _by default_).
+
+      + When deciding whether to process an event, the /effective level/ of the
+        logger is used to *determine* whether the event is passed to the /logger's
+        handlers/.
+
+    - /Child loggers/ *propagate messages up* to the /handlers/ associated with
+      their /ancestor loggers/.
+      Because of this,
+      1. it is *unnecessary* to define and configure /handlers/ for ALL the /loggers/
+         an application uses.
+      2. it is *sufficient* to configure /handlers/ for a /top-level logger/ and
+         create /child loggers/ as needed.
+         =TODO= =???=
+         (You can, however, turn off propagation by setting the /propagate
+         attribute/ of a /logger/ to ~False~.)
+
+*** TODO Handlers
+    - Handler :: objects that used to *dispatch* the appropriate log messages (_BASED
+      ON_ the log messages' /severity/) to the _handler's specified destination_.
+
+    - /Logger objects/ can add *zero or more* /handler objects/ to themselves with
+      an ~addHandler()~ /method/.
+      + Example:
+        An application requires THREE individual /handlers/ if it wants to send
+        * all log messages TO _a log file_,
+        * all log messages of *error or higher* TO ~stdout~,
+        * all messages of *critical* TO _an email address_.
+
+    - The standard library includes quite a few /handler types/ (see the _Useful
+      Handlers_ section); the tutorials use mainly ~StreamHandler~ and
+      ~FileHandler~ in its examples.
+
+    - There are _very few_ /methods/ in a /handler/ for application developers to
+      concern themselves with. The _ONLY_ /handler methods/ that seem relevant for
+      application developers who are using the _built-in_ /handler objects/ (that
+      is, *NOT creating* /custom handlers/) are the following /configuration
+      methods/:
+      + ~setLevel()~
+        just as in /logger objects/, specifies the /lowest severity/ that will be
+        dispatched to the appropriate destination.
+        * Q :: Why are there *two* ~setLevel()~ /methods/?
+
+        * A ::
+          - The level set in the /logger/
+            DETERMINES
+            which /severity/ of messages it will pass to its /handlers/.
+
+          - The level set in EACH /handler/
+            DETERMINES
+            which messages that /handler/ will send on.
+
+      + ~setFormatter()~
+        selects a ~Formatter~ object for THIS /handler/ to use.
+
+      + ~addFilter()~ and ~removeFilter()~
+        respectively configure and deconfigure /filter objects/ on /handlers/.
+
+    - Application code *should NOT directly* instantiate and use instances of ~Handler~.
+      + the ~Handler~ /class/ is a /base class/ that defines the /interface/ that
+        ALL /handlers/ should have and establishes some _default behavior_ that
+        /child classes/ can _use_ (or /override/).
+
+*** TODO Formatters
+*** Configuring Logging
+*** What happens if no configuration is provided
+*** Configuring Logging for a Library
+*** Logging Levels
+*** DONE Custom Levels
+    CLOSED: [2020-10-04 Sun 06:21]
+    *DON'T DO THIS*
+    *DON'T DO THIS especially if you are writing a library*
+
+    - The existing levels have been chosen on the basis of practical experience.
+      Mostly you don't need to create your own levels.
+
+    - However, if you are convinced that you need /custom levels/,
+      + great care is required!!!
+
+      + it is possibly a very *bad idea* to define /custom levels/ _if you are
+        developing a library_.
+        * REASON:
+          - Scenario: multiple library authors all define their own /custom levels/
+            + It's hard to control their logs when using these libraries together.
+
+            + It's hard to interpret logs -- numeric values of /custom levels/ may
+              happen, and same values might mean different things for different
+              libraries.
+
+*** Useful Handlers
+*** Exceptions raised during logging
+*** Using arbitrary objects as messages
+*** Optimization
+
+** See also
+*** Module ~logging~
+    API reference for the logging module.
+
+*** Module ~logging.config~
+    Configuration API for the logging module.
+
+*** Module ~logging.handlers~
+    Useful handlers included with the logging module.
+
+* Logging Cookbook
+  # Author: Vinay Sajip <vinay\under{}sajip at red-dove dot com>
+
+** TODO Using logging in multiple modules
+** TODO Logging from multiple threads
+** TODO Multiple handlers and formatters
+** TODO Logging to multiple destinations
+** Configuration server example
+** Dealing with handlers that block
+** Sending and receiving logging events across a network
+** Adding contextual information to your logging output
+*** Using LoggerAdapters to impart contextual information
+*** Using objects other than dicts to pass contextual information¶
+
+** Using Filters to impart contextual information
+** Logging to a single file from multiple processes
+** Using ~concurrent.futures.ProcessPoolExecutor~
+** Using file rotation
+** Use of alternative formatting styles
+** Customizing LogRecord
+** Subclassing QueueHandler - a ZeroMQ example
+** Subclassing QueueListener - a ZeroMQ example
+** An example dictionary-based configuration
+** Using a rotator and namer to customize log rotation processing
+** A more elaborate multiprocessing example
+** Inserting a BOM into messages sent to a SysLogHandler
+** Implementing structured logging
+** Customizing handlers with ~dictConfig()~
+** Using particular formatting styles throughout your application
+*** Using LogRecord factories
+*** Using custom message objects
+
+** Configuring filters with ~dictConfig()~
+** Customized exception formatting
+** Speaking logging messages
+** Buffering logging messages and outputting them conditionally
+** Formatting times using UTC (GMT) via configuration
+** Using a context manager for selective logging
+** A CLI application starter template
+** A Qt GUI for logging
+
+* Regular Expression HOWTO
+* Socket Programming HOWTO
+* Sorting HOW TO
+* Unicode HOWTO
+* HOWTO Fetch Internet Resources Using The urllib Package
+* Argparse Tutorial
+* An introduction to the ipaddress module
+* Argument Clinic How-To
+* Instrumenting CPython with DTrace and SystemTap

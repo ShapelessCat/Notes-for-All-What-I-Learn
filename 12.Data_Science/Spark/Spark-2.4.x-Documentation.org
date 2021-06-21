@@ -1,0 +1,694 @@
+#+TITLE: Spark Official Documentation
+#+COMMENT: Programming Guides
+#+VERSION: 2.4.5
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Quick Start
+  CLOSED: [2018-10-10 Wed 02:05]
+** TODO Security
+** DONE Interactive Analysis with the Spark Shell
+   CLOSED: [2018-10-10 Wed 01:52]
+*** DONE Basics
+    CLOSED: [2018-10-10 Wed 01:43]
+    - Spark's _primary abstraction_ is a _distributed collection of items_ called
+      a ~Dataset~.
+
+    - ~Dataset~'s can be created from
+      + /Hadoop InputFormats/ (such as HDFS files)
+        OR
+      + by transforming other ~Dataset~'s.
+
+    - Create ~Dataset~'s from the ="README.md"= file.
+      #+BEGIN_SRC scala
+        // scala>
+        val textFile = spark.read.textFile("README.md")  // transformation
+        /// textFile: org.apache.spark.sql.Dataset[String] = [value: string]
+
+        // scala>
+        textFile.count()  // action
+        /// res0: Long = 126
+
+        // scala>
+        textFile.first()  // TODO: ??? ???
+        /// res1: String = # Apache Spark
+
+        // scala>
+        val linesWithSpark = textFile.filter(_.contains("Spark"))  // transformation
+        /// linesWithSpark: org.apache.spark.sql.Dataset[String] = [value: string]
+
+        // scala>
+        textFile.filter(_.contains("Spark")).count()
+        // res3: Long = 15
+      #+END_SRC
+
+*** DONE More on Dataset Operations
+    CLOSED: [2018-10-10 Wed 01:52]
+    #+BEGIN_SRC scala
+      // scala>
+      textFile.map(line => line.split(" ").size).reduce((a, b) => math.max(a, b))  // action
+      /// res4: Long = 15
+
+      // scala> /// Use Java library
+      import java.lang.Math
+      textFile.map(line => line.split(" ").size).reduce((a, b) => Math.max(a, b))  // action
+      /// res5: Int = 15
+
+      // scala>
+      val wordCounts = textFile.flatMap(line => line.split(" ")).groupByKey(identity).count() // transformation
+      /// wordCounts: org.apache.spark.sql.Dataset[(String, Long)] = [value: string, count(1): bigint]
+
+      // scala>
+      wordCounts.collect()  // action
+      /// res6: Array[(String, Int)] = Array((means,1), (under,2), (this,3), (Because,1), (Python,2), (agree,1), (cluster.,1), ...)
+    #+END_SRC
+
+*** DONE Caching
+    CLOSED: [2018-10-10 Wed 01:47]
+    Pulling data sets into a CLUSTER-WIDE /in-memory cache/.
+    We do this for the repeatedly accessed data, rather than recompute everytime
+    we access the data (the default settings).
+
+    #+BEGIN_SRC scala
+      // scala>
+      linesWithSpark.cache()
+      /// res7: lineWithSpark.type = [value: string]
+
+      // scala>
+      linesWithSpark.count
+      /// res8: Long = 15
+
+      // scala>
+      linesWithSpark.count
+      /// res9: Long = 15
+    #+END_SRC
+
+** DONE Self-Contained Applications
+   CLOSED: [2018-10-10 Wed 02:05]
+   #+BEGIN_SRC scala
+     /* SimpleApp.scala */
+     import org.apache.spark.sql.SparkSession
+
+     object SimpleApp {
+       def main(args: Array[String]) {
+         val logFile = "YOUR_SPARK_HOME/README.md" // Should be some file on your system
+         val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
+         val logData = spark.read.textFile(logFile).cache()
+         val numAs = logData.filter(line => line.contains("a")).count
+         val numBs = logData.filter(line => line.contains("b")).count
+         println(s"Lines with a: $numAs, Lines with b: $numBs")
+         spark.stop()
+       }
+     }
+   #+END_SRC
+
+   - =build.sbt=
+     #+BEGIN_SRC scala
+       name := "Simple Project"
+
+       version := "1.0"
+
+       scalaVersion := "2.11.8"
+
+       libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.3.2"
+     #+END_SRC
+
+   - For sbt to work correctly, we'll need to layout =SimpleApp.scala= and =build.sbt=
+     according to the typical directory structure.
+     #+BEGIN_SRC shell
+       ## Your directory layout should look like this
+       # $
+       find .
+
+       ## .
+       ## ./build.sbt
+       ## ./src
+       ## ./src/main
+       ## ./src/main/scala
+       ## ./src/main/scala/SimpleApp.scala
+
+       ### Package a jar containing your application
+
+       # $
+       sbt package
+       ## ...
+       ## [info] Packaging {..}/{..}/target/scala-2.11/simple-project_2.11-1.0.jar
+
+       ## Use spark-submit to run your application
+       # $
+       ${SPARK_HOME}/bin/spark-submit \
+         --class "SimpleApp" \
+         --master local[4] \
+         target/scala-2.11/simple-project_2.11-1.0.jar
+       ## ...
+       ## Lines with a: 46, Lines with b: 23
+     #+END_SRC
+     We can create a JAR package containing the application's code, then use the
+     ~spark-submit~ script to run our program.
+
+     * =from Jian= =???=
+       What does the =--master local[4]= mean???
+
+** DONE Where to Go from Here
+   CLOSED: [2018-10-10 Wed 01:58]
+   - For an in-depth overview of the API, start with _the RDD programming guide_
+     and _the SQL programming guide_, or see "Programming Guides" menu of the
+     Spark official site for other components.
+
+   - For running applications on a cluster, head to the [[https://spark.apache.org/docs/latest/cluster-overview.html][deployment overview]].
+     =TODO= =IMPORTANT=
+
+   - Finally, Spark includes several samples in the examples directory ([[https://github.com/apache/spark/tree/master/examples/src/main/scala/org/apache/spark/examples][Scala]],
+     [[https://github.com/apache/spark/tree/master/examples/src/main/java/org/apache/spark/examples][Java]], [[https://github.com/apache/spark/tree/master/examples/src/main/python][Python]], [[https://github.com/apache/spark/tree/master/examples/src/main/r][R]]). You can run them as follows: =TODO=
+     #+BEGIN_SRC shell
+       # For Scala and Java, use run-example:
+       run-example SparkPi
+
+       # For Python examples, use spark-submit directly:
+       spark-submit examples/src/main/python/pi.py
+
+       # For R examples, use spark-submit directly:
+       spark-submit examples/src/main/r/dataframe.R
+     #+END_SRC
+
+* TODO RDDs, Accumulators, Broadcast Vars
+** Overview
+** Linking with Spark
+** Initializing Spark
+*** Using the Shell
+
+** Resilient Distributed Datasets (RDDs)
+*** Parallelized Collections
+*** External Datasets
+*** RDD Operations
+**** Basics
+**** Passing Functions to Spark
+**** Understanding closures
+***** Example
+***** Local vs. cluster modes
+***** Printing elements of an RDD
+
+**** Working with Key-Value Pairs
+**** Transformations
+**** Actions
+**** Shuffle operations
+***** Background
+***** Performance Impact
+
+*** RDD Persistence
+**** Which Storage Level to Choose?
+**** Removing Data
+
+** Shared Variables
+*** Broadcast Variables
+*** Accumulators
+
+** Deploying to a Cluster
+** Launching Spark jobs from Java / Scala
+** Unit Testing
+** Where to Go from Here
+
+* TODO Spark SQL, ~DataFrame~'s and ~Dataset~'s
+*** SQL
+*** Datasets and DataFrames
+
+** Getting Started
+*** Starting Point: SparkSession
+*** Creating DataFrames
+*** Untyped Dataset Operations (aka DataFrame Operations)
+*** Running SQL Queries Programmatically
+*** Global Temporary View
+*** Creating Datasets
+*** Interoperating with RDDs
+**** Inferring the Schema Using Reflection
+**** Programmatically Specifying the Schema
+
+*** Aggregations
+**** Untyped User-Defined Aggregate Functions
+**** Type-Safe User-Defined Aggregate Functions
+
+** Data Sources
+*** Generic Load/Save Functions
+**** Manually Specifying Options
+**** Run SQL on files directly
+**** Save Modes
+**** Saving to Persistent Tables
+**** Bucketing, Sorting and Partitioning
+
+*** Parquet Files
+**** Loading Data Programmatically
+**** Partition Discovery
+**** Schema Merging
+**** Hive metastore Parquet table conversion
+***** Hive/Parquet Schema Reconciliation
+***** Metadata Refreshing
+
+**** Configuration
+
+*** ORC Files
+*** JSON Datasets
+*** Hive Tables
+**** Specifying storage format for Hive tables
+**** Interacting with Different Versions of Hive Metastore
+
+*** JDBC To Other Databases
+*** Avro Files
+**** Deploying
+**** Load and Save Functions
+**** ~to_avro()~ and ~from_avro()~
+**** Data Source Option
+**** Configuration
+**** Compatibility with Databricks spark-avro
+**** Supported types for Avro -> Spark SQL conversion
+**** Supported types for Spark SQL -> Avro conversion
+
+*** Troubleshooting
+
+** Performance Tuning
+*** Caching Data In Memory
+*** Other Configuration Options
+*** Broadcast Hint for SQL Queries
+
+** Distributed SQL Engine
+*** Running the Thrift JDBC/ODBC server
+*** Running the Spark SQL CLI
+
+** PySpark Usage Guide for Pandas with Apache Arrow
+*** Apache Arrow in Spark
+**** Ensure PyArrow Installed
+
+*** Enabling for Conversion to/from Pandas
+*** Pandas UDFs (a.k.a. Vectorized UDFs)
+**** Scalar
+**** Grouped Map
+**** Grouped Aggregate
+
+*** Usage Notes
+**** Supported SQL Types
+**** Setting Arrow Batch Size
+**** Timestamp with Time Zone Semantics
+**** Compatibility Setting for PyArrow >= 0.15.0 and Spark 2.3.x, 2.4.x
+
+** Migration Guide
+*** Upgrading From Spark SQL 2.3 to 2.4
+*** Upgrading From Spark SQL 2.3.0 to 2.3.1 and above
+*** Upgrading From Spark SQL 2.2 to 2.3
+*** Upgrading From Spark SQL 2.1 to 2.2
+*** Upgrading From Spark SQL 2.0 to 2.1
+*** Upgrading From Spark SQL 1.6 to 2.0
+*** Upgrading From Spark SQL 1.5 to 1.6
+*** Upgrading From Spark SQL 1.4 to 1.5
+*** Upgrading from Spark SQL 1.3 to 1.4
+**** DataFrame data reader/writer interface
+**** DataFrame.groupBy retains grouping columns
+**** Behavior change on DataFrame.withColumn
+
+*** Upgrading from Spark SQL 1.0-1.2 to 1.3
+**** Rename of SchemaRDD to DataFrame
+**** Unification of the Java and Scala APIs
+**** Isolation of Implicit Conversions and Removal of dsl Package (Scala-only)
+**** Removal of the type aliases in org.apache.spark.sql for DataType (Scala-only)
+**** UDF Registration Moved to sqlContext.udf (Java & Scala)
+**** Python DataTypes No Longer Singletons
+
+*** Compatibility with Apache Hive
+**** Deploying in Existing Hive Warehouses
+**** Supported Hive Features
+**** Unsupported Hive Functionality
+**** Incompatible Hive UDF
+
+** Reference
+*** Data Types
+*** NaN Semantics
+*** Arithmetic operations
+
+* TODO Structured Streaming
+** Overview
+** Quick Example
+** Programming Model
+*** Basic Concepts
+*** Handling Event-time and Late Data
+*** Fault Tolerance Semantics
+
+** API using Datasets and DataFrames
+*** Creating streaming DataFrames and streaming Datasets
+**** Input Sources
+**** Schema inference and partition of streaming DataFrames/Datasets
+
+*** Operations on streaming DataFrames/Datasets
+**** Basic Operations - Selection, Projection, Aggregation
+**** Window Operations on Event Time
+***** Handling Late Data and Watermarking
+
+**** Join Operations
+***** Stream-static Joins
+***** Stream-stream Joins
+****** Inner Joins with optional Watermarking
+****** Outer Joins with Watermarking
+****** Support matrix for joins in streaming queries
+
+**** Streaming Deduplication
+**** Policy for handling multiple watermarks
+**** Arbitrary Stateful Operations
+**** Unsupported Operations
+
+*** Starting Streaming Queries
+**** Output Modes
+**** Output Sinks
+***** Using Foreach and ForeachBatch
+****** ForeachBatch
+****** Foreach
+
+**** Triggers
+
+*** Managing Streaming Queries
+*** Monitoring Streaming Queries
+**** Reading Metrics Interactively
+**** Reporting Metrics programmatically using Asynchronous APIs
+**** Reporting Metrics using Dropwizard
+
+*** Recovering from Failures with Checkpointing
+*** Recovery Semantics after Changes in a Streaming Query
+
+** Continuous Processing
+** Additional Information
+
+* TODO Spark Streaming (DStreams)
+** Overview
+** A Quick Example
+** Basic Concepts
+*** Linking
+*** Initializing ~StreamingContext~
+*** Discretized Streams (DStreams)
+*** Input DStreams and Receivers
+*** Transformations on DStreams
+*** Output Operations on DStreams
+*** DataFrame and SQL Operations
+*** MLlib Operations
+*** Caching / Persistence
+*** Checkpointing
+*** Accumulators, Broadcast Variables, and Checkpoints
+*** Deploying Applications
+*** Monitoring Applications
+
+** Performance Tuning
+*** Reducing the Batch Processing Times
+*** Setting the Right Batch Interval
+*** Memory Tuning
+
+** Fault-tolerance Semantics
+** Where to Go from Here
+
+* TODO MLlib (Machine Learning)
+*** Announcement: DataFrame-based API is primary API
+*** Dependencies
+*** Highlights in 2.3
+*** Migration guide
+**** From 2.2 to 2.3
+**** Breaking changes
+**** Deprecations and changes of behavior
+***** Deprecations
+***** Changes of behavior
+
+*** Previous Spark versions
+
+** MLlib: Main Guide
+*** Basic statistics
+**** Correlation
+**** Hypothesis testing
+**** Summarizer
+
+*** Data sources
+**** Image data sources
+
+*** Pipelines
+**** Main concepts in Pipelines
+***** DataFrame
+***** Pipeline components
+****** Transformers
+****** Estimators
+****** Properties of pipeline components
+
+***** Pipeline
+****** How it works
+****** Details
+
+***** Parameters
+***** ML persistence: Saving and Loading Pipelines
+****** Backwards compatibility for ML persistence
+
+**** Code examples
+***** Example: Estimator, Transformer, and Param
+***** Example: Pipeline
+***** Model selection (hyperparameter tuning)
+
+*** Extracting, transforming and selecting features
+**** Feature Extractors
+***** TF-IDF
+***** Word2Vec
+***** CountVectorizer
+***** FeatureHasher
+
+**** Feature Transformers
+***** Tokenizer
+***** StopWordsRemover
+***** n-gram
+***** Binarizer
+***** PCA
+***** PolynomialExpansion
+***** Discrete Cosine Transform (DCT)
+***** StringIndexer
+***** IndexToString
+***** OneHotEncoder (Deprecated since 2.3.0)
+***** OneHotEncoderEstimator
+***** VectorIndexer
+***** Interaction
+***** Normalizer
+***** StandardScaler
+***** MinMaxScaler
+***** MaxAbsScaler
+***** Bucketizer
+***** ElementwiseProduct
+***** SQLTransformer
+***** VectorAssembler
+***** VectorSizeHint
+***** QuantileDiscretizer
+***** Imputer
+
+**** Feature Selectors
+***** VectorSlicer
+***** RFormula
+***** ChiSqSelector
+
+**** Locality Sensitive Hashing
+***** LSH Operations
+****** Feature Transformation
+****** Approximate Similarity Join
+****** Approximate Nearest Neighbor Search
+
+***** LSH Algorithms
+****** Bucketed Random Projection for Euclidean Distance
+****** MinHash for Jaccard Distance
+
+*** Classification and Regression
+**** Classification
+***** Logistic regression
+****** Binomial logistic regression
+****** Multinomial logistic regression
+
+***** Decision tree classifier
+***** Random forest classifier
+***** Gradient-boosted tree classifier
+***** Multilayer perceptron classifier
+***** Linear Support Vector Machine
+***** One-vs-Rest classifier (a.k.a. One-vs-All)
+***** Naive Bayes
+
+**** Regression
+***** Linear regression
+***** Generalized linear regression
+****** Available families
+
+***** Decision tree regression
+***** Random forest regression
+***** Gradient-boosted tree regression
+***** Survival regression
+***** Isotonic regression
+
+**** Linear methods
+**** Decision trees
+***** Inputs and Outputs
+****** Input Columns
+****** Output Columns
+
+**** Tree Ensembles
+***** Random Forests
+****** Inputs and Outputs
+******* Input Columns
+******* Output Columns (Predictions)
+
+***** Gradient-Boosted Trees (GBTs)
+****** Inputs and Outputs
+******* Input Columns
+******* Output Columns (Predictions)
+
+*** Clustering
+**** K-means
+***** Input Columns
+***** Output Columns
+
+**** Latent Dirichlet allocation (LDA)
+**** Bisecting k-means
+**** Gaussian Mixture Model (GMM)
+***** Input Columns
+***** Output Columns
+
+*** Collaborative filtering
+**** Collaborative filtering
+***** Explicit vs. implicit feedback
+***** Scaling of the regularization parameter
+***** Cold-start strategy
+
+*** Frequent Pattern Mining
+**** FP-Growth
+**** PrefixSpan
+
+*** Model selection and tuning
+**** Model selection (a.k.a. hyperparameter tuning)
+**** Cross-Validation
+**** Train-Validation Split
+
+*** Advanced topics
+**** Optimization of linear methods (developer)
+***** Limited-memory BFGS (L-BFGS)
+***** Normal equation solver for weighted least squares
+***** Iteratively reweighted least squares (IRLS)
+
+** MLlib: RDD-based API Guide
+*** Data types
+*** Basic statistics
+**** summary statistics
+**** correlations
+**** stratified sampling
+**** hypothesis testing
+**** streaming significance testing
+**** random data generation
+
+*** Classification and regression
+**** linear models (SVMs, logistic regression, linear regression)
+**** naive Bayes
+**** decision trees
+**** ensembles of trees (Random Forests and Gradient-Boosted Trees)
+**** isotonic regression
+
+*** Collaborative filtering
+**** alternating least squares (ALS)
+
+*** Clustering
+**** k-means
+**** Gaussian mixture
+**** power iteration clustering (PIC)
+**** latent Dirichlet allocation (LDA)
+**** bisecting k-means
+**** streaming k-means
+
+*** Dimensionality reduction
+**** singular value decomposition (SVD)
+**** principal component analysis (PCA)
+
+*** Feature extraction and transformation
+*** Frequent pattern mining
+**** FP-growth
+**** association rules
+**** PrefixSpan
+
+*** Evaluation metrics
+*** PMML model export
+*** Optimization (developer)
+**** stochastic gradient descent
+**** limited-memory BFGS (L-BFGS)
+
+* TODO GraphX (Graph Processing)
+** Overview
+** Getting Started
+** The Property Graph
+*** Example Property Graph
+
+** Graph Operators
+*** Summary List of Operators
+*** Property Operators
+*** Structural Operators
+*** Join Operators
+*** Neighborhood Aggregation
+**** Aggregate Messages (aggregateMessages)
+**** Map Reduce Triplets Transition Guide (Legacy)
+**** Computing Degree Information
+**** Collecting Neighbors
+
+*** Caching and Uncaching
+
+** Pregel API
+** Graph Builders
+** Vertex and Edge RDDs
+*** VertexRDDs
+*** EdgeRDDs
+
+** Optimized Representation
+** Graph Algorithms
+*** PageRank
+*** Connected Components
+*** Triangle Counting
+
+** Examples
+
+* TODO SparkR (R on Spark)
+** Overview
+** SparkDataFrame
+*** Starting Up: SparkSession
+*** Starting Up from RStudio
+*** Creating SparkDataFrames
+**** From local data frames
+**** From Data Sources
+**** From Hive tables
+
+*** SparkDataFrame Operations
+**** Selecting rows, columns
+**** Grouping, Aggregation
+**** Operating on Columns
+**** Applying User-Defined Function
+***** Run a given function on a large dataset using ~dapply~ or ~dapplyCollect~
+****** ~dapply~
+****** ~dapplyCollect~
+
+***** Run a given function on a large dataset grouping by input column(s) and using ~gapply~ or ~gapplyCollect~
+****** ~gapply~
+****** ~gapplyCollect~
+
+***** Run local R functions distributed using ~spark.lapply~
+****** ~spark.lapply~
+
+*** Running SQL Queries from SparkR
+
+** Machine Learning
+*** Algorithms
+**** Classification
+**** Regression
+**** Tree
+**** Clustering
+**** Collaborative Filtering
+**** Frequent Pattern Mining
+**** Statistics
+
+*** Model persistence
+
+** Data type mapping between R and Spark
+** Structured Streaming
+** R Function Name Conflicts
+** Migration Guide
+*** Upgrading From SparkR 1.5.x to 1.6.x
+*** Upgrading From SparkR 1.6.x to 2.0
+*** Upgrading to SparkR 2.1.0
+*** Upgrading to SparkR 2.2.0
+*** Upgrading to SparkR 2.3.0
+*** Upgrading to SparkR 2.3.1 and above
+*** Upgrading to SparkR 2.4.0

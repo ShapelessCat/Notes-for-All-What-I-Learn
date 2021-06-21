@@ -1,0 +1,320 @@
+#+TITLE: asyncio
+#+SUBTITLE: Asynchronous I/O
+#+VERSION: 3.9.4
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+- ~asyncio~ is a library to write /concurrent/ code using the ~async~ / ~await~
+  syntax.
+
+- ~asyncio~ is used as a foundation for MULTIPLE _Python asynchronous frameworks_
+  that provide high-performance
+  * network and web-servers,
+  * database connection libraries,
+  * distributed task queues,
+  * etc.
+
+- ~asyncio~ is often a perfect *fit for*
+  /IO-bound/ and /high-level structured/ network code.
+
+- ~asyncio~ provides a set of _high-level APIs_ to:
+  * *run Python coroutines* CONCURRENTLY and have full control over their
+    execution;
+  * perform *network IO and IPC*;
+  * control *subprocesses*;
+  * distribute tasks via *queues*;
+  * *synchronize* concurrent code;
+
+- Additionally, there are _low-level APIs_ for library and framework developers
+  to:
+  * create and manage *event loops*, which
+    provide _asynchronous APIs_ for networking,
+    running subprocesses,
+    handling OS signals, etc;
+
+  * implement efficient protocols using transports;
+
+  * *bridge* _callback-based libraries and code_ *with* ~async~ / ~await~ syntax.
+
+* High-level APIs
+** Coroutines and Tasks
+   This section outlines _high-level asyncio APIs_ to work with
+   /coroutines/ and /Tasks/.
+
+*** DONE Coroutines
+    CLOSED: [2021-04-06 Tue 19:23]
+    Require Python 3.7+
+
+    - Example:
+      #+begin_src python
+        import asyncio
+
+        async def main():
+            print('hello')
+            await asyncio.sleep(1)
+            print('world')
+
+
+        asyncio.run(main())
+        # hello
+        # world
+
+        main()
+        # <coroutine object main at 0x1053bb7c8>
+      #+end_src
+
+    - To actually run a /coroutine/, /asyncio/ provides *three* main mechanisms:
+      * The ~asyncio.run()~ function to run the _top-level entry point_
+        “main()” function (see the above example.)
+
+      * Awaiting on a /coroutine/.
+        The following snippet of code will print ="hello"= after waiting for 1
+        second, and then print ="world"= after waiting for another 2 seconds:
+        #+begin_src python
+          import asyncio
+          import time
+
+
+          async def say_after(delay, what):
+              await asyncio.sleep(delay)
+              print(what)
+
+
+          async def main():
+              print(f"started at {time.strftime('%X')}")
+
+              await say_after(1, 'hello')
+              await say_after(2, 'world')
+
+              print(f"finished at {time.srftime('%X')}")
+
+          asyncio.run(main())
+
+          # started at 17:13:52
+          # hello
+          # world
+          # finished at 17:13:55
+        #+end_src
+
+    - The ~asyncio.create_task()~ function to _run /coroutines/ CONCURRENTLY_
+      as asyncio ~Tasks~.
+      Let's modify the above example and run two ~say_after~ /coroutines/
+      *concurrently*:
+      #+begin_src python
+        async def main():
+            task1 = asyncio.create_task(say_after(1, 'hello'))
+            task2 = asyncio.create_task(say_after(2, 'world'))
+            print(f"started at {time.strftime('%X')}")
+
+            # Wait until both tasks are completed (should take
+            # around 2 seconds.)
+            await task1
+            await task2
+
+            print(f"finished at {time.strftime('%X')}")
+
+
+        # started at 17:14:32
+        # hello
+        # world
+        # finished at 17:14:34
+      #+end_src
+
+*** DONE Awaitables
+    CLOSED: [2021-04-07 Wed 02:00]
+    We say that an object is an /awaitable object/
+    if it can be used in _an ~await~ expression_.
+    Many _asyncio APIs_ are designed to accept /awaitables/.
+
+    - There are _three_ MAIN types of /awaitable objects/:
+      * /coroutines/
+      * Tasks
+      * Futures
+
+**** DONE Coroutines
+     CLOSED: [2021-04-07 Wed 01:46]
+     Python coroutines are awaitables and therefore can be awaited from other
+     coroutines:
+     #+begin_src python
+       import asyncio
+
+
+       async def nested():
+           return 42
+
+
+       async def main():
+           # Nothing happens if we just call "nested()".
+           # A coroutine object is created but not awaited,
+           # so it *won't run at all*.
+           nested()
+
+           # Let's do it differently now and await it:
+           print(await nested())  # will print "42".
+
+
+       asyncio.run(main())
+     #+end_src
+
+     - *Important*:
+       In this documentation the term _"coroutine"_ can be used for
+       _TWO_ closely related concepts:
+       * a /coroutine function/:
+         an ~async def~ function;
+
+       * a /coroutine object/:
+         an object returned by calling a /coroutine function/.
+
+     - ~asyncio~ also supports *LEGACY* /generator-based coroutines/.
+
+**** DONE Tasks
+     CLOSED: [2021-04-07 Wed 01:49]
+     /Tasks/ are used to *schedule* /coroutines/ CONCURRENTLY.
+
+     - When a /coroutine/ is wrapped into a /Task/ with functions like
+       ~asyncio.create_task()~ the /coroutine/ is automatically scheduled to run
+       soon:
+       #+begin_src python
+         import asyncio
+
+
+         async def nested():
+             return 42
+
+
+         async def main():
+             # Schedule nested() to run soon concurrently
+             # with "main()".
+             task = asyncio.create_task(nested())
+
+             # "task" can now be used to cancel "nested()", or
+             # can simply be awaited to wait until it is complete:
+             await task
+
+
+         asyncio.run(main())
+       #+end_src
+
+**** DONE Futures
+     CLOSED: [2021-04-07 Wed 01:59]
+     - A /Future/ is a special /low-level awaitable object/ that represents an
+       *eventual result* of an asynchronous operation.
+
+     - When a /Future object/ is *awaited*,
+       it means that the /coroutine/ will wait until the /Future/ is resolved in
+       some other place.
+
+     - /Future objects/ in ~asyncio~ are needed to allow _callback-based code_ to
+       be used with ~async~ / ~await~.
+
+     - Normally there is no need to create /Future objects/ at the application
+       level code.
+
+     - /Future objects/, sometimes exposed by libraries and some _asyncio APIs_,
+       can be _awaited_:
+       #+begin_src python
+         async def main():
+             await function_that_returns_a_future_object()
+
+             # this is also valid:
+             await asyncio.gather(
+                 function_that_returns_a_future_object(),
+                 some_python_coroutine()
+             )
+       #+end_src
+
+     - A good example of a _low-level function_ that returns a /Future object/ is
+       ~loop.run_in_executor()~.
+
+*** TODO Running an asyncio Program
+    =New in version 3.7=
+    =Changed in version 3.9=: Updated to use ~loop.shutdown_default_executor()~.
+    ~asyncio.run(coro, *, debug=False)~
+
+*** TODO Creating Tasks
+    =New in version 3.7.=
+    =Changed in version 3.8: Added the name parameter.=
+    ~asyncio.create_task(coro, *, name=None)~
+
+*** TODO Sleeping
+    /coroutine/ ~asyncio.sleep(delay, result=None, *, loop=None)~
+
+*** TODO Running Tasks Concurrently
+    =Deprecated since version 3.8, will be removed in version 3.10:
+     The ~loop~ parameter.=
+
+    =Changed in version 3.7:
+     If the ~gather~ itself is cancelled, the cancellation is propagated regardless of return_exceptions.=
+
+    /awaitable/ ~asyncio.gather(*aws, loop=None, return_exceptions=False)~
+
+*** TODO Shielding From Cancellation
+    =Deprecated since version 3.8, will be removed in version 3.10:
+     The ~loop~ parameter.=
+    /awaitable/ ~asyncio.shield(aw, *, loop=None)~
+
+*** TODO Timeouts
+    =Changed in version 3.7:
+     When aw is cancelled due to a timeout, ~wait_for~ waits for aw to be cancelled. Previously, it raised ~asyncio.TimeoutError~ immediately.=
+    /coroutine/ ~asyncio.wait_for(aw, timeout, *, loop=None)~
+
+*** TODO Waiting Primitives
+    =Deprecated since version 3.8:
+     If any awaitable in aws is a coroutine, it is automatically scheduled as a Task. Passing coroutines objects to wait() directly is deprecated as it leads to confusing behavior.=
+
+    =Deprecated since version 3.8, will be removed in version 3.10:
+     The ~loop~ parameter.=
+
+    =Deprecated since version 3.8, will be removed in version 3.11:
+    Passing coroutine objects to ~wait()~ directly is deprecated.=
+
+    - /coroutine/
+      ~asyncio.wait(aws, *, loop=None, timeout=None, return_when=ALL_COMPLETED)~
+
+    - ~asyncio.as_completed(aws, *, loop=None, timeout=None)~
+      =Deprecated since version 3.8, will be removed in version 3.10:
+       The ~loop~ parameter.=
+
+*** TODO Running in Threads
+    =New in version 3.9=
+    /coroutine/
+    ~asyncio.to_thread(func, /, *args, **kwargs)~
+
+*** TODO Scheduling From Other Threads
+    =New in version 3.5.1=
+    ~asyncio.run_coroutine_threadsafe(coro, loop)~
+
+*** TODO Introspection
+    =New in version 3.7.=
+    - ~asyncio.current_task(loop=None)~
+    - ~asyncio.all_task(loop=None)~
+
+*** TODO Task Object
+    ~class asyncio.Task(coro, *, loop=None, name=None)~
+
+*** TODO Generator-based Coroutines
+    - *Note*:
+      Support for /generator-based coroutines/ is *DEPRECATED* and is scheduled
+      for removal in _Python 3.10_.
+
+    - ~@asyncio.coroutine~
+    - ~asyncio.iscoroutine(obj)~
+    - ~asyncio.iscoroutinefunction(func)~
+
+** Streams
+** Synchronization Primitives
+** Subprocesses
+** Queues
+** Exceptions
+
+* Low-level APIs
+** Event Loop
+** Futures
+** Transports and Protocols
+** Policies
+** Platform Support
+
+* Guides and Tutorials
+** High-level API Index
+** Low-level API Index
+** Developing with asyncio

@@ -1,0 +1,888 @@
+#+TITLE: The Java\reg{} Virtual Machine Specifiction
+#+AUTHOR: Tim Lindholm, Frank Yellin, Gilad Bracha, Alex Buckley, (for 13 add) Daniel Smith
+#+SPECIFICATION: JSR-388 Java SE 13
+#+VERSION: 13
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+#+Release: Sep 2019
+#+META: Java SE 9 Edtion - 2017-08-07 --> Java SE 13 Edition - 2019-08-21
+
+* 1 Introduction - 1
+** 1.1 A Bit of History - 1
+** 1.2 The Java Virtual Machine - 2
+** 1.3 Organization of the Specification - 3
+** 1.4 Notation - 4
+** 1.5 Feedback - 4
+
+* TODO 2 The Structure of the Java Virtual Machine - 5
+** DONE 2.1 The =class= File Format - 5
+   CLOSED: [2019-12-04 Wed 16:00]
+   - Compiled code to be executed by the JVM is represented using a _hardware- and
+     operating system-independent binary format_, typically (but *not necessarily*)
+     stored in a file, known as the /class file format/.
+
+   - The /class file format/ PRECISELY defines
+     + *the representation of a /class/ or /interface/,*
+
+     + including details such as
+       * *byte ordering* that might be taken for granted in a platform-specific
+         object file format.
+
+       * ETC. TODO ??? =from Jian= not mentioned in this spec. I want to know more!!!
+
+   - TODO Chapter 4, "The class File Format", covers the class file format in detail.
+
+** DONE 2.2 Data Types - 6
+   CLOSED: [2018-03-08 Thu 15:10]
+   - Two kinds of types:
+     + primitive types
+     + reference types
+
+   - Correspondingly, two kinds values
+     + primitive values
+     + reference values
+
+   - The JVM expects that *nearly all* type checking is _done prior to run time_,
+     typically by a compiler, and does not have to be done by the JVM itself.
+
+   - object :: either a dynamically allocated /class instance/ or an /array/.
+
+** TODO 2.3 Primitive Types and Values - 6
+   TODO
+   TODO
+   TODO
+
+*** DONE 2.3.1 Integral Types and Values - 7
+    CLOSED: [2019-12-04 Wed 16:57]
+    The values of the /integral types/ of the JVM are:
+    - ~byte~: [-2^{7}, 2^{7} - 1]
+    - ~short~: [-2^{15}, 2^{15} - 1]
+    - ~int~: [-2^{31}, 2^{31} - 1]
+    - ~long~: [-2^{63}, 2^{63} - 1]
+    - ~char~: [0, 2^{16} - 1]
+
+*** TODO 2.3.2 Floating-Point Types, Value Sets, and Values - 8
+*** DONE 2.3.3 The ~returnAddress~ Type and Values - 10
+    CLOSED: [2019-12-04 Wed 16:05]
+    - The ~returnAddress~ type is used by the JVM's ~jsr~, ~ret~, and ~jsr_w~
+      instructions TODO (§jsr, §ret, §jsr_w).
+
+    - The values of the ~returnAddress~ type are _POINTERS to the opcodes of /JVM
+      instructions/._
+
+    - _UNLIKE_ the /numeric primitive types/, the ~returnAddress~ type
+      + does *NOT correspond to any* Java programming language type
+        and
+      + CANNOT be modified by the running program.
+
+*** DONE 2.3.4 The ~boolean~ Type - 10
+    CLOSED: [2019-12-04 Wed 16:52]
+    - JVM defines a ~boolean~ type.
+
+    - JVM only provides very limited (=from Jian= direct) support for ~boolean~.
+      + Expressions in JPL that operate on ~boolean~ values are compiled to use values
+        of the JVM ~int~ data type.
+
+      + JVM does directly support /boolean arrays/.
+        * Use ~newarray~ to create it.
+
+        * Access and modify /boolean arrays/ with the /byte array/ instructions
+          ~baload~ and ~bastore~.
+
+    - Comments:
+      In Oracle's JVM implementation,
+      /boolean arrays/ in JPL are encoded as JVM /byte arrays/, using _8 bits per
+      boolean element_.
+
+    - The JVM encodes /boolean array/ components using
+      + ~1~ to represent ~true~
+      + ~0~ to represent ~false~
+
+    - JPL ~boolean~ values are mapped by compilers to values of JVM type ~int~,
+      *the compilers MUST use the same encoding.*
+
+** DONE 2.4 Reference Types and Values - 11
+   CLOSED: [2019-12-04 Wed 18:00]
+   - There are _THREE_ kinds of /reference types/:
+     + class types
+     + array types
+     + interface types
+
+   - Their values are /references/ to _DYNAMICALLY_ created
+     + class instances
+     + arrays,
+     + class instances or arrays that implement interfaces TODO ??? TODO
+
+   - TODO Array type related TODO
+     + component type :: ???
+
+     + element type :: a type, not an array type, of the element of an array
+
+     + The element type of an array type is necessarily either a primitive type,
+       or a class type, or an interface type.
+
+   - A ~reference~ value may also be the special /null reference/, _a reference to
+     no object_, which will be denoted here by ~null~.
+
+   - The /null reference/
+     + initially has _NO run-time type_,
+     + BUT may be cast to any type.
+
+   - The default value of a ~reference~ type is ~null~.
+
+   - This SPEC does _NOT_ mandate a concrete value encoding ~null~.
+
+** DONE 2.5 Run-Time Data Areas - 11
+   CLOSED: [2019-12-02 Mon 19:07]
+   There are _TWO_ types of runtime data areas:
+   - Be created on when JVM start-up and destroyed only when the JVM exits.
+   - Be created when a thread (it belongs to) is created and destroyed when this thread exits.
+
+*** DONE 2.5.1 The ~pc~ Register - 12
+    CLOSED: [2019-12-02 Mon 17:29]
+    - ~pc~ :: program counter
+
+    - Each JVM thread has its own ~pc~ register.
+
+    - The ~pc~ register contains
+      + (non-~native~ method)
+        the address of the JVM instruction currently being executed.
+
+      + (~native~ method)
+        undefined value
+
+    - The JVM's ~pc~ register is _wide enougth_ to hold
+      + a ~returnAddress~;
+        OR
+      + a /native pointer/ on the specific platform.
+
+*** DONE 2.5.2 Java Virtual Machine Stacks - 12
+    CLOSED: [2019-12-02 Mon 18:00]
+    Each /JVM thread/ has a *private JVM stack*, created at the SAME TIME as the
+    /thread/.
+
+    - A /JVM stack/ stores /frames/ (2.6).
+
+    - The /JVM stack/ is _NEVER manipulated directly EXCEPT to push and pop /frames/,_
+      /frames/ may be (???) heap allocated.
+
+    - The memory for a /JVM stack/ does NOT need to be contiguous.
+      + In the 1st edition of JVM Spec, the /JVM stack/ was known as _Java stack_.
+
+    - /JVM stacks/
+      + EITHER
+        to be a fixed size (even fixed size stack JVM, each stack may be chosen
+        independenlty when stack is created)
+
+      + OR
+        to dynamically expand and contract as required by the computation.
+
+    - The JVM implementation may provide the programmer or the user control over
+      + the initial size of /JVM stacks/
+      + maximum and minimum sizes
+
+    - The following exceptional conditions are associated with /JVM stacks/:
+      + ~StackOverflowError~ =RE-READ=
+      + ~OutOfMemoryError~ =RE-READ=
+
+*** DONE 2.5.3 Heap - 13
+    CLOSED: [2019-12-02 Mon 18:17]
+    /Heap/ is shared among all /JVM threads/.
+
+    - The /heap/ is the _runtime data area_ from which memory for ALL _class
+      instances_ and _arrays_ is allocated.
+
+    - The /heap/ is ceated on VM start-up.
+
+    - There is a /automatic storage manangement system/ (known as a /garbage
+      collector/). NO particular type of automatic storage management system is
+      required. It depends on the implementor's system requirements.
+
+    - The /heap/
+      + may be FIXED SIZE
+        OR
+      + may be EXPANDED as required by the computation
+        and
+        may be CONTRACTED if a larger heap becomes unnecessary.
+
+    - The memory for the /heap/ does NOT need to be contiguous.
+
+    - Initial size and maximum/minimum heap size can be controled.
+
+    - The following _exceptional condition_ is associated with the /heap/:
+      + ~OutOfMemoryError~ =Re-read=
+
+*** DONE 2.5.4 Method Area - 13
+    CLOSED: [2019-12-02 Mon 18:58]
+    The JVM has a /method area/ that is *shared among all /JVM threads/.*
+
+    - The /method area/ is analogous to ??? TODO TODO TODO
+
+    - The /method area/ stores *per-class* structures such as
+      + the /RUNTIME/ /constant pool/, /field/ and /method data/,
+
+      + the *code* for /methods/ and /constructors/,
+        including the _special_ /methods/ used in /class/ and /interface/
+        initialization and in instance initialization (2.9) TODO
+
+    - Creation time: JVM start-up
+
+    - The /method area/ is _logically_ part of the /heap/,
+      simple implementations may choose *NOT* to either gc or compact it.
+
+    - This SPEC does *NOT mandate* the location of the /method area/ or the policies
+      used to manage compiled code.
+
+    - The /method area/ may be of
+      + a _fixed size_
+      + _expanded_ and _contracted_
+
+    - Initial size and maximum/minimum size can be controled.
+
+    - The /memory/ for the /method area/ does _NOT need to be contiguous_.
+
+    - The following _exceptional condition_ is associated with the /method area/:
+      + ~OutOfMemoryError~ =Re-Read=
+
+*** TODO 2.5.5 Run-Time Constant Pool - 14 - =RE-READ=
+    A /run-time constant pool/ is a *per-class* or *per-interface* run-time
+    representation of the ~constant_pool~ table in a ~class~ file (§4.4).
+
+    - It contains several kinds of constants, ranging from numeric literals known
+      at compile-time to method and field references that must be resolved at
+      run-time. The run-time constant pool serves a function similar to that of
+      a symbol table for a conventional programming language, although it
+      contains a wider range of data than a typical symbol table.
+      TODO TODO TODO TODO NOTE
+
+    - Each run-time constant pool is allocated from the Java Virtual Machine's
+      method area (§2.5.4). The run-time constant pool for a class or interface
+      is constructed when the class or interface is created (§5.3) by the Java
+      Virtual Machine.
+      TODO TODO TODO TODO NOTE
+
+    - The following _exceptional condition_ is associated with the construction of
+      the /runtime constant pool/ for a /class/ or /interface/:
+      + ~OutOfMemoryError~ =RE-READ=
+
+    - TODO
+      See _Chapter 5 Loading, Linking, and Initializing_ for info about the CONSTRUCTION
+      of the /runtime constant pool/.
+
+*** TODO 2.5.6 Native Method Stacks - 14 - =RE-READ=
+
+** 2.6 Frames - 15
+   A /frame/ is used to _STORE data and PARTIAL results_, as well as to _PERFORM
+   dynamic linking_, _RETURN values for methods_, and _DISPATCH exceptions._
+   TODO TODO TODO ??? ??? ???
+
+   - A new frame is created each time a method is invoked.
+
+   - A frame is destroyed when its method invocation completes (normal or abrupt).
+
+   - Frames are allocated from _the /JVM stack/ (§2.5.2) of the /thread/ creating
+     the /frame/._
+
+   - Each /frame/ has its *own*
+     + array of local variables (§2.6.1),
+
+     + operand stack (§2.6.2),
+
+     + a reference to the runtime constant pool (§2.5.5) of the class of the current
+       method.
+
+   - Comments: ???
+
+   - The sizes of the /local variable array/ and the /operand stack/ are *determined
+     at compile-time* and are *supplied along with the code for the /method/ associated
+     with the /frame/ (§4.7.3).*
+     + Thus the size of the /frame data structure/ depends _ONLY_ on
+       * the implementation of the JVM
+         AND
+       * the memory for these structures can be allocated simultaneously on /method
+         invocation/.
+
+   - *Only one* /frame/, the /frame/ for the /executing method/, is *active* at any
+     point in a _given thread_ of control.
+       This /frame/ is referred to as the /CURRENT frame/, and its /method/ is known
+     as the /CURRENT method/.
+
+     The class in which the current method is defined is the current class.
+     Operations on local variables and the operand stack are typically with
+     reference to the current frame.
+
+   - When does a /frame/ cease to be /current frame/?
+     + When the /current method/ invokes ANOTHER /method/ --
+       this invoked method _will become NEW /current method/._
+       * Control transfer: this -> the invoked
+
+     + When the /current method/ completes -- the /method/ who invoked it will
+       become NEW /current method/.
+       * Control transfer: this -> the invoker
+
+   - A /frame/ is _local_ to its CREATER /thread/, and it _cannot_ be referenced
+     by any OTHER /thread/.
+
+*** 2.6.1 Local Variables - 16
+    - TODO NOTE
+
+    - A single local variable can hold a value of type
+      + boolean
+      + byte
+      + char
+      + short
+      + int
+      + float
+      + reference
+      + returnAddress
+
+    - A pair of local variables can hold a value of type
+      + long
+      + double
+
+    - /Local variables/ are addressed by _indexing_.
+      Index range: 0 to size - 1
+
+    - TODO
+    - TODO
+    - TODO
+
+*** 2.6.2 Operand Stacks - 17
+*** 2.6.3 Dynamic Linking - 18
+*** 2.6.4 Normal Method Invocation Completion - 18
+*** DONE 2.6.5 Abrupt Method Invocation Completion - 18
+    CLOSED: [2019-12-04 Wed 18:11]
+    - Two reasons of method invocations _complete abruptly_:
+      + if execution of a JVM instruction within the method causes the JVM to
+        throw an exception (§2.10), and that exception is not handled within the
+        method.
+
+      + if the exception due to the execution of an ~athrow~ instruction is not
+        caught by the _CURRENT method_.
+
+    - A /method invocation/ that _completes abruptly_ *NEVER* returns a value to
+      its invoker.
+
+** DONE 2.7 Representation of Objects - 19
+   CLOSED: [2019-12-04 Wed 12:02]
+   The JVM does *NOT mandate ANY particular internal structure* for /objects/.
+
+   - Comments:
+     In some of Oracle's implementations of the JVM, a reference to a /class instance/
+     is a pointer to a /handle/ (TODO concept ???) that is itself _a PAIR of pointers_:
+     + to a _table_ containing
+       * the _methods_ of the object
+       * a _pointer_ to the ~Class~ object that represents the type of the object
+
+     + to the _memory_ allocated from the /heap/ for the object data.
+
+** 2.8 Floating-Point Arithmetic - 19
+*** 2.8.1 Java Virtual Machine Floating-Point Arithmetic and IEEE 754 - 19
+*** 2.8.2 Floating-Point Modes - 20
+*** 2.8.3 Value Set Conversion - 20
+
+** 2.9 Special Methods - 22
+*** 2.9.1 Instance Initialization Methods - 22
+*** 2.9.2 Class Initialization Methods - 22
+*** 2.9.3 Signature Polymorphic Methods - 23
+
+** TODO 2.10 Exceptions - 23
+   An /exception/ in the JVM is represented by an /instance/ of the /class/
+   ~Throwable~ or one of its /subclasses/.
+
+   - Throwing an /exception/ results in an _IMMEDIATE nonlocal transfer of control
+     from the point where the exception was thrown_.
+
+   - /Exceptions/ thrown by the JVM are precise:
+     + when the transfer of control takes place, all effects of the instructions
+       executed before the point from which the exception is thrown must appear
+       to have taken place.
+
+     + BEFORE:
+       all effects of the instructions executed before @INSTANCE must appear
+       to have taken place.
+
+     + INSTANCE: the exception is thrown and need transfer of control takes place
+
+     + AFTER:
+       No instructions that occur after @INSTANCE may appear to have been evaluated.
+       =IMPORTANT=
+       If optimized code has speculatively executed some of the instructions
+       which follow the point at which the exception occurs, such code must be
+       prepared to hide this speculative execution from the user-visible state
+       of the program.
+
+   - TODO TODO TODO NOTE =RE-READ=
+
+** 2.11 Instruction Set Summary - 26
+   - A /JVM instruction/ consists of
+     + a *one-byte opcode* specifying the operation to be performed
+
+     + followed by *zero or more operands* supplying *arguments or data* that are
+       used by the operation.
+
+   - *MANY* instructions have *no operands* and consist ONLY of an opcode.
+
+   - Ignoring exceptions,
+     the inner loop of a Java Virtual Machine interpreter is effectively
+     #+begin_src text
+       do {
+          atomically calculate pc and fetch opcode at pc;
+          if (operands) fetch operands;
+          execute the action for the opcode;
+       } while (there is more to do);
+     #+end_src
+
+   - The *number* and *size* of the /operands/ are _DETERMINED BY_ the /opcode/.
+
+   - =IMPORTANT=
+     _If_ an /operand/ is *more than one byte in size*,
+     _then_ it is stored in *big-endian order* - high-order byte first.
+     + Example:
+         An unsigned 16-bit index into the local variables is stored as _two unsigned
+       bytes_, =byte1= and =byte2=, such that its value is ~(byte1 << 8) | byte2~.
+
+   - The bytecode instruction stream is only single-byte aligned. The two exceptions
+     are the lookupswitch and tableswitch instructions (§lookupswitch,
+     §tableswitch), which are padded to force internal alignment of some of
+     their operands on 4-byte boundaries.
+     TODO TODO TODO NOTE ???
+     + The decision to limit the Java Virtual Machine opcode to a byte and to forgo data alignment
+       within compiled code reflects a conscious bias in favor of compactness, possibly at the cost
+       of some performance in naive implementations. A one-byte opcode also limits the size of
+       the instruction set. Not assuming data alignment means that immediate data larger than a
+       byte must be constructed from bytes at run time on many machines.
+       TODO TODO TODO NOTE ???
+       TODO TODO TODO NOTE ???
+
+*** 2.11.1 Types and the Java Virtual Machine - 26 - NOTE
+*** 2.11.2 Load and Store Instructions - 29 - NOTE
+*** 2.11.3 Arithmetic Instructions - 30 - NOTE
+*** 2.11.4 Type Conversion Instructions - 32 - NOTE
+*** DONE 2.11.5 Object Creation and Manipulation - 34
+    CLOSED: [2019-12-03 Tue 16:45]
+    Although BOTH /class instances/ and /arrays/ are /objects/, the JVM creates
+    and manipulates /class instances/ and /arrays/ using *DISTINCT* sets of
+    instructions.
+
+    - CREATE
+      a new /class instance/: ~new~
+
+    - CREATE
+      a new /array/: ~newarray~, ~anewarray~, ~multianewarray~
+
+    - ACCESS
+      /static fields/ (known as /class variables/): ~getstatic~, ~putstatic~
+
+    - ACCESS
+      /instance fields/ (known as /instance variables/): ~getfield~, ~putfield~
+
+    - LOAD
+      an array component onto the /operand stack/:
+      ~baload~, ~caload~, ~saload~, ~iaload~, ~laload~, ~faload~, ~daload~, ~aaload~
+
+    - STORE
+      a value from the /operand stack/ as an array component:
+      ~bastore~, ~castore~, ~sastore~, ~iastore~, ~lastore~, ~fastore~, ~dastore~, ~aastore~
+
+    - Get the length of an array:
+      ~arraylength~
+
+    - Check properties of /class instances/ or /arrays/:
+      ~instanceof~, ~checkcast~
+
+*** DONE 2.11.6 Operand Stack Management Instructions - 34 - TODO _MEANING_???
+    CLOSED: [2019-12-03 Tue 16:47]
+    A number of instructions are provided for the DIRECT manipulation of the
+    /operand stack/: ~pop~, ~pop2~, ~dup~, ~dup2~, ~dup_x1~, ~dup2_x1~,
+    ~dup_x2~, ~dup2_x2~, ~swap~.
+
+*** TODO 2.11.7 Control Transfer Instructions - 34
+*** TODO 2.11.8 Method Invocation and Return Instructions - 35
+*** DONE 2.11.9 Throwing Exceptions - 36
+    CLOSED: [2019-12-03 Tue 16:52]
+    - An /exception/ is thrown _PROGRAMMATICALLY_ using the ~athrow~ instruction.
+
+    - /Exceptions/ can also be thrown _by various Java Virtual Machine instructions_
+      if they DETECT an /abnormal condition/.
+      TODO HOWTO detect?
+      TODO WHATIS an /abormal condition/?
+
+*** TODO 2.11.10 Synchronization - 36
+
+** DONE 2.12 Class Libraries - 37
+   CLOSED: [2019-12-04 Wed 15:10]
+   JVM *must* provide sufficient support for the implementation of the class libraries
+   of the Java SE Platform. *Some of the classes in these libraries _CANNOT_ be
+   implemented without the cooperation of the JVM*.
+
+   - Examples:
+     TODO TODO TODO
+
+** 2.13 Public Design, Private Implementation - 37
+
+* DONE 3 Compiling for the Java Virtual Machine - 39
+  CLOSED: [2019-12-02 Mon 16:17]
+** 3.1 Format of Examples - 39
+** 3.2 Use of Constants, Local Variables, and Control Constructs - 40
+** 3.3 Arithmetic - 45
+** 3.4 Accessing the Run-Time Constant Pool - 46
+** 3.5 More Control Examples - 47
+** 3.6 Receiving Arguments - 50
+** 3.7 Invoking Methods - 51
+** 3.8 Working with Class Instances - 53
+** 3.9 Arrays - 55
+** 3.10 Compiling Switches - 57
+** 3.11 Operations on the Operand Stack - 59
+** 3.12 Throwing and Handling Exceptions - 60
+** 3.13 Compiling finally - 63
+** 3.14 Synchronization - 66
+** 3.15 Annotations - 67
+** 3.16 Modules - 68
+
+* DONE 4 The class File Format - 71
+  CLOSED: [2019-12-02 Mon 16:15]
+** 4.1 The =ClassFile= Structure - 72
+** 4.2 Names - 78
+*** 4.2.1 Binary Class and Interface Names - 78
+*** 4.2.2 Unqualified Names - 79
+*** 4.2.3 Module and Package Names - 79
+
+** 4.3 Descriptors - 80
+*** 4.3.1 Grammar Notation - 80
+*** 4.3.2 Field Descriptors - 80
+*** 4.3.3 Method Descriptors - 82
+
+** 4.4 The Constant Pool - 83
+*** 4.4.1 The ~CONSTANT_Class_info~ Structure - 86
+*** 4.4.2 The ~CONSTANT_Fieldref_info~, ~CONSTANT_Methodref_info~, and ~CONSTANT_InterfaceMethodref_info~ Structures - 87
+*** 4.4.3 The ~CONSTANT_String_info~ Structure - 88
+*** 4.4.4 The ~CONSTANT_Integer_info~ and ~CONSTANT_Float_info~ Structures - 88
+*** 4.4.5 The ~CONSTANT_Long_info~ and ~CONSTANT_Double_info~ Structures - 90
+*** 4.4.6 The ~CONSTANT_NameAndType_info~ Structure - 91
+*** 4.4.7 The ~CONSTANT_Utf8_info~ Structure - 92
+*** 4.4.8 The ~CONSTANT_MethodHandle_info~ Structure - 94
+*** 4.4.9 The ~CONSTANT_MethodType_info~ Structure - 96
+*** 4.4.10 The ~CONSTANT_Dynamic_info~ and ~CONSTANT_InvokeDynamic_info~ Structure - 96
+*** 4.4.11 The ~CONSTANT_Module_info~ Structure - 97
+*** 4.4.12 The ~CONSTANT_Package_info~ Structure - 98
+** 4.5 Fields - 99
+** 4.6 Methods - 101
+** 4.7 Attributes - 104
+*** 4.7.1 Defining and Naming New Attributes - 111
+*** 4.7.2 The ~ConstantValue~ Attribute - 111
+*** 4.7.3 The ~Code~ Attribute - 112
+*** 4.7.4 The ~StackMapTable~ Attribute - 112
+*** 4.7.5 The ~Exceptions~ Attribute - 123
+*** 4.7.6 The ~InnerClasses~ Attribute - 124
+*** 4.7.7 The ~EnclosingMethod~ Attribute - 127
+*** 4.7.8 The ~Synthetic~ Attribute - 128
+*** 4.7.9 The ~Signature~ Attribute - 125
+**** 4.7.9.1 Signatures - 130
+
+*** 4.7.10 The ~SourceFile~ Attribute - 134
+*** 4.7.11 The ~SourceDebugExtension~ Attribute - 134
+*** 4.7.12 The ~LineNumberTable~ Attribute - 135
+*** 4.7.13 The ~LocalVariableTable~ Attribute - 136
+*** 4.7.14 The ~LocalVariableTypeTable~ Attribute - 138
+*** 4.7.15 The ~Deprecated~ Attribute - 140
+*** 4.7.16 The ~RuntimeVisibleAnnotations~ Attribute - 141
+**** 4.7.16.1 The ~element_value~ structure - 147
+
+*** 4.7.17 The ~RuntimeInvisibleAnnotations~ Attribute - 146
+*** 4.7.18 The ~RuntimeVisibleParameterAnnotations~ Attribute - 147
+*** 4.7.19 The ~RuntimeInvisibleParameterAnnotations~ Attribute - 148
+*** 4.7.20 The ~RuntimeVisibleTypeAnnotations~ Attribute - 150
+**** 4.7.20.1 The ~target_info~ union - 156
+**** 4.7.20.2 The ~type_path~ structure - 160
+
+*** 4.7.21 The ~RuntimeInvisibleTypeAnnotations~ Attribute - 166
+*** 4.7.22 The ~AnnotationDefault~ Attribute - 167
+*** 4.7.23 The ~BootstrapMethods~ Attribute - 168
+*** 4.7.24 The ~MethodParameters~ Attribute - 169
+*** 4.7.25 The ~Module~ Attribute - 171
+*** 4.7.26 The ~ModulePackages~ Attribute - 178
+*** 4.7.27 The ~ModuleMainClass~ Attribute - 179
+*** 4.7.28 The ~NestHost~ Attribute - 180
+*** 4.7.29 The ~NestMembers~ Attribute - 180
+
+** 4.8 Format Checking - 182
+** 4.9 Constraints on Java Virtual Machine Code - 182
+*** 4.9.1 Static Constraints - 183
+*** 4.9.2 Structural Constraints - 186
+
+** 4.10 Verification of =class= Files - 190
+*** 4.10.1 Verification by Type Checking - 191
+**** 4.10.1.1 Accessors for Java Virtual Machine Artifacts - 194
+**** 4.10.1.2 Verification Type System - 198
+**** 4.10.1.3 Instruction Representation - 202
+**** 4.10.1.4 Stack Map Frames and Type Transitions - 204
+**** 4.10.1.5 Type Checking Abstract and Native Methods - 209
+**** 4.10.1.6 Type Checking Methods with Code - 212
+**** 4.10.1.7 Type Checking Load and Store Instructions - 213
+**** 4.10.1.8 Type Checking for protected Members - 215
+**** 4.10.1.9 Type Checking Instructions - 226
+
+*** 4.10.2 Verification by Type Inference - 345
+**** 4.10.2.1 The Process of Verification by Type Inference - 345
+**** 4.10.2.2 The Bytecode Verifier - 345
+**** 4.10.2.3 Values of Types ~long~ and ~double~ - 349
+**** 4.10.2.4 Instance Initialization Methods and Newly Created Objects - 349
+**** 4.10.2.5 Exceptions and ~finally~ - 351
+
+** 4.11 Limitations of the Java Virtual Machine - 353
+
+* DONE 5 Loading, Linking, and Initializing - 355
+  CLOSED: [2019-12-02 Mon 15:34]
+** 5.1 The Run-Time Constant Pool - 355
+** 5.2 Java Virtual Machine Startup - 358
+** 5.3 Creation and Loading 359
+*** 5.3.1 Loading Using the Bootstrap Class Loader - 361
+*** 5.3.2 Loading Using a User-defined Class Loader - 361
+*** 5.3.3 Creating Array Classes - 362
+*** 5.3.4 Loading Constraints - 363
+*** 5.3.5 Deriving a Class from a ~class~ File Representation - 364
+*** 5.3.6 Modules and Layers - 365
+
+** 5.4 Linking - 368
+*** 5.4.1 Verification - 369
+*** 5.4.2 Preparation - 369
+*** 5.4.3 Resolution - 370
+**** 5.4.3.1 Class and Interface Resolution - 372
+**** 5.4.3.2 Field Resolution - 372
+**** 5.4.3.3 Method Resolution - 373
+**** 5.4.3.4 Interface Method Resolution - 376
+**** 5.4.3.5 Method Type and Method Handle Resolution - 377
+**** 5.4.3.6 mically-Computed Constant and Call Site Resolution - 381
+
+*** 5.4.4 Access Control - 386
+*** 5.4.5 Method Overriding - 388
+*** 5.4.6 Method Selection - 389
+
+** 5.5 Initialization - 389
+** 5.6 Binding Native Method Implementations - 392
+** 5.7 Java Virtual Machine Exit - 393
+
+* DONE 6 The Java Virtual Machine Instruction Set - 395
+  CLOSED: [2019-12-02 Mon 16:23]
+** DONE 6.1 Assumptions: The Meaning of "Must" - 395
+   CLOSED: [2017-10-16 Mon 10:56]
+   - The description here always satisfy the static and structural constraints of
+     $4 (the class file format).
+
+   - If some constraint (a "must" or "must not") in an instruction description is
+     _NOT satisfied_ at run time, the behavior of the Java Virtual Machine is
+     _undefined_.
+
+   - =.class= file verifier ($4.10)
+
+** DONE 6.2 Reserved Opcodes - 396
+   CLOSED: [2017-10-16 Mon 10:56]
+   - Three reserved opcodes:
+     + 254 (0xFE) - ~impdep1~
+     + 255 (0xFF) - ~impdep2~
+     + 202 (0xCA) - ~breakpoint~
+
+   - These three reserved opcodes CANNOT appear in valid =.class= files.
+
+   - Tools such as debuggers or JIT code generators ($2.13) may encounter these
+     opcodes.
+
+     =From Jian= I think these opcodes are inserted by the code already loaded
+     by JVM.
+
+** DONE 6.3 Virtual Machine Errors - 396
+   CLOSED: [2017-10-16 Mon 10:56]
+   Subclasses of ~VirtualMachineError~:
+   - ~InternalError~
+   - ~OutOfMemoryError~
+   - ~StackOverflowError~
+   - ~UnknownError~
+
+** DONE 6.4 Format of Instruction Descriptions - 397
+   CLOSED: [2017-10-16 Mon 11:04]
+   - Example instruction ~mnemonic~
+     ......
+
+   - Values of types ~long~ and ~double~ are represented by a _SINGLE entry_ on
+     the operand stack.
+
+     In JVM Spec V1, they need _TWO entries_.
+
+** TODO 6.5 Instructions - 400 - TODO re-page
+*** ~aaload~ 385
+*** ~aastore~ 386
+*** ~aconst_null~ 388
+*** ~aload~ 389
+    - Operation    Load ~reference~ from array
+
+    - Format       ~aaload~
+                   ~index~
+
+    - Forms        ~aload = 25 (0x19)~
+
+    - Operand      ... →
+
+    - Stack        ..., objectref
+
+    - Description  The /index/ is an unsigned byte that must be an index into the local
+                   variable array of the current frame ($2.6). The local variable at
+                   /index/ must contain a /reference/. The /objectref/ in the local variable
+                   at /index/ is pushed onto the operand stack.
+
+    - Notes        The /aload/ instruction cannot be used to load a value of type
+                   ~returnAddress~ from a local variable onto the operand stack. This
+                   asymmetry with the /astore/ instruction ($astore) is intentional.
+
+                   The /aload/ opcode can be used in conjunction with the /wide/
+                   instruction ($wide) to access a local variable using a two-byte
+                   unsigned index.
+
+*** ~aload_<n>~ 390
+*** ~anewarray~ 391
+*** ~areturn~ 392
+*** ~arraylength~ 393
+*** ~astore~ 394
+*** ~astore_<n>~ 395
+*** ~athrow~ 396
+*** ~baload~ 398
+*** ~bastore~ 399
+*** ~bipush~ 400
+*** ~caload~ 401
+*** ~castore~ 402
+*** ~checkcast~ 403
+*** ~d2f~ 405
+*** ~d2i~ 406
+*** ~d2l~ 407
+*** ~dadd~ 408
+*** ~daload~ 410
+*** ~dastore~ 411
+*** ~dcmp<op>~ 412
+*** ~dconst_<d>~ 414
+*** ~ddiv~ 415
+*** ~dload~ 417
+*** ~dload_<n>~ 418
+*** ~dmul~ 419
+*** ~dneg~ 421
+*** ~drem~ 422
+*** ~dreturn~ 424
+*** ~dstore~ 425
+*** ~dstore_<n>~ 426
+*** ~dsub~ 427
+*** ~dup~ 428
+*** ~dup_x1~ 429
+*** ~dup_x2~ 430
+*** ~dup2~ 431
+*** ~dup2_x1~ 432
+*** ~dup2_x2~ 433
+*** ~f2d~ 435
+*** ~f2i~ 436
+*** ~f2l~ 437
+*** ~fadd~ 438
+*** ~faload~ 440
+*** ~fastore~ 441
+*** ~fcmp<op>~ 442
+*** ~fconst_<f>~ 444
+*** ~fdiv~ 445
+*** ~fload~ 447
+*** ~fload_<n>~ 448
+*** ~fmul~ 449
+*** ~fneg~ 451
+*** ~frem~ 452
+*** ~freturn~ 454
+*** ~fstore~ 455
+*** ~fstore_<n>~ 456
+*** ~fsub~ 457
+*** ~getfield~ 458
+*** ~getstatic~ 459
+*** ~goto~ 461
+*** ~goto_w~ 462
+*** ~i2b~ 463
+*** ~i2c~ 464
+*** ~i2d~ 465
+*** ~i2f~ 466
+*** ~i2l~ 467
+*** ~i2s~ 468
+*** ~iadd~ 469
+*** ~iaload~ 470
+*** ~iand~ 471
+*** ~iastore~ 472
+*** ~iconst_<i>~ 473
+*** ~idiv~ 474
+*** ~if_acmp<cond>~ 475
+*** ~if_icmp<cond>~ 476
+*** ~if<cond>~ 478
+*** ~ifnonnull~ 480
+*** ~ifnull~ 481
+*** ~iinc~ 482
+*** ~iload~ 483
+*** ~iload_<n>~ 484
+*** ~imul~ 485
+*** ~ineg~ 486
+*** ~instanceof~ 487
+*** ~invokedynamic~ 489
+*** ~invokeinterface~ 494
+*** ~invokespecial~ 498
+*** ~invokestatic~ 502
+*** ~invokevirtual~ 505
+*** ~ior~ 512
+*** ~irem~ 513
+*** ~ireturn~ 514
+*** ~ishl~ 516
+*** ~ishr~ 517
+*** ~istore~ 518
+*** ~istore_<n>~ 519
+*** ~isub~ 520
+*** ~iushr~ 521
+*** ~ixor~ 522
+*** ~jsr~ 523
+*** ~jsr_w~ 524
+*** ~l2d~ 525
+*** ~l2f~ 526
+*** ~l2i~ 527
+*** ~ladd~ 528
+*** ~laload~ 529
+*** ~land~ 530
+*** ~lastore~ 531
+*** ~lcmp~ 532
+*** ~lconst_<l>~ 533
+*** ~ldc~ 534
+*** ~ldc_w~ 536
+*** ~ldc2_w~ 538
+*** ~ldiv~ 539
+*** ~lload~ 540
+*** ~lload_<n>~ 541
+*** ~lmul~ 542
+*** ~lneg~ 543
+*** ~lookupswitch~ 544
+*** ~lor~ 546
+*** ~lrem~ 547
+*** ~lreturn~ 548
+*** ~lshl~ 549
+*** ~lshr~ 550
+*** ~lstore~ 551
+*** ~lstore_<n>~ 552
+*** ~lsub~ 553
+*** ~lushr~ 554
+*** ~lxor~ 555
+*** ~monitorenter~ 556
+*** ~monitorexit~ 558
+*** ~multianewarray~ 560
+*** ~new~ 562
+*** ~newarray~ 564
+*** ~nop~ 566
+*** ~pop~ 567
+*** ~pop~2 568
+*** ~putfield~ 569
+*** ~putstatic~ 571
+*** ~ret~ 573
+*** ~return~ 574
+*** ~saload~ 575
+*** ~sastore~ 576
+*** ~sipush~ 577
+*** ~swap~ 578
+*** ~tableswitch~ 579
+*** ~wide~ 581
+
+* 7 Opcode Mnemonics by Opcode - 597
+* A Limited License Grant - 601

@@ -1,0 +1,546 @@
+#+TITLE: REST API
+#+SUBTITLE: Design Rulebook
+#+AUTHOR: Mark Massé
+#+YEAR: 2012
+#+PUBLISHER: Packt
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Preface - ix
+** DONE Greetings Program! - ix - =TODO= =RE-READ=
+   CLOSED: [2018-11-06 Tue 03:09]
+   - REST :: Representation State Transfer
+
+   - /REST/ is a _technical description_ of HOW the /World Wide Web/ works.
+
+   - If the Web is said to have an "OS", its _architectural_ STYLE is /REST/.
+
+   - REST Application Programming Interface (REST API) ::
+        The API of _a type of web server_ that enables a client, either
+        user-operated or automated, to access resources that model a system's
+        data and functions in a specific style.
+
+        =from Jian= This sentence in the book is NOT clear, and seems wrong even
+        in semantics (not reasonable)! =TODO= =Re-visit=
+
+   - _THIS_ book is a *REST API designer's _style guide_ and _reference_.*
+     It proposes a set of rules that you can leverage to design and develop REST
+     APIs.
+
+** DONE Conventions Used in This Book - ix
+   CLOSED: [2018-11-06 Tue 03:08]
+** DONE Using Code Examples - x
+   CLOSED: [2018-11-06 Tue 03:08]
+** DONE How to Contact Us - xi
+   CLOSED: [2018-11-06 Tue 03:09]
+** TODO Acknowledgments - xi =TODO= =RE-READ=
+*** TODO Tim Berners-Lee - xi
+*** TODO Roy Fielding - xi
+*** TODO Leonard Richardson - xii
+*** DONE O'Reilly Media, Inc. - xii
+    CLOSED: [2018-11-06 Tue 03:11]
+*** DONE Technical Reviewers - xii
+    CLOSED: [2018-11-06 Tue 03:11]
+*** DONE Colleagues - xiii
+    CLOSED: [2018-11-06 Tue 03:11]
+*** TODO The REST Community - xiii
+*** TODO Stuart Rackham - xiii
+*** TODO Personal - xiii
+
+* TODO 1. Introduction - 1
+** Hello World Wide Web - 1
+** Web Architecture - 2
+   - Upon analysis, Fielding recognized that the Web's *scalability* was _governed
+     by_ a set of key *CONSTRAINTS*. Fielding grouped into _SIX_ categories and
+     collectively referred to as the Web's architectural style:
+     1. Client-server
+     2. Uniform interface
+     3. Layered system
+     4. Cache
+     5. Stateless
+     6. Code-on-demand
+
+*** Client–Server - 3
+*** Uniform Interface - 3
+*** Layered System - 4
+*** Cache - 4
+*** Stateless - 4
+*** Code-On-Demand - 4
+
+** Web Standards - 5
+** REST - 5
+** REST APIs - 5
+** REST API Design - 6
+*** Rules - 6
+*** WRML - 7
+
+** Recap - 7
+
+* DONE 2. Identifier Design with URIs - 11
+  CLOSED: [2018-11-09 Fri 02:56]
+** DONE URIs - 11
+   CLOSED: [2018-11-08 Thu 16:07]
+   - REST APIs use /Uniform Resource Identifiers (URIs)/ to ADDRESS _resources_.
+
+   - URI Design:
+     + GOOD:
+       http://api.example.restapi.org/france/paris/louvre/leonardo-da-vinci/mona-lisa
+
+     + BAD:
+       http://api.example.restapi.org/68dd0-a9d3-11e0-9f1c-0800200c9a66
+
+   - A note about the _opacity of URIs_ in Tim Berners-Lee's "Axioms of Web
+     Architecture" list:
+     #+BEGIN_QUOTE
+     The only thing you can use an identifier for is to refer to an object. When
+     you are not dereferencing, you should not look at the contents of the URI
+     string to gain other information.
+                    -- Tim Berners-Lee http://www.w3.org/DesignIssues/Axioms.html
+     #+END_QUOTE
+
+   - =TODO= Chapter 5 discussion.
+
+   - =TODO= This Chapter
+     Introduce a set of _design rules_ for _REST API URIs_.
+
+** DONE URI Format - 11
+   CLOSED: [2018-11-08 Thu 16:38]
+   - URI syntax (RFC 3986) =TODO= =READ=
+     ~URI := scheme "://" authority "/" path [ "?" query ] [ "#" fragment ]~
+
+*** DONE Rule: Forward slash separator (/) must be used to indicate a hierarchical relationship - 12
+    CLOSED: [2018-11-08 Thu 16:13]
+    - ~/~ must be used to indicate a _hierarchical relationship_ BETWEEN _resources_.
+
+*** DONE Rule: A trailing forward slash (/) should not be included in URIs - 12
+    CLOSED: [2018-11-08 Thu 16:22]
+    - The trailing ~/~
+      + adds NO semantic value
+        and
+      + may cause confusion.
+
+    - It's always better to assign one identifier to one resource.
+
+      There is no reason to use two URIs (one without trailing ~/~ and one with
+      trailing ~/~) to identify one resource.
+
+    - A /sever/ *should NEVER* generate or communicate URIs with trailing ~/~ with
+      its /clients/.
+
+    - However, usually, /servers/ should have trailing ~/~ tolerance -- redirect
+      the trailing ~/~ URI to the resource located by the non-trailing one.
+      =TODO= Rule 301
+
+*** DONE Rule: Hyphens (-) should be used to improve the readability of URIs - 12
+    CLOSED: [2018-11-08 Thu 16:24]
+    To improve readability,
+    anywhere you would use a space or hyphen in English,
+    you should use a hyphen in a /URI/.
+
+*** DONE Rule: Underscores (_) should not be used in URIs - 12
+    CLOSED: [2018-11-08 Thu 16:24]
+    It can be partially obscured or completely hidden by _underlining_, which is
+    often used by the browsers or editors to mark clickable links, including URIs.
+
+    Either _partially obscured_ or _completely hidden_ depends on SPECIFIC *font settings*.
+
+*** DONE Rule: Lowercase letters should be preferred in URI paths - 13
+    CLOSED: [2018-11-08 Thu 16:29]
+    When convenient, lowercase letters are preferred in /URI/ paths
+    _since capital letters can sometimes cause problems._
+
+    - RFC 3986 defines URIs as *case-sensitive*
+      _EXCEPT FOR_ the /scheme/ and /host components/.
+
+    - For example:
+      1. http://api.example.restapi.org/my-folder/my-doc
+      2. HTTP://API.EXAMPLE.RESTAPI.ORG/my-folder/my-doc
+      3. http://api.example.restapi.org/My-Folder/my-doc
+
+      1 is prefered!
+
+      1 and 2 are considered to be identical,
+      according to _the URI format specification (RFC 3986)_.
+
+      3 is *DIFFERENT* from 1 and 2, which may cause unnecessary confusion.
+
+*** DONE Rule: File extensions should not be included in URIs - 13
+    CLOSED: [2018-11-08 Thu 16:36]
+    Rely on the /media type/, rather then a extension after a period (~.~), as
+    communicated through the ~Content-Type~ header, to determine how to process
+    the body's content.
+
+    - =TODO= "Media Types" on page 39. =TODO=
+
+    - NOTES: =TODO= =TODO=
+      *To enable _simple links_ and _easy debugging_,*
+      a REST API may _SUPPORT_ *media type selection* VIA a *query parameter*
+      as discussed in the section
+      _“Rule: Media type selection using a query parameter may be suppor- ted”
+      on page 44._
+
+** DONE URI Authority Design - 14
+   CLOSED: [2018-11-08 Thu 16:46]
+   This section covers the _naming conventions_ that should be used for the
+   /authority/ portion of a REST API.
+
+*** DONE Rule: Consistent subdomain names should be used for your APIs - 14
+    CLOSED: [2018-11-08 Thu 16:43]
+    - The /top-level domain/ and /first subdomain/ names (e.g., ~soccer.restapi.org~)
+      of an API should identify its *service owner*. =TODO= =???= =???=
+
+    - The /full domain name of an API/ should add a /subdomain named ~api~./
+      For example: http://api.soccer.restapi.org
+
+*** DONE Rule: Consistent subdomain names should be used for your client developer portal - 14
+    CLOSED: [2018-11-08 Thu 16:46]
+    Many /REST APIs/ have an _associated website_, known as a /developer portal/,
+    to help onboard new clients with documentation, forums, and self-service
+    provisioning of secure API access keys.
+
+      If an API provides a /developer portal/, by convention it should have a
+    _subdomain labeled developer_. For example: http://developer.soccer.restapi.org
+
+** DONE Resource Modeling - 14
+   CLOSED: [2018-11-08 Thu 18:37]
+   *Each segment separated by a ~/~ should be a resource.*
+
+** TODO Resource Archetypes - 15
+   - When modeling an /API's resources/,
+     we can start with the some _basic_ /resource archetypes/.
+
+   - A REST API is *composed of 4* DISTINCT /resources archetypes/:
+     + /document/
+     + /collection/
+     + /store/
+     + /controller/
+
+   - *CAUTION*
+     _Chapter 5_
+
+*** TODO Document - 15
+*** TODO Collection - 15
+*** TODO Store - 16
+*** TODO Controller - 16
+
+** DONE URI Path Design - 16
+   CLOSED: [2018-11-09 Fri 02:47]
+*** DONE Rule: A singular noun should be used for document names - 17
+    CLOSED: [2018-11-09 Fri 02:36]
+    - Example (a single player document):
+      http://api.soccer.restapi.org/leagues/seattle/teams/trebuchet/players/claudio
+
+*** DONE Rule: A plural noun should be used for collection names - 17
+    CLOSED: [2018-11-09 Fri 02:38]
+    - Example:
+      http://api.soccer.restapi.org/leagues/seattle/teams/trebuchet/players
+
+*** DONE Rule: A plural noun should be used for store names - 17
+    CLOSED: [2018-11-09 Fri 02:38]
+    - Example:
+      http://api.music.restapi.org/artists/mikemassedotcom/playlists
+
+*** DONE Rule: A verb or verb phrase should be used for controller names - 17
+    CLOSED: [2018-11-09 Fri 02:39]
+    - Examples:
+      http://api.college.restapi.org/students/morgan/register
+      http://api.example.restapi.org/lists/4324/dedupe
+      http://api.ognom.restapi.org/dbs/reindex
+      http://api.build.restapi.org/qa/nightly/runTestSuite
+
+*** TODO Rule: Variable path segments may be substituted with identity-based values - 18 =RE-READ=
+*** DONE Rule: CRUD function names should not be used in URIs - 18
+    CLOSED: [2018-11-09 Fri 02:45]
+    - /URIs/ *should NOT be* used to indicate that a /CRUD function/ is performed.
+
+      /URIs/ *should be* used to uniquely identify resources, and they should be
+      named as described in the rules above.
+
+    - =TODO=
+      As discussed in "Request Methods" on page 23, =TODO=
+      /HTTP request methods/ should be used to indicate which /CRUD function/ is
+      performed.
+
+      + This API interaction design is preferred:
+        ~DELETE /users/1234~
+
+      + Anti-patterns - What NOT to do:
+        ~GET /deleteUser?id=1234~
+        ~GET /deleteUser/1234~
+        ~DELETE /deleteUser/1234~
+        ~POST /users/1234/delete~
+
+** TODO URI Query Design - 19
+   - ??? =TODO=
+   - ??? =TODO=
+   - ??? =TODO=
+
+*** DONE Rule: The query component of a URI may be used to filter collections or stores - 19
+    CLOSED: [2018-11-09 Fri 02:54]
+    - A /URI's query component/ is a natural fit for supplying search criteria to
+      a collection or store.
+
+    - Example:
+      + ~GET /users~
+      + A /query/ as _the filter criteria_: ~GET /users?role=admin~
+
+*** TODO Rule: The query component of a URI should be used to paginate collection or store results - 20
+    =TODO= =NOTES=
+    =TODO= Chapter 4
+
+** DONE Recap - 20 - =IMPORTANT=
+   CLOSED: [2018-11-09 Fri 02:47]
+   =IMPORTANT=
+   Table 2-1. vocabulary review
+   PAGE 20 ~ 21
+
+* TODO 3. Interaction Design with HTTP - 23
+** DONE HTTP/1.1 - 23
+   CLOSED: [2018-11-09 Fri 03:00]
+   - /REST APIs/ embrace *ALL* aspects of the /HyperText Transfer Protocol/,
+     version 1.1 (HTTP/1.1) including its
+     + request methods
+     + response codes
+     + message headers
+
+   - This book _DIVIDES_ its coverage of HTTP between *two* chapters,
+     + with this chapter discussing /request methods/ and /response status codes/.
+
+     + Incorporating /metadata/ in a /REST API design/, with /HTTP's request/ and
+       /response headers/, is the subject of Chapter 4.
+
+   - Tips:
+     A few examples in this chapter use /curl/.
+     It has some advantages over the browser:
+     + /curl/ allows _easy access_ to HTTP's full feature set
+       and
+
+     + /curl/ is _scriptable_, meaning that programmers can write simple _shell
+       scripts_ or _batch files_ containing /curl/ commands to *test* or *use* a
+       /REST API/.
+
+** TODO Request Methods - 23
+   Clients specify the desired /interaction method/ in the ~Request-Line~ part =TODO=
+   of an HTTP request message. _RFC 2616_ defines /the ~Request-Line~ syntax/ as
+   shown below: *Request-Line \equiv{} Method SP Requiest-URI SP HTTP-Version CRLF*
+
+   - Each /HTTP method/ has specific, well-defined semantics within the context of a /REST
+     API's resource model/.
+     + ~GET~:
+       *retrieve* a /representation/ of a _resource's state_.
+
+     + ~HEAD~:
+       *retrieve* the /metadata/ associated with the _resource's state_.
+
+     + ~PUT~:
+       *add* a NEW /resource/ to a store or *update* a /resource/.
+
+     + ~DELETE~:
+       *remove* a /resource/ _from its parent_.
+
+     + ~POST~:
+       should be used to
+       * *create* a NEW /resource/ _within a collection_
+         OR
+       * *execute* /controllers/.
+
+*** TODO Rule: ~GET~ and ~POST~ must not be used to tunnel other request methods - 24
+*** TODO Rule: ~GET~ must be used to retrieve a representation of a resource - 24
+*** TODO Rule: ~HEAD~ should be used to retrieve response headers - 25
+*** TODO Rule: ~PUT~ must be used to both insert and update a stored resource - 25
+*** TODO Rule: ~PUT~ must be used to update mutable resources - 26
+*** TODO Rule: ~POST~ must be used to create a new resource in a collection - 26
+*** TODO Rule: ~POST~ must be used to execute controllers - 26
+*** TODO Rule: ~DELETE~ must be used to remove a resource from its parent - 27
+*** TODO Rule: ~OPTIONS~ should be used to retrieve metadata that describes a resource’s available interactions - 27
+
+** TODO Response Status Codes - 28
+   - 
+   - Table 3-1. Reponse status code categories
+     | Category           | Description                                           |
+     |--------------------+-------------------------------------------------------|
+     | 1xx: Informational | Communicates transfer protocol-level information.     |
+     |--------------------+-------------------------------------------------------|
+     | 2xx: Success       | Indicates that the client’s request was accepte       |
+     |                    | successfully.                                         |
+     |--------------------+-------------------------------------------------------|
+     | 3xx: Redirection   | Indicates that the client must take some additional   |
+     |                    | action in order to complete their request.            |
+     |--------------------+-------------------------------------------------------|
+     | 4xx: Client Error  | This category of error status codes points the finger |
+     |                    | at clients.                                           |
+     |--------------------+-------------------------------------------------------|
+     | 5xx: Server Error  | The server takes responsibility for these error       |
+     |                    | status codes.                                         |
+
+*** DONE Rule: 200 ("OK") should be used to indicate nonspecific success - 28
+    CLOSED: [2018-11"09"Fri 22:12]
+    In most cases, _"00" is the code the client hopes to see.
+
+    - _200_ indicate" t"at the REST API _SUCCESSFULLY carried out whatever action
+      the client req"es"ed_,
+
+    - UNLIKE _204_, "20"_ response SHOULD include a /response body/.
+
+*** DONE Rule: 200 ("OK") must not be used to communicate errors in the response body - 28
+    CLOSED: [2018-11-09 Fri 22:13]
+    A REST API *MUST NOT be compromised* in an effort to accommodate LESS
+    SOPHISTICATED HTTP clients.
+
+*** TODO Rule: 201 ("Created") must be used to indicate successful resource creation - 28
+*** TODO Rule: 202 ("Accepted") must be used to indicate successful start of an asynchronous action - 29
+*** TODO Rule: 204 ("No Content") should be used when the response body is intentionally empty - 29
+*** TODO Rule: 301 ("Moved Permanently") should be used to relocate resources - 29
+*** TODO Rule: 302 ("Found") should not be used - 29
+    - =NOTE= =TODO= More details
+
+    - Use _303_ or _307_ introduced in the HTTP 1.1, rather than _302_.
+
+*** DONE Rule: 303 ("See Other") should be used to refer the client to a different URI - 30
+    CLOSED: [2018-11-09 Fri 22:20]
+    The _301_ status code indicates that the /REST API's resource model/ has been
+    _significantly redesigned_ and a _new permanent URI has been assigned to the
+    client’s requested resource_.
+
+    The REST API should specify _the *new* URI_ in the response's ~Location~ /header/.
+
+*** DONE Rule: 304 ("Not Modified") should be used to preserve bandwidth - 30
+    CLOSED: [2018-11-09 Fri 22:22]
+    - =TODO=
+
+    - TODO: Chapter 4
+
+*** TODO Rule: 307 ("Temporary Redirect") should be used to tell clients to re-submit the request to another URI - 30
+*** DONE Rule: 400 ("Bad Request") may be used to indicate nonspecific failure - 30
+    CLOSED: [2018-11-09 Fri 22:26]
+    _400_ is the _GENERIC client-side error status_,
+    sed when no other _4xx_ error code is appropriate.
+    =from Jian= A fall back choice!
+
+    - Tips: =TODO=
+      For errors in the _4xx_ category, the /response body/ may contain a
+      document describing the client's error (UNLESS the /request method/ was
+      ~HEAD~ ).
+
+      =TODO=
+      See “Error Representation” on page 68 for error response body design.
+
+*** DONE Rule: 401 ("Unauthorized") must be used when there is a problem with the client’s credentials - 31
+    CLOSED: [2018-11-09 Fri 22:28]
+    A _401_ error response indicates that
+    the client tried to operate on a protected resource _WITHOUT providing the PROPER authorization._
+    It may have provided
+    + the wrong credentials
+      or
+    + none at all. 
+
+*** DONE Rule: 403 ("Forbidden") should be used to forbid access regardless of authorization state - 31
+    CLOSED: [2018-11-09 Fri 22:30]
+    REST APIs use _403_ to enforce application-level permissions.
+    The client does everything right, but for some reason, it can't access some
+    resources. For example, out of a specific permitted scope.
+
+*** DONE Rule: 404 ("Not Found") must be used when a client's URI cannot be mapped to a resource - 31
+    CLOSED: [2018-11-09 Fri 22:30]
+*** TODO Rule: 405 ("Method Not Allowed") must be used when the HTTP method is not supported - 31
+*** TODO Rule: 406 ("Not Acceptable") must be used when the requested media type cannot be served - 32
+*** TODO Rule: 409 ("Conflict") should be used to indicate a violation of resource state - 32
+*** TODO Rule: 412 ("Precondition Failed") should be used to support conditional operations - 32
+*** TODO Rule: 415 ("Unsupported Media Type") must be used when the media type of a request’s payload cannot be processed - 32
+*** DONE Rule: 500 ("Internal Server Error") should be used to indicate API mal-function - 32
+    CLOSED: [2018-11-09 Fri 22:32]
+    _500_ is the *GENERIC* REST API _error response_.
+
+    - Most web frameworks automatically respond with this response status code
+      whenever they execute some request handler code that raises an exception.
+
+    - A 500 error is *never* the client's fault
+      and therefore
+      it is reasonable for the client to retry the _exact same request_ that
+      triggered this response, and _HOPE_ TO GET A DIFFERENT RESPONSE.
+
+*** TODO Recap - 33
+
+* TODO 4. Metadata Design - 35
+** TODO HTTP Headers - 35
+*** Rule: ~Content-Type~ must be used - 35
+*** Rule: ~Content-Length~ should be used - 35
+*** Rule: ~Last-Modified~ should be used in responses - 35
+*** Rule: ETag should be used in responses - 36
+*** Rule: Stores must support conditional PUT requests - 36
+*** Rule: Location must be used to specify the URI of a newly created resource - 37
+*** Rule: Cache-Control, Expires, and Date response headers should be used to encourage caching - 37
+*** Rule: Cache-Control, Expires, and Pragma response headers may be used to discourage caching - 38
+*** Rule: Caching should be encouraged - 38
+*** Rule: Expiration caching headers should be used with 200 (“OK”) responses - 38
+*** Rule: Expiration caching headers may optionally be used with 3xx and 4xx responses - 38
+*** Rule: Custom HTTP headers must not be used to change the behavior of HTTP methods - 38
+
+** TODO Media Types - 39
+*** Media Type Syntax - 39
+*** Registered Media Types - 39
+*** Vendor-Specific Media Types - 40
+
+** TODO Media Type Design - 41
+*** Rule: Application-specific media types should be used - 41
+*** Rule: Media type negotiation should be supported when multiple rep resentations are available - 43
+*** Rule: Media type selection using a query parameter may be supported - 44
+
+** TODO Recap - 44
+
+* TODO 5. Representation Design - 47
+** Message Body Format - 47
+*** Rule: JSON should be supported for resource representation - 47
+*** Rule: JSON must be well-formed - 48
+*** Rule: XML and other formats may optionally be used for resource representation - 48
+*** Rule: Additional envelopes must not be created - 49
+
+** Hypermedia Representation - 49
+*** Rule: A consistent form should be used to represent links - 49
+*** Rule: A consistent form should be used to represent link relations - 52
+*** Rule: A consistent form should be used to advertise links - 53
+*** Rule: A self link should be included in response message body representations - 54
+*** Rule: Minimize the number of advertised “entry point” API URIs - 54
+*** Rule: Links should be used to advertise a resource’s available actions in a state-sensitive manner - 55
+
+** Media Type Representation - 56
+*** Rule: A consistent form should be used to represent media type formats - 56
+*** Rule: A consistent form should be used to represent media type schemas - 59
+*** Error Representation - 68
+*** Rule: A consistent form should be used to represent errors - 68
+*** Rule: A consistent form should be used to represent error responses - 69
+*** Rule: Consistent error types should be used for common error conditions - 70
+
+** Recap - 70
+
+* TODO 6. Client Concerns - 71
+** Introduction - 71
+** Versioning - 71
+*** Rule: New URIs should be used to introduce new concepts - 71
+*** Rule: Schemas should be used to manage representational form versions - 72
+*** Rule: Entity tags should be used to manage representational state versions - 72
+
+** Security - 72
+*** Rule: OAuth may be used to protect resources - 72
+*** Rule: API management solutions may be used to protect resources - 73
+
+** Response Representation Composition - 73
+*** Rule: The query component of a URI should be used to support partial responses - 74
+*** Rule: The query component of a URI should be used to embed linked resources - 76
+*** Processing Hypermedia - 78
+*** JavaScript Clients - 79
+*** Rule: JSONP should be supported to provide multi-origin read access from JavaScript - 80
+*** Rule: CORS should be supported to provide multi-origin read/write ac cess from JavaScript - 82
+*** Recap - 83
+
+* TODO 7. Final Thoughts - 85
+** State of the Art - 85
+** Uniform Implementation - 86
+*** Principle: REST API designs differ more than necessary - 86
+*** Principle: A REST API should be designed, not coded - 87
+*** Principle: Programmers and their organizations benefit from consistency - 88
+*** Principle: A REST API should be created using a GUI tool - 89 
+
+** Recap - 91
+
+* Appendix: My First REST API - 93

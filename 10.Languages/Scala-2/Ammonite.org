@@ -1,0 +1,386 @@
+#+TITLE: Ammonite
+#+LINK: https://ammonite.io
+#+VERSION: 2.4.0
+#+AUTHOR: Haoyi Li
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Ammonite-REPL
+  - The Ammonite-REPL is an improved Scala REPL, re-implemented from first
+    principles. It is much more featureful.
+
+  - It can be combined with /Ammonite-Ops/ to replace Bash as your systems shell.
+
+** TODO Installation on Linux
+** TODO Installation on macOS
+** TODO Installation on Windows
+** Running Ammonite REPL
+  - If you want some initialization code available to the REPL, you can add it to
+    your =~/.ammonite/predef.sc=.
+
+  - You can also try out _Ammonite 1.1.2_ in an EXISTING _SBT project_.
+    To do so, add the following to your =build.sbt=
+    #+BEGIN_SRC scala
+      libraryDependencies += {
+        val version = scalaBinaryVersion.value match {
+          case "2.10" => "1.0.3"
+          case _ ⇒ "1.1.2"
+        }
+        "com.lihaoyi" % "ammonite" % version % "test" cross CrossVersion.full
+      }
+
+      sourceGenerators in Test += Def.task {
+        val file = (sourceManaged in Test).value / "amm.scala"
+        IO.write(file, """object amm extends App { ammonite.Main.main(args) }""")
+        Seq(file)
+      }.taskValue
+
+      // Optional, required for the `source` command to work
+      (fullClasspath in Test) ++= {
+        (updateClassifiers in Test).value
+          .configurations
+          .find(_.configuration == Test.name)
+          .get
+          .modules
+          .flatMap(_.artifacts)
+          .collect{case (a, f) if a.classifier == Some("sources") => f}
+      }
+    #+END_SRC
+    * After that, simply hit
+      ~sbt projectName/test:run~
+      or if there are other ~main~ methods in the ~Test~ scope
+      ~sbt projectName/test:run-main amm~
+      To activate the Ammonite REPL.
+
+  - You can also configure Ammonite in the global configuration file of SBT:
+    =~/.sbt/0.13/global.sbt=
+
+  - *Note*:
+   /Ammonite-REPL/ does _NOT_ support Windows,
+   even though /Ammonite-Ops/ does.
+
+   See #119 if you are interested in details or want to try your hand at making
+   it work.
+
+** Features
+   Ammonite-REPL supports many more features than the default REPL, including: 
+
+*** Pretty-printed output
+    Ammonite-REPL uses ~PPrint~ to display its output by default.
+
+**** Configurable Truncation
+     - ~show~: Show the value without any truncation.
+       For example, ~show(Seq.fill(20)(100))~.
+
+     - Change height:
+       ~repl.pprinter() = repl.pprinter().copy(defaultHeight = 5)~
+       All the evaluation output after this line will be truncated to this height.
+
+     - Ammonite-REPL intelligently truncates your output when it's beyond a certain
+       size.
+       + You can request for the full output to be printed on-demand, print a certain
+         number of lines, or even change the implicit ~pprintConfig~ so subsequent
+         lines all use your new configuration. TODO TODO TODO
+
+*** Editing
+**** Syntax Highlighting
+**** Multi-line editing
+**** Desktop key-bindings
+**** Console key-bindings
+**** History Search
+**** DONE Block Input
+     CLOSED: [2020-01-11 Sat 17:09]
+     - Definition inside ~{ ... }~ will be unwrapped and evaluated as top-level
+       expressoins.
+         You can use this to e.g. declare mutully recursive functions or classes &
+       companion-objects WITHOUT being forced to squeeze everyting onto a single
+       line or create an ~object~ only for importing items inside it.
+       #+begin_src scala
+         // Ammonite:
+
+         // INPUT:
+         // {
+         //   val x = 1
+         //   val y = 2
+         //   x + y
+         // }
+
+         // OUTPUT:
+         // x: Int = 1
+         // y: Int = 2
+         // res0_2: Int = 3
+       #+end_src
+
+     - Use ~{{ ... }}~ if you don't want ammonite's ~{ ... }~ behavior.
+       In ammonite ~{{ ... }}~ is like the ~{ ... }~ in scala souce code.
+       #+begin_src scala
+         // Ammonite:
+
+         // INPUT:
+         // {{
+         //   val x = 1
+         //   val y = 2
+         //   x + y
+         // }}
+
+         // OUTPUT:
+         // res0: Int = 3
+       #+end_src
+
+**** DONE Undo & Redo
+     CLOSED: [2020-01-11 Sat 17:09]
+     - Undo: ~Ctrl~ + ~-~
+       + This combination offten have conflication with the _zoom out_
+         functionality of a terminal.
+
+       + GNU Readline use ~Ctrl~ + ~_~, this works for Ammonite.
+
+
+     - Redo: ~Alt/Esc~ + ~-~
+
+*** TODO Magic Imports
+     Ammonite provides a set of _magic imports_ that let you load additional code
+     into a REPL session:
+       these are imports which start with a ~$~, and are *top-level* inside the
+     REPL command or your /Scala Scripts/.
+
+**** DONE import ~$file~
+     CLOSED: [2018-08-01 Wed 17:46]
+     Write a Scala Script =MyScript.sc=.
+     #+BEGIN_SRC scala
+       // MyScript.sc
+       val elite = 31337
+     #+END_SRC
+
+     - Import the =MyScript.sc=:
+       #+begin_src scala
+         // @
+         import $file.MyScript
+
+         // Use it:
+         MyScript.elite
+         //// res1: Int = 31337
+       #+end_src
+       =From Jian=
+       Here =@= is the prompt of Ammonite
+
+     - If the Scala Script is in a _subfolder_ =myfolder=, you can
+       ~@ import $file.myfolder.MyScript~
+
+     - If the script is in an _OUTER folder_,
+       ~@ import $file.^.MyScript~
+
+     - If we want to import the contents of the script in one go: 
+       ~import $file.MyScript, MyScript._~
+
+     - *Note*
+       you can also perform /file imports/ from your /predef file/, which are
+       resolved relative to that file's path =???=.
+         This is useful if your predef is large and you want to break it up into
+       multiple files.
+
+***** DONE Imported Scripts are Re-used - *Re-Read*
+      CLOSED: [2018-08-01 Wed 17:36]
+      - No matter how many times you load a script file, it will only be compiled
+        once, and its top-level definitions or statements will only be evaluated
+        once.
+
+        If you want to run parts of it multiple times, define a function in it,
+        rather than load the file multiple times.
+
+      - If you want to reload the script file, you need to use *Ammonite's Save/Load
+        Session* functionality to
+        + ~sess.save()~ the session BEFORE importing the script
+          AND
+        + ~sess.load()~ to reset the script BEFORE re-importing the script you need.
+
+***** DONE Cannot directly import from inside a Script
+      CLOSED: [2020-01-12 Sun 01:45]
+      - ~@ import $file.MyScript._~ is *ILLEGAL*!!!
+        You must do ~@ import $file.MyScript, MyScript._~
+
+***** DONE Renamed-scripts and multiple-scripts
+      CLOSED: [2020-01-12 Sun 01:45]
+      - As in normal Scala Source code, use the pattern of
+        ~@ import $file.{MyScript, MyOtherScript}~
+
+      - You can't use ~import $file._~ to import multiple-scripts.
+
+**** DONE import ~$exec~ - TODO
+     CLOSED: [2020-01-12 Sun 01:56]
+     ~import $exec~ is like copy the code inside the filename follows ~$exec~, paste
+     it to current environment (the Ammonite-REPL) and execute.
+
+     - For example,
+       when =~/.ammonite/predef.sc= file is too big, and you want to split it to
+       multiple files. Suppose the one you split out is =~/.ammonite/helper.sc=.
+       You can use ~import $exec.helper~ inside =predef.sc=, its like copy all
+       the definitions from =helper.sc= and paste it into =predef.sc= -- the
+       =predef.sc= before splition comes back.
+         You can also do this in REPL, and it's like copy all things in =helper.sc=
+       into current REPL.
+       =from Jian= I rephrase this paragraph, and I'm not sure if my
+       understanding is right. DO _EXPERIMENT_ later!!! TODO TODO TODO TODO
+
+**** TODO import ~$ivy~
+
+*** TODO Builtins
+**** TODO Repl API
+**** TODO Utilities
+***** source
+***** time
+***** grep
+***** browse
+***** desugar
+
+*** Save/Load Session
+*** Superior Autocomplete
+*** Interrupting run-away execution with Ctrl-C
+*** Compiler-crash Robustness
+*** Other Fixes
+
+** Configuration
+*** Refs
+*** Compiler Flags
+*** JVM Flags
+
+** Embedding
+*** Instantiating Ammonite
+*** Debugging
+*** Remote REPL
+
+* TODO Scala Scripts
+** TODO Script Files
+*** TODO Script Imports
+    Third party dependencies here means /Ivy Depencencies/.
+
+**** Other Scripts
+     ~import $file~
+     #+begin_src scala
+       // Basic.sc
+       val basicValue = 31337
+
+       // FileImport.sc
+       import $file.Basic
+       val fileImportVal = Basic.basicValue + 1
+     #+end_src
+
+     - Use ~^~ to import things from outside the current script's enclosing folder.
+       e.g. ~import $file.^.^.foo~ will import the script =../../foo.sc=.
+
+     - ~$file~ imports inside Scala Scripts behave the _SAME as_ ~$file~ imports
+       within the Ammonite-REPL, and have the same characteristics: 
+       + Imported Scripts are Re-used
+       + Cannot directly import from inside a Script
+       + Renamed-scripts and multiple-scripts 
+
+**** Ivy Dependencies
+     - Example:
+       #+begin_src scala
+         import $ivy.`com.lihaoyi::scalatags:0.7.0`, scalatags.Text.all._
+
+         val rendered = div("Moo").render
+       #+end_src
+
+     - TODO: ???
+       If you need more detailed control over what you are importing, e.g. with
+       attributes, classifiers or exclusions, you can fall back to using the
+       ~interp.load.ivy(deps: coursier.Dependency*)~ function.
+       #+begin_src scala
+         import os._
+
+         interp.load.module($printedScriptPath/"loadIvyAdvanced.sc")
+
+         serializer
+       #+end_src
+       TODO TODO TODO ??? ??? ???
+       Note that to use this function, your script needs to be a /multi-stage
+       script/ as listed below TODO, and the ~interp.load.ivy~ call needs to be
+       in an earlier block
+
+*** TODO Multi-stage Scripts
+*** TODO Script Arguments
+*** TODO Ammonite Arguments in Scripts
+*** TODO Multiple Main Methods
+*** TODO Script Usage Docs
+*** TODO Bundled Libraries
+*** TODO Script Builtins
+*** TODO Script Predef
+
+** TODO Running Scripts
+*** From Bash
+    - You can run a Scala Script from the command line: ~amm MyScript.sc~
+
+    - You can use the shebang line ~#!/usr/bin/env amm~ if you want to set your
+      script executable.
+
+    - Set ~JAVA_OPTS~ for a script to be invoked:
+      ~bash$ JAVA_OPTS='-xMX1024m' amm path/to/script.sc~
+
+*** Watch and Reload
+*** Script Debug REPL
+*** From the REPL
+*** Execution Model
+*** SBT Integration
+
+* TODO Ammonite-Ops
+** Paths
+*** RelPaths
+*** Path Operations
+*** Constructing Paths
+
+** Operations
+*** Operator Reference
+*** Extensions
+**** Traversable
+**** Pipeable
+**** Callable
+
+*** Chaining
+*** Reading Resources
+*** Spawning Subprocesses
+**** Environment Variables
+**** Invoking Files
+**** Current Working Directory
+
+* TODO Ammonite-Shell
+** Shell Basics
+*** Working Directory
+*** Listing Files
+*** Filesystem Operations
+*** Piping
+*** Subprocesses
+
+** Scripting
+*** Scala Scripting
+*** Typed Values
+*** Scala/Java APIs
+*** Writing/Loading Scripts
+
+** Design Decisions & Tradeoffs
+*** Scala as the Language
+*** Running on the JVM
+*** Goals of Ammonite-Shell
+
+* TODO Ammonite Cookbook
+** HTTP Requests
+** Scraping HTML
+** GUI Applications
+** Office Automation
+** Image Processing
+** Machine Learning
+** Play Framework Server
+** SQL Database
+
+* TODO Reference
+** Community
+** Older Scala Versions
+** Talks
+** In the Wild
+** Scaladoc
+** Changelog
+*** 2.4.0
+*** Other versions
+
+** Unstable Versions
+*** Unstable Changelog

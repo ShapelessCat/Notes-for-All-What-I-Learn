@@ -1,0 +1,1349 @@
+#+TITLE: SQL in 10 Minutes
+#+VERSION: 45h
+#+AUTHOR: Ben Forta
+#+YEAR: 2012
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* TODO Introduction
+** DONE Who Is the Teach Yourself SQL Book For?
+   CLOSED: [2017-08-31 Thu 15:36]
+** DONE DBMSs Covered in This Book
+   CLOSED: [2017-08-31 Thu 15:33]
+   DBMSs that explicitly covered:
+   - Apache Open Office Base
+   - IBM DB2
+   - Microsoft Access
+   - Microsoft SQL Server (including Microsoft SQL Server Express)
+   - MariaDB
+   - MySQL
+   - Oracle (including Oracle Express)
+   - PostgreSQL
+
+** DONE Conventions Used in This Book
+   CLOSED: [2017-08-31 Thu 15:36]
+   AS REFERENCE
+
+* TODO Lesson 1. Understanding SQL
+** TODO Database Basics
+   A good place to start our study is with a list and explanation of the most
+   important database terms.
+
+*** Databases
+    Distinguish /database/ and /database management system (DBMS)/.
+
+*** Tables
+    - table :: structured files that can store data of a specific type.
+
+    - Entries in /table/ are homogeneous.
+
+*** Columns and Datatypes
+
+*** Rows
+
+*** Primary Keys
+
+** TODO What Is SQL?
+** TODO Try It Yourself
+** TODO Summary
+
+* DONE Lesson 2. Retrieving Data
+  CLOSED: [2018-10-15 Mon 12:49]
+** DONE 2.1 The ~SELECT~ Statement
+   CLOSED: [2018-10-15 Mon 10:51]
+   - *TIPs*
+     Never name a column using a keyword.
+
+     See Appendix E SQL Reserved Words for more info
+
+   - You need provide two pieces of info to ~SELECT~
+     1. WHAT to select
+
+     2. WHERE to select
+
+** DONE 2.2 Retrieving Individual Columns
+   CLOSED: [2018-10-15 Mon 10:51]
+   #+BEGIN_SRC sql
+     SELECT [columnName] FROM [tableName]
+   #+END_SRC
+
+** DONE 2.3 Retrieving Multiple Columns
+   CLOSED: [2018-10-15 Mon 10:51]
+   #+BEGIN_SRC sql
+     SELECT [columnNames ...] FROM [tableName]
+   #+END_SRC
+
+   - How to format the output depends on the specific DBSM.
+
+** DONE 2.4 Retrieving All Columns
+   CLOSED: [2018-10-15 Mon 10:51]
+   #+BEGIN_SRC sql
+     SELECT * FROM [tableName]
+   #+END_SRC
+
+   - Avoid using wildcard if you can -- for performance and for concise.
+
+** DONE 2.5 Retrieving Distinct Rows
+   CLOSED: [2018-10-15 Mon 12:36]
+   #+BEGIN_SRC sql
+     SELECT DISTINCT [columnName]
+     FROM [tableName]
+   #+END_SRC
+
+** DONE 2.6 Limiting Results
+   CLOSED: [2018-10-15 Mon 12:44]
+   Take AT MOST n rows
+   Can include /offset/
+
+   - SQL Server
+     #+BEGIN_SRC sql
+       SELECT TOP 5 [columnName]
+       FROM [tableName];
+     #+END_SRC
+
+   - DB2
+     #+BEGIN_SRC sql
+       SELECT [columnName]
+       FROM [tableName]
+       FETCH FIRST 5 ROWS ONLY;
+     #+END_SRC
+
+   - Oracle
+     #+BEGIN_SRC sql
+       SELECT [columnName]
+       FROM [tableName]
+       WHERE ROWNUM <= 5;
+     #+END_SRC
+
+   - MySQL, MariaDB, PostgreSQL, or SQLite
+     #+BEGIN_SRC sql
+       SELECT [columnName]
+       FROM [tableName]
+       LIMIT 5;
+     #+END_SRC
+
+     + Start from the _offset_, and take the _limit_ number of rows
+       #+BEGIN_SRC sql
+         SELECT [columnName]
+         FROM [tableName]
+         LIMIT 5 OFFSET 5;
+       #+END_SRC
+
+       * *Use base-0 index!*
+         There is a column of number on the left, they are one major key, NOT
+         the /index/
+
+       * MySQL and MariaDB have a simplified version of ~LIMIT 4 OFFSET 3~:
+         ~LIMIT 4, 3~. =from Jian= This simplified version is NOT clear.
+
+** DONE 2.7 Using Comments
+   CLOSED: [2018-10-15 Mon 12:49]
+   - Line comment:
+     + ~--~ (prefered)
+
+     + ~#~  (not support by majority of DBMS)
+
+   - Block comment:
+     ~/* */~
+
+** DONE 2.8 Summary
+   CLOSED: [2018-10-15 Mon 12:49]
+
+* DONE Lesson 3. Sorting Retrieved Data
+  CLOSED: [2018-10-15 Mon 13:30]
+  ~ORDER BY~
+
+** DONE 3.1 Sorting Data
+   CLOSED: [2018-10-15 Mon 12:56]
+   - clause :: =TODO=
+
+   - Sort (example):
+     #+BEGIN_SRC sql
+       SELECT prod_name
+       FROM Products
+       ORDER BY prod_name;
+     #+END_SRC
+     + You can also use the _non-selected column_ as the reference for sorting.
+
+     + ~ORDER BY~ must be the *last clause*, or you'll trigger an error.
+
+** DONE 3.2 Sorting by Multiple Columns
+   CLOSED: [2018-10-15 Mon 12:58]
+   #+BEGIN_SRC sql
+     SELECT prod_id, prod_price, prod_name
+     FROM Products
+     ORDER BY prod_price, prod_name;
+   #+END_SRC
+   When multiple values in column _prod\under{}price_ are same, you _prod\under{}name_.
+
+** DONE 3.3 Sorting by Column Position
+   CLOSED: [2018-10-15 Mon 13:23]
+   #+BEGIN_SRC sql
+     SELECT prod_id, prod_price, prod_name
+     FROM Products
+     ORDER BY 2, 3;
+   #+END_SRC
+
+   - The numbers follow ~ORDER BY~ correspond to the selected columns:
+     =prod_id=, =prod_price=, =prod_name=
+          1          2             3
+
+   - You can use _numbers_ and _names_ together -- _name_ is used to refer the
+     _non-selected columns_.
+
+   - Don't use _Numbers_ when you find they make any confusion.
+     Use _numbers_ may also affect the _refactoring_.
+
+** DONE 3.4 Specifying Sort Direction
+   CLOSED: [2018-10-15 Mon 13:24]
+   - Descending
+     #+BEGIN_SRC sql
+       SELECT prod_id, prod_price, prod_name
+       FROM Products
+       ORDER BY prod_price DESC;
+     #+END_SRC
+     + ~DESC~ is the shorthand of ~DESCENDING~
+     
+   - *Descending* for some column(s), *ascending* for other column(s):
+     #+BEGIN_SRC sql
+       SELECT prod_id, prod_price, prod_name
+       FROM Products
+       ORDER BY prod_price DESC, prod_name;
+     #+END_SRC
+
+   - *TIPS*:
+     DBMS's are usually NOT case-sensitive.
+     If they are designed _case-insensitive_, the ~ORDER BY~ _CAN'T be
+     case-sensitive_.
+
+** DONE 3.5 Summary
+   CLOSED: [2018-10-15 Mon 13:29]
+
+* DONE Lesson 4. Filtering Data
+  CLOSED: [2018-10-15 Mon 14:12]
+  Learn how to use the ~SELECT~ /statement/'s ~WHERE~ /clause/ to *specify
+  search conditions*.
+
+** DONE 4.1 Using the ~WHERE~ Clause
+   CLOSED: [2018-10-15 Mon 14:01]
+   The ~WHERE~ /clause/ is specified *right after* the /table name (~From
+   clause~)/:
+   #+BEGIN_SRC sql
+     SELECT prod_name, prod_price
+     FROM Products
+     WHERE prod_price = 3.49;
+   #+END_SRC
+
+   - *TIP*
+     + If you have choice, _try SQL filtering first_ -- Database is designed to
+       do this kind of job, and it's usually much more efficient then the
+       filtering operations peformed inside an application.
+
+     + Let Database filter, and then in many cases the data need to be sent out
+       can be much more less -- if send through network, you can *save a lot of
+       bandwidth*!!!
+
+   - *CAUTION*:
+     + *Reminder*: ~ORDER BY~ must be at the end!!!
+
+     + Conclusion: ~ORDER BY~ should come after ~WHERE~ clause, if it exists.
+
+** DONE 4.2 The ~WHERE~ Clause Operations
+   CLOSED: [2018-10-15 Mon 14:01]
+   - The operators supported by SQL ~WHERE~ clause:
+     | Operator  | Description                  |
+     |-----------+------------------------------|
+     | ~=~       | Equality                     |
+     | ~<>~      | Non-equality                 |
+     | ~!=~      | Non-equality                 |
+     | ~<~       | Less than                    |
+     | ~<=~      | Less than or equal to        |
+     | ~!<~      | Not less than                |
+     | ~>~       | Greater than                 |
+     | ~>=~      | Greater than or equal to     |
+     | ~!>~      | Not greater than             |
+     | ~BETWEEN~ | Between two specified values |
+     | ~IS NULL~ | is a ~NULL~ value            |
+
+     + *CAUTION*
+       There are some redundant operators!
+
+       NOT ALL of these operators are supported by ALL DBMS's.
+       =from Jian= I think this sentence talks about the /redundant ones/.
+
+*** DONE 4.2.1 Checking Against a Single Value
+    CLOSED: [2018-10-15 Mon 14:04]
+    #+BEGIN_SRC sql
+      SELECT prod_name, prod_price
+      FROM Products
+      WHERE prod_price < 10;
+    #+END_SRC
+
+*** DONE 4.2.2 Checking for Nonmatches
+    CLOSED: [2018-10-15 Mon 14:06]
+    #+BEGIN_SRC sql
+      SELECT vend_id, prod_name
+      FROM Products
+      WHERE vend_id <> 'DLL01';
+    #+END_SRC
+
+*** DONE 4.2.3 Checking for a Range of Values
+    CLOSED: [2018-10-15 Mon 14:06]
+    #+BEGIN_SRC sql
+      SELECT prod_name, prod_price
+      FROM Products
+      WHERE prod_price BETWEEN 5 AND 10;
+    #+END_SRC
+
+*** DONE 4.2.4 Checking for No Value
+    CLOSED: [2018-10-15 Mon 14:08]
+    *You CAN'T use check ~NULL~ euqality.*
+
+    #+BEGIN_SRC sql
+      SELECT prod_name
+      FROM Products
+      WHERE prod_price IS NULL;
+    #+END_SRC
+
+    #+BEGIN_SRC sql
+      SELECT cust_name
+      FROM CUSTOMERS
+      WHERE cust_email IS NULL;
+    #+END_SRC
+
+    - *TIPS*
+      Many DBMS's provide _RICHER_ /filter operations/.
+
+** DONE Summary
+   CLOSED: [2018-10-15 Mon 14:11]
+
+* DONE Lesson 5. Advanced Data Filtering
+  CLOSED: [2018-10-15 Mon 23:39]
+  Learn
+  - how to *combine* ~WHERE~ /clauses/ to create powerful and sophisticated
+    _search conditions_.
+
+  - how to use the ~NOT~ and ~IN~ /operators/.
+
+** DONE 5.1 Combining ~WHERE~ Clauses
+   CLOSED: [2018-10-15 Mon 23:25]
+   You can use ~AND~ and ~OR~ to combine ~WHERE~ /clauses/.
+
+*** DONE 5.1.1 ~AND~ Operator
+    CLOSED: [2018-10-15 Mon 23:20]
+    #+BEGIN_SRC sql
+      SELECT prod_id, prod_price, prod_name
+      FROM Products
+      WHERE vend_id = 'DLL01' AND prod_price <= 4;
+    #+END_SRC
+
+*** DONE 5.1.2 ~OR~ Operator
+    CLOSED: [2018-10-15 Mon 23:21]
+    #+BEGIN_SRC sql
+      SELECT prod_id, prod_price, prod_name
+      FROM Products
+      WHERE vend_id = 'DLL01' OR prod_id = 'BRS01';
+    #+END_SRC
+
+*** DONE 5.1.3 Understanding Order of Evaluation
+    CLOSED: [2018-10-15 Mon 23:24]
+    ~AND~, similar to most programming languages, has high precedence than ~OR~.
+    #+BEGIN_SRC sql
+      SELECT prod_name, prod_price
+      FROM Products
+      WHERE vend_id = 'DLL01'
+            OR vend_id = 'BRS01'
+            AND prod_price >= 10;
+
+      -- means
+
+      SELECT prod_name, prod_price
+      FROM Products
+      WHERE vend_id = 'DLL01'
+            OR (vend_id = 'BRS01' AND prod_price >= 10);
+
+      -- rather than
+
+      SELECT prod_name, prod_price
+      FROM Products
+      WHERE (vend_id = 'DLL01' OR vend_id = 'BRS01') AND prod_price >= 10;
+    #+END_SRC
+
+** DONE 5.2 Using the ~IN~ Operator
+   CLOSED: [2018-10-15 Mon 23:34]
+   ~IN~ can be used to represent some logic meanings like ~OR~.
+
+   However, ~IN~ is more flexible and powerful:
+   - When there are many conjunctions, 
+     ~IN~ syntax is cleaner and easier to read.
+
+   - The order of evaluation is easier to manage when ~IN~ is used.
+
+   - ~IN~ has better performance, which will become clear when you have a large
+     number of conjunction conditions.
+
+   - ~IN~ can contain another ~SELECT~ /statement/, enabling you to build highly
+     dynamic ~WHERE~ /clauses/.
+     =TODO= Lession 11 - "Working with Subqueries."
+
+** DONE 5.3 Using the ~NOT~ Operator
+   CLOSED: [2018-10-15 Mon 23:39]
+   ~NOT~ is used in a ~WHERE~ /clause/ to _negate_ a condition.
+
+   - Example:
+     #+BEGIN_SRC sql
+       SELECT prod_name
+       FROM Products
+       WHERE NOT vend_id = 'DLL01'
+       ORDER BY prod_name;
+     #+END_SRC
+     Of course, we can use ~WHERE vend_id <> 'DLL01'~.
+     A more real world example should be combine ~NOT~ and ~IN~.
+
+   - *NOTE* =IMPORTANT=
+     /MariaDB/ supports the use of ~NOT~ to *negate* ~IN~, ~BETWEEN~, and
+     ~EXISTS~ /clauses/.
+
+     _This is *different from most DBMSs* that allow ~NOT~ to be used to negate
+     any conditions._
+
+** DONE Summary
+   CLOSED: [2018-10-15 Mon 23:39]
+   
+* DONE Lesson 6. Using Wildcard Filtering
+  CLOSED: [2018-10-16 Tue 18:43]
+  Learn
+  - what /wildcards/ are, and how they are used
+
+  - how to perform /wildcard searches/ using the ~LIKE~ operator for sophisticated
+    filtering of retrieved data.
+
+** DONE 6.1 Using the ~LIKE~ Operator
+   CLOSED: [2018-10-16 Tue 02:07]
+   - /Wildcard searching/ can *ONLY* be used with _text fields (strings)_,
+     you *can NOT* use /wildcards/ to _search_ fields of non-text datatypes.
+
+*** DONE The Percent Sign (~%~) Wildcard
+    CLOSED: [2018-10-16 Tue 01:54]
+    #+BEGIN_SRC sql
+      SELECT prod_id, prod_name
+      FROM Products
+      WHERE prod_name LIKE 'Fish%';
+    #+END_SRC
+    ~%~ is like the ~.*~ in other language regex pattern.
+
+    - *Note*
+      Microsoft Access use ~*~ instead of ~%~
+
+    - *Note*
+      Depending on our DBMS and how it is configured, searches _MAY BE
+      case-sensitive._
+
+    - *Note* =IMPORTANT=
+      Many DBMS's, including Microsoft Access, pad field contents with spaces,
+      and then use a /search pattern/ without ~%~ at the end match NOTHING.
+
+      You usually have two ways to deal with this:
+      + Always add a ~%~ to the end of your /search pattern/
+
+      + _Prefered_: trim the spaces using functions.
+        =IMPORTANT= =TODO= Lesson 8. "Using Data Manipulation Functions."
+
+    - *CAUTION*
+      ~%~ will never match ~NULL~.
+
+*** DONE The Underscore (~_~) Wildcard
+    CLOSED: [2018-10-16 Tue 01:58]
+    - ~_~ is like the ~.~ regex pattern in many programming languages'.
+
+    - *NOTE*
+      ~_~ is NOT supported by DB2.
+
+    - *NOTE*
+      In Microsoft Access, you need to use ~?~ _INSTEAD OF_ ~_~.
+
+    - Example:
+      #+BEGIN_SRC sql
+        SELECT prod_id, prod_name
+        FROM Products
+        WHERE prod_name LIKE '__ inch teddy bear';
+      #+END_SRC
+
+*** DONE The Brackets (~[]~) Wildcard
+    CLOSED: [2018-10-16 Tue 02:07]
+    - *NOTE*
+      ~[]~ is NOT supported by ALL DBMS's.
+
+      Microsoft Access and Microsoft SQL Server *support* it.
+
+    - Example:
+      Find all contacts whose names begin with 'J' or 'M':
+      #+BEGIN_SRC sql
+        SELECT cust_contact
+        FROM Customers
+        WHERE cust_contact LIKE '[JM]%'
+        ORDER BY cust_contact;
+      #+END_SRC
+
+    - The negation of ~[JM]~ is ~[^JM]~
+      #+BEGIN_SRC sql
+        SELECT cust_contact
+        FROM Customers
+        WHERE cust_contact LIKE '[^JM]%'
+        ORDER BY cust_contact;
+      #+END_SRC
+
+      + *NOTE*
+        Negating Sets in Microsoft Access
+
+        The negation of ~[JM]~ is ~[!JM]~, and you *cannot* use the ~[^JM]~
+        /search pattern./
+
+      + You can also negate with ~WHERE NOT~
+        #+BEGIN_SRC sql
+          SELECT cust_contact
+          FROM Customers
+          WHERE NOT cust_contact LIKE '[JM]%'
+          ORDER BY cust_contact;
+        #+END_SRC
+
+** DONE 6.2 Tips for Using Wildcards
+   CLOSED: [2018-10-16 Tue 18:43]
+   Use /wildcards/, and you may notice a bad performance.
+
+   - Here are some _rules_ to keep in mind when using /wildcards/:
+     + *Avoid OVERUSE* /wildcards/.
+       *If another search operator will do, use it instead.*
+
+     + Unless absolutely necessary, *DO NOT use /wildcards/ at the beginning of the
+       /search pattern/.*
+
+       /Search patterns/ that begin with /wildcards/ are the *slowest* to process.
+
+** DONE 6.3 Summary
+   CLOSED: [2018-10-16 Tue 02:11]
+
+* DONE Lesson 7. Creating Calculated Fields
+  CLOSED: [2018-10-16 Tue 23:29]
+  Learn
+  - *what* calculated fields are
+  - how to *create* them
+  - how to use *aliases* to refer to them from within your application.
+
+** DONE 7.1 Understanding Calculated Fields
+   CLOSED: [2018-10-16 Tue 23:29]
+   - /Calculated fields/ do *NOT* actually exist in database tables.
+       Rather, a calculated field is created _on-the-fly_ *within* a SQL
+     ~SELECT~ statement.
+
+   - field ::
+     ESSENTIALLY means the SAME THING as /column/ and often used
+     *interchangeably*.
+       Although
+     + /database columns/ are TYPICALLY called /columns/
+       and
+
+     + /fields/ is USUALLY used in conjunction with /calculated fields/.
+
+   - _From the perspective of a client_ (for example, your application),
+     a /CALCULATED field/'s data is returned in the same way as data from any
+     other /column/.
+
+   - *TIPs*
+     As a rule,
+     it is *far quicker* to perform these operations on the _database server_
+     _THAN_
+     it is to perform them within the _client_.
+
+** DONE 7.2 Concatenating Fields
+   CLOSED: [2018-10-16 Tue 23:18]
+   - The /concatenation operator/ can be ~+~ or ~||~, which depends on the DBMS
+     you use.
+
+     MySQL and MariaDB *must* use specific function.
+
+   - *Note*
+     + ~+~:
+       Access and SQL Server
+
+     + ~||~
+       DB2, Oracle, PostgreSQL, SQLite, and Open Office Base
+
+   - Example
+     + The usage of ~||~ is similar -- just replace the ~+~ above with ~||~.
+       #+BEGIN_SRC sql
+         SELECT vend_name + ' (' + vend_country + ')'
+         FROM Vendors
+         ORDER BY vend_name;
+       #+END_SRC
+
+     + MySQL and MariaDB
+       #+BEGIN_SRC sql
+         SELECT Concat(vend_name, ' (', vend_country, ')')
+         FROM Vendors
+         ORDER BY vend_name;
+       #+END_SRC
+
+   - If you run the code above, you will see the trailing spaces of ~vend_country~
+     between ='('= and =')'=. Use the ~RTRIM~ function:
+     #+BEGIN_SRC sql
+       SELECT RTRIM(vend_name) + ' (' + RTRIM(vend_country) + ')'
+       FROM Vendors
+       ORDER BY vend_name;
+     #+END_SRC
+
+   - ~LTRIM~ delete the left spaces.
+     ~TRIM~ delete spaces of two sides.
+
+*** DONE 7.2.1 Using Aliases
+    CLOSED: [2018-10-16 Tue 23:18]
+    Give the a new calculated /field/ a name with ~AS~:
+    #+BEGIN_SRC sql
+      SELECT RTRIM(vend_name) + ' (' + RTRIM(vend_country) + ')'
+      AS vend_title
+      FROM Vendors
+      ORDER BY vend_name;
+    #+END_SRC
+
+    - *Tip*: Other Uses for Aliases
+      Aliases have other uses too. Some common uses include renaming a column if
+      the real table column name contains illegal characters (for example,
+      spaces), and expanding column names if the original namesare either
+      ambiguous or easily misread.
+
+    - *CAUTION*: Alias Names
+      Use multiple words as an /alias/ is allowed (_quoted_), but *strongly discouraged*.
+
+    - *NOTE*: /Derived Columns/
+      Same meaning as /aliases/.
+
+** DONE 7.3 Performing Mathematical Calculations
+   CLOSED: [2018-10-16 Tue 23:24]
+   - You can use ~+~, ~-~, ~*~, and ~/~:
+     #+BEGIN_SRC sql
+       SELECT prod_id,
+              quantity,
+              item_price,
+              quantity*item_price AS expanded_price
+       FROM OrderItems
+       WHERE order_num = 20008;
+     #+END_SRC
+
+   - *Tip*: How to Test Calculations =IMPORTANT=
+     Use ~SELECT~ without ~FROM~.
+
+     For example,
+     + ~SELECT 3 * 2;~
+     + ~SELECT TRIM(' abc ');~
+
+** DONE 7.3 Summary
+   CLOSED: [2018-10-16 Tue 23:19]
+
+* TODO Lesson 8. Using Data Manipulation Functions
+** TODO Understanding Functions
+** TODO Using Functions
+** TODO Summary
+
+* DONE Lesson 9. Summarizing Data
+  CLOSED: [2018-10-17 Wed 02:36]
+  Learn
+  - what the /SQL *aggregate* functions/ are
+    and
+  - how to use them to summarize table data.
+
+** DONE 9.1 Using Aggregate Functions
+   CLOSED: [2018-10-17 Wed 01:20]
+   It is often necessary to *summarize* data *without actually retrieving it
+   all*, and SQL provides special functions for this purpose.
+
+   - aggregate functions ::
+        Functions that operate on a set of rows to calculate and return a single value.
+
+*** DONE 9.1.1 The ~AVG()~ Function
+    CLOSED: [2018-10-17 Wed 01:10]
+    - For a /column/
+      #+BEGIN_SRC sql
+        SELECT AVG(prod_price) AS avg_price
+        FROM  Products;
+      #+END_SRC
+
+    - For specific lines and columns
+      #+BEGIN_SRC sql
+        SELECT AVG(prod_price) AS avg_price
+        FROM  Products
+        WHERE vend_id = 'DLL01';
+      #+END_SRC
+
+    - *CAUTION*: Individual Columns Only
+      You *CANNOT* average multiple columns with one ~AVG()~ call.
+
+    - *Note*: ~NULL~ values
+      ~NULL~'s are ignored by ~AVG()~
+
+*** DONE 9.1.2 The ~COUNT()~ Function
+    CLOSED: [2018-10-17 Wed 01:13]
+    - Two ways to use ~COUNT()~:
+      + ~COUNT(*)~ takes into account the number of ~NULL~.
+        #+BEGIN_SRC sql
+          SELECT COUNT(*) AS num_cust
+          FROM Customers;
+        #+END_SRC
+
+      + ~COUNT(columnName)~ ignores ~NULL~ values.
+        #+BEGIN_SRC sql
+          SELECT COUNT(cust_emails) AS num_cust
+          FROM Customers;
+        #+END_SRC
+
+*** DONE 9.1.3 The ~MAX()~ Function
+    CLOSED: [2018-10-17 Wed 01:17]
+    #+BEGIN_SRC sql
+      SELECT MAX(prod_price) AS max_price
+      FROM Products;
+    #+END_SRC
+
+    - *TIPs*: Using ~MAX()~ with Non-Numeric Data
+      _ALTHOUGH_ ~MAX()~ is USUALLY used to find the _highest numeric_ or _date values_,
+      many (_but not all_) DBMSs allow it to be used to return the highest value
+      in any columns including textual columns.
+
+      _When used with textual data_, ~MAX()~ returns the row that would be the _last
+      if the data were sorted by that column._
+
+    - *NOTE*
+      ~MAX()~ *IGNORES* ~NULL~ rows.
+
+*** DONE 9.1.4 The ~MIN()~ Function
+    CLOSED: [2018-10-17 Wed 01:17]
+    Similar to ~MAX()~
+
+*** DONE 9.1.5 The ~SUM()~ Function
+    CLOSED: [2018-10-17 Wed 01:20]
+    - Examples:
+      #+BEGIN_SRC sql
+        SELECT SUM(quantity) AS items_ordered
+        FROM OrderItems
+        WHERE order_num = 20005;
+      #+END_SRC
+
+      Sum /mutiple columns/ arithmetics result
+      #+BEGIN_SRC sql
+        SELECT SUM(item_price*quantity) AS total_price
+        FROM OrderItems
+        WHERE order_num = 20005;
+      #+END_SRC
+
+    - *NOTE*
+      ~MAX()~ *IGNORES* ~NULL~ rows.
+
+** DONE 9.2 Aggregates on Distinct Values
+   CLOSED: [2018-10-17 Wed 02:32]
+   - The *five* /aggregate functions/ can all be used in *two* ways:
+     + To perform calculations
+       on _all rows_,
+       specify the ~ALL~ argument or
+       specify no argument at all (because ~ALL~ is the *default behavior*).
+
+     + To only include unique values, specify the ~DISTINCT~ argument.
+
+   - *NOTE*: Not in _Microsoft Access_
+     Microsoft Access does not support the use of ~DISTINCT~ *WITHIN* /aggregate
+     functions/, and so the following example will *NOT* work with Access.
+
+     To achieve a similar result in Access you will need to use a subquery to
+     return ~DISTINCT~ data to an _OUTER ~SELECT COUNT(*)~ statement_.
+     =TODO= =EXAMPLES=
+
+   - Example
+     #+BEGIN_SRC sql
+       SELECT AVG(DISTINCT prod_price) AS avg_price
+       FROM Products
+       WHERE vend_id = 'DLL01';
+     #+END_SRC
+
+   - *CAUTION*: _No_ ~DISTINCT~ With ~COUNT(*)~
+     ~DISTINCT~ may only be used with ~COUNT()~ if a column name is
+     specified. ~DISTINCT~ may not be used with ~COUNT(*)~.
+
+     Similarly, ~DISTINCT~ must be used with a /column name/ and not with a
+     /calculation/ or /expression/.
+     =TODO= =TODO= =TODO=
+     =TODO= =TODO= =TODO=
+     =TODO= =TODO= =TODO=
+
+   - *TIPS*: Using ~DISTINCT~ with ~MIN()~ and ~MAX()~
+     This is allowed, but it has no value.
+
+   - *NOTE*: Additional Aggregate Arguments
+     In addition to the ~DISTINCT~ and ~ALL~ arguments shown here, _some_ DBMSs
+     support additional arguments such as ~TOP~ and ~TOP PERCENT~ that let you
+     perform calculations on _subsets_ of _query results_.
+       Refer to your DBMS documentation to determine exactly what arguments are
+     available to you.
+     =TODO= =EXAMPLES= =TODO=
+
+** DONE 9.3 Combining Aggregate Functions
+   CLOSED: [2018-10-17 Wed 02:35]
+   #+BEGIN_SRC sql
+     SELECT COUNT(*) AS num_items,
+            MIN(prod_price) AS price_min,
+            MAX(prod_price) AS price_max,
+            AVG(prod_price) AS price_avg
+     FROM Products;
+   #+END_SRC
+
+   - *Caution*: Naming Aliases
+     Avoid using /names of actual columns/ as aliases in aggreations.
+
+     Nothing illegal, but _MANY_ SQL implementations do *NOT SUPPORT* this and
+     will generate obscure error messages if you do so.
+     
+** DONE 9.4 Summary
+   CLOSED: [2018-10-17 Wed 02:35]
+
+* DONE Lesson 10. Grouping Data - =TODO= =NOTE=
+  CLOSED: [2018-10-17 Wed 21:12]
+  Learn how to *group data* so that you can *summarize subsets* of table contents.
+  This involves _TWO_ new ~SELECT~ /statement/ /clauses/:
+  - the ~GROUP BY~ /clause/
+  - the ~HAVING~ /clause/
+
+** DONE 10.1 Understanding Data Grouping
+   CLOSED: [2018-10-17 Wed 19:11]
+   We learned _summarizing data_ in the last lesson.
+
+   _Mostly, we need to summarize subsets, rather than the whole dataset itself._
+   In the last lesson, we used ~WHERE~ to filter and get a group to summarize like:
+   #+BEGIN_SRC sql
+     SELECT COUNT(*) AS num_prods
+     FROM Products
+     WHERE vend_id = 'DLL01';
+   #+END_SRC
+
+   *This is NOT enough! How about we want to get ALL groups?*
+
+** TODO 10.2 Creating Groups
+   Group with ~GROUP BY~ clauses.
+
+   - Example:
+     #+BEGIN_SRC sql
+       SELECT vend_id, COUNT(*) AS num_prods
+       FROM Products
+       GROUP BY vend_id;
+     #+END_SRC
+     This time the output can be multiple rows, and each row is like the ~WHERE
+     vend_id = specific_id~ output.
+
+** DONE 10.3 Filtering Groups
+   CLOSED: [2018-10-17 Wed 20:50]
+   - ~WHERE~ can only filter by /row/.
+     Use ~HAVING~ to filter by /group/, which support ALL the operators of ~WHERE~.
+
+   - Example:
+     #+BEGIN_SRC sql
+       SELECT cust_id, COUNT(*) AS orders
+       FROM Orders
+       GROUP BY cust_id
+       HAVING COUNT(*) >= 2;
+     #+END_SRC
+
+   - Example (combine ~WHERE~ and ~HAVING~)
+     #+BEGIN_SRC sql
+       SELECT vend_id, COUNT(*) AS num_prods
+       FROM Products
+       WHERE prod_price >= 4
+       GROUP BY vend_id
+       HAVING COUNT(*) >= 2;
+     #+END_SRC
+
+   - Note: Using ~HAVING~ and ~WHERE~
+     They have different semantics.
+
+     However, when there is no ~GROUP BY~, each /row/ by default is a /group/,
+     and ~HAVING~ do the same thing as ~WHERE~.
+       Even in this situation, you should avoid using ~HAVING~ -- you should
+     make that distinction yourself.
+
+** DONE 10.4 Grouping and Sorting
+   CLOSED: [2018-10-17 Wed 21:07]
+   By the standard, ~GROUP BY~ has NO guarantee to the /order/ of _output_.
+   Actually, it's about how you /group/, and it has no relation with how to
+   _output_.
+
+   - This can be a legal grouped by ~items~ data output from a DBSM:
+     #+BEGIN_SRC text
+       order_num  items
+       ---------  -----
+       20006      3
+       20007      5
+       20008      5
+       20009      3
+     #+END_SRC
+
+     #+BEGIN_SRC sql
+       SELECT order_num, COUNT(*) AS items
+       FROM OrderItems
+       GROUP BY order_num
+       HAVING COUNT(*) >= 3;
+     #+END_SRC
+
+   - If you want the above example has an ordered by group output, do
+     #+BEGIN_SRC sql
+       SELECT order_num, COUNT(*) AS items
+       FROM OrderItems
+       GROUP BY order_num
+       HAVING COUNT(*) >= 3
+       ORDER BY items, order_num;
+     #+END_SRC
+
+     + *Note*: /Microsoft Access/ Incompatibility
+       /Microsoft Access/ does *NOT allow sorting by alias,* and so this example
+       will fail.
+       * Solution:
+         REPLACE ~items~ (in the ~ORDER BY~ /clause/) WITH the _actual calculation_
+         or with the _field position_.
+
+         As such, ~ORDER BY COUNT(*), order_num~ or ~ORDER BY 2, order_num~ will
+         BOTH work.
+
+   - Table 10.1. ~ORDER BY~ vs. ~GROUP BY~
+     | ~ORDER BY~                    | ~GROUP BY~                                     |
+     |-------------------------------+------------------------------------------------|
+     | *Sorts* generated _output_.   | Groups rows. The output might not be in        |
+     |                               | group order, however.                          |
+     |-------------------------------+------------------------------------------------|
+     | Any /columns/ (even /columns/ | ONLY /SELECTED columns/ or /expressions        |
+     | NOT selected) may be used.    | columns/ may be used, and every /selected      |
+     |                               | column expression/  *MUST* be used.            |
+     |-------------------------------+------------------------------------------------|
+     | Never required.               | Required if using /columns/ (or /expressions/) |
+     |                               | with /aggregate functions/.                    |
+     |-------------------------------+------------------------------------------------|
+     =IMPORTANT= =TODO= =RE-READ=
+
+   - You should *ALWAYS* provide an *EXPLICIT* ~ORDER BY~ /clause/ as well,
+     EVEN IF it is identical (NO guarantee in SQL specification) to the ~GROUP
+     BY~ /clause/.
+
+** DONE 10.5 ~SELECT~ Clause Ordering
+   CLOSED: [2018-10-17 Wed 21:12]
+   =IMPORTANT=
+   =IMPORTANT=
+   =IMPORTANT=
+   Table 10.2. ~SELECT~ /Clauses/ and Their _Sequence_
+   | Clause     | Description                          | Required                                |
+   |------------+--------------------------------------+-----------------------------------------|
+   | ~SELECT~   | Columns or expression to be returned | Yes                                     |
+   | ~FROM~     | Table to retrieve data from          | Only if selecting data from a table     |
+   | ~WHERE~    | R0w-level filtering                  | No                                      |
+   | ~GROUP BY~ | Group specification                  | Only if calculating aggregates by group |
+   | ~HAVING~   | Group-level filtering                | No                                      |
+   | ~ORDER BY~ | Output sort order                    | No                                      |
+
+** DONE 10.6 Summary
+   CLOSED: [2018-10-17 Wed 21:12]
+  
+* TODO Lesson 11. Working with Subqueries
+** DONE 11.1 Understanding Subqueries
+   CLOSED: [2018-10-17 Wed 21:15]
+   - *Query*
+     Any SQL statement.
+
+     However, the term is USUALLY used to refer to ~SELECT~ /statements/.
+
+   - subqueries :: /queries/ that are embedded into other /queries/.
+
+   - *Note*: MySQL Support
+     If you are using MySQL, be aware that support for /subqueries/ was introduced
+     in version 4.1.
+
+     _Earlier versions_ of MySQL do *NOT support* /subqueries/.
+
+** TODO 11.2 Filtering by Subquery
+   - *Tip*: Formatting Your SQL =TODO= =NOTE=
+     =TODO=
+
+   - *Caution*: Single Column Only
+     Subquery SELECT statements can only retrieve a single column.
+     Attempting to retrieve multiple columns will return an error.
+
+   - *Caution*: Subqueries and Performance
+     The code shown here works, and it achieves the desired result.
+     However, using subqueries is not always the most efficient way to
+     perform this type of data retrieval. More on this in Lesson 12, “Joining
+     Tables,” where you will revisit this same example.
+
+** TODO 11.3 Using Subqueries as Calculated Fields
+   - *Caution*: Fully Qualified Column Names
+     =TODO=
+
+   - *Tip*: Subqueries May Not Always Be the Best Option
+     As explained earlier in this lesson, although the sample code shown
+     here works, it is often not the most efficient way to perform this type of
+     data retrieval. You will revisit this example when you learn about
+     JOINs in the next two lessons.
+
+** TODO 11.4 Summary
+
+* TODO Lesson 12. Joining Tables
+** TODO 12.1 Understanding Joins
+*** 12.1.1 Understanding Relational Tables
+*** 12.1.2 Why Use Joins?
+
+** TODO 12.2 Creating a Joins
+*** 12.2.1 The Importance of the ~WHERE~ Clause
+*** 12.2.2 Inner Joins
+*** 12.2.3 Joining Multiple Tables
+
+** TODO 12.3 Summary
+
+* TODO Lesson 13. Creating Advanced Joins
+** TODO 13.1 Using Table Aliases
+** TODO 13.2 Using Different Join Types
+*** 13.2.1 Self Joins
+*** 13.2.2 Natural Joins
+*** 13.2.3 Outer Joins
+
+** TODO !3.3 Using Joins with Aggregate Functions
+** TODO !3.4 Using Joins and Join Conditions
+** TODO !3.5 Summary
+** 
+* DONE Lesson 14. Combining Queries
+  CLOSED: [2018-10-20 Sat 21:07]
+  Learn
+  - how to use the ~UNION~ operator to *combine multiple* ~SELECT~ /statements/
+    *into one* result set.
+
+** DONE 14.1 Understanding Combined Queries
+   CLOSED: [2018-10-20 Sat 18:11]
+   Use MULTIPLE ~SELECT~ /statements/ and combine their results to return.
+
+   - /Combined queries/ are usually known as /unions/ or /compound queries/.
+
+   - There are basically _TWO_ scenarios in which you'd use _combined queries_:
+     + To return similarly structured data _from different tables_ in a single query
+
+     + To perform multiple queries against _a single table_ returning the data as
+       one query
+
+   - *Tip*: Combining Queries and Multiple WHERE Conditions
+     _ANY_ ~SELECT~ /statement/ with *MULTIPLE* ~WHERE~ /clauses/ can also be
+     specified as a ~UNION~ /combined query/.
+
+     This is NOT true for ~UNION ALL~ queries.
+
+** DONE 14.2 Creating Combined Queries
+   CLOSED: [2018-10-20 Sat 18:22]
+*** DONE 14.2.1 Using ~UNION~
+    CLOSED: [2018-10-20 Sat 18:22]
+    - Equivalent SQL's:
+      + With ~Union~
+        #+BEGIN_SRC sql
+          SELECT cust_name, cust_contact, cust_email
+          FROM Customers
+          WHERE cust_state IN ('IL','IN','MI')
+
+          UNION
+
+          SELECT cust_name, cust_contact, cust_email
+          FROM Customers
+          WHERE cust_name = 'Fun4All';
+        #+END_SRC
+
+      + With ~WHERE~
+        #+BEGIN_SRC sql
+          SELECT cust_name, cust_contact, cust_email
+          FROM Customers
+          WHERE cust_state IN ('IL','IN','MI') OR cust_name = 'Fun4All';
+        #+END_SRC
+
+    - *TIP*: ~UNION~ Limits
+      *NO standard SQL limit* to the number of ~SELECT~ /statements/ that can be
+      combined with ~UNION~.
+
+      However, *DBMS's can have this limitation*, as you guess, for practical
+      reasons.
+
+    - *CAUTION*: Performance Issues
+      Most good DBMSs use an internal /query optimizer/ to combine the ~SELECT~
+      /statements/ *before* they are even processed.
+        In theory, this means that from a performance perspective, there should
+      be _no real difference_ between using MULTIPLE ~WHERE~ clause conditions
+      or a ~UNION~.
+
+      I say in theory, because, in practice, MOST /query optimizers/ do NOT
+      always do as good a job as they should. *Your best bet is to test both
+      methods to see which will work best for you.*
+
+*** DONE 14.2.2 ~UNION~ Rules
+    CLOSED: [2018-10-20 Sat 18:31]
+    As you can see, unions are very easy to use. But there are a few rules
+    governing exactly which can be combined:
+
+    - ~UNION~ is a binary operator, and one ~UNION~ must be composed of two ~SELECT~
+      /statements/.
+
+    - _EACH_ /query/ in a ~UNION~ must contain the *same columns, expressions, or
+      aggregate functions* (and _some DBMSs_ even require that *columns be listed
+      in the same order*).
+
+    - *Column datatypes must be compatible*:
+      Same type or one type can be converted to another implicitly.
+
+    Aside from these basic rules and restrictions,
+    /unions/ can be used for any data retrieval tasks.
+
+*** DONE 14.2.3 Including or Eliminating Duplicate Rows
+    CLOSED: [2018-10-20 Sat 20:56]
+    By default, ~UNION~ de-duplicates.
+    You can use ~UNION ALL~ to keep all rows of each ~SELECT~.
+
+    - *TIP*: ~UNION~ vs. ~WHERE~
+    ~UNION~ almost always accomplishes the same thing as mutiple ~WHERE~
+    /condtions/, _WHILE_ ~UNION ALL~ has no corresponding ~WHERE~!!!
+
+*** DONE 14.2.4 Sorting Combined Query Results
+    CLOSED: [2018-10-20 Sat 21:03]
+    - *ONLY ONE* ~OEDER BY~ can be used for ONE set of /unioned queries/, and it
+      MUST occur AFTER the final ~SELECT~ /statement/.
+
+    - *NOTE* Other ~UNION~ Types
+      Some DBMS's provides ~UNION EXCEPT~ (or ~MINUS~), and ~INTERSECT~.
+      They are rarely used -- you can use /joins/ to do this kind of things.
+
+    - *TIP* Working with Multiple Tables
+
+** DONE 14.3 Summary
+   CLOSED: [2018-10-20 Sat 21:03]
+
+* TODO Lesson 15. Inserting Data
+
+** TODO 15.1 Understanding Data Insertion
+*** 15.1.1 Inserting Complete Rows
+*** 15.1.2 Inserting Partial Rows
+*** 15.1.3 Inserting Retrieved Data
+
+** TODO 15.2 Copying from One Table to Another
+** TODO 15.3 Summary
+
+* DONE Lesson 16. Updating and Deleting Data
+  CLOSED: [2018-10-20 Sat 22:17]
+  Learn how to use the ~UPDATE~ and ~DELETE~ /statements/ to enable you to
+  further manipulate your /table data/.
+
+** DONE 16.1 Updating Data
+   CLOSED: [2018-10-20 Sat 21:50]
+   - Two ways to ~UPDATE~:
+     + update specific rows
+     + update all rows in a table
+
+   - *CAUTION*: Don't Omit the ~WHERE~ /Clause/
+     If you don't use ~WHERE~, you update all rows in a table, which is mostly
+     NOT what you want.
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+
+   - *TIP*: ~UPDATE~ and Security
+     In client-server DBMS's, you may need some _special security privileges_
+     to do ~UPDATE~.
+
+   - The basic format of an ~UPDATE~ /statement/ is made up of *three* parts:
+     + The table to be updated
+     + The column names and their new values
+     + The filter condition that determines which rows should be updated
+
+   - Example:
+     Customer 1000000005 has NO e-mail address on file now now has one.
+     Update this info.
+     #+BEGIN_SRC sql
+       UPDATE Customers
+       SET cust_email = 'kim@thetoystore.com'
+       WHERE cust_id = '1000000005';
+     #+END_SRC
+
+     + =IMPORTANT=
+       As we mentioned above, without using ~WHERE~, you'll update all the ~cust_emal~
+       of this table.
+
+   - Example:
+     Update multiple columns
+     #+BEGIN_SRC sql
+       UPDATE Customers
+       SET cust_contact = 'Sam roberts'
+           cust_email = 'sam@toyland.com'
+       WHERE cust_id = '1000000006';
+     #+END_SRC
+
+   - *TIP*: USing Subqueries in an ~UPDATE~ Statement
+     =EXAMPLES= =???=
+
+   - *TIP*: The ~FROM~ Keyword
+     _SOME_ SQL implementations support a ~FROM~ /clause/ in the ~UPDATE~
+     statement that can be used to update the rows in one table with data from
+     another table.
+     _Check the document of the DBMS you are using._
+
+   - You can /update/ a column to ~NULL~ -- this is a kind of deletion.
+
+** DONE 16.2 Deleting Data
+   CLOSED: [2018-10-20 Sat 22:11]
+   - *CAUTION*: Don't Omit the ~WHERE~ /Clause/
+     AS the same title in the last section.
+
+   - *TIP*: ~DELETE~ and Security
+     AS the "~UPDATE~ and Security".
+
+   - Example:
+     #+BEGIN_SRC sql
+       DELETE FROM Customers
+       WHERE cust_id = '1000000006';
+     #+END_SRC
+
+   - *TIP*: Foreign Keys Are Your Friend
+     =TODO= =RE-READ=
+     =TODO= =RE-READ=
+     =IMPORTANT=
+     =IMPORTANT=
+
+   - *TIP*: The ~FROM~ Keyword
+     In Some SQL implementations, the ~FROM~ in ~DELETE FROM~ is an optional part.
+     However, you should always keep it for portability!
+
+   - ~DELETE~ takes *NO* _column names_ or _wildcard characters_.
+     ~DELETE~ *deletes entire rows*, *NOT* columns.
+
+     To delete specific columns use an ~UPDATE~ statement, and set ~NULL~ value.
+
+   - *TIP*: Table Contents, Not Tables
+     ~DELETE~ deletes /table/ _contents_, NOT /tables/.
+     Even if you delete ALL the /rows/ in a /table/, the /table/ itself is still
+     there.
+
+   - *TIP*: Faster Deletes
+     ~TRUNCATE TABLE~ can delete all rows of a /table/ like ~DELETE FROM~ _WITHOUT_
+     ~WHERE~, but the former is much faster -- data changes are _not logged_.
+
+** DONE 16.3 Guidelines for Updating and Deleting Data
+   CLOSED: [2018-10-20 Sat 22:17]
+   Here are some IMPORTANT GUIDELINES that many SQL programmers follow:
+   - *Never* execute an ~UPDATE~ or a ~DELETE~ *without* a ~WHERE~ clause
+     _unless you really_ do intend to update and delete every row.
+
+   - Make sure EVERY /table/ has a /primary key/ (refer back to Lesson 12,
+     "Joining Tables," if you have forgotten what this is), and use it as the
+     ~WHERE~ /clause/ whenever possible. (You may specify _individual primary
+     keys_, _multiple values_, or _value ranges_.)
+     =TODO= =???= =EXAMPLE=
+
+   - Before you use a ~WHERE~ clause with an ~UPDATE~ or a ~DELETE~, first test
+     it with a ~SELECT~ to make sure it is filtering the right records -- it is
+     far too easy to write incorrect ~WHERE~ clauses.
+
+   - Use database enforced /referential integrity/ (refer back to Lesson 12 for
+     this one, too) so that the DBMS will *not allow* the _deletion_ of rows that
+     have data in other tables related to them.
+
+   - Some DBMSs allow
+     /database administrators/ to *impose restrictions* that prevent the
+     execution of ~UPDATE~ or ~DELETE~ without a ~WHERE~ /clause/.
+     =GOOD=
+
+     If your DBMS supports this feature, consider using it.
+     =IMPORTANT=
+
+** DONE 16.4 Summary 
+   CLOSED: [2018-10-20 Sat 22:17]
+
+* TODO Lesson 17. Creating and Manipulating Tables
+** TODO 17.1 Creating Tables
+*** 17.1.1 Basic Table Creation
+*** 17.1.2 Working with ~NULL~ Values
+*** 17.1.3 Specifying Default Values
+
+** TODO 17.2 Updating Tables
+** TODO 17.3 Deleting Tables 
+** TODO 17.4 Renaming Tables
+** TODO 17.5 Summary
+
+* TODO Lesson 18. Using Views
+** TODO 18.1 Understanding Views
+*** 18.1.1 Why Use Views
+*** 18.1.2 View Rules and Restrictions
+
+** TODO 18.2 Creating Views
+*** 18.2.1 Using Views to Simplify Complex Joins
+*** 18.2.2 Using Views to Reformat Retrieved Data
+*** 18.2.3 Using Views to Filter Unwanted Data
+*** 18.2.4 Using Views with Calculated Fields
+
+** TODO 18.3 Summary
+
+* TODO Lesson 19. Working with Stored Procedures
+** TODO 19.1 Understanding Stored Procedures
+** TODO 19.2 Why to Use Stored Procedures
+** TODO 19.3 Executing Stored Procedures
+** TODO 19.4 Creating Stored Procedures
+** TODO 19.5 Summary
+
+* TODO Lesson 20. Managing Transaction Processing
+** TODO 20.1 Understanding Transaction Processing
+** TODO 20.2 Controlling Transactions
+** TODO 20.3 Summary
+
+* TODO Lesson 21. Using Cursors
+** Understanding Cursors
+** Working with Cursors
+** Summary
+
+* TODO Lesson 22. Understanding Advanced SQL Features
+** TODO Understanding Constraints
+** TODO Understanding Indexes
+** TODO Understanding Triggers
+** TODO Database Security
+** TODO Summary
+
+* TODO A Sample Table Scripts
+** TODO Understanding the Sample Tables
+** TODO Obtaining the Sample Tables
+
+* TODO B Working in Popular Applications
+** Using Apache Open Office Base
+** Using Adobe ColdFusion
+** Using IBM DB2
+** Using MariaDB
+** Using Microsoft Access
+** Using Microsoft Asp
+** Using Microsoft Asp.NET
+** Using Microsoft Query
+** Using Microsoft SQL Server (including Microsoft SQL Server Express)
+** Using MySQL
+** Using Oracle
+** Using Oracle Express
+** Using PHP
+** Using PostgreSQL
+** Using SQLite
+** Configuring ODBC Data Sources
+
+* TODO C SQL Statement Syntax
+** ~ALTER~ ~TABLE~
+** ~COMMIT~
+** ~CREATE INDEX~
+** ~CREATE PROCEDURE~
+** ~CREATE TABLE~
+** ~CREATE VIEW~
+** ~DELETE~
+** ~DROP~
+** ~INSERT~
+** ~INSERT SELECT~
+** ~ROLLBACK~
+** ~SELECT~
+** ~UPDATE~
+
+* TODO D Using SQL Datatypes
+** TODO String Datatypes
+** TODO Numeric Datatypes
+** TODO Data and Time Datatypes
+** TODO Binary Datatypes
+
+* TODO E SQL Reserved Words

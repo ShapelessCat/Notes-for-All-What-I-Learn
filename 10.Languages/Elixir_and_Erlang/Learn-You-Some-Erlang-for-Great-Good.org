@@ -1,0 +1,1485 @@
+#+TITLE: Learn You Some Erlang for Great Good!
+#+SUBTITLE: A Beginner's Guide
+#+AUTHOR: Fred Hébert, Foreword by Joe Armstrong
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* ABOUT THE AUTHOR - xvii
+* FOREWORD - xix
+* PREFACE - xxi
+** To the Foreigner xxi
+** To the Erlang Regular xxii
+** To the Person Who Has Read This Online xxii
+
+* ACKNOWLEDGMENTS - xxiii
+* TODO Introduction - 1
+** So What’s Erlang? - 2
+   - Erlang has a large _emphasis_ on /concurrency/ and /high reliability/.
+
+   - To be able to have dozens of tasks being performed at the same time, Erlang
+     uses the /actor model/, and _each /actor/ is a separate /process/ in the
+     virtual machine._
+
+   - In practice, Erlang forces you to write /actors/ (/processes/) that will share
+     no information with other bits of code _unless_ they pass messages to each other.
+     Every communication is _explicit_, _traceable_, and _safe_.
+
+   - Erlang is NOT JUST a language but also a development environment as a whole.
+     Here are just some components of the standard distribution:
+     + Development tools (compiler, debugger, profiler, and test frameworks,
+       optional type analyzer)
+
+     + The Open Telecom Platform (OTP) framework
+
+     + A web server
+
+     + Advanced tracing tools
+
+     + The Mnesia database (a key/value storage system able to replicate itself
+       on many servers, which supports nested transactions and lets you store
+       any kind of Erlang data)
+
+   - The virtual machine and libraries also allow you to
+     + update the code of a running system without interrupting any program
+
+     + distribute your code with ease on many computers
+
+     + manage errors and faults in a simple but powerful manner.
+
+   - =TODO=
+     We'll cover how to use most of these tools and achieve safety in this book.
+
+   - A general policy in Erlang: Let it crash.
+
+     Erlang has ability to recover from errors, organize code with actors, and
+     scale with distribution and concurrency.
+
+** Don't Drink Too Much Kool-Aid 4
+** What You Need to Dive In 5
+** Where to Get Help 6
+
+* DONE 1 STARTING OUT - 7
+  CLOSED: [2018-05-15 Tue 21:05]
+** DONE Using the Erlang Shell - 7
+   CLOSED: [2018-05-13 Sun 22:23]
+*** DONE Entering Shell Commands - 8
+    CLOSED: [2018-05-13 Sun 22:23]
+    - Erlang Shell command: ~erl~
+
+*** DONE Exiting the Shell - 8
+    CLOSED: [2018-05-13 Sun 22:23]
+    - You can use ~help()~ to find out the exist command.
+
+    - quit: ~q().~, which is a shorthand for ~init:stop().~
+
+    - When you type ~erl~ and get into the Erlang shell, you can see some lines before the first prompt:
+      #+BEGIN_SRC text
+        Erlang/OTP 20 [erts-9.3] [source] [64-bit] [smp:4:4] [ds:4:4:10] [async-threads:10] [hipe] [kernel-poll:false]
+
+        Eshell V9.3  (abort with ^G)
+      #+END_SRC
+
+      + Q :: What does ^G (usually Ctrl-G) do?
+      + A :: Actually, the Erlang shell is _NOT JUST_ a simple shell as with
+             other languages. Instead, it is _a BUNDLE of shell instances_, each
+             running different jobs.
+
+      + Moreover, you can manage them like processes in an operating system.
+        Type ~h~ after you get into the "User switch command" mode after
+        typing Ctrl-G, and you see:
+        #+BEGIN_SRC text
+          c [nn]             - connect to job
+          i [nn]             - interrupt job
+          k [nn]             - kill job
+          j                  - list all jobs
+          s [shell]          - start local shell
+          r [node [shell]]   - start remote shell
+          q                  - quit erlang
+          ? | h              - this message
+        #+END_SRC
+        For example,
+        * - ~k 3~ will terminate that 3rd shell and all the code it was running at the time.
+
+        * ~i 4~ will stop the code that is running without killing the shell.
+
+        * Create new shell instances by typing in ~s~ , list them with ~j~ , and
+          connect to them with ~c [nn]~, where ~nn~ is a number.
+
+      + Ast some point, you might see an asterrisk (*) next to some shell jobs:
+        #+BEGIN_SRC erlang
+          % --> j
+              1* {shell,start,[init]}
+        #+END_SRC
+        This ~*~ means that this is the LAST shell instance you were using.
+
+    - If your shell ever freezes:
+      Type CTRL-G<Enter>, and then ~i~, and then ~c~.
+
+      This will
+      1. get you to the shell manager
+      2. interrupt the current shell job,
+      3. then connect back to it.
+
+    - Each expression should end with a period!!!!!!!
+
+    - A sequence of expressions *MUST be terminated with a period followed by
+      whitespace (a line break, a space, and so on)*; otherwise, it won't be
+      executed. You can separate expressions with commas, but only the result of
+      the last one will be shown (although the others are still executed).
+
+** DONE Some Erlang Basics - 10
+   CLOSED: [2018-05-14 Mon 02:33]
+   Erlang is considered to be a relatively small and simple language.
+
+*** DONE Numbers - 10
+    CLOSED: [2018-05-13 Sun 22:31]
+    - Erlang's ~/~ is used as the general division -- even integer-to-integer
+      division results can be floating numbers.
+
+      ~div~ is used /integer division/.
+
+      ~rem~ is used for calculating remainder for /integer division/.
+
+    - Numbers of other than base 10 should be written in the ~Base#Value~ pattern.
+      For example,
+      #+BEGIN_SRC erlang
+        2#101010. % 42
+        8#0677.   % 447
+        16#AE.    % 147
+      #+END_SRC
+
+*** DONE Invariable Variables - 11
+    CLOSED: [2018-05-13 Sun 22:49]
+    - In Erlang, /variables/ *BEGIN with an uppercase letter* by definition.
+      #+BEGIN_SRC erlang
+        One.                 % * 1: variable 'One' is unbound
+        One = 1.             % 1
+        Un = Uno = One = 1.  % 1
+        Two = One + One.     % 2
+        Two = 2.             % 2
+        Two = Two + 1.       % ** exception error: no match of right hand side value 3
+      #+END_SRC
+      + (line 1)
+        You cannot use a variable before declaring it!
+
+      + (line 3)
+        You can reassign a value to a variable _ONLY WHEN this variable has the
+        SAME value_.
+
+        Technically, /variables/ can also start with an _underscore_, but by
+        convention, ~_~ is used to take values you don't care about.
+
+      + (line 2)
+        ~=~ is NOT only be used as /assignment/!
+
+        (line 3)
+        ~=~ can be used /as comparison/ (Actually, this is a /pattern matching/!):
+        * if its two sides are equal, it will return this value;
+        * if they are not equal, an _exception error_ will be raised.
+
+        More example:
+        #+BEGIN_SRC erlang
+          47 = 45 + 2.  % 47
+          47 = 45 + 3.  % ** exception error: no match of right hand side value 48
+        #+END_SRC
+
+    - Erlang *shell specific* functionalities:
+      + ~f(Variable).~: Erase the variable names from the environment.
+      + ~f().~: Erase all variable names from the environment.
+
+*** DONE Atoms - 12
+    CLOSED: [2018-05-13 Sun 23:42]
+    - There is a reason why variables names can't begin with a _lowercase character_:
+      /atoms/.
+
+    - While starting with a lowercase letter is ONE WAY to write an /atom/, there
+      are also OTHER WAYS. For example,
+      #+BEGIN_SRC erlang
+        atom.                     % atom
+        atom_rule.                % atom_rule
+        atoms_rule@erlang.        % atoms_rule@erlang
+
+        'Atoms can be cheated!'.  % 'Atoms can be cheated!'
+        atom = 'atom'.            % atom
+      #+END_SRC
+      + An /atom/ should be enclosed in single quotes ~'~
+        * if it does _NOT begin with_ a LOWERCASE letter
+
+        * if it contains any characters _other than_
+          - alphanumeric characters
+          - an underscore ( ~_~ )
+          - an at sign ( ~@~ )
+
+      + Line 5 also shows that an /atom/ _with single quotes_ is *exactly the
+        same as* a similar /atom/ _without them_.
+
+    - What are interesting for /atom/:
+      + It is a _constant_, every value has a _unique_ name without any confusion.
+
+      + It is IMPOSSIBLE for such a constant to be _undefined_!
+
+    - *DOn't Drink too much KOOL-AID*
+      + Atoms are really nice and a great way to send messages or represent
+        constants.
+
+      + HOWEVER,
+        there are *pitfalls* to using /atoms/ for too many things:
+
+        + Each /atom/ _consumes memory (4 bytes per atom in a 32-bit system and 8
+          bytes per atom in a 64-bit system)_.
+
+        + An /atom/ is referred to in an /atom table/, which is *NOT garbage
+          collected*.
+            So /atoms/ will accumulate until the system tips over, either from
+          memory usage or because 1,048,577 /atoms/ were declared . =TODO= =???= =WHY THIS NUMBER???=
+
+      + Conclusion:
+        *This means /atoms/ should NOT be generated dynamically.*
+
+        * If your system needs to be reliable, and user input lets someone crash
+          it at will by telling it to create /atoms/, you're in serious trouble .
+
+        * /Atoms/ should be seen as tools for the developer because, honestly,
+          that's what they are.
+
+        To reiterate:
+        You should feel perfectly safe using /atoms/ in your everyday code as long
+        as you type them in yourself.
+          It’s *only dynamic generation* of /atoms/ that is _RISKY_ .
+
+    - NOTE:
+      + Some /atoms/ are /reserved words/ and CANNOT be used except for what the
+        language designers wanted them to be:
+        * function names
+        * operators
+        * expressions, and so on.
+
+      + These /reserved words/ are as follows:
+        ~after~, ~and~, ~andalso~, ~band~, ~begin~, ~bnot~, ~bor~, ~bsl~, ~bsr~,
+        ~bxor~, ~case~, ~catch~, ~cond~, ~div~, ~end~, ~fun~, ~if~, ~let~,
+        ~not~, ~of~, ~or~, ~orelse~, ~query~, ~receive~, ~rem~, ~try~, ~when~,
+        and ~xor~ .
+
+*** DONE Boolean Algebra and Comparison Operators - 14
+    CLOSED: [2018-05-14 Mon 02:23]
+    #+BEGIN_SRC erlang
+      true and false.       % false
+      false or true.        % true
+      false xor false.      % true
+      not false.            % true
+      not (true and true).  % true
+    #+END_SRC
+    - ~and~ and ~or~ are *NOT* short-circuit.
+
+    - If you want short-circuit, use ~andalso~ and ~orelse~.
+
+    - equality or inequality checks ~=:=~, ~=/=~, ~==~, ~/=~:
+      #+BEGIN_SRC erlang
+        5 =:= 5.    % true
+        1 =:= 0.    % false
+        1 =/= 0.    % false
+        5 =:= 5.0.  % false
+
+        5 == 5.0.   % true
+        5 /= 5.0.   % false
+      #+END_SRC
+      + ~==~ and ~/=~ are used for the check you don't care about the exact type!
+
+        You'd better always start with ~=:=~ and ~=/=~, and only use ~==~ and
+        ~/=~ when you are sure you don't need exact comparison.
+
+    - Other comparison:
+      #+BEGIN_SRC erlang
+        1 < 2.   % true
+        1 < 1.   % false
+        1 >= 1.  % true
+        1 =< 1.  % true
+      #+END_SRC
+      Pay attention to the last one: ~=<~. It is different from almost all the
+      other popular languages.
+
+    - Erlang doesn't always get mad at you for using the wrong types:
+      #+BEGIN_SRC erlang
+        5 + llama.  %% exception error: .....
+
+        % BUT
+
+        5 =:= true.  %% false
+      #+END_SRC
+
+    - Erlang actually has *NO* such things as Boolean values /true/ and /false/.
+      The terms ~true~ and ~false~ are /atoms/! You shouldn't expect them
+      anything.
+
+    - *NOTE*
+      The correct ordering of each element in a comparison is the following:
+
+      =VERY IMPORTANT!!!=
+      *number < atom < reference < fun < port < pid < tuple < list < bit string*.
+
+      =TODO= =???= =WHY=
+      Some of these types won't be familiar to you, but you will get to know
+      them through this book. Just remember that this is why you can compare
+      anything with anything.
+        To quote Joe Armstrong, one of the creators of Erlang, “The actual order
+      is not important -- but that a total ordering is well defined is
+      important.” =TODO= =???= =WHY=
+
+*** DONE Tuples - 16
+    CLOSED: [2018-05-14 Mon 02:22]
+    - SYNTAX:
+      ~{Element1, Element2, ..., ElementN}~
+
+      + Example:
+        #+BEGIN_SRC erlang
+          X = 10, Y = 4.  %% 4
+          Point = {X,Y}.  %% {10, 4}
+        #+END_SRC
+
+    - Unpack tuples with /pattern matching/:
+      #+BEGIN_SRC erlang
+        Point = {4,5}.  %% {4,5}
+        {4,5} = Point.  %% {4,5}
+        X.              %% 4
+        {X,_} = Point.  %% {4,5}
+      #+END_SRC
+
+    - A way to use /tuple/: use it as Haskell ~newtype~.
+      It has a name called /tagged tuple/.
+      For example:
+      #+BEGIN_SRC erlang
+        PreciseTemperature = {celsius, 23.213}.  %% {celsius, 23.213}
+        {kelvin, T} = PreciseTemperature         %% ** exception error: ...
+      #+END_SRC
+      OR
+      #+BEGIN_SRC erlang
+        {point, {X, Y}}.  %% {point, {4,5}}
+      #+END_SRC
+
+*** DONE Lists - 18
+    CLOSED: [2018-05-14 Mon 02:22]
+    - Erlang /lists/ are *heterogeneous* with SYNTAX:
+      ~[Element1, Element2, ..., ElementN]~
+
+      For example,
+      #+BEGIN_SRC erlang
+        [1, 2, 3, {numbers, [4, 5, 6]}, 5.34, atom].
+        %% [1, 2, 3, {numbers, [4, 5, 6]}, 5.34, atom].
+      #+END_SRC
+
+    - In Erlang, /strings/ are /lists/:
+      #+BEGIN_SRC erlang
+        [97, 98, 99].           %% "abc"
+        [97, 98, 99, 4, 5, 6].  %% [97, 98, 99, 4, 5, 6]
+        [233].                  %% "é"
+      #+END_SRC
+      Many people dislike these behaviors: =IMPORTANT=
+      Erlang will print lists of numbers as numbers only when at least one of
+      them could not also represent a letter.
+
+      =TODO= =!!!=
+      However, don't despair, because there are other ways to write stings, as
+      you'll see in "Binary Strings" on page 27.
+
+    - *Don't Drink Too Much Kool-Aid* =TODO= =RE-WRITE NOTE!=
+      This is why some programmers say that _Erlang SUCKS at STRING MANIPULATION_:
+      + It does _not have a built-in string type_ as in most other languages.
+        * Rationale:
+          The lack is due to Erlang’s origins as a language created and used by
+          telecom companies. They never (or rarely) used strings, so they were
+          not officially added to the language as their own data type.
+
+      + Improvement after years:
+        However, this problem is getting fixed with time.
+        The virtual machine (VM) now
+        * *PARTIALLY* supports Unicode
+        * is getting faster at string manipulations all the time.
+
+      + There is also a way to *store* strings as a /binary data structure/,
+        making them really light and faster to work with.
+        =TODO= We'll discuss this in “Binary Strings” on page 27.
+
+      All in all, some functions are *still missing from* the standard library
+      when it comes to strings.
+
+    - Concatenation ~++~ and elimination ~--~.
+      For example:
+      #+BEGIN_SRC erlang
+        [1, 2, 3] ++ [4, 5].           %% [1, 2, 3, 4, 5]
+        [1, 2, 3, 4, 5] -- [1, 2, 3].  %% [4, 5]
+        [1, 2, 3, 4, 5] -- [1, 8].     %% [2, 3, 4, 5]
+      #+END_SRC
+
+    - Both of ~++~ and ~--~ are *right-associative*:
+      #+BEGIN_SRC erlang
+        [1, 2, 3] -- [1, 2] -- [3].  %% [3]
+        [1, 2, 3] -- [1, 2] -- [2].  %% [2, 3]
+      #+END_SRC
+
+    - Two built-in functions (BIFs) for /lists/: head (~hd~) and tail (~tl~).
+      #+BEGIN_SRC erlang
+        hd([1, 2, 3, 4]).  %% 1
+        tl([1, 2, 3, 4]).  %% [2, 3, 4]
+      #+END_SRC
+
+    - NOTE:
+      BIFs are usually functions that could not be implemented in pure Erlang,
+      and as such are defined in C, or whichever language Erlang happens to be
+      implemented in (it was Prolog in the 1980s).
+
+      Sometime, "could not" does only mean "for the efficiency reason, could not".
+      For example, the BIF ~length(List)~.
+
+    - /Pattern matching/ the head and tail:
+      #+BEGIN_SRC erlang
+        List = [2, 3, 4].    %% [2,3,4]
+        NewList = [1|List].  %% [1, 2,3,4]
+
+        [Head|Tail] = NewList.     %% [1, 2, 3, 4]
+        Head.                      %% 1
+        Tail.                      %% [2, 3, 4]
+        [NewHead|NewTail] = Tail.  %% [2, 3, 4]
+        NewHead.                   %% 2
+      #+END_SRC
+      + The ~|~ is called the /cons/ operator.
+        The /list/ can be built with only /cons/ operators and values:
+        #+BEGIN_SRC erlang
+          [1 | []].              % [1]
+          [2 | [1 | []]].        % [2, 1]
+          [3 | [2 | [1 | []]]].  % [3, 2, 1]
+        #+END_SRC
+
+    - NOTE:
+      /Improper lists/, like ~[1 | 2]~, although syntactically valid, are of very
+      limited use outside of user-defined data structures.
+
+      You can apply the ~[Head|Tail]~ pattern matching on /improper lists/,
+      but you *cannot* apply standard functions of Erlang (even ~length()~).
+
+*** DONE List Comprehensions - 21
+    CLOSED: [2018-05-14 Mon 02:33]
+    - For example:
+      ~[2*N || N <- [1,2,3,4]].  %% [2, 4, 6, 8]~
+
+    - The arrow ~<-~ acts exactly like the ~=~ operator,
+      with the exception that it doesn't throw exceptions -- it just ignore the
+      unmatched data. See below the example "Use List Comprehensions as Filter".
+
+    - Even number from 1 to 10.
+      ~[X || X <- [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], X rem 2 =:= 0].~
+
+    - Single Generator List Comprehension SYNTAX:
+      ~NewList = [Expression || Pattern <- List, Condition1, Condition2, ..., ConditionN]~
+      + The ~Pattern <- List~ is called a /generator expression/.
+
+    - Multiple Generators List Comprehension SYNTAX:
+      ~NewList = [Expression || GeneratorExpr1, ..., GeneratorExprN, Condition1, ..., ConditionN]~
+
+    - Use List Comprehensions as Filter:
+      #+BEGIN_SRC erlang
+        Weather = [{toronto, rain}, {montreal, storms}, {london, fog},
+                   {paris, sun}, {boston, fog}, {vancouver, snow}].
+
+        FoggyPlaces = [X || {X, fog} <- Weather].  %% [london, boston]
+      #+END_SRC
+
+** DONE Working with Binary Data - 23
+   CLOSED: [2018-05-15 Tue 21:05]
+   - Unlike most other languages,
+     Erlang provides useful abstractions when dealing with binary values with
+     pattern matching, instead of requiring the old-fashioned /bit twiddling/
+     with special operators.
+       It makes dealing with raw binary data fun and easy (no, really), =TODO= =HOW= =???=
+     which was necessary for the telecom applications it was created to help with.
+
+   - /Bit manipulation/ has _a unique syntax and idioms_ that may look kind of
+     weird at first
+
+*** DONE Bit Syntax - 23
+    CLOSED: [2018-05-15 Tue 20:38]
+    - Erlang bit syntax:
+      + encloses binary data between ~<<~ and ~>>~
+      + splits it in readable /segments/; each segment is separated by a _comma_.
+
+      A /segment/ is a sequence of bits of a binary (not necessarily on a byte
+      boundary, although this is the default behavior =TODO= =???=).
+
+    - Example:
+      Store an orange pixel of true color (24 bits).
+      + The hexadecimal notation has the format #RRGGBB
+      + A tint of orange is ~#F09A29~
+
+      Then, you write code like:
+      #+BEGIN_SRC erlang
+        Color = 16#09A29.      % 15768105
+        Pixel = <<Color:24>>.  % <<240,154,41>>
+      #+END_SRC
+      This basically says, "Put the binary values of #F09A29 on 24 bits of space
+      (red on 8 bits, green on 8 bits, and blue also on 8 bits) in the variable
+      Pixel."
+
+      That value can then be written to a file or a socket later.
+
+      The ~<<240,154,41>>~ is another representation which is equivalent to
+      ~16#09A29~.
+
+    - Unpack:
+      #+BEGIN_SRC erlang
+        Pixels = <<213,45,132,64,76,32,76,0,0,234,32,15>>.
+        %% <<213,45,132,64,76,32,76,0,0,234,32,15>>
+
+        <<Pix1,Pix2,Pix3,Pix4>> = Pixels.
+        %% ** exception error: no match of right hand side value <<213,45,132,64,76,32,76,0,0,234,32,15>>
+
+        <<Pix1:24, Pix2:24, Pix3:24, Pix4:24>> = Pixels.
+        %% <<213,45,132,64,76,32,76,0,0,234,32,15>>
+      #+END_SRC
+      + ~<<Pix1,Pix2,Pix3,Pix4>> = Pixels.~ doesn't work, because ~Pixels~ has 24
+        segments, rather than 4.
+
+      + ~<<Pix1:24, Pix2:24, Pix3:24, Pix4:24>> = Pixels.~ works, because you
+        specify how to store 24 segements into four parts.
+
+    - Unpack and get the first part:
+      #+BEGIN_SRC erlang
+        <<R:8, Rest/binary>> = Pixels.
+
+        R.
+        %% 213
+      #+END_SRC
+      + ~Rest/binary~ is a syntactic sugar.
+
+    - Erlang allows more than one way to describe a /binary segment/:
+      + ~Value~ 
+      + ~Value:Size~ 
+      + ~Value/TypeSpecifierList~ 
+      + ~Value:Size/TypeSpecifierList~
+
+    - /TypeSpecifierList/ represents one or more of the following, separated by a
+      hyphen (~-~):
+      + /Type/
+        * default: ~integer~
+
+        * ~integer~, ~float~, ~binary~, ~bytes~, ~bitstring~, ~bits~, ~utf8~,
+          ~utf16~, and ~utf32~ .
+
+      + Signedness
+        * default: ~unsigned~
+
+        * ~signed~ and ~unsigned~
+
+      + Endianness
+        * default: ~big~ -- the standard used in network protocol encodings
+
+        * ~big~, ~little~, and ~native~.
+
+        * /Endianness/ *only matters* when the type is ~integer~, ~utf16~,
+          ~utf32~, or ~float~.
+
+        * There is also the option to use ~native~, which will _choose a
+          runtime_ if the CPU uses little-endianness or big-endianness
+          natively.
+
+      + Unit
+        * This is written as ~unit:Integer~.
+
+        * unit :: the *size* of each /segment/.
+
+        * =TODO=
+          The allowed range of /unit/ is 1 to 256.
+          It is set by default to 1 bit for integer , float , and bitstring types, and to
+          8 bits for binary . The utf8 , utf16 , and utf32 types do not require a unit to
+          be defined. The multiplication of size by unit is equal to the number of
+          bits the segment will take, and must be evenly divisible by 8. The unit
+          size is usually used to ensure byte alignment.
+          The default size of a data type can be changed by combining dif-
+          ferent parts of a binary. As an example, <<25:4/unit:8>> will encode the
+          number 25 as a 4-byte integer, or <<0,0,0,25>> in its graphical representa-
+          tion. <<25:2/unit:16>> will give the same result, and so will <<25:1/unit:32>> .
+          Erlang will generally accept <<25:Size/unit:Unit>> and multiply Size by
+          Unit to figure out how much space it should take to represent the value.
+          Again, the result of this should be divisible by 8.
+
+    - Examples:
+      #+BEGIN_SRC erlang
+        <<X1/unsigned>> = <<-44>>.
+        %% <<"Ô">>
+
+        X1.
+        %% 212
+
+        <<X2/signed>> = <<-44>>.
+        %% <<"Ô">>
+
+        X2.
+        %% -44
+
+        <<X2/integer-signed-little>> = <<-44>>.
+        %% <<"Ô">>
+
+        X2.
+        %% -44
+
+        <<N:8/unit:1>> = <<72>>.
+        %% <<"H">>
+
+        N.
+        %% 72
+
+        <<N/integer>> = <<72>>.
+        %% <<"H">>
+
+        <<Y:4/little-unit:8>> = <<72,0,0,0>>.
+        %% <<72,0,0,0>>
+
+        Y.
+        %% 72
+      #+END_SRC
+
+*** DONE Bitwise Binary Operations - 26
+    CLOSED: [2018-05-15 Tue 20:38]
+    - Erlang's bit operations:
+      + ~bsl~ (bit shift left)
+      + ~bsr~ (bit shift right)
+      + ~band~
+      + ~bor~
+      + ~bxor~
+      + ~bnot~
+
+    - For example:
+      #+BEGIN_SRC erlang
+        2#00100 = 2#00010 bsl 1.
+        2#00001 = 2#00010 bsr 1.
+        2#10101 = 2#10001 bor 2#00101.
+      #+END_SRC
+
+    - *DON'T DRINK TOO MUCH KOOL-AID*
+      - Erlang is traditionally just NOT that great at heavy number-crunching.
+          It would likely be a bad idea to do stuff like converting videos or
+        images with it.
+
+      - Take note, however, that Erlang is usually mighty fast for applications
+        that do not require number-crunching, such as
+        + reacting to events
+        + message-passing (with the help of atoms being extremely light), and so
+          on.
+
+        It can deal with events in matters of milliseconds, and as such, is a
+        great candidate for soft real-time applications.
+
+*** DONE Binary Strings - 27
+    CLOSED: [2018-05-15 Tue 20:46]
+    - /Binary strings/ are much more efficient in terms of space.
+      + Normal /list/, which is used to save /strings/, are similar to /linked
+        lists/.
+
+      + /Binary strings/ are more like C arrays.
+
+    - The downside of /binary strings/ compared to lists is a loss in simplicity
+      when it comes to pattern matching and manipulation.
+
+      =IMPORTANT=
+      Consequently, people tend to use /binary strings/ when storing text that
+      won't be manipulated too much or when space efficiency is a real issue.
+
+    - *NOTE*
+      + Don't use /binary strings/ or /strings/ to tag data.
+        You should use /atoms/.
+        *The comparisons of /atoms/ take constant time, while the comparisons of
+        /strings/ take linear time.*
+
+      + Conversely, do NOT use /atoms/ to replace /strings/ because they are
+        lighter. /Strings/ can be manipulated, while /atoms/ can ONLY be
+        compared and nothing else.
+
+*** DONE Binary Comprehensions - 28
+    CLOSED: [2018-05-15 Tue 21:04]
+    - Example:
+      #+BEGIN_SRC erlang
+        << <<X>> || <<X>> <= <<1,2,3,4,5>>, X rem 2 == 0>>.
+        %% <<2,4>>
+      #+END_SRC
+
+    - Example:
+      #+BEGIN_SRC erlang
+        Pixels = <<213,45,132,64,76,32,76,0,0,234,32,15>>.
+        %% <<213,45,132,64,76,32,76,0,0,234,32,15>>
+
+        RGB = [ {R,G,B} || <<R:8,G:8,B:8>> <= Pixels ].
+        %% [{213,45,132},{64,76,32},{76,0,0},{234,32,15}]
+      #+END_SRC
+
+    - Example (be opposite to the above):
+      #+BEGIN_SRC erlang
+        << <<R:8, G:8, B:8>> || {R,G,B} <- RGB >>.
+        %% <<213,45,132,64,76,32,76,0,0,234,32,15>>
+      #+END_SRC
+
+    - Resulting binary requires a while defined binary type:
+      #+BEGIN_SRC erlang
+        << <<Bin>> || Bin <- [<<3,7,5,4,7>>] >>.
+        %% ** exception error: bad argument
+
+        << <<Bin/binary>> || Bin <- [<<3,7,5,4,7>>] >>.
+        %% <<3,7,5,4,7>>
+      #+END_SRC
+
+    - Example (a /binary comprehension/ with a /binary generation/):
+      #+BEGIN_SRC erlang
+        << <<(X+1)/integer>> || <<X>> <= <<3,7,5,4,7>> >>.
+        %% <<4,8,6,5,8>>
+      #+END_SRC
+
+    - =TODO=
+      MORE DETAILS:
+      http://user.it.uu.se/~pergu/papers/erlang05.pdf
+   
+* DONE 2 MODULES - 31
+  CLOSED: [2018-05-14 Mon 23:39]
+** DONE What Are Modules? - 31
+   CLOSED: [2018-05-14 Mon 22:08]
+   - module :: a bunch of functions grouped together in a single file, under a single name.
+               
+   - *ALL* /functions/ in Erlang must be defined in /modules/.
+
+   - You may not notice:
+     The BIFs mentioned in Chapter 1, such as ~hd~ and ~tl~, actually belong to
+     the ~erlang~ /mdoule/.
+
+     Actually, ALL of the arithmetic, logic, and Boolean operators also are in the ~erlang~ /module/.
+
+   - =From Jian=
+     You can consider the ~erlang~ /module/ is similar to the ~java.lang~ module
+     in Java:
+     The /functions/ in ~erlang~ are imported automatically, and for the other
+     functions, you need to call them with the form
+     ~Module::Function(Arguments)~.
+
+   - Example:
+     #+BEGIN_SRC erlang
+       list:seq(1,4).  %% [1,2,3,4]
+     #+END_SRC
+
+** DONE Creating Modules - 32
+   CLOSED: [2018-05-14 Mon 22:08]
+   - You can declare *two* kinds of things in a /module/:
+     + /functions/
+     + /attributes/
+
+   - Attributes :: metadata describing the /module/ itself,
+                   such as its name, the functions that should be visible to the
+                   outside world, the author of the code, and so on.
+
+   - All /module attributes/ follow the form ~-Name(Attribute).~.
+     ONLY one of them is necessary for your /module/ to be complilable:
+     ~-moudle(Name).~
+     + The ~Name~ above should be an /atom/.
+
+     + The ~Name~ must be same as the file name.
+
+   - Export:
+     ~-export([Function1/Arith, Funciton2/Arith, ..., FunctionN/Arity]).~
+
+     =From Jian=:
+     Erlang  wants to take control of what to export.
+       To do this, Erlang need to provide extra info: it cannot be the /types/
+     -- Erlang is a dynamic language. /arity/ is this kind of info.
+
+   - *NOTE*
+     /Exported functions/ represent a /module/'s /interface/.
+
+     It is important to define an /interface/ that reveals *only the bare minimum*
+     of what is necessary to use the /module's functions/.
+       This lets you fiddle with the internal details of your implementations
+     without breaking code that might depend on your /module/.
+
+   - The _SYNTAX_ of defining a /function/:
+     ~Name(Args) -> Body.~
+
+     + Here *Name* must be an /atom/
+
+     + *Body* can be _one or more_ Erlang /expressions/ separated by *commas*.
+
+     + The /function/ is ended with a *period*.
+
+     As many functional programming languages, Erlang doesn't have ~return~.
+     Its /functions/ just return their last logical expression value.
+
+   - *NOTE*
+     The CONVENTION in the Erlang community:
+     + ~%%%~:
+       for comments that are _general_ to a /module/ (what the /module/ is used
+       for, licenses, and so on) and divisions of different sections of a module
+       (public code, private code, helper functions, and so on).
+
+     + ~%%~:
+       All other comments that are alone on their own line and at the _same
+       level of indentation as the surrounding code_.
+
+     + ~%~:
+       This is used at the end of a line where there is code.
+
+   - Import:
+     ~-import(Module, [Function1/Arity, ..., FunctionN/Arity]).~
+
+   - In Erlang, /import/ is strongly discouraged.
+     The only exception is the ~lists~ /module/, whose /functions/ are used with
+     a higher frequency.
+
+** DONE Compiling Code - 36
+   CLOSED: [2018-05-14 Mon 23:07]
+   - Compile command (command line):
+     ~erlc flags file.erl~
+
+   - Compile command (in the Erlang shell or in a /mdoule/):
+     ~compile:file(Filename)~
+
+   - Another way, often used when developing code, is to compile from the shell:
+     ~c(ModuleName)~
+
+   - *NOTE*
+     After compiling, you get a file with =.bean= extension: ~ModuleName.beam~
+
+     =TODO= HISTORY!!!
+
+   - After you get the =.beam= file (in your current path), you can use the
+     functions it exports:
+     #+BEGIN_SRC erlang
+       useless:add(7, 2).  % 9
+
+       useless:hello().
+       %% Hello, world!
+       %% ok
+
+       useless:greet_and_add_two(-3).
+       %% Hello, world!
+       %% -1
+     #+END_SRC
+     + You see the ~useless:hello()~ returns an /atom/ ~ok~.
+
+       Erlang functions and expressions must always return something, even if
+       they would not need to in other languages.
+
+       As such, ~io:format/1~ returns ~ok~ to denote a normal condition:
+       _the absence of errors_.
+
+*** DONE Compiler Options - 37
+    CLOSED: [2018-05-14 Mon 23:07]
+    - The most common flags:
+      + ~-debug_info~
+        =TODO= =NOTES=
+
+      + ~-{outdir,Dir}~
+        =TODO= =NOTES=
+
+      + ~-export_all~
+        =TODO= =NOTES=
+
+      + ~-{d,Macro}~ or ~-{d,Macro,Value}~
+        =TODO= =NOTES=
+
+    - Compile with flags
+      + Specify flags in Erlang shell compilation function:
+        #+BEGIN_SRC erlang
+          compile:file(useless, [debug_info, export_all]).  % {ok,useless}
+
+          c(useless, [debug_info, export_all]).             % {ok,useless}
+        #+END_SRC
+
+      + Specify flags inside the source file:
+        ~-compile([debug_info, export_all]).~
+
+    - *Note*
+      + Compile to native code.
+        You need the ~hipe~ /module/.
+        * ~hipe:c(Module,OptionsList).~
+          OR
+        * ~c(Module,[native]).~
+
+      + The compilation result is still a =.beam= file, but it will no longer be
+        portable across platform.
+
+      + In general,
+        compiling with ~hipe~ is seen as _a last resort to get performance out
+        of CPU-intensive operations_.
+
+** DONE Defining Macros - 38
+   CLOSED: [2018-05-14 Mon 23:30]
+   - /Erlang macros/ are similar to C's ~#define~ statements, and are _mainly used
+     to *define* SHORT FUNCTIONS and CONSTANTS_.
+     
+   - SYNTAX:
+     + Define:
+       ~-define(MACRO, some_value).~
+
+     + Example:
+       ~-define(HOUR, 3600). % in seconds~
+
+   - An example of defining "function" macro:
+     ~-define(sub(X,Y), X-Y).~
+
+   - Use /macro/:
+     ~?MACRO~
+
+   - There are also a few predefined macros, such as the following:
+     + ~?MODULE~
+       it is *replaced* by the /current module name/ as an /atom/
+
+     + ~?FILE~
+       it is *replaced* by the /filename/ as a /string/
+
+     + ~?LINE~
+       it returns the line number of wherever the macro is placed
+
+   - You can also check whether particular macros are defined in your code
+     and conditionally define other macros based on that result.
+
+     To do this, use the /attributes/ ~-ifdef(MACRO).~, ~-else.~, and ~-endif.~
+     + Example 1:
+       #+BEGIN_SRC erlang
+         -ifdef(DEBUGMODE).
+         -define(DEBUG(S), io:format("dbg: "++S)).
+         -else.
+         -define(DEBUG(S), ok).
+         -endif.
+       #+END_SRC
+  
+       * Use it:
+         ~?DEBUG("entering some function")~
+         It will only output information if the /module/ is compiled with a
+         ~DEBUGMODE~ /macro/ present. Otherwise, return ~ok~ and do nothing.
+
+     + Example 2:
+       As another example, you could also _define tests to exist only if some
+       test macro is first defined_:
+       #+BEGIN_SRC erlang
+         -ifdef(TEST).
+         my_test_function() ->
+             run_some_tests().
+         -endif.
+       #+END_SRC
+
+       Then, using the /compile flags/ mentioned previously, we can choose
+       whether to define ~DEBUGMODE~ or ~TEST~ as
+       ~c(Module, [{d,'TEST'},{d,'DEBUGMODE'}]).~.
+
+       =????= ~d~ =TODO=
+
+** DONE More About Modules - 40
+   CLOSED: [2018-05-14 Mon 23:39]
+*** DONE Metadata - 40
+    CLOSED: [2018-05-14 Mon 23:36]
+    - /Module attributes/ are metadata describing properties of the /module/
+      itself.
+
+      When compiling a /module/, the compiler will pick up most /module
+      attributes/ and store them (along with other information) in a
+      ~module_info/0~ _function_.
+
+    - Check the metadata of a /module/.
+      For example, the ~useless~ /module/:
+      #+BEGIN_SRC erlang
+        useless:module_info().
+        %% [{exports,[{add,2},
+        %%            {hello,0},
+        %%            {greet_and_add_two,1},
+        %%            {module_info,0},
+        %%            {module_info,1}]},
+        %%  {imports,[]},
+        %%  {attributes,[{vsn,[174839656007867314473085021121413256129]}]},
+        %%  {compile,[{options,[]},
+        %%            {version,"4.8"},
+        %%            {time,{2013,2,13,2,56,32}},
+        %%            {source,"/home/ferd/learn-you-some-erlang/useless.erl"}]}]
+
+        useless:module_info(attributes).
+        %% [{vsn,[174839656007867314473085021121413256129]}]
+      #+END_SRC
+
+    - *NOTE*
+      ~vsn~ is an automatically generated unique value that differentiates each
+      version of your code, EXCLUDING comments.
+
+      It is used in code /hot-loading/ (upgrading an application while it runs,
+      without stopping it) and by some tools related to release handling.
+
+      You can also specify a ~vsn~ value yourself by adding
+      ~-vsn(VersionNumber)~ to your module.
+
+*** DONE Circular Dependencies - 41
+    CLOSED: [2018-05-14 Mon 23:39]
+    For maintenance reason:
+    - /circular dependencies/ should be avoided.
+
+    - _Too many dependencies module_ should be avoided.
+
+* TODO 3 SYNTAX IN FUNCTIONS - 43
+** TODO Pattern Matching - 43
+   - Greet to different people with different messages:
+     #+BEGIN_SRC erlang
+       greet(male, Name) ->
+           io:format("Hello, Mr. ~s!", [Name]);
+       greet(female, Name) ->
+           io:format("Hello, Mrs. ~s!", [Name]);
+       greet(_, Name) ->
+           io:format("Hello, ~s!", [Name]).
+     #+END_SRC
+     + _Each of these function declarations_ is called a /function clause/.
+       They must be separated by ~;~ and together form a /function declaration/.
+       A /function declaration/ counts as one larger statement that ends with ~.~.
+
+   - *Formatting with* ~io:format~
+     + ~~n~: newline character
+
+     + ~~s~: a format for strings and binary strings
+
+     + ~~p~: print an Erlang term in the same way terms are output for you by the
+       Erlang shell (adding indentation and everything).
+
+     For example,
+     #+BEGIN_SRC erlang
+       io:format("~s~n", [<<"Hello">>])
+       io:format("~p~n", [<<"Hello">>])
+       io:format("~~~n")
+       io:format("~f~n", [4.0])
+       io:format("~30f~n", [4.0])
+     #+END_SRC
+
+*** DONE Fancier Patterns - 45
+    CLOSED: [2018-05-14 Mon 23:56]
+    #+BEGIN_SRC erlang
+      -module(functions).
+
+      -compile(export_all). % Replace with -export() later, for sanity's sake!
+
+      head([H|_]) -> H.
+
+      second([_,X|_]) -> X.
+    #+END_SRC
+
+*** TODO Variables in a Bind - 46
+    - xx
+
+** TODO Guards, Guards! - 48
+** TODO What the If?! - 49
+** TODO In case of - 52
+** TODO Which Should We Use? - 54
+
+* TODO 4 TYPES (OR LACK THEREOF) - 55
+  This chapter introduces Erlang's type system, the reasons behind its use, and
+  how that affects you, as a brand-new Erlang programmer.
+
+** TODO Dynamite-Strong Typing - 55
+** TODO Type Conversions - 57
+** TODO To Guard a Data Type - 58
+** TODO For Type Junkies - 60
+
+* TODO 5 HELLO RECURSION! - 61
+** How Recursion Works - 62
+*** Length of a List - 63
+*** Length of a Tail Recursion - 64
+
+** More Recursive Functions - 66
+*** A Duplicate Function - 66
+*** A Reverse Function - 66
+*** A Sublist Function - 68
+*** A Zip Function - 69
+*** Quick, Sort! - 70
+
+** More Than Lists - 72
+** Thinking Recursively - 75
+
+* TODO 6 HIGHER-ORDER FUNCTIONS - 77
+** Let's Get Functional - 77
+** Anonymous Functions - 79
+*** More Anonymous Function Power - 80
+*** Function Scope and Closures - 81
+
+** Maps, Filters, Folds, and More - 83
+*** Filters - 83
+*** Fold Everything - 84
+*** More Abstractions - 86
+
+* TODO 7 ERRORS AND EXCEPTIONS - 87
+** A Compilation of Errors - 88
+*** Compile-Time Errors - 88
+*** No, YOUR Logic Is Wrong! - 89
+*** Runtime Errors - 90
+
+** Raising Exceptions - 93
+*** Error Exceptions - 93
+*** Exit Exceptions - 94
+*** Throw Exceptions - 95
+
+** Dealing with Exceptions - 96
+*** Handling Different Types of Exceptions - 96
+*** After the Catch - 99
+*** Trying Multiple Expressions - 99
+*** Wait, There's More! - 100
+
+** Try a try in a Tree - 103
+
+* TODO 8 FUNCTIONALLY SOLVING PROBLEMS - 105
+** TODO Reverse Polish Notation Calculator - 106
+*** TODO How RPN Calculators Work - 106
+*** TODO Creating an RPN Calculator - 107
+*** TODO Testing the Code - 110
+
+** TODO Heathrow to London - 111
+*** TODO Solving the Problem Recursively - 112
+*** TODO Writing the Code - 114
+*** TODO Running the Program Without the Erlang Shell - 118
+
+* TODO 9 A SHORT VISIT TO COMMON DATA STRUCTURES - 121
+** TODO Records - 122
+*** Defining Records - 122
+*** Reading Values from Records - 123
+*** Updating Records - 125
+*** Sharing Records - 126
+
+** TODO Key/Value Stores - 127
+*** Stores for Small Amounts of Data - 127
+*** Larger Dictionaries: Dicts and GB Trees - 128
+
+** TODO A Set of Sets - 130
+** TODO Directed Graphs - 131
+** TODO Queues - 132
+** TODO End of the Short Visit - 133
+
+* TODO 10 THE HITCHHIKER’S GUIDE TO CONCURRENCY - 135
+** TODO Don't Panic - 136
+** TODO Concurrency Concepts - 137
+*** TODO Scalability - 137
+*** TODO Fault Tolerance - 138
+*** TODO Concurrency Implementation - 140
+
+** TODO Not Entirely Unlike Linear Scaling - 140
+** TODO So Long and Thanks for All the Fish! - 142
+*** TODO Spawning Processes - 142
+*** TODO Sending Messages - 144
+*** TODO Receiving Messages - 145
+
+* TODO 11 MORE ON MULTIPROCESSING - 149
+** State Your State 150
+** We Love Messages, But We Keep Them Secret 152
+** Time Out 153
+** Selective Receives 156
+*** The Pitfalls of Selective Receives 156
+*** More Mailbox Pitfalls 159
+
+* TODO 12 ERRORS AND PROCESSES - 161
+** Links 162
+*** It’s a Trap! 164
+*** Old Exceptions, New Concepts 165
+
+** Monitors 168
+** Naming Processes 170
+
+* TODO 13 DESIGNING A CONCURRENT APPLICATION - 175
+** Understanding the Problem 176
+** Defining the Protocol 178
+** Lay Them Foundations 180
+** An Event Module 181
+*** Events and Loops 181
+*** Adding An Interface 184
+
+** The Event Server 186
+*** Handling Messages 188
+*** Hot Code Loving 191
+*** I Said, Hide Your Messages 192
+
+** A Test Drive 194
+** Adding Supervision 195
+** Namespaces (or Lack Thereof) 196
+
+* TODO 14 AN INTRODUCTION TO OTP - 199
+** The Common Process, Abstracted 200
+** The Basic Server 201
+*** Introducing the Kitty Server 201
+*** Generalizing Calls 203
+*** Generalizing the Server Loop 204
+*** Starter Functions 206
+*** Generalizing Kitty Server 207
+
+** Specific vs Generic 209
+** Callback to the Future 210
+*** The init Function 210
+*** The handle_call Function 211
+*** The handle_cast Function 212
+*** The handle_info Function 212
+*** The terminate Function 212
+*** The code_change Function 213
+
+** BEAM Me Up, Scotty! 213
+
+* TODO 15 RAGE AGAINST THE FINITE-STATE MACHINES - 219
+** What Is a Finite-State Machine? 220
+** Generic Finite-State Machines 223
+*** The init Function 223
+*** The StateName Function 224
+*** The handle_event Function 225
+*** The handle_sync_event Function 225
+*** The code_change and terminate Functions 225
+
+** A Trading System Specification 225
+*** Show Me Your Moves 226
+*** Defining the State Diagrams and Transitions 227
+
+** Game Trading Between Two Players 233
+*** The Public Interface 233
+*** FSM-to-FSM Functions 235
+*** The gen_fsm Callbacks 236
+
+** That Was Really Something 245
+** Fit for the Real World? 246
+
+* TODO 16 EVENT HANDLERS - 247
+** Handle This! *pumps shotgun* 248
+** Generic Event Handlers 249
+*** The init and terminate Functions 250
+*** The handle_event Function 250
+*** The handle_call Function 251
+*** The handle_info Function 251
+*** The code_change Function 251
+
+** It’s Curling Time! 252
+*** The Scoreboard 252
+*** Game Events 253
+*** Alert the Press! 257
+
+* TODO 17 WHO SUPERVISES THE SUPERVISORS? - 263
+** Supervisor Concepts 264
+** Using Supervisors 266
+*** Restart Strategies 266
+*** Restart Limits 268
+*** Child Specifications 268
+
+** Band Practice 271
+*** Musicians 271
+*** Band Supervisor 274
+
+** Dynamic Supervision 277
+*** Using Standard Supervisors Dynamically 277
+*** Using a simple_one_for_one Supervisor 279
+
+* TODO 18 BUILDING AN APPLICATION - 281
+** A Pool of Processes 282
+*** The Onion Layer Theory 283
+*** A Pool’s Tree 284
+
+** Implementing the Supervisors 286
+** Working on the Workers 290
+** Writing a Worker 296
+** Run Pool Run 298
+** Cleaning the Pool 301
+
+* TODO 19 BUILDING APPLICATIONS THE OTP WAY - 303
+** My Other Car Is a Pool 304
+** The Application Resource File 305
+** Converting the Pool 307
+** The Application Behavior 309
+** From Chaos to Application 310
+** Library Applications 314
+
+* TODO 20 THE COUNT OF APPLICATIONS - 315
+** From OTP Application to Real Application 316
+*** The Application File 317
+*** The Application Callback Module and Supervisor 318
+*** The Dispatcher 319
+*** The Counter 329
+
+** Run App Run 331
+** Included Applications 333
+** Complex Terminations 333
+
+* TODO 21 RELEASE IS THE WORD - 335
+** Fixing the Leaky Pipes 336
+*** Terminating the VM 336
+*** Updating the Application Files 336
+*** Compiling the Applications 337
+
+** Releases with systools 338
+*** Creating a Boot File 339
+*** Packaging the Release 340
+
+** Releases with Reltool 341
+*** Reltool Options 345
+
+** Reltool Recipes 348
+** Released from Releases 352
+
+* TODO 22 LEVELING UP IN THE PROCESS QUEST - 353
+** The Hiccups of Appups and Relups 354
+** The Ninth Circle of Erl 356
+** Process Quest 357
+*** The regis-1 0 0 Application 358
+*** The processquest-1 0 0 Application 359
+*** The sockserv-1 0 0 Application 360
+*** The Release 360
+
+** Making Process Quest Better 363
+*** Updating code_change Functions 363
+*** Adding Appup Files 365
+*** Upgrading the Release 369
+
+** Relup Review 372
+
+* TODO 23 BUCKETS OF SOCKETS - 375
+** IO Lists 375
+** UDP and TCP: Bro-tocols 377
+*** UDP Sockets 379
+*** TCP Sockets 381
+
+** More Control with Inet 384
+** Sockserv, Revisited 387
+** Where to Go from Here? 396
+
+* TODO 24 EUNITED NATIONS COUNCIL - 397
+** EUnit—What’s an EUnit? 398
+** Test Generators 402
+** Fixtures 404
+*** More Test Control 406
+*** Test Documentation 407
+
+** Testing Regis 408
+** He Who Knits EUnits 417
+
+* TODO 25 BEARS, ETS, BEETS: IN-MEMORY NOSQL FOR FREE! - 419
+** Why ETS 420
+** The Concepts of ETS 421
+** ETS Phone Home 423
+*** Creating and Deleting Tables 423
+*** Inserting and Looking Up Data 425
+
+** Meeting Your Match 427
+** You Have Been Selected 428
+** DETS 433
+** A Little Less Conversation, a Little More Action, Please 434
+*** The Interface 434
+*** Implementation Details 435
+
+* TODO 26 DISTRIBUNOMICON - 441
+** This Is My Boomstick 442
+** Fallacies of Distributed Computing 445
+*** The Network Is Reliable 445
+*** There Is No Latency 446
+*** Bandwidth Is Infinite 446
+*** The Network Is Secure 447
+*** Topology Doesn’t Change 448
+*** There Is Only One Administrator 449
+*** Transport Cost Is Zero 449
+*** The Network Is Homogeneous 450
+*** Fallacies in a Nutshell 451
+
+** Dead or Dead-Alive 451
+** My Other Cap Is a Theorem 453
+*** Consistency 453
+*** Availability 453
+*** Partition Tolerance 454
+*** Zombie Survivors and CAP 454
+
+** Setting Up an Erlang Cluster 458
+*** Through the Desert on a Node with No Name 458
+*** Connecting Nodes 459
+*** More Tools 460
+
+** Cookies 462
+** Remote Shells 464
+** Hidden Nodes 465
+** The Walls Are Made of Fire, and the Goggles Do Nothing 466
+** The Calls from Beyond 467
+*** The net_kernel Module 467
+*** The global Module 467
+*** The rpc Module 469
+
+** Burying the Distribunomicon 471
+
+* TODO 27 DISTRIBUTED OTP APPLICATIONS - 473
+** Adding More to OTP 474
+** Taking and Failing Over 475
+** The Magic 8 Ball 476
+*** Building the Application 477
+*** Making the Application Distributed 480
+
+* TODO 28 COMMON TEST FOR UNCOMMON TESTS - 485
+** What Is Common Test? 485
+** Common Test Structure 486
+** Creating a Simple Test Suite 488
+*** Running the Tests 489
+
+** Testing with State 491
+** Test Groups 493
+*** Defining Test Groups 494
+*** Test Group Properties 495
+*** The Meeting Room 496
+
+** Test Suites Redux 500
+** Test Specifications 501
+*** Specification File Contents 501
+*** Creating a Spec File 503
+*** Running Tests with a Spec File 503
+
+** Large-Scale Testing 504
+*** Creating a Distributed Spec File 506
+*** Running Distributed Tests 507
+
+** Integrating EUnit Within Common Test 508
+** Is There More? 509
+
+* TODO 29 MNESIA AND THE ART OF REMEMBERING - 511
+** What’s Mnesia? 512
+** What Should the Store Store? 513
+*** The Data to Store 513
+*** Table Structure 514
+
+** From Record to Table 515
+** Of Mnesia Schemas and Tables 516
+** Creating Tables 519
+*** Installing the Database 519
+*** Starting the Application 522
+** Access and Context 523
+** Reads, Writes, and More 524
+** Implementing the First Requests 526
+*** A Test for Adding Services 526
+*** Tests for Lookups 529
+*** Accounts and New Needs 532
+
+** Meet the Boss 534
+** Deleting Stuff, Demonstrated 536
+** Query List Comprehensions 539
+** Remember Mnesia 541
+
+* TODO 30 TYPE SPECIFICATIONS AND DIALYZER - 543
+** PLTs Are the Best Sandwiches 543
+** Success Typing 545
+** Type Inference and Discrepancies 547
+** Typing About Types of Types 550
+*** Singleton Types 550
+*** Union and Built-in Types 551
+*** Defining Types 554
+*** Types for Records 555
+
+** Typing Functions 556
+** Typing Practice 560
+** Exporting Types 564
+** Typed Behaviors 566
+** Polymorphic Types 567
+*** We Bought a Zoo 568
+*** Some Cautions 570
+
+** You’re My Type 572
+** That’s All, Folks 572
+
+* AFTERWORD - 573
+** Other Erlang Applications 574
+** Community Libraries 575
+** Your Ideas Are Intriguing to Me and I Wish to Subscribe to Your Newsletter 576
+** Is That It? 576
+
+* APPENDIX ON ERLANG’S SYNTAX - 577
+** The Template 577
+** The English Sentence 579
+** And, Or, Done 580
+** In Conclusion 580
+
+* Index - 581

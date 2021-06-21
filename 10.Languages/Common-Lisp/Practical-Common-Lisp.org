@@ -1,0 +1,538 @@
+#+TITLE: Practical Common Lisp
+#+AUTHOR: Peter Seibel
+#+YEAR: 2005
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* About the Author - xix
+* About the Technical Reviewer - xxi
+* Acknowledgments - xxiii
+* Typographical Conventions - xxv
+* TODO CHAPTER 1. Introduction: Why Lisp? - 1
+*** Why Lisp? - 2
+*** Where It Began - 4
+*** Who This Book Is For - 7
+
+* TODO CHAPTER 2. Lather, Rinse, Repeat: A Tour of the REPL - 9
+*** 2.1 Choosing a Lisp Implementation - 9
+*** 2.2 Getting Up and Running with Lisp in a Box - 11
+*** 2.3 Free Your Mind: Interactive Programming - 12
+*** 2.4 Experimenting in the REPL - 12
+*** DONE 2.5 "Hello, World," Lisp Style - 13
+    CLOSED: [2020-01-01 Wed 19:32]
+    - Evalulate the value ="hello, world"= in the repl
+
+    - Use ~format~ to send a string to standard output and return a ~NIL~:
+      #+begin_src common-lisp
+        (format t "hello, world")
+        ;; hello, world
+        ; NIL
+      #+end_src
+      + TODO ~NIL~ is Lisp's version of /false/ and/or /null/.
+             More on that in Chapter 4.
+
+    - Define a function to print ="hello, world"=:
+      #+begin_src common-lisp
+        (defun hello-world () (format t "hello, world"))
+        ; HELLO-WORLD
+        ;; Run it
+        (hello-world)
+        ;; hello, world
+        ; NIL
+      #+end_src
+
+*** DONE 2.6 Saving Your Work - 15
+    CLOSED: [2020-01-01 Wed 19:45]
+    - Load Common Lisp source code from a file with =filename=:
+      ~(load "filename")~
+
+    - Type ~q~ to quit _REPL debugger mode_.
+
+* TODO CHAPTER 3. Practical: A Simple Database - 19
+*** DONE CDs and Records - 19
+    CLOSED: [2020-01-01 Wed 21:38]
+    - In our application, each record (the representation of the info for a CD)
+      in the database will contain
+      + the title and artist of the CD,
+      + a rating of how much the user likes it
+      + a flag saying whether it has been ripped.
+
+    - My ways to define a CD data structures.
+      From four-item list to a user defined class, usingthe /Common Lisp Object
+      System (CLOS)/.
+
+    - keyword symbol :: any name that starts with a colon (~:~).
+
+    - For now, let's keep it simple and use a /list/.
+      Example, ~(list 1 2 3)~.
+
+    - A even more convenient representation:
+      /property list (plist)/ with /keyworld symbol/.
+      For example, ~(list :a 1 :b 2 :c 3)~
+      + It is ~GETF~ function that make the /plists/ a convenient way to represent
+        the records: ~(getf (list :a 1 :b 2 :c 3) :a)~ returns ~1~.
+        ~GETF~ make /plist/ a sort of _poor man's hash table_.
+
+      + CD representation constructor:
+        #+begin_src common-lisp
+          (defun make-cd (title artist rating ripped)
+            (list :title title :artist artist :rating rating :ripped ripped))
+        #+end_src
+
+*** DONE Filing CDs - 21
+    CLOSED: [2020-01-01 Wed 21:41]
+    - For simplicity, let's define a /global variable/ *db* with the ~DEFVAR~ /macro/:
+      #+begin_src common-lisp
+        (defvar *db* nil)
+      #+end_src
+
+    - Define a function to add a single CD /record/ to *db* (with the ~PUSH~ /macro/):
+      #+begin_src common-lisp
+        (defun add-record (cd) (push cd *db*))
+      #+end_src
+
+*** DONE Looking at the Database Contents - 21
+    CLOSED: [2020-01-01 Wed 21:52]
+    - Dump the *db* to a more human-readable format:
+      #+begin_src common-lisp
+        (defun dump-db ()
+          (dolist (cd *db*)
+            (format t "~{~a:~10t~a~%}~%" cd)))
+
+        ;; TITLE:   Home
+        ;; ARTIST:  Dixie Chicks
+        ;; RATING:  9
+        ;; RIPPED:  T
+        ;;
+        ;; TITLE:   Fly
+        ;; ARTIST:  Dixie Chicks
+        ;; RATING:  8
+        ;; RIPPED:  T
+        ;;
+        ;; TITLE:   Roses
+        ;; ARTIST:  Kathy Mattea
+        ;; RATING:  7
+        ;; RIPPED:  T
+      #+end_src
+      + Details about the ~format~ usage
+        TODO More details in Chapter 18
+
+      + TODO NOTE NOTE NOTE !!!
+
+    - Another version of ~dump-db~ that is without EXPLICIT loop by ~dolist~.
+      #+begin_src common-lisp
+        (defun dump-db ()
+          (format t "~{~a:~10t~a~%}~%" *db*))
+      #+end_src
+
+*** Improving the User Interaction - 23
+*** Saving and Loading the Database - 25
+*** Querying the Database - 27
+*** Updating Existing Records—Another Use for WHERE - 31
+*** Removing Duplication and Winning Big - 32
+*** Wrapping Up - 36
+
+* TODO CHAPTER 4. Syntax and Semantics - 37
+*** DONE What's with All the Parentheses? - 37
+    CLOSED: [2020-01-01 Wed 21:56]
+*** DONE Breaking Open the Black Box - 38 - *RE-READ*
+    CLOSED: [2020-01-01 Wed 22:34]
+    - Compare the strucutures of different language processors
+      + Most other languages:
+        1. lexer: source code -> tokesn
+        2. parser: tokens -> AST
+        3. evaluator (interpret it directly or compile it into other languages):
+           * Interpret AST and get the result (value or effect)
+           * Translate AST to other langueages
+
+      + Common Lisp
+        1. reader: source code -> Lisp objects (/s-expression/)
+        2. evaluator: Lisp objects -> the result value of the evaluation
+           * comment: Only _Lisp /forms/ (legal /s-expression/)_ can be evaluated .
+
+*** TODO S-expressions - 39
+    - The basic elements of /s-expressions/ are /lists/ and /atoms/!
+      + list :: a structure that
+        * delimited by parentheses
+        * contain any number of whitespace-separated elements
+
+      + atom :: everything else
+
+    - /Comments/, technically speaking, are _NOT_ /s-expressoin/!
+      It starts with a ~;~, and extends to the end of a line.
+      _They are treated essentially like whitespace._
+
+    - /Lists/ are syntactically so trivial,
+      the only remaining syntactic rules you need to know are those governing
+      the form of differnt kinds of /atoms/.
+      + _This section describe the rules for the most commonly used kinds of /atoms/:_
+        * /numbers/
+        * /strings/
+        * /names/
+
+      + Then cover how /s-expressions/ *composed* of these elements can be evaluated
+        as /Lisp forms/.
+
+    - Examples:
+      #+begin_src common-lisp
+        123       ; the integer one hundred twenty-three
+        3/7       ; the ratio three-sevenths
+        1.0       ; the floating-point number one in default precision
+        1.0e0     ; another way to write the same floating-point number
+        1.0d0     ; the floating-point number one in "double" precision
+        1.0e-4    ; the floating-point equivalent to one-ten-thousandth
+        +42       ; the integer forty-two
+        -42       ; the integer negative forty-two
+        -1/4      ; the ratio negative one-quarter
+        -2/8      ; another way to write negative one-quarter
+        246/2     ; another way to write the integer one hundred twenty-three
+      #+end_src
+      TODO More details in Chapter 10
+
+    - The *only two characters* that *must be escaped* _within_ a /string/ are
+      + double quotes (~"~)
+      + /backslash/ (~\~) itself.
+
+    - All other characters can be included in a string literal without escaping,
+      regardless of their meaning outside a string.
+        Not needed ~\~ can will be dropped as they doesn't exist. For example,
+      ~"foo"~ is the same as ~"fo\o"~.
+
+    - symbols :: Names used in Lisp programs
+      + Examples: ~FORMAT~, ~hello-world~, and ~*db*~
+
+    - Readers can't read a /name/ that consists only of /periods/.
+
+    - *10 characters* that serve other syntactic purposes _CAN'T_ appear in /names/:
+      1. open parentheses
+      2. close parentheses
+      3. double quotes
+      4. single quotes
+      5. backtick
+      6. comma
+      7. colon
+      8. semicolon
+      9. backslash
+      10. vertical bar.
+
+    - And even those 10 characters can be /names/, if you're willing to
+      + escape them by preceding the character to be _escaped with_ a /backslash/
+        OR
+      + by _surrounding_ the part of the name containing characters that need
+        _escaping with_ /vertical bars/.
+
+    - The /reader/ behavior is like: TODO RE-READ
+      + /names/ like ~foo~, ~Foo~, and ~FOO~ will be both be read as ~FOO~.
+      + /names/ with _escaping_ like ~\f\o\o~ and ~|foo|~ will be read as ~foo~.
+        
+    - Standard style, these days, is to
+      1. *write* code in all _lowercase_
+         and then
+      2. let the *reader change* names to _uppercase_.
+
+    - Footnote 7.
+      the case-converting behavior of the reader can be customized.
+      NOTE _MORE_
+
+    - TODO TODO TODO
+    - TODO TODO TODO
+    - TODO TODO TODO
+    - TODO TODO TODO
+
+*** TODO S-expressions As Lisp Forms - 41
+*** TODO Function Calls - 42
+*** TODO Special Operators - 43
+*** TODO Macros - 44
+*** TODO Truth, Falsehood, and Equality - 45
+*** TODO Formatting Lisp Code - 47
+
+* CHAPTER 5. Functions - 51
+*** Defining New Functions - 51
+*** Function Parameter Lists - 53
+*** Optional Parameters - 53
+*** Rest Parameters - 55
+*** Keyword Parameters - 56
+*** Mixing Different Parameter Types - 57
+*** Function Return Values - 58
+*** Functions As Data, a.k.a. Higher-Order Functions - 59
+*** Anonymous Functions - 61
+
+* CHAPTER 6. Variables - 65
+*** Variable Basics - 65
+*** Lexical Variables and Closures - 68
+*** Dynamic, a.k.a. Special, Variables - 69
+*** Constants - 74
+*** Assignment - 74
+*** Generalized Assignment - 75
+*** Other Ways to Modify Places - 76
+
+* CHAPTER 7. Macros: Standard Control Constructs - 79
+*** WHEN and UNLESS - 80
+*** COND - 82
+*** AND, OR, and NOT - 82
+*** Looping - 83
+*** DOLIST and DOTIMES - 84
+*** DO - 85
+*** The Mighty LOOP - 87
+
+* CHAPTER 8. Macros: Defining Your Own - 89
+*** The Story of Mac: A Just-So Story - 89
+*** Macro Expansion Time vs. Runtime - 90
+*** DEFMACRO - 91
+*** A Sample Macro: do-primes - 92
+*** Macro Parameters - 93
+*** Generating the Expansion - 95
+*** Plugging the Leaks - 96
+*** Macro-Writing Macros - 100
+*** Beyond Simple Macros - 102
+
+* CHAPTER 9. Practical: Building a Unit Test Framework - 103
+*** Two First Tries - 103
+*** Refactoring - 105
+*** Fixing the Return Value - 106
+*** Better Result Reporting - 108
+*** An Abstraction Emerges - 109
+*** A Hierarchy of Tests - 110
+*** Wrapping Up - 112
+
+* CHAPTER 10. Numbers, Characters, and Strings - 115
+*** Numbers - 116
+*** Numeric Literals - 117
+*** Basic Math - 119
+*** Numeric Comparisons - 121
+*** Higher Math - 122
+*** Characters - 122
+*** Character Comparisons - 122
+*** Strings - 123
+*** String Comparisons - 124
+
+* CHAPTER 11. Collections - 127
+*** Vectors - 127
+*** Subtypes of Vector - 129
+*** Vectors As Sequences - 130
+*** Sequence Iterating Functions - 130
+*** Higher-Order Function Variants - 133
+*** Whole Sequence Manipulations - 134
+*** Sorting and Merging - 135
+*** Subsequence Manipulations - 136
+*** Sequence Predicates - 137
+*** Sequence Mapping Functions - 137
+*** Hash Tables - 138
+*** Hash Table Iteration - 140
+
+* CHAPTER 12. They Called It LISP for a Reason: List Processing - 141
+*** "There Is No List" - 141
+*** Functional Programming and Lists - 144
+*** "Destructive" Operations - 145
+*** Combining Recycling with Shared Structure - 147
+*** List-Manipulation Functions - 149
+*** Mapping - 151
+*** Other Structures - 152
+
+* CHAPTER 13. Beyond Lists: Other Uses for Cons Cells - 153
+*** Trees - 153
+*** Sets - 155
+*** Lookup Tables: Alists and Plists - 157
+*** DESTRUCTURING-BIND - 161
+
+* CHAPTER 14. Files and File I/O - 163
+*** Reading File Data - 163
+*** Reading Binary Data - 165
+*** Bulk Reads - 165
+*** File Output - 165
+*** Closing Files - 167
+*** Filenames - 168
+*** How Pathnames Represent Filenames - 169
+*** Constructing New Pathnames - 171
+*** Two Representations of Directory Names - 173
+*** Interacting with the File System - 173
+*** Other Kinds of I/O - 175
+
+* CHAPTER 15. Practical: A Portable Pathname Library - 179
+*** The API - 179
+*** *FEATURES* and Read-Time Conditionalization - 180
+*** Listing a Directory - 182
+*** Testing a File’s Existence - 185
+*** Walking a Directory Tree - 187
+
+* CHAPTER 16. Object Reorientation: Generic Functions - 189
+*** Generic Functions and Classes - 190
+*** Generic Functions and Methods - 191
+*** DEFGENERIC - 193
+*** DEFMETHOD - 194
+*** Method Combination - 196
+*** The Standard Method Combination - 197
+*** Other Method Combinations - 198
+*** Multimethods - 200
+*** To Be Continued - 202
+
+* CHAPTER 17. Object Reorientation: Classes - 203
+*** DEFCLASS - 203
+*** Slot Specifiers - 205
+*** Object Initialization - 206
+*** Accessor Functions - 209
+*** WITH-SLOTS and WITH-ACCESSORS - 212
+*** Class-Allocated Slots - 213
+*** Slots and Inheritance - 214
+*** Multiple Inheritance - 215
+*** Good Object-Oriented Design - 218
+
+* CHAPTER 18. A Few FORMAT Recipes - 219
+*** The FORMAT Function - 220
+*** FORMAT Directives - 221
+*** Basic Formatting - 222
+*** Character and Integer Directives - 223
+*** Floating-Point Directives - 225
+*** English-Language Directives - 226
+*** Conditional Formatting - 227
+*** Iteration - 228
+*** Hop, Skip, Jump - 230
+*** And More - 231
+
+* CHAPTER 19. Beyond Exception Handling: Conditions and Restarts - 233
+*** The Lisp Way - 234
+*** Conditions - 235
+*** Condition Handlers - 235
+*** Restarts - 238
+*** Providing Multiple Restarts - 240
+*** Other Uses for Conditions - 241
+
+* CHAPTER 20. The Special Operators - 245
+*** Controlling Evaluation - 245
+*** Manipulating the Lexical Environment - 246
+*** Local Flow of Control - 248
+*** Unwinding the Stack - 252
+*** Multiple Values - 256
+*** EVAL-WHEN - 258
+*** Other Special Operators - 260
+
+* CHAPTER 21. Programming in the Large: Packages and Symbols - 263
+*** How the Reader Uses Packages - 263
+*** A Bit of Package and Symbol Vocabulary - 265
+*** Three Standard Packages - 266
+*** Defining Your Own Packages - 267
+*** Packaging Reusable Libraries - 270
+*** Importing Individual Names - 271
+*** Packaging Mechanics - 272
+*** Package Gotchas - 273
+
+* CHAPTER 22. LOOP for Black Belts - 277
+*** The Parts of a LOOP - 277
+*** Iteration Control - 278
+*** Counting Loops - 278
+*** Looping Over Collections and Packages - 280
+*** Equals-Then Iteration - 281
+*** Local Variables - 282
+*** Destructuring Variables - 282
+*** Value Accumulation - 283
+*** Unconditional Execution - 285
+*** Conditional Execution - 285
+*** Setting Up and Tearing Down - 287
+*** Termination Tests - 288
+*** Putting It All Together - 290
+
+* CHAPTER 23. Practical: A Spam Filter - 291
+*** The Heart of a Spam Filter - 291
+*** Training the Filter - 295
+*** Per-Word Statistics - 297
+*** Combining Probabilities - 299
+*** Inverse Chi Square - 301
+*** Training the Filter - 302
+*** Testing the Filter - 303
+*** A Couple of Utility Functions - 305
+*** Analyzing the Results - 306
+*** What's Next - 309
+
+* CHAPTER 24. Practical: Parsing Binary Files - 311
+*** Binary Files - 311
+*** Binary Format Basics - 312
+*** Strings in Binary Files - 314
+*** Composite Structures - 316
+*** Designing the Macros - 317
+*** Making the Dream a Reality - 318
+*** Reading Binary Objects - 320
+*** Writing Binary Objects - 322
+*** Adding Inheritance and Tagged Structures - 323
+*** Keeping Track of Inherited Slots - 325
+*** Tagged Structures - 327
+*** Primitive Binary Types - 329
+*** The Current Object Stack - 332
+
+* CHAPTER 25. Practical: An ID3 Parser - 335
+*** Structure of an ID3v2 Tag - 336
+*** Defining a Package - 337
+*** Integer Types - 338
+*** String Types - 339
+*** ID3 Tag Header - 343
+*** ID3 Frames - 344
+*** Detecting Tag Padding - 346
+*** Supporting Multiple Versions of ID3 - 348
+*** Versioned Frame Base Classes - 350
+*** Versioned Concrete Frame Classes - 351
+*** What Frames Do You Actually Need? - 352
+*** Text Information Frames - 354
+*** Comment Frames - 356
+*** Extracting Information from an ID3 Tag - 357
+
+* CHAPTER 26. Practical: Web Programming with AllegroServe - 363
+*** A 30-Second Intro to Server-Side Web Programming - 363
+*** AllegroServe - 365
+*** Generating Dynamic Content with AllegroServe - 368
+*** Generating HTML - 370
+*** HTML Macros - 373
+*** Query Parameters - 374
+*** Cookies - 377
+*** A Small Application Framework - 379
+*** The Implementation - 380
+
+* CHAPTER 27. Practical: An MP3 Database - 385
+*** The Database - 385
+*** Defining a Schema - 388
+*** Inserting Values - 390
+*** Querying the Database - 392
+*** Matching Functions - 394
+*** Getting at the Results - 397
+*** Other Database Operations - 398
+
+* CHAPTER 28. Practical: A Shoutcast Server - 401
+*** The Shoutcast Protocol - 401
+*** Song Sources - 402
+*** Implementing Shoutcast - 405
+
+* CHAPTER 29. Practical: An MP3 Browser - 411
+*** Playlists - 411
+*** Playlists As Song Sources - 413
+*** Manipulating the Playlist - 417
+*** Query Parameter Types - 420
+*** Boilerplate HTML - 422
+*** The Browse Page - 423
+*** The Playlist - 426
+*** Finding a Playlist - 429
+*** Running the App - 430
+
+* CHAPTER 30. Practical: An HTML Generation Library, the Interpreter - 431
+*** Designing a Domain-Specific Language - 431
+*** The FOO Language - 433
+*** Character Escaping - 435
+*** Indenting Printer - 437
+*** HTML Processor Interface - 438
+*** The Pretty Printer Backend - 439
+*** The Basic Evaluation Rule - 443
+*** What's Next? - 447
+
+* CHAPTER 31. Practical: An HTML Generation Library, the Compiler - 449
+*** The Compiler - 449
+*** FOO Special Operators - 454
+*** FOO Macros - 459
+*** The Public API - 462
+*** The End of the Line - 463
+
+* CHAPTER 32. Conclusion: What's Next? - 465
+*** Finding Lisp Libraries - 465
+*** Interfacing with Other Languages - 467
+*** Make It Work, Make It Right, Make It Fast - 467
+*** Delivering Applications - 475
+*** Where to Go Next - 477
+
+* INDEX - 481
+

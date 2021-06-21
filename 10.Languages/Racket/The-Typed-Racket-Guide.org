@@ -1,0 +1,152 @@
+#+TITLE: The Typed Racket Guide
+#+VERSION: v.8.0
+#+AUTHOR: Sam Tobin-Hochstadt, Vincent St-Amour, Eric Dobson, Asumu Takikawa
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE 1 Quick Start
+  CLOSED: [2018-12-31 Mon 15:18]
+  - Using /Typed Racket/ requires the following steps:
+    1. ~#lang typed/racket~
+    2. ~(require typed/mod)~ if you use ~(require mod)~ in _untyped_ Racket.
+    3. Annotate _structure definitions_ and _top-level definitions_ with their types.
+
+  - Example:
+    + Racket:
+      #+BEGIN_SRC racket
+        #lang racket
+
+        (struct pt (x y))
+
+        ; distance : pt pt -> real
+        (define (distance p1 p2)
+          (sqrt (+ (sqr (- (pt-x p2) (pt-x p1)))
+                   (sqr (- (pt-y p2) (pt-y p1))))))
+      #+END_SRC
+
+    + Typed Racket:
+      #+BEGIN_SRC racket
+        #lang typed/racket
+
+        (struct pt ([x : Real] [y : Real]))
+
+        (: distance (-> pt pt Real))
+        (define (distance p1 p2)
+          (sqrt (+ (sqr (- (pt-x p2) (pt-x p1)))
+                   (sqr (- (pt-y p2) (pt-y p1))))))
+      #+END_SRC
+
+** 1.1 Using Typed Racket from the Racket REPL
+   Shell command: ~racket -I typed/racket~
+
+* TODO 2 Beginning Typed Racket
+  Recall the /typed module/ from _Quick Start_:
+
+  - ~->~ indicates a type is a /function type/.
+
+  - In the type annotation
+    + the types before the last one is the /domain types/, or the /input types/.
+    + the last type is the /range type/, or the /output type/.
+
+  - The goal of Typed Racket is to allow almost all definitions to be typechecked
+    *without change*.
+
+  - Use ~:print-type~ command to print the type.
+
+** TODO 2.1 Datatypes and Unions
+   - Union types :: ~(U t1 t2 ...)~
+
+   - Example:
+     #+BEGIN_SRC racket
+       #lang typed/racket
+
+       (define-type Tree (U leaf node))
+       (struct leaf ([val : Number]))
+       (struct node ([left : Tree] [right : Tree]))
+
+       (: tree-height (-> Tree Integer))
+       (define (tree-height t)
+         (cond [(leaf? t) 1]
+               [else (max (+ 1 (tree-height (node-left t)))
+                          (+ 1 (tree-height (node-right t))))]))
+
+       (: tree-sum (-> Tree Number))
+       (define (tree-sum t)
+         (cond [(leaf? t) (leaf-val t)]
+               [else (+ (tree-sum (node-left t))
+                        (tree-sum (node-right t)))]))
+     #+END_SRC
+
+** DONE 2.2 Type Errors
+   CLOSED: [2018-12-31 Mon 15:49]
+   Example:
+   #+BEGIN_SRC racket
+     (add1 "not a number")
+     ;; eval:9:0: Type Checker: type mismatch
+     ;;   expected: Number
+     ;;   given: String
+     ;;   in: "not a number"
+   #+END_SRC
+
+* TODO 3 Specifying Types
+** 3.1 Type Annotation and Binding Forms
+*** 3.1.1 Annotating Definitions
+*** 3.1.2 Annotating Local Binding
+*** 3.1.3 Annotating Functions
+*** 3.1.4 Annotating Single Variables
+*** 3.1.5 Annotating Expressions
+
+** 3.2 Type Inference
+*** 3.2.1 When do you need type annotations?
+
+** 3.3 New Type Names
+
+* TODO 4 Types in Typed Racket
+** 4.1 Basic Types
+** 4.2 Function Types
+** 4.3 Types for Functions with Optional or Keyword Arguments
+** 4.4 Union Types
+** 4.5 Recursive Types
+** 4.6 Structure Types
+** 4.7 Subtyping
+** 4.8 Polymorphism
+*** 4.8.1 Polymorphic Data Structures
+*** 4.8.2 Polymorphic Functions
+*** 4.8.3 Lexically Scoped Type Variables
+
+** 4.9 Variable-Arity Functions: Programming with Rest Arguments
+*** 4.9.1 Uniform Variable-Arity Functions
+*** 4.9.2 Non-Uniform Variable-Arity Functions
+
+* TODO 5 Occurrence Typing
+** 5.1 Basic Occurrence Typing
+** 5.2 Propositions and Predicates
+** 5.3 Other conditionals and assertions
+** 5.4 A caveat about ~set!~
+** 5.5 ~let~-aliasing
+
+* TODO 6 Typed-Untyped Interaction
+** 6.1 Using Untyped Code from Typed Code
+*** 6.1.1 Opaque Types
+
+** 6.2 Using Typed Code in Untyped Code
+** 6.3 Protecting Typed-Untyped Interaction
+
+* TODO 7 Optimization in Typed Racket
+** 7.1 Turning the optimizer off
+** 7.2 Getting the most out of the optimizer
+*** 7.2.1 Numeric types
+*** 7.2.2 Lists
+*** 7.2.3 Vectors
+*** 7.2.4 Contract boundaries
+
+* TODO 8 Caveats and Limitations
+** 8.1 The ~Integer~ type and ~integer?~
+** 8.2 Type inference for polymorphic functions
+** 8.3 Typed-untyped interaction and contract generation
+** 8.4 Unsupported features
+** 8.5 Type generalization
+** 8.6 Macros and compile-time computation
+** 8.7 Expensive contract boundaries
+** 8.8 Pattern Matching and Occurrence Typing
+** 8.9 ~is-a?~ and Occurrence Typing

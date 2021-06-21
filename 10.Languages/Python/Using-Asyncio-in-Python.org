@@ -1,0 +1,223 @@
+#+TITLE: Using Asyncio in Python
+#+SUBTITLE: Understanding Python's Asynchronous Programming Features
+#+VERSION: February 2020
+#+AUTHOR: Caleb Hattingh
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE Preface - vii
+  CLOSED: [2020-11-14 Sat 13:45]
+  _Python 3.4_ *introduced* the ~asyncio~ library, and _Python 3.5_ *produced*
+  the ~async~ and ~await~ /keywords/ to use it palatably. These new additions
+  allow so-called /asynchronous programming/.
+
+  - /Large-scale concurrency/ is one big reason (use Asyncio to avoid blocking wait),
+    BUT the other big attraction of Asyncio over /preemptive threading/ is *safety*.
+
+  - My goal with this book is to give you a basic understanding of why these new
+    features have been introduced and how to use them in your own projects.
+    More specifically, I aim to provide the following:
+    * A critical comparison of ~asyncio~ and ~threading~ for concurrent network programming
+
+    * An understanding of the new ~async~ / ~await~ language syntax
+
+    * A general overview of the new ~asyncio~ standard library features in Python
+
+    * Detailed, extended case studies with code, showing how to use a few of the
+      more popular Asyncio-compatible third-party libraries
+
+  - We'll
+    1. begin with a story that illustrates the _shift in thinking that must
+       accompany a transition from /threaded/ to /async/ programming._
+
+    2. Then, we'll take a look at the _CHANGES_ that were made in the Python language
+       itself to accommodate /async programming/.
+
+    3. Finally, we'll explore some of the ways in which these new features can be
+       used most effectively.
+
+  - The new Asyncio features are *not going to radically change* the way you write
+    programs. They provide specific tools that make sense only for specific
+    situations; but in the right situations, asyncio is exceptionally useful.
+      In this book, we're going to explore those situations and how you can best
+    approach them by using the new Asyncio features.
+
+** Conventions Used in This Book - viii
+** O'Reilly Online Learning - ix
+** How to Contact Us - ix
+** Acknowledgments - x
+
+* DONE 1. Introducing Asyncio - 1
+  CLOSED: [2020-11-14 Sat 15:31]
+  The central focus of Asyncio is on how best to best perform multiple tasks at
+  the same time -- and not just any tasks, but SPECIFICALLY _tasks that involve
+  *waiting periods*._
+
+** DONE The Restaurant of ThreadBots - 1 - =SUMMARY required=
+   CLOSED: [2020-11-14 Sat 14:45]
+** DONE Epilogue - 6
+   CLOSED: [2020-11-14 Sat 14:47]
+** DONE What Problem Is Asyncio Trying to Solve? - 6 - =RE-READ=
+   CLOSED: [2020-11-14 Sat 15:30]
+
+* TODO 2. The Truth About Threads - 9
+** DONE Benefits of Threading - 10
+   CLOSED: [2020-11-14 Sat 16:41]
+   - There are the main benefits of /threading/:
+     * Ease of reading code
+     * Parallelism with shared memory
+     * Know-how and existing code
+   
+** DONE Drawbacks of Threading - 11
+   CLOSED: [2020-11-14 Sat 16:41]
+** TODO Case Study: Robots and Cutlery - 14
+   - Example 2-2. ThreadBot programming for table service
+     #+begin_src python
+       import threading
+       from queue import Queue
+
+
+       class ThreadBot(threading.Thread):
+           def __init__(self):
+               super().__init__(target=self.manage_table)
+               self.cutlery = Cutlery(knives=0, forks=0)
+               self.tasks = Queue()
+
+           def manage_table(self):
+               while True:
+                   task = self.tasks.get()
+                   if task == 'prepare table':
+                       kitchen.give(to=self.cutlery, knives=4, forks=4)
+                   elif task == 'clear table':
+                       kitchen.give(to=self.kitchen, knives=4, forks=4)
+                   elif task == 'shutdown':
+                       return
+     #+end_src
+
+   - Example 2-3. Definition of the Cutlery object
+     #+begin_src python
+       from attr import attrs, attrib
+
+
+       @attrs
+       class Cutlery:
+           knives = attrib(default=0)
+           forks = attrib(default=0)
+
+           def give(self, to: 'Cutlery', knives=0, forks=0):
+               self.change(-knives, -forks)
+               to.change(knives, forks)
+
+           def change(self, knives, forks):
+               self.knives += knives
+               self.forks += forks
+
+       kitchen = Cutlery(knives=100, forks=100)
+       bots = [threadBot() for i in range(10)]
+
+
+       import sys
+
+
+       for bot in bots:
+           for i in range(int(sys.argv[1])):
+               bot.tasks.put('prepare table')
+               bot.tasks.put('clear table')
+           bot.tasks.put('shutdown')
+
+       print(f"Kitchen inventory before service: {kitchen}")
+
+       for bot in bots:
+           bot.start()
+
+       for bot in bots:
+           bot.join()
+       print(f"Kitchen inventory after service: {kitchen}")
+     #+end_src
+
+   - Your strategy for testing the code basically involves running a group of
+     ~ThreadBot~'s over a sequence of table service. Each ~ThreadBot~ must do the
+     following:
+     * Prepare a "table for four," which means obtaining four sets of ~knives~ and
+       ~forks~ from the kitchen.
+
+     * Clear a table, which means returning the set of four ~knives~ and ~forks~
+       from a table back to the kitchen.
+
+   - If you run a bunch of ThreadBots over a bunch of tables a specific number of
+     times, you expect that after all the work is done, all of the knives and
+     forks should be back in the kitchen and accounted for.
+
+   - Wisely, you decide to test that, with one hundred tables to be prepared and
+     cleared by each ThreadBot and all of them operating at the same time,
+     because you want to ensure that they can work together and nothing goes
+     wrong. This is the output of that test:
+     #+begin_src shell
+       python cutlery_test.py 100
+       # Kitchen inventory before service: Cutlery(knives=100, forks=100)
+       # Kitchen inventory after service: Cutlery(knives=100, forks=100)
+     #+end_src
+
+   - All the knives and forks end up back in the kitchen! So, you congratulate
+     yourself on writing good code and deploy the bots. Unfortunately, in
+     practice, every now and then you find that you do not end up with all
+     cutlery accounted for when the restaurant closes. You notice the problem
+     gets worse when you add more bots and/or the place gets busier. Frustrated,
+     you run your tests again, changing nothing except the size of the test
+     (10,000 tables!):
+     
+* TODO 3. Asyncio Walk-Through - 21
+** TODO Quickstart - 22
+** TODO The Tower of Asyncio - 28
+** TODO Coroutines - 31
+*** The New ~async def~ Keywords - 32
+*** The New ~await~ Keyword - 34
+
+** TODO Event Loop - 37
+** TODO Tasks and Futures - 39
+*** Create a Task? Ensure a Future? Make Up Your Mind! - 42
+
+** TODO Async Context Managers: ~async with~ - 46
+*** The ~contextlib~ Way
+
+** TODO Async Iterators: ~async for~ - 50
+** TODO Simpler Code with Async Generators - 53
+** TODO Async Comprehensions - 55
+** TODO Starting Up and Shutting Down (Gracefully!) - 57
+*** What Is the ~return_exceptions=True~ for in ~gather()~? - 61
+*** Signals - 63
+*** Waiting for the Executor During Shutdown - 68
+
+* TODO 4. 20 Asyncio Libraries You Aren't Using (But...Oh, Never Mind) - 75
+** TODO Streams (Standard Library) - 76
+*** Case Study: A Message Queue - 76
+*** Case Study: Improving the Message Queue - 84
+
+** TODO Twisted - 88
+** TODO The Janus Queue - 91
+** TODO ~aiohttp~ - 92
+*** Case Study: Hello World - 93
+*** Case Study: Scraping the News - 93
+
+** TODO ØMQ (ZeroMQ) - 98
+*** Case Study: Multiple Sockets - 99
+*** Case Study: Application Performance Monitoring - 102
+
+** TODO ~asyncpg~ and Sanic - 110
+*** Case Study: Cache Invalidation - 115
+
+** TODO Other Libraries and Resources - 126
+
+* TODO 5. Concluding Thoughts - 129
+* TODO A. A Short History of Async Support in Python - 131
+** TODO In the Beginning, There Was asyncore - 131
+** TODO The Path to Native Coroutines - 133
+
+* TODO B. Supplementary Material - 135
+** TODO Cutlery Example Using Asyncio - 135
+** TODO Supplementary Material for News Website Scraper - 137
+** TODO Supplementary Material for the ZeroMQ Case Study - 138
+** TODO Database Trigger Handling for the asyncpg Case Study - 140
+** TODO Supplementary Material for the Sanic Example: aelapsed and aprofiler - 143
+
+* Index - 145
