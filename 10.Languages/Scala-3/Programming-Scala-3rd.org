@@ -25,7 +25,8 @@
 ** Acknowledgments for the Second Edition
 ** Acknowledgments for the First Edition
    
-* TODO 1. Zero to Sixty: Introducing Scala
+* DONE 1. Zero to Sixty: Introducing Scala
+  CLOSED: [2021-06-24 Thu 02:50]
 ** DONE Why Scala?
    CLOSED: [2021-06-22 Tue 12:00]
    - Scala:
@@ -73,7 +74,8 @@
    CLOSED: [2021-06-22 Tue 14:00]
 ** DONE Building the Code Examples
    CLOSED: [2021-06-22 Tue 14:00]
-** TODO More Tips
+** DONE More Tips
+   CLOSED: [2021-06-23 Wed 23:01]
 *** DONE Using sbt
     CLOSED: [2021-06-22 Tue 14:27]
     - Common _sbt_ commands:
@@ -109,11 +111,175 @@
     - Configure the compiler options for the code examples (in =build.sbt=) to
       pass ~-source:future~! =from Jian= ignore the explanation.
       
-*** TODO Running the Scala Command-Line Tools Using sbt
+*** DONE Running the Scala Command-Line Tools Using sbt
+    CLOSED: [2021-06-23 Wed 23:01]
     
-** TODO A Taste of Scala
-** TODO A Sample Application
-** TODO Recap and What’s Next
+** DONE A Taste of Scala
+   CLOSED: [2021-06-24 Thu 01:39]
+   - Test:
+     ~testOnly progscala3.objectsystem.equality.EqualitySuite~
+
+   - When you use the ~run~ command in sbt, it will find *ALL* the /entry points/
+     and prompt you to pick which one.
+     * Note:
+       + sbt only scans =src/main/scala= and =src/main/java=.
+       + When you compile and run tests, =src/test/scala= and =src/test/java= are searched.
+         =TODO= =TODO= =TODO=
+     
+   - A second way to run this program is to
+     1. use ~runMain~ and
+     2. specify the same /fully qualified path/ to the /main class/ that was shown,
+        ~progscala3.introscala.Hello2~. 
+     
+   - Run your code outside sbt (that started when =build.sbt= exist):
+     Specify ~classpath~, the root directory for all of the compiled =.class= files.
+     #+begin_src bash
+       cp="target/scala-3.0.0/calsses/"
+       
+       scala3 -classpath $cp progscala3.introscala.Hello2 Hello Scala World!
+       # HELLO SCALA WORLD!
+     #+end_src
+
+   - *Note*
+     * parameters :: the list of things a method expects to be passed when you call it.
+     * arguments :: values you actually pass to it when making the call.
+
+   - How to run through these _THREE_ /entry points/:
+     #+begin_src scala
+       // src/main/scala/progscala3/introscala/UpperMain1.scala
+       
+       package progscala3.introscala
+       
+       object UpperMain1:
+         def main(params: Array[String]): Unit =
+           print("UpperMain1.main: ")
+           params.map(s => s.toUpperCase).foreach(s => printf("%s ",s))
+           println("")
+       
+       def main(params: Array[String]): Unit =
+         print("main: ")
+         params.map(s => s.toUpperCase).foreach(s => printf("%s ",s))
+         println("")
+       
+       @main def Hello(params: String*): Unit =
+         print("Hello: ")
+         params.map(s => s.toUpperCase).foreach(s => printf("%s ",s))
+         println("")
+     #+end_src
+     * In Scala 2, the _last two_ are *NOT allowed*.
+       Run the first one:
+       ~runMain progscala3.introscala.UpperMain1 Hello World!~
+
+     * In Scala 3, the _last two_ are *allowed*.
+       1. For the second one:
+          ~runMain progscala3.introscala.UpperMain1$package Hello World!~
+          This is *NOT recommended!* In this way, we must always remember
+          manually add the ~$package~ part. Also, the ~$package~ is inconvenient
+          for Linux and macOS shells like bash!
+
+       2. For the third one, the recommended one:
+          ~runMain progscala3.introscala.Hello Hello World!~
+
+     * About the /signature/ of these THREE /entry points/ functions:
+       + They all need /return type/: ~Unit~.
+
+       + The _1st_ and _2nd_ need the /TRADITIONAL signature (_name_ ~main~,
+         _parameter type_ ~Array[String]~)/.
+           This is *not flexible*, and, because of the _mutability_ of ~Array~,
+         it CAN BE _a source of bugs_.
+
+       + The _3rd_ is flexible in /signature/ (both the _name_ and _parameter type(s)_).
+
+   - The /singleton design pattern/ has *drawbacks*:
+     * It's hard to replace a /singleton instance/ with a _test double_ in /unit tests/,
+       =TODO= =???=
+     * It forces all computation through a /single instance/ *raises concerns about
+       thread safety and limits scalability options.*
+       =TODO=
+         However, we'll see plenty of examples in the book where ~object~'s are
+       used effectively.
+
+   - TIP: =FOR THIS BOOK=
+     _The terminology that this book will use_
+     To avoid confusion,
+     * I'll use /instance/, RATHER THAN /object/,
+       _WHEN_ I refer to an /instance/ created from a /class/ with ~new~ or the
+       /single instance/ of an ~object~.
+
+     * Because /classes/ and /objects/ are so similar,
+       I'll _use /type/ generically_ for them.
+         All the /types/ we'll see, like ~String~, are implemented as /classes/ or
+       /objects/.
+     
+** DONE A Sample Application
+   CLOSED: [2021-06-24 Thu 02:46]
+   - When implementing the factory method ~apply~ in a /companion object/,
+     the ~new~ is still needed. Without it, the compiler would think we are
+     calling ~Point.apply~ again on the righthand side, creating an *infinite
+     recursion!*
+     #+begin_src scala
+       object Point:
+         def apply(x: Double = 0.0, y: Double = 0.0) = new Point(x, y)
+     #+end_src
+
+   - One of the *tenets* of OOP is that
+     you should never use ~if~ or ~match~ statements that _match on instance type_
+     because /inheritance hierarchies/ evolve -- when a new /subtype/ _is INTRODUCED
+     without also fixing these statements_, they *break*.
+       Instead, /polymorphic methods/ should be used.
+
+     * Q :: So, is the /pattern-matching/ code just discussed an /antipattern/?
+
+     * A :: Of course, NOT. Let's use the following code to explain:
+       #+begin_src scala
+         package progscala3.introscala.shapes
+         
+         import scala.util.chaining.*
+         
+         object ProcessMessages:                                              // <1>
+           def apply(message: Message): Message =                             // <2>
+             message match                                                    // <3>
+               case Exit =>
+               println(s"ProcessMessage: exiting...")
+               Exit
+               case Draw(shape) =>
+               shape.pipe { s =>
+                 s.draw(str => println(s"ProcessMessage: $str"))
+                 Response(s"ProcessMessage: $s drawn")
+               }
+               case Response(unexpected) =>
+               Response(s"ERROR: Unexpected Response: $unexpected").tap { r =>
+                 println(s"ProcessMessage: $r")
+               }
+       #+end_src
+       + For the ~Shape~, we *do NOT* match its /subtypes/. 
+         ~Shape~ is _NOT_ ~sealded~, *match* its /subtypes/ is _error-prone_ as
+         the code evolve, and new shape(s) are introduced.
+           Here, we only use the known API of ~Shape~ and the /subtype polymorphism/.
+     
+       + For the ~Message~, we match its /subtypes/ because the ~Message~ is ~sealed~.
+         The ~match~ can detect /non-exhaustivity/ if new /subtype(s)/ are
+         introduced in the future.
+           This is NOT perfect, because still need to add some ~case~ clauses in the
+         future to handle new introduced /subtypes/. However, because of the
+         /exhaustivity check/ we will notice the new introduced /subtypes/
+         during developemnt. This is good enough.
+         - =from Jian=
+           About "This is NOT perfect":
+           Ideally, the ADTs are usually pretty stable. We may adjust it during
+           development, or the first some release iterations, but we don't
+           frequently change it. This means mostly we need to handle this "NOT
+           perfect".
+       
+     - *CONCLUSION*:
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       * Handle ADTs with /pattern matching/.
+       * Handle non-ADTs subtypes with /subtyping polymorphism/.
+       
+** DONE Recap and What's Next
+   CLOSED: [2021-06-24 Thu 02:50]
     
 * DONE 2. Type Less, Do More
   CLOSED: [2021-06-17 Thu 00:52]
@@ -153,7 +319,7 @@
 ** DONE Variable Declarations
    CLOSED: [2021-06-15 Tue 14:54]
    - *TIP*
-     Avoid using /mutable types/ like ~Array~, as mutation is a common source of
+     Avoid using mutable types/ like ~Array~, as mutation is a common source of
      bugs in concurrent programs.
      * =from Jian=
        The conslution is right, but "Avoid using /mutable types/" in not always
@@ -1098,7 +1264,7 @@
     
 ** Recap and What's Next
     
-* TODO 9. Object-Oriented Programming in Scala - _READING_
+* TODO 9. Object-Oriented Programming in Scala - _READING_ _One Section Left_
 ** DONE Class and Object Basics: Review
    CLOSED: [2021-06-19 Sat 16:53]
    - *Tip*
@@ -1294,8 +1460,23 @@
        In Scala 3, there is clearly an empty tuple: ~EmptyTuple~.
     
 ** TODO Opaque Types and Value Classes
+   - /Wrapper classes/ that have _ONE_ value field:
+     * PROS:
+     * CONS:
+
+   - Use /type aliases/:
+     * PROS:
+     * CONS:
+     
 *** Opaque Type Aliases
+    - PROS:
+    - CONS:
+      
+**** Opaque type aliases and matchable
+     
 *** Value Classes
+    - PROS:
+    - CONS:
     
 ** DONE Supertypes
    CLOSED: [2021-06-20 Sun 01:43]
@@ -1373,8 +1554,223 @@
       class Manager(name: String, age: Int, salary: Float, minions: Seq[Employee]) extends Employee(name, age, salary)
     #+end_src
     
-** TODO Export Clauses
-** TODO Good Object-Oriented Design: A Digression
+** DONE Export Clauses
+   CLOSED: [2021-06-23 Wed 17:30]
+   =from Jian=
+   Please read the "Motivation" section of the "Export Clauses" of _Scala 3
+   Official Reference_.
+
+   - /Export clauses/ can help us to avoid writing /FORWARDING methods/.
+
+   - Example:
+     #+begin_src scala
+       object ServiceWithoutExports:
+         private val dirAuthenticate = DirectoryAuthenticate(URL("https://directory.wtf"))
+       
+         def authenticate(username: UserName, password: Password): Boolean =
+           dirAuthenticate(username, password)
+       
+         def isAuthenticated: Boolean =
+           dirAuthenticate.isAuthenticated
+     #+end_src
+
+     can be written as:
+     #+begin_src scala
+       object ServiceWithoutExports:
+         private val dirAuthenticate = DirectoryAuthenticate(URL("https://directory.wtf"))
+         export dirAuthenticate.{isAuthenticated, apply as authenticate}
+     #+end_src
+
+   - The following rules describe what members are eligible for exporting:
+     *All /exports/ are ~final~. They can't be overridden in /subtypes/.* 
+
+     * The member *can't be owned* by a /supertype/ of the type with the /export
+       clause/.
+
+     * The member *can't override* a /concrete definition/ in a /supertype/,
+       but it *can* be used to implement an /abstract member/ in a /supertype/.
+
+     * The member is *accessible* at the /export clause/.
+       =from Jian= Follow the _visibility rules_.
+
+     * The member is *not* a /constructor/.
+
+     * The member is *not* the _synthetic (compiler-generated) class part of an
+       object_.
+
+     * If the member is a /given instance/ or /implicit value/, then the /export/
+       *MUST BE tagged with* ~given~.
+
+   - /Export clauses/ can also appear *outside* /types/, meaning they are defined
+     at the _package level_.
+     * Hence, one way to provide a very controlled view of what's visible in a
+       /package/ is to
+       1. _DECLARE_ everything /package private/,
+       2. THEN use /export clauses/ to _EXPOSE ONLY_ those items you want publicly
+          visible.
+          + =TODO=
+            See _Chapter 15_ for more details on ~public~, ~protected~,
+            ~private~, and _more fine-grained visibility controls_.
+   
+** DONE Good Object-Oriented Design: A Digression - =RE-READ=
+   CLOSED: [2021-06-23 Wed 22:56]
+   Copy this code from the section "Constructors in Scala":
+   #+begin_src scala
+     class Person(name: String, age: Int)
+     class Employee(name: String, age: Int, salary: Float)                        extends Person(name, age)
+     class Manager(name: String, age: Int, salary: Float, minions: Seq[Employee]) extends Employee(name, age, salary)
+   #+end_src
+   Consider the preceding example where ~Person~ was a /supertype/ of ~Employee~,
+   which was a /supertype/ of ~Manager~. _It has several *code smells*._
+
+   - Two problems:
+     1. There's a lot of _boilerplate_ in the /constructor argument lists/,
+        like ~name: String~, ~age: Int~ *REPEATED three times*.
+
+     2. It seems like all three should be /case classes/, right?
+        * We *can't* /subtype/ one /case class/ to create another.
+          This is BECAUSE
+          *the autogenerated implementations of ~toString~, ~equals~, and
+          ~hashCode~ do not work properly for /subtypes/,*
+          this means _you *can't* create an actul /subtype/ of the case-class type._
+          + =from Jian=
+            Only complete the basic requirements of /inheritance/ dosen't promise
+            an idomatic subtyping. This is another proof that /inheritance/ and
+            /subtyping/ are actually two different concepts.
+
+        * This limitation is by design.
+          _It reflects the *PROBLEMATIC* aspects of /subtyping/._
+
+          + For example,
+            If not considering the concrete context, we can't say
+            ~Manager~, ~Employee~, and ~Person~ instances that have the same
+            field values (if exist) are not equal.
+              In practice, we must take into account context.
+
+            - =from Jian=
+              However, in code level, we usually don't want them be equal by default.
+              I think the better solution (which *CAN'T* be satisfied by
+              _extending a case class_):
+              1. By default, compare their all fields.
+              2. Implement some _CUSTOMIZED_ equality check methods to compare
+                 different /subtypes/.
+
+        * *The real problem is that we are subtyping the state of these instances.*
+          We are using /subtyping/ to add additional /fields/ that *contribute to the
+          _instance state_.*
+            In contrast, /subtyping behavior (methods)/ with the same _state_ is
+          easier to implement robustly. _It avoids the problems with ~equals~ and
+          ~hashCode~ just described, for example._
+
+        * Of course, these problems with /inheritance/ have been known for a long time.
+          Today, *GOOD object-oriented design favors /composition/ over /inheritance/,*
+          where we, WHEN POSSIBLE,
+          *compose* units of functionality
+          _RATHER THAN_
+          *build* /class hierarchies/.
+
+        * *Mixin composition* with /traits/ makes /composition/ straightforward.
+          + The code examples mostly
+            - use /type hierarchies/ with *few* levels and
+            - *mixins* to enhance them.
+            When bits of *CLEANLY SEPARATED* /state/ and /behavior/ are combined,
+            /mixin composition/ is ROBUST.
+
+   - When /subtyping/ is used, I recommend the following rules:
+     * Use only *one level* of /subtyping/ from a /supertype/,
+       if at all possible.
+
+     * /Concrete classes/ are never /subtyped/, except for _TWO cases_:
+       + /Classes/ that *mix in* other behaviors defined in /traits/ (see Chapter 10).
+         Ideally, those behaviors should be *orthogonal* (i.e., not overlapping).
+
+       + /Test-only versions/ to *promote automated* /unit testing/.
+
+     * When /subtyping/ seems like the right approach, consider partitioning
+       behaviors into /traits/, and *mixin* those /traits/ instead.
+       + Recall our ~NAPhoneNumber~ design earlier in this chapter.
+
+     * *NEVER build up* /logical state/ *across* /supertype-subtype boundaries/.
+       =TODO= =RE-THINK=
+       =TODO= =RE-THINK=
+       =TODO= =RE-THINK=
+       + logical state :: the /fields/ and /methods/, which together define a
+                           /state machine/ for the _logical behavior_.
+                           
+         - There might have some private, implementation-specific state that
+           doesn't affect this external behavior, but be very careful that the
+           internals don't leak through the /type's abstraction/.
+           * For example,
+             + a library might include /private subtypes/ for _special cases_.
+             + /Types/ might have /private fields/ to implement
+               - _caching_,
+               - _auditing_, or
+               - other concerns that are *NOT* part of the /public abstraction/.
+      
+     * *ONLY* use /case classes/ for _leaf nodes_ in a /type hierarchy/.
+       That is, *don't subtype /case classes/.*
+
+     * Make your intentions explicit by marking types
+       + ~open~,
+       + ~final~, or
+       + ~sealed~,
+       as appropriate.
+   
+   - Q :: So what about our ~Person~ hierarchy? What should we do instead?
+   - A :: *It really depends on the context of use.*
+     * Q :: If we're implementing a _Human Resources_ application,
+            do we need a separate concept of ~Person~ OR
+            can ~Employee~ just be the ONLY type,
+            declared as a /case class/?
+     * Q :: Do we even need any types for this at all?
+     * Q :: If we're processing a result set from a /database query/,
+            is it sufficient to use /tuples/ or /maps/ to hold the values
+            returned from the query for each unique use case?
+     * Q :: Can we *dispense* with the ceremony of declaring a type altogether?
+
+   - Here is an alternative with just a SINGLE ~Employee~ /case class/ that embeds
+     the _ASSUMPTION_ that nonmanagers will have an empty set of subordinates:
+     #+begin_src scala
+       // src/script/scala/progscala3/basicoop/people/Employee.scala
+       
+       case class Employee(
+         name:    String,
+         age:     Int,
+         title:   String,
+         manages: Set[Employee] = Set.empty)
+       
+       val john = Employee("John Smith", 35, "Accountant")
+       val jane = Employee("Jane Doe", 28, "Full Stack Developer")
+       val tom  = Employee("Tom Tired", 22, "Junior Minion")
+       val minions = Set(john, jane, tom)
+       val ceo = Employee("John Smith", 60, "CEO", minions)
+     #+end_src
+     * =from Jian=
+       Usually I prefer to create a ~enum Title~,
+       RATHER THAN using ~String~ for ~title~.
+       #+begin_src scala
+         enum Title {
+           case Accountant
+           case FullStackDeveloper
+           case JuniorMinion
+           case CEO
+         }
+         
+         import Title.*
+         
+         case class Employee(
+           name:    String,
+           age:     Int,
+           title:   Title,
+           manages: Set[Employee] = Set.empty)
+         
+         val john = Employee("John Smith", 35, Accountant)
+         val jane = Employee("Jane Doe", 28, FullStackDeveloper)
+         val tom  = Employee("Tom Tired", 22, JuniorMinion)
+         val minions = Set(john, jane, tom)
+         val ceo = Employee("John Smith", 60, CEO, minions)
+       #+end_src
+     
 ** DONE Fields in Types
    CLOSED: [2021-06-21 Mon 14:37]
    - =from Jian=
@@ -1469,7 +1865,8 @@
     - Note that *the SPACE between the ~-~ and the ~:~ is NECESSARY* to tell the
       compiler that the method name ends with ~-~ and *not with* ~:~!
     
-** TODO Recap and What's Next
+** DONE Recap and What's Next
+   CLOSED: [2021-06-23 Wed 22:56]
     
 * TODO 10. Traits
 ** TODO Traits as Mixins
