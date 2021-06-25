@@ -290,20 +290,115 @@
 ** Summary - 172
 
 * TODO 7. Optimizing and Tuning Spark Applications - 173
-** Optimizing and Tuning Spark for Efficiency - 173
+** TODO Optimizing and Tuning Spark for Efficiency - 173
 *** Viewing and Setting Apache Spark Configurations - 173
+    - There are *THREE* ways you can get and set _Spark properties_:
+      1. Through a set of configuration files. In your deployment’s
+         ~$SPARK_HOME~ directory (where you installed Spark), there are a number
+         of config files:
+         =conf/spark-defaults.conf.template=,
+         =conf/log4j.properties.template=, and
+         =conf/spark-env.sh.template=.
+         Changing the default values in these files and saving them without the
+         =.template= suffix instructs Spark to use these new values.
+         * *Note*:
+           Configuration changes in the =conf/spark-defaults.conf= file apply to
+           + _the Spark cluster_ and
+           + _all Spark applications submitted to the cluster_.
+
+      2. Specify _Spark configurations_ directly
+         *in your Spark application* or
+         #+begin_src scala
+           // In Scalaimport org.apache.spark.sql.SparkSession
+           
+           object BuildSparkSession {
+             def printConfigs(session: SparkSession) = {
+               // Get conf
+               val mconf = session.conf.getAll
+           
+               // Print them
+               for (k <- mconf.keySet) {
+                 println(s"${k} -> ${mconf(k)}\n")
+               }
+             }
+           
+             def main(args: Array[String]) {
+               // Create a session
+               val spark = SparkSession.builder
+                 .config("spark.sql.shuffle.partitions", 5)
+                 .config("spark.executor.memory", "2g")
+                 .master("local[*]")
+                 .appName("SparkConfig")
+                 .getOrCreate()
+           
+               printConfigs(spark)
+               spark.conf.set("spark.sql.shuffle.partitions",
+                              spark.sparkContext.defaultParallelism)
+               println(" ****** Setting Shuffle Partitions to Default Parallelism")
+               printConfigs(spark)
+             }
+           
+             /// spark.driver.host -> 10.8.154.34
+             /// spark.driver.port -> 55243
+             /// spark.app.name -> SparkConfig
+             /// spark.executor.id -> driver
+             /// spark.master -> local[*]
+             /// spark.executor.memory -> 2g
+             /// spark.app.id -> local-1580162894307
+             /// spark.sql.shuffle.partitions -> 5
+           }
+         #+end_src
+         *on the command line* when submitting the application with ~spark-submit~,
+         using the ~--conf~ flag:
+         #+begin_src shell
+           spark-submit --conf spark.sql.shuffle.partitions=5 \
+                        --conf"spark.executor.memory=2g" \
+                        --class main.scala.chapter7.SparkConfig_7_1 jars/main-scala-chapter7_2.12-1.0.jar
+         #+end_src
+
+      3. Through a _programmatic interface_ via the /Spark shell/.
+         As with everything else in Spark, APIs are the primary method of
+         interaction.
+           Through the ~SparkSession~ object,
+         you can access MOST _Spark config settings_.
+
+         - In a Spark REPL, for example, this Scala code shows the Spark configs on a
+           _local host_ where Spark is launched in /local mode/ (for details on
+           the different modes available, =TODO= _see “Deployment modes” in Chapter 1_):
+           #+begin_src scala
+             // scala>
+             val mconf = spark.conf.getAll
+             
+             // scala>
+             mconf.keySet.foreach { k => println(s"${k} -> ${mconf(k)}\n") }
+             // spark.driver.host -> 10.13.200.101
+             // spark.driver.port -> 65204
+             // spark.repl.class.uri -> spark://10.13.200.101:65204/classes
+             // spark.jars ->
+             // spark.repl.class.outputDir -> /private/var/folders/jz/qg062ynx5v39wwmfxmph5nn...
+             // spark.app.name -> Spark shell
+             // spark.submit.pyFiles ->
+             // spark.ui.showConsoleProgress -> true
+             // spark.executor.id -> driver
+             // spark.submit.deployMode -> client
+             // spark.master -> local[*]
+             // spark.home -> /Users/julesdamji/spark/spark-3.0.0-preview2-bin-hadoop2.7
+             // spark.sql.catalogImplementation -> hive
+             // spark.app.id -> local-1580144503745
+           #+end_src
+      
 *** Scaling Spark for Large Workloads - 177
 **** Static versus dynamic resource allocation - 177
 **** Configuring Spark executors' memory and the shuffle service - 178
 **** Maximizing Spark parallelism - 180
 
-** Caching and Persistence of Data - 183
+** TODO Caching and Persistence of Data - 183
 *** ~DataFrame.cache()~ - 183
 *** ~DataFrame.persist()~ - 184
 *** When to Cache and Persist - 187
 *** When Not to Cache and Persist - 187
 
-** A Family of Spark Joins - 187
+** TODO A Family of Spark Joins - 187
 *** Broadcast Hash Join - 188
 **** When to use a broadcast hash join - 189
 
@@ -311,7 +406,7 @@
 **** Optimizing the shuffle sort merge join - 193
 **** When to use a shuffle sort merge join - 197
 
-** Inspecting the Spark UI - 197
+** TODO Inspecting the Spark UI - 197
 *** Journey Through the Spark UI Tabs - 197
 **** Jobs and Stages - 198
 **** Executors - 200
@@ -320,7 +415,7 @@
 **** Environment - 203
 **** Debugging Spark applications - 204
 
-** Summary - 205
+** TODO Summary - 205
 
 * TODO 8. Structured Streaming - 207
 ** Evolution of the Apache Spark Stream Processing Engine - 207
