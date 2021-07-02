@@ -1,0 +1,1476 @@
+#+TITLE: Zionomicon
+#+AUTHORS: John De Goes, Adam Fraser
+#+VERSION: Early Release - WIP
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* DONE 1 Foreword by John A. De Goes - 12
+  CLOSED: [2021-07-03 Sat 03:47]
+** 1.1 A Brief History of ZIO - 12
+** 1.2 The Birth of ZIO - 13
+** 1.3 Contentious Concurrency - 14
+** 1.4 Typed Errors & Other Evolution - 15
+** 1.5 Contributor Growth - 16
+** 1.6 Improved Type-Inference - 16
+** 1.7 Batteries Included - 17
+** 1.8 ZIO Stream - 17
+** 1.9 ZIO Environment - 18
+** 1.10 Software Transactional Memory - 19
+** 1.11 Execution Traces - 20
+** 1.12 Summer 2019 - 21
+** 1.13 ZIO Test - 21
+** 1.14 ZLayer - 22
+** 1.15 Structured Concurrency - 23
+** 1.16 Why ZIO - 24
+** 1.17 ZIO Alternatives - 25
+** 1.18 Zionomicon - 26
+   
+* DONE 2 Essentials: First Steps With ZIO - 27
+  CLOSED: [2021-07-11 Sun 02:13]
+  - This chapter will teach you the critical theory you need to understand and
+    build _ZIO applications_.
+
+    * We will start by introducing the CORE /data type/ in ZIO, which is called a
+      /functional effect type/, and
+    
+    * define /functional effects/ as blueprints for concurrent workflows.
+    
+    * We will LEARN how to *combine effects sequentially,* and see how this allows
+      us to refactor legacy code to ZIO.
+
+    * We will DISCUSS the meaning of each of the /type parameters/ in _ZIO's core data
+      type_, particularly
+      + the /error type/ and
+      + the /environment type/,
+      which are features unique to ZIO.
+
+    * We will _COMPARE_ ZIO to the ~Future~ data type in the Scala standard library,
+      to clarify the concepts we introduce.
+
+    * We will SEE
+      how /ZIO environment/ lets us leverage the _testable services_ built into
+      ZIO for interacting with _time_, the _console_, and _system information_ (among
+      others).
+      
+    * Finally, we'll SEE
+      how /recursive ZIO effects/ allow us to
+      + *loop* and
+      + perform other control flow operations.
+
+  - By the end of this chapter,
+    * you will be able to *write* _basic programs_ using ZIO, including those that
+      leverage /environmental effects/ and /custom control flow operators/, and
+
+    * you will be able to *refactor* legacy code to ZIO by following some simple
+      guidelines.
+
+** TODO 2.1 Functional Effects As Blueprints - 28
+   The _core data type_ in the _ZIO library_ is ~ZIO[R, E, A]~, and values of
+   this type are called /functional effects/.
+
+   - A /functional effect/ is a kind of *blueprint* for a /concurrent workflow/.
+
+   - A /functional effect/ of type ~ZIO[R, E, A]~ requires:
+     * ~R~: /environment/ of the effect
+     * ~E~: /error type/
+     * ~A~: /success type/
+
+** DONE 2.2 Sequential Composition - 31
+   CLOSED: [2021-07-08 Thu 13:01]
+   #+begin_src scala
+     trait ZIO[R, E, A] {
+       // ...
+       def flatMap[B](andThen: A => ZIO[R, E, B]): ZIO[R, E, B] = ...
+       // ...
+     }
+   #+end_src
+
+   - Using this ~for~ /sequential operator/, we can describe a simple workflow
+     that readers user input and then displays the input back to the user, as
+     shown in the following snippet:
+     #+begin_src scala
+       import scala.io.StdIn
+       
+       val readLine =
+         ZIO.effect(StdIn.readLine())
+       
+       def printLine(line: String) =
+         ZIO.effect(println(line))
+       
+       val echo =
+         readLine.flatMap(printLine)
+     #+end_src
+
+   - The ~flatMap~ operator is _FUNDAMENTAL_
+     because it captures the way statements are executed in a _procedural
+     program_: later statements *depend on* results computed by previous statements,
+     which is exactly the relationship that ~flatMap~ describes.
+     
+   - For reference, here is th above program written in a _procedural style_:
+     #+begin_src scala
+       val line = Console.readLine()
+       Console.println(line)
+     #+end_src
+     This relationship between _procedural programming_ and the ~flatMap~
+     operator is so precise,
+     we can actually *translate* any _procedural program_ into ZIO
+     *by wrapping each statement in a constructor like ~ZIO.effect~ and then
+     gluing the statements together using ~flatMap~.*
+     * Example (translation):
+       #+begin_src scala
+         val data = doQuery(query)
+         val response = generateResponse(data)
+         writeResponse(response)
+       #+end_src
+
+       can be translated into ZIO as follows:
+       #+begin_src scala
+         ZIO.effect(doQuery(query)).flatMap { data =>
+           ZIO.effect(generateResponse(data)).flatMap { response =>
+             ZIO.effect(writeResponse(response))
+           }
+         }
+       #+end_src
+     
+*** DONE 2.2.1 For Comprehensions - 32
+    CLOSED: [2021-07-08 Thu 13:01]
+    - A ~for~ /comprehension/ with *n* lines is translated by Scala into
+      * *n - 1* calls to ~flatMap~ methods on the /effects/,
+      * followed by a _final call_ to a ~map~ method on the last effect.
+
+    - Example:
+      #+begin_src scala
+        for {
+          x <- doA
+          y <- doB(x)
+          z <- doC(x, y)
+        } yield x + y + z
+      #+end_src
+
+      will be translated into:
+      #+begin_src scala
+        doA.flatMap { x =>
+          doB(x).flatMap { y =>
+            doC(x, y).map(z => x + y + z)
+          }
+        }
+      #+end_src
+    
+** DONE 2.3 Other Sequential Operators - 33
+   CLOSED: [2021-07-08 Thu 13:34]
+   /Sequential composition/ is so common when using /functional effects/, ZIO
+   provides a variety of related operators for common needs.
+
+   - ~zipWith~, ~zipLeft~ / ~<*~, and ~zipRight~ / ~*>~.
+
+   - ~foreach~ and ~combineAll~
+
+** DONE 2.4 ZIO Type Parameters - 35
+   CLOSED: [2021-07-09 Fri 18:09]
+   - ~ZIO[R, E, A]~ /type parameters/:
+     * ~R~ is the /environment/ required for the effect to be executed.
+       This could include
+       + any /dependencies/ the effect has,
+         for example access to a database or a logging service, or
+       + an effect might _NOT require any /environment/,_ in which case, the
+         /type parameter/ will be ~Any~.
+
+     * ~E~ is the type of value that the effect _can FAIL with_.
+       + This could be ~Throwable~ or ~Exception~,
+         but it could also be a /domain-specific error type/, or
+       + an effect might _not be able to fail at all_, in which case the /type
+         parameter/ will be ~Nothing~.
+
+     * ~A~ is the type of value that the effect _can SUCCEED with_.
+       It can be thought of as the /return value/ or /output of the effect/.
+
+   - If *NOT* considering the /concurrent/, /async/ or /resource-safe/,
+     ~ZIO[R, E, A]~ is similar to ~R => Either[E, A]~.
+     _It is a useful mental model._
+     * The following snippet of code defines this *TOY model* of a /ZIO effect/:
+       #+begin_src scala
+         final case class ZIO[-R, +E, +A](run: R => Either[E, A])
+       #+end_src
+
+   - _Use mental model to implement some basic constructors and operators:_
+     #+begin_src scala
+       final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
+         def map[B](f: A => B): ZIO[R, E, B] =
+           ZIO(r => self.run(r).map(f))
+       
+         def flatMap[R1 <: R, E1 >: E, B](
+           f: A => ZIO[R1, E1, B]
+         ): ZIO[R1, E1, B] =
+           ZIO(r => self.run(r).fold(ZIO.fail(_), f).run(r))
+       }
+       
+       object ZIO {
+         def effect[A](a: => A): ZIO[Any, Throwable, A] =
+           ZIO(_ => try Right(a) catch { case t: Throwable => Left(t) })
+       
+         def fail[E](e: => E): ZIO[Any, E, Nothing] =
+           ZIO(_ => Left(e))
+       }
+     #+end_src
+     * The parameter of ~ZIO.effect~ is /by name/ -- you want to describe
+       execution, not evaluate eagerly.
+
+*** DONE 2.4.1 The Error Type - 37
+    CLOSED: [2021-07-09 Fri 17:55]
+    - =NOTE= =TODO=
+
+    - Implement ~foldM~ with the _mental model_:
+      #+begin_src scala
+        final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
+          def foldM[R1 <: R, E1, B](
+            failure: E => ZIO[R1, E1, B],
+            success: A => ZIO[R1, E1, B]
+          ): ZIO[R1, E1, B] =
+            ZIO(r => self.run(r).fold(failure, success).run(r))
+        }
+      #+end_src
+
+    - Implement ~fold~ with the _metal model_:
+      #+begin_src scala
+        final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
+          def fold[B](
+            failure: E => B,
+            success: A => B
+          ): ZIO[R1, Nothing, B] =
+            ZIO(r => Right(self.run(r).fold(failure, success)))
+        }
+      #+end_src
+      * Can't create a ~Nothing~ value -- ~fold~ can't fail.
+
+*** DONE 2.4.2 The Environment Type - 38
+    CLOSED: [2021-07-09 Fri 18:09]
+    - The two fundamental operational of working with the /environment/ are:
+      #+begin_src scala
+        final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
+          def provide(r: R): ZIO[Any, E, A] =
+            ZIO(_ => self.run(r))
+        }
+        
+        object ZIO {
+          def environment[R]: ZIO[R, Nothing, A] =
+            ZIO(r => Right(r))
+        }
+      #+end_src
+      * accessing the /environment/ (e.g. getting access to a database to do
+        something with it) and
+
+      * providing the /environment/ (providing a database service to an effect
+        that needs one, so it doesn't need anything else).
+
+** DONE 2.5 ZIO Type Aliases - 39
+   CLOSED: [2021-07-10 Sat 02:23]
+   - With its /THREE type parameters/ ZIO is extremely powerful.
+     * We can use the /environment type parameter/ to
+       *propagate information DOWNWARD* in our program (databases, connection
+       pools, configuration, and much more), and
+
+     * we can use the /error and success type parameters/ to
+       *propagate information UPWARD*.
+
+   - Aliases:
+     #+begin_src scala
+       type IO[+E, +A]   = ZIO[Any, E, A]
+       type Task[+A]     = ZIO[Any, Throwable, A]
+       type RIO[-R, +A]  = ZIO[R, Throwable, A]
+       type UIO[+A]      = ZIO[Any, Nothing, A]
+       type URIO[-R, +A] = ZIO[R, Nothing, A]
+     #+end_src
+     * ~IO[E, A]~ - An effect that
+       + does *NOT* require any /environment/
+       + may _fail_ with an ~E~, OR may _succeed_ with an ~A~ =FIXME= missing period
+
+     =FIXME= ~Task[A]~
+     * ~Task~ - An effect that
+       + does *NOT* require any /environment/,
+       + may _fail_ with a ~Throwable~, OR may _succeed_ with an ~A~ =FIXME= missing period
+
+     =FIXME= ~RIO[R, A]~
+     * ~RIO~ - An effect that
+       + requires an /environment/ of type ~R~,
+       + may _fail_ with a ~Throwable~, or may _succeed_ with an ~A~.
+
+     =FIXME= ~UIO[A]~
+     * ~UIO~ - An effect that
+       + does *not* require any /environment/,
+       + *cannot* _fail_, and _succeeds_ with an ~A~ =FIXME= missing period
+
+     * ~URIO[R, A]~ - An effect that
+       + requires an /environment/ of type ~R~,
+       + *cannot* _fail_, and may _succeed_ with an ~A~.
+
+   - Several other data types in _ZIO_ and _other libraries in the ZIO ecosystem_
+     use SIMILAR /type aliases/, so if you are familiar with these you will be
+     able to pick those up quickly, as well.
+     * =from Jian=
+       =TODO=
+       Learn more about _other libraries in the ZIO ecosystem_.
+
+** DONE 2.6 Comparison to Future - 40
+   CLOSED: [2021-07-10 Sat 03:35]
+   We will discuss other differences between ~ZIO~ and ~Future~ later in this
+   book when we discuss /concurrency/, _BUT_ for now there are *THREE primary
+   differences* to keep in mind.
+
+*** DONE 2.6.1 A ~Future~ Is A Running effect - 40
+    CLOSED: [2021-07-10 Sat 03:07]
+    - Unlike a _functional effect_ like ~ZIO~,
+      a ~Future~ models a _running effect_.
+
+    - Snippet:
+      #+begin_src scala
+        import scala.concurrent.Future
+        import scala.concurrent.ExecutionContext.Implicits.global
+        
+        val goShoppingFuture: Future[Unit] =
+          Future(println("Going to the grocery store"))
+      #+end_src
+      * As soon as ~goShoppingFuture~ is defined this effect will begin executing.
+        ~Future~ _does *NOT* suspend evaluation of code wrapped in it._
+
+    - =TODO= =RE-NOTE=
+    - Because of this *tangling* between the _WHAT_ and the _HOW_,
+      we don't have much power when using ~Future~.
+      * For example,
+        it would be nice to be able to define a _delay operator_ on ~Future~,
+        just like we have for ZIO. _BUT_ we *can't* do that because it would be a
+        method on ~Future~, and if we have a ~Future~, then it is *already
+        running*, so it's *TOO LATE to delay it.*
+
+    - Similarly, we *can't retry* a ~Future~ in the event of _failure_, like we
+      can for ~ZIO~, because a ~Future~ *isn't* a blueprint for doing something --
+      it's an executing computation.
+        So if a ~Future~ _fails_, there is nothing else to do. We can ONLY
+      *retrieve* the _failure_.
+
+    - In contrast, since a /ZIO effect/ is a BLUEPRINT for a /concurrent workflow/,
+      if we execute the effect once and it fails, we can always try executing it
+      again, or executing it as many times as we would like.
+
+    - This is the reason why ~ZIO~ doesn't need an /execution context/ like the
+      ~ExecutionContext~ for ~Future~. To run a effect, ~ZIO~ need an
+      ~Executor~, mostly any ~Executor~.
+      * later we will see how you can “lock” an effect to run in a *specific*
+        /execution context/, for those rare cases where you need to be explicit
+        about this
+
+*** DONE 2.6.2 ~Future~ Has An Error Type Fixed To ~Throwable~ - 42
+    CLOSED: [2021-07-10 Sat 03:32]
+    ~Future~ has an /error type/ _fixed to_ ~Throwable~.
+    It has *much less expressive power* than a /polymorphic error type/.
+
+    - Illustration by examples:
+      #+begin_src scala
+        def parseInt: Future[Int] =
+          ???
+            
+        def parseIntOrZero: Future[Int] =
+          parseInt.fallBackTo(Future.successful(0))
+      #+end_src
+      * For the ~parseInt~,
+        *we have no idea*
+        _how this future can fail by looking at the type signature._
+        + Could it return a ~NumberFormatException~ from parsing?
+        + Could it return an ~IOException~?
+        + Could it *not fail at all* because it handles its own errors, perhaps
+          by retrying until the user entered a valid integer?
+        We just don't know, not unless we dig into the code and study it at
+        length.
+
+      * This problem is especially annoying
+        WHEN we handle all possible failure scenarios of a ~Future~,
+        *BUT _nothing changes_ about the /type/.*
+
+        + For the ~parseIntOrZero~, there is *no possible to know it can't fail*
+          -- the /type signature/ doesn't tell us this. As far as the /type
+          signature/ is concerned, this method could fail in _infinitely many
+          ways_, just like ~parseInt~!
+
+          - From the perspective of the /compiler/, ~fallBackTo~ *hasn't* changed
+            anything about the fallibility of the ~Future~.
+              In contrast, in ZIO ~parseInt~ would have a type of
+            ~IO[NumberFormatException, Int]~, and ~parseIntOrZero~ would have a
+            type of ~UIO[Int]~, indicating precisely _how ~parseInt~ *can* fail_
+            and _that ~parseIntOrZero~ *cannot* fail_.
+
+*** DONE 2.6.3 ~Future~ Does Not Have A Way To Model The Dependencies Of An Effect - 43
+    CLOSED: [2021-07-10 Sat 03:35]
+    ZIO has direct support for /dependency injection/, but ~Future~ does *not*.
+    =TODO= In later chapters
+
+    - This means that in practice, *most* ~Future~ code in the real world is
+      *NOT very testable*, because it requires too much _plumbing_ and
+      _boilerplate_.
+    
+** DONE 2.7 More Effect Constructors - 43
+   CLOSED: [2021-07-10 Sat 23:32]
+   - The ~ZIO.effect~ /constructor/ is a useful and common effect constructor,
+     BUT it's *NOT suitable* for every scenario:
+     * _Fallible_:
+       Since the ~ZIO.effect~ /constructor/ returns an effect that can fail
+       with any kind of ~Throwable~ (~ZIO[Any, Throwable, A]~).
+       + *RIGHT choice*
+         WHEN you are converting _legacy code_ into ZIO and don't know if it
+         throws /excpetions/.
+
+       + *BUT sometimes*, we know that some code *DOESN'T* throw /exceptions/.
+
+     * _Synchronous_:
+       The ~ZIO.effect~ /constructor/ requires that our _procedural code_ be
+       /synchronous/, returning some value of the specified type from the
+       captured block of code.
+         But in an /asynchronous/ API, we have to register a callback to be
+       invoked when a value of type ~A~ is available.
+       _How do we *convert* /asynchronous/ code *to* /ZIO effects/?_
+
+     * _Unwrapped_:
+       The ~ZIO.effect~ /constructor/ *ASSUMES* the value we are computing is
+       NOT wrapped in yet another data type, which has its own way of modeling
+       failure.
+         But some of the code that we interact with return an ~Option[A]~, an
+       ~Either[E, A]~, a ~Try[A]~, or even a ~Future[A]~.
+       _How do we convert from these types into /ZIO effects/?_
+
+   - Fortunately,
+     ZIO comes with robust constructors that handle
+     * custom failure scenarios,
+     * asynchronous code, and
+     * other common data types.
+
+*** DONE 2.7.1 Pure Versus Impure Values - 44
+    CLOSED: [2021-07-10 Sat 04:19]
+    - /referential transparency/
+
+    - ZIO tries to do the right thing even if you accidentally treat
+      side-effecting code as pure code.
+        But *mixing side-effecting code with ZIO code can be a source of bugs,*
+      so it is best to be careful about using the RIGHT /effect constructor/. As
+      a side benefit, this will make your code easier to read and review for
+      your colleagues.
+
+*** DONE 2.7.2 Effect Constructors For Pure Computations - 45
+    CLOSED: [2021-07-10 Sat 04:35]
+    - In addition, even _pure code_ can benefit from some features of ZIO,
+      such as /environment/, /typed errors/, and /stack safety/.
+
+    - The _TWO most basic ways_ to convert /pure values/ into /ZIO effects/ are
+      ~succeed~ and ~fail~:
+      #+begin_src scala
+        object ZIO {
+          def fail[E](e: => E): ZIO[Any, E, Nothing] = ???
+        
+          def succeed[A](a: => A): ZIO[Any, Nothing, A] = ???
+        }
+      #+end_src
+      * The ~ZIO.succeed~ /constructor/ converts a value into an effect that
+        _succeeds_ with that value. The effects created with this constructor
+        *cannot fail*.
+
+      * The ~ZIO.fail~ /constructor/ converts a value into an effect that
+        _fails_ with that value.
+          For example, ~ZIO.fail(new Exception)~ construct an effect that fails
+        with the specified exception. The /success type/ of the effect returned
+        by ~ZIO.fail~ is ~Nothing~, because effects created with this
+        constructor *cannot succeed*.
+
+    - There are a variety of _OTHER_ /constructors/ that can
+      *convert* /standard Scala data types/ *into* /ZIO effects/.
+      #+begin_src scala
+        import scala.util.Try
+        
+        object ZIO {
+          def fromEither[E, A](eea: => Either[E, A]): IO[E, A] = ???
+        
+          def fromOption[A](oa: => Option[A]): IO[None.type, A] = ???
+        
+          def fromTry[A](oa: => Try[A]): Task[A] = ???
+        }
+      #+end_src
+
+    - These are *NOT the only* /effect constructors/ for /pure values/.
+      =TODO=
+      In the exercises at the end of this chapter, you will explore a few of the
+      _OTHER_ constructors.
+
+*** DONE 2.7.3 Effect Constructors for Side Effecting Computations - 47
+    CLOSED: [2021-07-10 Sat 23:32]
+    The *most important* /effect constructors/ are those for side-effecting
+    computations.
+      These constructors *convert* /procedural code/ *into* /ZIO effects/, so
+    they become blueprints that _SEPARATE the WHAT from the HOW._
+
+    - Earlier in this chapter, we introduced ~ZIO.effect~.
+      This constructor
+      * *captures* side-effecting code, and
+      * *defers* its evaluation until later,
+        _translating_ any /exceptions/ thrown in the code into ~ZIO.fail~ values.
+
+    - Sometimes, however, we want to convert _side-effecting code_ into a /ZIO
+      effect/, but we know the _side-effecting code_ does *NOT throw* any
+      /exceptions/.
+        For example, checking the system time or generating a random variable
+      are definitely side-effects, but they *cannot throw* /exceptions/.
+      * For these cases, we can use the /constructor/ ~ZIO.effectTotal~, which
+        converts /procedural code/ into a /ZIO effect/ that _CANNOT fail_:
+        #+begin_src scala
+          object ZIO {
+            def effectTotal[A](a: => A): ZIO[Any, Nothing, A]
+          }
+        #+end_src
+
+**** TODO 2.7.3.1 Converting Async Callbacks
+     =TODO= =NOTE=
+     xxx
+
+** DONE 2.8 Standard ZIO Services - 49
+   CLOSED: [2021-07-10 Sat 23:32]
+   - ZIO provides _four to five_ different default services for ALL applications,
+     depending on the platform:
+     1. *Clock*.
+        Provides functionality related to *time and scheduling*.
+          If you are accessing the current time or scheduling a computation to
+        occur at some point in the future you are using this.
+
+     2. *Console*.
+        Provides functionality related to *console input and output*.
+
+     3. *System*.
+        Provides functionality for getting *system and environment variables*.
+
+     4. *Random*.
+        Provides functionality for generating *random values*.
+
+     5. *Blocking*.
+        Provides functionality for running blocking tasks on a separate
+        ~Executor~ optimized for these kinds of workloads.
+        * Because blocking is *not supported* on _Scala.js_,
+          this service is *only available* on the _JVM_.
+
+   - =TODO= =NOTE=
+   - =TODO= =NOTE=
+   - =TODO= =NOTE=
+   - =TODO= =NOTE=
+     Survey and Discussion to these ZIO Services.
+
+*** DONE 2.8.1 Clock - 51
+    CLOSED: [2021-07-10 Sat 21:08]
+    The ~Clock~ service provides functionality related to *Time and Scheduling*.
+
+    - This includes several methods to obtain the _current time_ in different
+      ways
+      * ~currentTime~ to return the _current time_ in the specified ~TimeUnit~,
+      * ~currentDateTime~ to return the _current_ ~OffsetDateTime~, and
+      * ~nanoTime~ to obtain the _current time_ in nanoseconds.
+
+    - The ~Clock~ service includes a ~sleep~ /method/,
+      which can be used to sleep for a certain amount of time.
+
+    - The signature of ~nanoTime~ and ~sleep~ are shown in the following snippet:
+      #+begin_src scala
+        import zio.duration._
+        
+        package object clock {
+          def nanoTime: URIO[Clock, Long]
+        
+          def sleep(duration: => Duration): URIO[Clock, Unit]
+        }
+      #+end_src
+      * This ~sleep~ is /nonblocking/, so it doesn't actually consume any /threads/
+        while it is waiting for the time to elapse.
+        =TODO= =???=
+        =TODO= =???=
+        =TODO= =???=
+
+      * Implement ~delay~ with ~sleep~:
+        #+begin_src scala
+          import zio.clock._
+          import zio.duration._
+          
+          def delay[R, E, A](zio: ZIO[R, E, A])(
+            duration: Duration
+          ): ZIO[R with Clock, E, A] =
+            clock.sleep(duration) *> zio
+        #+end_src
+
+    - The ~Clock~ service is the building block for *ALL time and scheduling
+      functionality in ZIO.*
+        Consequently, you will see the ~Clock~ service as a component of the
+      /environment/ whenever working with
+      * retrying,
+      * repetition,
+      * timing, or
+      * other features related to /time/ and /scheduling/ built into ZIO.
+
+*** DONE 2.8.2 Console - 52
+    CLOSED: [2021-07-10 Sat 22:58]
+    The ~Console~ service provides functionality around
+    *reading* from and *writing* to the /console/.
+
+    - =from Jian= _EXPLAIN why we didn't use ~Console~ until here:_
+      *So far* in this book, we have been interacting with the /console/ by
+      converting /procedural code/ in the Scala library to ZIO effects, using the
+      ~ZIO.effect~ /constructor/.
+        This was useful to illustrate how to translate procedural to ZIO, and
+      demonstrate there is no “magic” in ZIO's own console facilities.
+      * *However*,
+        _WRAPPING console functionality DIRECTLY_ is *not ideal*,
+        because we cannot provide alternative implementations for /testing
+        environments/.
+          In addition, there are some tricky edge corner cases for console
+        interaction that *the ~Console~ services handles for us.* (For example,
+        reading from the console can _fail ONLY with_ an ~IOException~.)
+
+    - The key /methods/ on the ~Console~ service:
+      #+begin_src scala
+        package object console {
+          val getStrLn: ZIO[Console IOExcception, String]
+          def putStr(line: => String): URIO[Console, Unit]
+          def putStrLn(line: => String): URIO[Console, Unit]
+        }
+      #+end_src
+
+    - USAGE:
+      The ~Console~ service is commonly used in console applications, but is *less
+      common* in generic code than ~Clock~ or ~Random~.
+        In the rest of this book, we will illustrate examples involving _console
+      applications_ with these /methods/, *RATHER THAN converting /methods/ from
+      the Scala standard library.*
+
+*** DONE 2.8.3 System - 52
+    CLOSED: [2021-07-10 Sat 23:06]
+    The ~System~ service provides functionality to get *system and environment
+    variables*.
+
+    - The two main /methods/ on the ~System~ service
+      #+begin_src scala
+        package object system {
+          def env(variable: String): IO[SecurityException, Option[String]]
+          def property(prop: String): IO[Throwable, Option[String]]
+        }
+      #+end_src
+      =FIXME= A missing closing curly brace.
+      * ~env~, which accesses a specified /environment variable/
+      * ~property~, which accesses a specified /system property/
+
+    - There are also other variants for
+      * *obtaining* all /environment variables/ or /system properties/, or
+      * *specifying* a /backup value/, if a specified /environment variable/ or
+        /property/ does _NOT exist_.
+
+    - USAGE:
+      Like the ~Console~ service, the ~System~ service tends to be used more in
+      _applications_ or _certain libraries_ (e.g. those dealing with configuration)
+      BUT is uncommon in generic code.
+
+*** DONE 2.8.4 Random - 53
+    CLOSED: [2021-07-10 Sat 05:10]
+    ZIO ~Random~ service exposes essentially the *SAME interface* as
+    ~scala.util.Random~, but all the /methods/ return /functional effects/.
+
+    - The ~Random~ service is sometimes used in generic code in /scheduling/,
+      such as when adding a random delay between recurrences of some /effect/.
+
+*** DONE 2.8.5 Blocking - 53
+    CLOSED: [2021-07-10 Sat 23:32]
+    The ~Blocking~ service supports running blocking effects on an ~Executor~
+    optimized for /blocking tasks/.
+      By default, the /ZIO runtime/ is *optimized for* /asynchronous and
+    computationally-bound tasks/, with _a small fixed number of /threads/ that
+    perform all work._
+      Although this choice *optimizes throughput* for /async/ and /CPU tasks/,
+    it means that you *could potentially exhaust ALL* of /ZIO's default threads/
+    if you run _blocking I/O operations_ on them. Therefore, it is critical
+    that /blocking tasks/ be run on a SEPARATE /blocking thread pool/, which
+    is optimized for these workloads.
+    =TODO= =???= =TODO=
+    =TODO= =???= =TODO=
+    =TODO= =???= =TODO=
+    =TODO= =???= =TODO=
+    =TODO= =???= =TODO=
+
+    - The ~Blocking~ service has several /methods/ to support this use case.
+        The most fundamental is the ~blocking~ operator, which takes an effect
+      and ensures it will be run on the /blocking thread pool/.
+      #+begin_src scala
+        import zio.blocking._
+        
+        object blocking {
+          def blocking[R <: Blocking, E, A](
+            zio: ZIO[R, E, A]
+          ): ZIO[R, E, A] = ???
+        }
+      #+end_src
+
+    - Let's say that the database query described above was not implemented in
+      terms of a callback based API but instead synchronously waited until the
+      result was available (thereby blocking the calling thread).
+        In this case, we would want to make sure the effect is executed on the
+      /blocking thread pool/ by using the ~blocking~ operator, as shown in the
+      following snippet:
+      #+begin_src scala
+        import zio.blocking._
+        
+        def getUserById(id: Int): IO[Unit, String] =
+          ???
+        
+        def getUserByIdBlocking(id: Int): ZIO[Blocking, Unit, String] =
+          blocking(getUserById(id))
+      #+end_src
+      Notice that the ~Blocking~ service is now a _dependency_ in the /type
+      signature/, clarifying that the returned effect involves /blocking IO/, in
+      a way its previous signature did not.
+
+    - If you want to
+      _construct an /effect/ from a /blocking side-effect/ DIRECTLY_,
+      you can use the ~effectBlocking~ /constructor/, which is equivalent to
+      ~blocking(ZIO.effect(...))~.
+    
+** DONE 2.9 Recursion And ZIO - 54
+   CLOSED: [2021-07-10 Sat 05:06]
+   One of the features of ZIO is that *ZIO effects are _stack-safe_ for
+   arbitrarily recursive effects.* So we can write ZIO functions that call
+   themselves to implement any kind of recursive logic with ZIO.
+
+   - Example:
+     #+begin_src scala
+       import zio.console._
+       
+       val readInt: RIO[Console, Int] =
+         for {
+           line <- console.getStrLn
+           int  <- ZIO.effect(line.toInt)
+         } yield int
+     #+end_src
+     =FIXME=
+     The ~int~ is highlighted in the book, and it shouldn't -- no need to
+     highlight the ~int~ in Scala code snippets.
+
+     #+begin_src scala
+       lazy val readIntOrRetry: URIO[Console, Int] =
+         readInt
+           .orElse {
+             console.putStrLn("Please enter a valid integer") *> readIntOrRetry
+           }
+     #+end_src
+     Using recursion, we can _create our own sophisticated control flow
+     constructs for our ZIO programs._
+
+** DONE 2.10 Conclusion - 55
+   CLOSED: [2021-07-10 Sat 23:44]
+   - /Functional effects/ are blueprints for /concurrent workflows/,
+     immutable values that offer a variety of operators for *transforming* and
+     *combining* /effects/ to solve more complex problems.
+
+   - The /ZIO type parameters/ allow us to
+     * *model* /effects/ that require context from an /environment/ before they
+       can be executed;
+
+     * *model* /failure modes/ (or a lack of /failure modes/);
+
+     * *describe* the /final successful result/ that will be computed by an
+       /effect/.
+
+   - ZIO offers a variety of ways to create /functional effects/
+     from /synchronous/ code, /asynchronous/ code, /pure computations/, and
+     /impure computations/.
+       In addition, /ZIO effects/ can be *created from* other data types built
+     into the Scala standard library.
+
+   - ZIO uses the /environment type parameter/ to make it easy to write _testable
+     code_ that interacts with interfaces, without the need to manually propagate
+     those interfaces throughout the entire application.
+     * Using this /type parameter/, ZIO ships with _standard services_ for
+       interacting with the /console/, the /system/, /random number generation/,
+       and a /blocking thread pool/.
+
+   - With these tools, you should be able to write your own simple ZIO programs,
+     * *convert* existing code you have written into ZIO using /effect constructors/,
+       and leverage the functionality built *into* ZIO.
+
+** TODO 2.11 Exercises - 56 - =WORKING ON=
+   
+* DONE 3 Essentials: Testing ZIO Programs - 61 - =TODO= =NOTE=
+  CLOSED: [2021-07-11 Sun 04:53]
+** DONE 3.1 Writing Simple Programs With ZIO Test - 64
+   CLOSED: [2021-07-11 Sun 03:03]
+   #+begin_src scala
+     libraryDependencies ++= Seq(
+       "dev.zio" %% "zio-test" % zioVersion,
+       "dev.zio" %% "zio-test-sbt" % zioVersion
+     )
+   #+end_src
+   =FIXME= comma
+
+   - Non-effect tests with ZIO-test:
+     #+begin_src scala
+       import zio.test._
+       import zio.test.Assertion._
+
+
+       object ExampleSpec extends DefaultRunnableSpec {
+         def spec = suite("ExampleSpec")(
+           test("addition works") {
+             assert(1 + 1)(equalTo(2))
+           }
+         )
+       }
+     #+end_src
+     * Each _collection of tests_ is represented as a ~spec~ that can
+       + EITHER be a _test_
+       + OR a _suite containing one or more other /specs/._
+
+     * In this way, a ~spec~ is a *tree like data structure* that can SUPPORT
+       *arbitrary levels of nesting* of /suites/ and _tests_.
+
+   - ZIO-effect tests with ZIO-test:
+     #+begin_src scala
+       object ExampleSpec extends DefaultRunnableSpec {
+         def spec = suite("ExampleSpec")(
+           testM("ZIO.succeed succeeds with specified value") {
+             assertM(ZIO.succeed(1 + 1))(equalTo(2))
+           }
+         )
+       }
+     #+end_src
+     Compare to the "Non-effect tests with ZIO-test",
+     BESIDES the fact that the to-be-tested value is now a ZIO-effect, 
+     ~test~ is replaced by ~testM~ and ~assert~ is replaced by ~assertM~.
+     * There is not magic about ~testM~ and ~assertM~:
+       #+begin_src scala
+         object ExampleSpec extends DefaultRunnableSpec {
+           def spec = suite("ExampleSpec") {
+             testM("testing an effect using map operator") {
+               ZIO.succeed(1 + 1).map(n => assert(n)(equalTo(2)))
+             },
+             testM("testing an effect using a for comprehension") {
+               for {
+                 n <- ZIO.succeed(1 + 1)
+               } yield assert(n)(equalTo(2))
+             }
+          }
+         }
+       #+end_src
+       All _THREE_ ways of writing this test are *equivalent*.
+
+   - Combinators for ~assert~:
+     * ~!~
+     * ~&&~
+     * ~||~
+
+** DONE 3.2 Using Assertions - 66
+   CLOSED: [2021-07-11 Sun 03:25]
+   _Mental model_ for ~Assertion~:
+   #+begin_src scala
+     type Assertion[-A] = A => Boolean
+     
+     def equalTo[A](expected: A): Assertion[A] =
+       _ == expected
+   #+end_src
+
+   - This is not exactly how ~Assertion~ is implemented because the data type
+     returned by running an assertion on a value needs to contain some
+     additional information to support reporting test results.
+       However, it is a good _mental model_.
+
+   - There are _a variety of assertions_ in the ~Assertion~ /companion object/ in
+     the ~zio.test~ package. For now we will just provide a few examples to show
+     their capabilities:
+     * ~hasSameElements~:
+       Compare collections without considering the orders.
+       #+begin_src scala
+         object ExampleSpec extends DefaultRunnableSpec {
+           def spec = suite("ExampleSpec")(
+             test("hasSameElement") {
+               assert(List(1, 1, 2, 3))(hasSameElements(List(3, 2, 1, 1)))
+             }
+           )
+         }
+       #+end_src
+
+     * ~fails~:
+       =TODO= RE-READ BOOK
+       #+begin_src scala
+         object ExampleSpec extends DefaultRunnableSpec {
+           def spec = suite("ExampleSpec")(
+             testM("fails") {
+               for {
+                 exit <- ZIO.effect(1 / 0).catchAll(_ => ZIO.fail(())).run
+               } yield assert(exit)(fails(isUnit))
+             }
+           )
+         }
+       #+end_src
+       + One other thing you may notice here is that
+         *many /assertions/ take other /assertions/ as arguments.*
+         This allows you to express more specific assertions that “zero in” on
+         part of a larger value.
+
+       + ~isUnit~ is a shortthand for ~equalTo(())~.
+       
+     * ~anything~:
+       =TODO= =???=
+
+     * Assertion combinators.
+       Example:
+       + A collection
+         has at least one value
+         *and*
+         all of the values are greater than or equal to zero.
+         #+begin_src scala
+           val assertion: Assertion[Iterable[Int]] =
+             isNonEmpty && forall(nonNegative)
+         #+end_src
+
+       + A collection is
+         either empty
+         *or*
+         contains exactly three elements
+         #+begin_src scala
+           val assertion: Assertion[Iterable[Int]] =
+             isEmpty && hasSize(equalTo(3))
+         #+end_src
+
+       + Negate an assertion.
+         Example:
+         #+begin_src scala
+           val assertion: Assertion[Iterable[Any]] =
+             not(isDistinct)
+         #+end_src
+
+** DONE 3.3 Test Implementations Of Standard ZIO Services - 68
+   CLOSED: [2021-07-11 Sun 03:36]
+   - =TODO= =NOTE=
+
+** DONE 3.4 Common Test Aspects - 70
+   CLOSED: [2021-07-11 Sun 04:53]
+** DONE 3.5 Basic Property Based Testing - 71
+   CLOSED: [2021-07-11 Sun 04:53]
+** DONE 3.6 Conclusion - 74
+   CLOSED: [2021-07-11 Sun 04:53]
+** DONE 3.7 (WIP) Exercises - 74
+   CLOSED: [2021-07-11 Sun 04:53]
+   
+* DONE 4 Essentials: The ZIO Error Model 75 - =TODO= =NOTE=
+  CLOSED: [2021-07-13 Tue 16:21]
+  Complex applications can fail in countless ways.
+  
+  - Failures can be
+    * Local or global
+    * recoverable or non-recoverable
+
+  - Leverage Scala's type system to tame the massive complexity of error management,
+    and build robust and resilient applications that work according to specification
+
+** DONE 4.1 Exceptions Versus Defects - 75
+   CLOSED: [2021-07-12 Mon 03:18]
+   The /ZIO error type/ allows us to see just by looking at the /type signature/
+   all the ways that an /effect/ can fail.
+     _But sometimes, a FAILURE can occur in a way that is *NOT supposed to happen*._
+
+   - For example, here is a *NOT supposed to happen* FAILURE:
+     #+begin_src scala
+       val divisionByZero: UIO[Int] =
+         UIO.effectTotal(1 / 0)
+     #+end_src
+
+   - ZIO draws a *distinction* between two types of FAILURES:
+     * Errors :: potential failures that are *represented* in the /error type/ of
+                 the /effect/.
+       + They model FAILURE scenarios that are _anticipated_ and _potentially
+         recoverable_.
+
+       + They are sometimes called *typed failures* or *checked failures*.
+
+     * Defects :: potential failures *NOT represented* in the /error type/ of the
+                  /effect/.
+       + They model failure scenarios that are unanticipated or unrecoverable.
+
+       + They are also called *fiber failures*, *untyped failures*, or
+         *unchecked failures*.
+
+   - =RE-READ=
+
+** DONE 4.2 Cause - 77
+   CLOSED: [2021-07-12 Mon 03:26]
+   ZIO _formalizes_ this distinction between /failures/ and /defects/ using a
+   /data type/ called ~Cause~.
+
+   - So far, we have said that ~ZIO[R, E, A]~ is the type of effects that can
+     potentially fail with an ~E~ or succeed with an ~A~. Now we can be more
+     precise, and say that an effect of type ~ZIO[R, E, A]~ can potentially fail
+     with a ~Cause[E]~ or succeed with an ~A~.
+
+   - A ~Cause[E]~ is a /sealed trait/ that has *several* /subtypes/ that capture
+     all possible failure scenarios for an /effect/.
+
+   - For now, the most relevant subtypes are shown in the following snippet:
+     #+begin_src scala
+       sealed trait Cause[+E]
+       object Cause {
+         final case class Die(t: Throwable) extends Cause[Nothing]
+         final case class Fail[+E](e: E)    extends Cause[E]
+       }
+     #+end_src
+     * A ~Cause[E]~ can 
+       + either be a ~Fail[E]~, containing an /error/ of type ~E~,
+       + or a ~Die~, containing a ~Throwable~.
+     
+     * ~Fail~ describes /errors/
+       and
+       ~Die~ describes /defects/.
+   
+** DONE 4.3 ~Exit~ - 77
+   CLOSED: [2021-07-12 Mon 18:57]
+   Another /data type/ that is _CLOSELY related to_ ~Cause~ is ~Exit~. ~Exit~ is
+   /sealed trait/ that describes *ALL* the different ways that running /effects/
+   can finish execution.
+     In particular, /effects/ of type ~ZIO[R, E, A]~ may
+   EITHER _succeed_ with a value of type ~A~, OR _fail_ with a ~Cause[E]~.
+   #+begin_src scala
+     sealed trait Exit[+E, +A]
+     object Exit {
+       final case class Success[+A](value: A)        extends Exit[Nothing, A]
+       final case class Failure[+E](cause: Cause[E]) extends Exit[E, Nothing]
+     }
+   #+end_src
+
+   - Once we understand ~Cause~, ~Exit~ is a relatively simple data type.
+     * It is equivalent to ~Either[Cause[E], A]~, which is the encoding we used
+       in our _mental model of ZIO_ in the FIRST chapter
+       + with ~E~ replaced by ~Cause[E]~ in the ~Left~ case.
+         - Creating a separate /data type/ for ~Cause~ just *allows us to*
+           provide useful /methods/ and clarifies what /THIS data type/
+           represents in /type signatures/.
+
+   - You will most commonly encounter ~Exit~ when working
+     with some operators that *allow* you to do something with the _result of an
+     /effect/._
+     =TODO=
+       We'll see more specific examples of this later, but for now, just be
+     aware that this data type exists and understand that it represents all the
+     ways a running ZIO effect can finish execution.
+
+** TODO 4.4 Handling Defects - 78
+** TODO 4.5 Converting Errors to Defects - 80
+** TODO 4.6 Multiple Failures - 81
+** TODO 4.7 Other Useful Error Operators - 83
+** TODO 4.8 Combining Effects with Different Errors - 83
+** TODO 4.9 (WIP) Designing Error Models - 85
+** TODO 4.10 Execution Tracing - 85
+*** TODO (WIP) 4.10.1 Interpreting Error Tracing - 86
+    
+** TODO 4.11 Dealing With Stacked Errors - 86
+** TODO 4.12 Leveraging Typed Errors - 88
+** TODO 4.13 Conclusion - 88
+** TODO 4.14 Exercises - 88
+   
+* TODO 5 Essentials: Integrating With ZIO - 91
+** 5.1 Integrating With Java - 94
+** 5.2 Integrating With Javascript - 97
+** 5.3 Integrating With Cats Effect - 98
+** 5.4 Integrating With Specific Libraries - 100
+** 5.5 Conclusion - 107
+** 5.6 Exercises - 107
+   
+* TODO 6 Parallelism And Concurrency: The Fiber Model - 108
+  This chapter begins our discussion of ZIO's support for /asynchronous/, /parallel/,
+  and /concurrent programming/.
+
+  - ZIO is _based on a model of_ /fibers/ so we will begin by learning
+    _what /fibers/ are_ and
+    _how they are different than /threads/._
+    * We will learn the basic operations on /fibers/ including
+      + *forking* them,
+      + *joining* them, and
+      + *interrupting* them.
+
+    * We will also discuss
+      + _ZIO's /fiber/ supervision model_ and
+      + how it makes it easier for us to _write *SAFE* concurrent code._
+
+** TODO 6.1 Fibers Distinguished From Operating System Threads - 108
+** TODO 6.2 Forking Fibers - 109
+** TODO 6.3 Joining Fibers - 110
+** TODO 6.4 Interrupting Fibers - 111
+** TODO 6.5 Fiber Supervision - 112
+** TODO 6.6 Locking Effects - 114
+** TODO 6.7 Conclusion - 116
+** TODO 6.8 Exercises - 116
+   
+* TODO 7 Parallelism And Concurrency: Concurrency Operators - 117
+** 7.1 The Importance Of Concurrency Operators - 117
+** 7.2 Race And ZipPar - 117
+** 7.3 Variants of ZipPar - 118
+** 7.4 (WIP) Variants of Race - 120
+** 7.5 Other Variants - 120
+** 7.6 (WIP) Conclusion - 121
+** 7.7 (WIP) Exercises - 121
+   
+* TODO 8 Parallelism And Concurrency: Fiber Supervision In Depth - 122
+** 8.1 Preventing Fibers From Being Interrupted Too Early - 122
+** 8.2 Scopes - 125
+** 8.3 Overriding The Scope A Fiber Forks New Fibers In - 131
+** 8.4 Conclusion - 133
+** 8.5 Exercises - 135
+   
+* TODO 9 Parallelism And Concurrency: Interruption In Depth - 136
+** 9.1 Timing Of Interruption - 136
+*** 9.1.1 Interruption Before An Effect Begins Execution - 137
+*** 9.1.2 Interruption Of Side Effecting Code - 139
+    
+** 9.2 Interruptible and Uninterruptible Regions - 141
+** 9.3 Composing Interruptibility - 144
+** 9.4 Waiting For Interruption - 147
+** 9.5 Conclusion - 149
+** 9.6 Exercises - 149
+   
+* 10 Concurrent Structures: ~Ref~ - Shared State - 150
+** 10.1 Purely Functional Mutable State - 150
+** 10.2 Ref As Purely Functional Equivalent Of An Atomic Reference - 153
+** 10.3 Operations Are Atomic But Do Not Compose Atomically - 156
+** 10.4 RefM For Evaluating Effects While Updating - 157
+** 10.5 FiberRef For References Specific To Each Fiber - 159
+** 10.6 ZRef and ZRefM For Polymorphic References - 162
+** 10.7 Conclusion - 168
+** 10.8 Exercises - 168
+   
+* 11 Concurrent Structures: ~Promise~ - Work Synchronization - 169
+** 11.1 Various Ways of Completing Promises - 171
+** 11.2 Waiting On A Promise - 173
+** 11.3 Promises And Interruption - 173
+** 11.4 Combining Ref And Promise For More Complicated Concurrency Scenarios - 174
+** 11.5 Conclusion - 177
+** 11.6 Exercises - 177
+   
+* 12 Concurrent Structures: ~Queue~ - Work Distribution - 178
+** 12.1 Queues As Generalizations Of Promises - 178
+** 12.2 Offering And Taking Values From A Queue - 179
+** 12.3 Varieties Of Queues - 181
+*** 12.3.1 Back Pressure Strategy - 181
+*** 12.3.2 Sliding Strategy - 182
+*** 12.3.3 Dropping Strategy - 183
+    
+** 12.4 Other Combinators On Queues - 183
+*** 12.4.1 Variants Of Offer And Take - 184
+*** 12.4.2 Metrics On Queues - 185
+*** 12.4.3 Shutting Down Queues - 185
+    
+** 12.5 Polymorphic Queues - 186
+*** 12.5.1 Transforming Outputs - 186
+*** 12.5.2 Transforming Inputs - 187
+*** 12.5.3 Filtering Inputs and Outputs - 188
+*** 12.5.4 Combining Queues - 188
+    
+** 12.6 Conclusion - 190
+** 12.7 Exercises - 191
+   
+* 13 Concurrent Structures: ~Hub~ - Broadcasting - 192
+** 13.1 Hub As The Optimal Solution To The Broadcasting Problem - 193
+** 13.2 Creating Hubs - 197
+*** 13.2.1 Bounded Hubs - 197
+*** 13.2.2 Sliding Hubs - 198
+*** 13.2.3 Unbounded Hubs - 199
+*** 13.2.4 Dropping Hubs - 200
+
+** 13.3 Operators On Hubs - 201
+** 13.4 Polymorphic Hubs - 202
+** 13.5 Conclusion - 206
+   
+* 14 Concurrent Structures: ~Semaphore~ - Work Limiting - 208
+** 14.1 Interface Of A Semaphore - 208
+** 14.2 Using Semaphores To Limit Parallelism - 209
+** 14.3 Using Semaphore To Implement Operators - 210
+** 14.4 Using Semaphore To Make A Data Structure Safe For Concurrent Access - 211
+** 14.5 Conclusion - 213
+** 14.6 Exercises - 213
+   
+* 15 Resource Handling: Bracket - Safe Resource Handling - 214
+** 15.1 Inadequacy Of Try And Finally In The Face Of Asynchronous Code - 214
+** 15.2 Bracket As A Generalization Of Try And Finally - 216
+** 15.3 The Ensuring Combinator - 219
+** 15.4 Conclusion - 219
+** 15.5 Exercises - 220
+   
+* 16 Resource Handling: Managed - Composable Resources - 221
+** 16.1 Managed As A Reification of Bracket - 222
+** 16.2 Managed As A ZIO Effect With Additional Capabilities - 225
+** 16.3 Constructing Managed Resources - 226
+*** 16.3.1 Fundamental Constructors - 226
+*** 16.3.2 Convenience Constructors - 229
+    
+** 16.4 Transforming Managed Resources - 231
+*** 16.4.1 Operators With Direct Counterparts On ZIO - 231
+*** 16.4.2 Operators Without Direct Counterparts on ZIO - 232
+    
+** 16.5 Using Managed Resources - 233
+** 16.6 Conclusion - 235
+** 16.7 Exercises - 236
+   
+* 17 Resource Handling: Advanced Managed - 237
+** 17.1 Internal Representation Of Managed - 238
+*** 17.1.1 Finalizers - 239
+*** 17.1.2 The Release Map - 239
+*** 17.1.3 Putting It Together - 240
+    
+** 17.2 Separating Acquire And Release Actions Of Managed - 243
+** 17.3 Conclusion - 250
+   
+* 18 Dependency Injection: Essentials - 251
+** 18.1 The Dependency Injection Problem - 251
+** 18.2 Limitations Of Traditional Dependency Injection Approaches - 253
+*** 18.2.1 Tagless Final - 253
+*** 18.2.2 ReaderT - 257
+*** 18.2.3 Implicits - 258
+    
+** 18.3 ZIO As A Reader Monad On Steroids - 260
+** 18.4 Accessing The Environment - 261
+** 18.5 Composition Of Environment Types - 262
+** 18.6 Providing An Effect With Its Required Environment - 264
+** 18.7 Conclusion - 268
+** 18.8 Exercises - 269
+
+* 19 Dependency Injection: Advanced Dependency Injection - 270
+** 19.1 Composing Services - 270
+** 19.2 The Has Data Type - 274
+** 19.3 Best Practices For Creating A Fluent API - 275
+** 19.4 Vertical And Horizontal Composition - 277
+** 19.5 Local Modification And Elimination - 281
+** 19.6 Conclusion - 282
+** 19.7 Exercises - 282
+   
+* 20 Software Transactional Memory: Composing Atomicity - 283
+** 20.1 Inability To Compose Atomic Actions With Other Concurrency Primitives - 283
+** 20.2 Conceptual Description Of STM - 287
+** 20.3 Using STM - 288
+** 20.4 Limitations of STM - 293
+** 20.5 Conclusion - 296
+** 20.6 Exercises - 296
+    
+* 21 Software Transaction Memory: ~STM~ Data Structures - 297
+** 21.1 Description Of STM Data Structures - 298
+*** 21.1.1 TArray - 299
+*** 21.1.2 TMap - 301
+*** 21.1.3 TPriorityQueue - 302
+*** 21.1.4 TPromise - 303
+*** 21.1.5 TQueue - 305
+*** 21.1.6 TReentrantLock - 307
+*** 21.1.7 TSemaphore - 310
+*** 21.1.8 TSet - 311
+    
+** 21.2 Creating Your Own STM Data Structures - 312
+** 21.3 Conclusion - 317
+** 21.4 Exercises - 317
+    
+* 22 Software Transactional Memory: Advanced ~STM~ - 318
+** 22.1 Debugging - 318
+** 22.2 Optimization - 318
+** 22.3 Effects - 318
+** 22.4 Conclusion - 318
+** 22.5 Exercises - 318
+   
+* 23 Advanced Error Management: Retries - 319
+** 23.1 Limitations Of Traditional Retry Operators - 319
+** 23.2 Retrying And Repeating With ZIO - 321
+** 23.3 Common Schedules - 324
+*** 23.3.1 Schedules For Recurrences - 324
+*** 23.3.2 Schedules For Delays - 324
+*** 23.3.3 Schedules For Conditions - 328
+*** 23.3.4 Schedules For Outputs - 329
+*** 23.3.5 Schedules For Fixed Points In Time - 332
+    
+** 23.4 Transforming Schedules - 333
+*** 23.4.1 Transforming Inputs and Outputs - 333
+*** 23.4.2 Summarizing outputs - 334
+*** 23.4.3 Side Effects - 335
+*** 23.4.4 Environment - 336
+*** 23.4.5 Modifying Schedule Delays - 337
+*** 23.4.6 Modifying Decisions - 339
+*** 23.4.7 Schedule Completion - 340
+    
+** 23.5 Composing Schedules - 341
+*** 23.5.1 Intersection And Union Of Schedules - 341
+*** 23.5.2 Sequential Composition Of Schedules - 345
+*** 23.5.3 Alternative Schedules - 347
+*** 23.5.4 Function Composition Of Schedules - 349
+    
+** 23.6 Implementation Of Schedule - 350
+** 23.7 Conclusion - 353
+** 23.8 Exercises - 353
+   
+* 24 Advanced Error Management: Debugging - 354
+** 24.1 Execution Traces - 354
+** 24.2 Fiber Dumps - 354
+** 24.3 Conclusion - 354
+** 24.4 Exercises - 354
+    
+* 25 Advanced Error Management: Best Practices - 355
+** 25.1 Sandboxing At The Edge - 355
+** 25.2 Recoverable Versus Non-Recoverable Errors - 355
+** 25.3 Logging Errors - 355
+** 25.4 Conclusion - 355
+** 25.5 Exercises - 355
+   
+* 26 Streaming: First Steps With ~ZStream~ - 356
+** 26.1 Streams As Effectual Iterators - 356
+** 26.2 Streams As Collections - 358
+*** 26.2.1 Implicit Chunking - 358
+*** 26.2.2 Potentially Infinite Streams - 359
+*** 26.2.3 Common Collection Operators On Streams - 360
+    
+** 26.3 Constructing Basic Streams - 361
+*** 26.3.1 Constructing Streams From Existing Values - 361
+*** 26.3.2 Constructing Streams From Effects - 362
+*** 26.3.3 Constructing Streams From Repetition - 362
+*** 26.3.4 Constructing Streams From Unfolding - 364
+    
+** 26.4 Running Streams - 365
+*** 26.4.1 Running A Stream As Folding Over Stream Values - 366
+*** 26.4.2 Running A Stream For Its Effects - 366
+*** 26.4.3 Running A Stream For Its Values - 368
+    
+** 26.5 Type Parameters - 370
+*** 26.5.1 The Environment Type - 370
+*** 26.5.2 The Error Type - 370
+    
+** 26.6 Conclusion - 371
+    
+* 27 (WIP) Streaming: Next Steps With ~ZStream~ - 372
+** 27.1 Sinks - 372
+** 27.2 Creating Streams From Files - 372
+** 27.3 Transducers - 372
+** 27.4 Conclusion - 372
+** 27.5 Exercises - 372
+    
+* 28 (WIP) Streaming: Creating Custom Streams - 373
+** 28.1 Streams As Resourceful Iterators - 373
+** 28.2 Conclusion - 373
+** 28.3 Exercises - 373
+    
+* 29 (WIP) Streaming: Transforming Streams - 374
+* 30 (WIP) Streaming: Combining Streams - 375
+* 31 (WIP) Streaming: Transducers - 376
+* 32 (WIP) Streaming: Sinks - 377
+* 33 (WIP) Streaming: Summaries - 378
+* 34 Testing: Basic Testing - 379
+** 34.1 Tests As Effects - 379
+** 34.2 Specs As Recursively Nested Collections Of Tests - 385
+** 34.3 Conclusion - 386
+** 34.4 Exercises - 386
+    
+* 35 (WIP) Testing: Assertions - 387
+** 35.1 Assertions As Predicates - 387
+** 35.2 Using Assertions To “Zoom In” On Part Of A Larger Structure - 387
+** 35.3 Common Assertions - 387
+** 35.4 Labeling Assertions - 387
+** 35.5 Implementing New Assertions - 387
+** 35.6 Conclusion - 387
+** 35.7 Exercises - 387
+    
+* 36 Testing: The Test Environment - 388
+** 36.1 Test Implementation Of Standard Services - 388
+*** 36.1.1 Test Implementation of Clock Service - 390
+*** 36.1.2 Test Implementation Of Console Service - 395
+*** 36.1.3 Test Implementation Of Random Service - 397
+*** 36.1.4 Test Implementation Of System Service - 400
+    
+** 36.2 Accessing The Live Environment - 401
+** 36.3 Creating Custom Test Implementations - 403
+** 36.4 Conclusion - 409
+** 36.5 Exercises - 409
+    
+* 37 Testing: Test Aspects - 410
+** 37.1 Test Aspects As Polymorphic Functions - 413
+** 37.2 Ability To Constrain Types - 414
+** 37.3 Common Test Aspects - 418
+*** 37.3.1 Running Effects Before And After Tests - 418
+*** 37.3.2 Flaky And NonFlaky Tests - 419
+*** 37.3.3 Ignoring Tests - 420
+*** 37.3.4 Diagnosing Deadlocks - 420
+*** 37.3.5 Handling Platform And Version Specific Issues - 421
+*** 37.3.6 Modifying The Environment - 422
+*** 37.3.7 Accessing Configuration Information - 422
+*** 37.3.8 Controlling Parallelism - 422
+*** 37.3.9 Asserting That A Test Fails - 422
+    
+** 37.3.10Running Each Test On A Separate Fiber - 422
+*** 37.3.11 Timing Tests - 422
+*** 37.3.12 Verifying Post-Conditions - 422
+    
+** 37.4 Implementing Test Aspects - 422
+** 37.5 Conclusion - 422
+** 37.6 Exercises - 422
+    
+* 38 (WIP) Testing: Using Resources In Tests - 423
+** 38.1 Shared Versus Unshared Resources - 423
+** 38.2 Providing Resources To Tests - 423
+** 38.3 Composing Resources And Extending The Test Environment - 423
+** 38.4 Conclusion - 423
+** 38.5 Exercises - 423
+    
+* 39 Testing: Property Based Testing - 424
+** 39.1 Generators As Streams Of Samples - 429
+** 39.2 Constructing Generators - 430
+** 39.3 Operators On Generators - 433
+*** 39.3.1 Transforming Generators - 433
+*** 39.3.2 Combining Generators - 434
+*** 39.3.3 Choosing Generators - 436
+*** 39.3.4 Filtering Generators - 438
+*** 39.3.5 Running Generators - 439
+    
+** 39.4 Random And Deterministic Generators - 440
+** 39.5 Samples And Shrinking - 445
+** 39.6 Conclusion - 449
+** 39.7 Exercises - 450
+   
+* 40 (WIP) Testing: Test Annotations - 451
+** 40.1 Using Test Annotations To Record Additional Information About Tests - 451
+** 40.2 Implementing Test Annotations - 451
+** 40.3 Implementing Test Annotation Reporters - 451
+** 40.4 Conclusion - 451
+** 40.5 Exercises - 451
+   
+* 41 (WIP) Testing: Reporting - 452
+* 42 (WIP) Applications: Parallel Web Crawler - 453
+** 42.1 Definition Of A Parallel Web Crawler - 454
+** 42.2 Interacting With Web Data - 456
+** 42.3 First Sketch Of A Parallel Web Crawler - 461
+** 42.4 Making It Testable - 464
+** 42.5 Scaling It Up - 466
+** 42.6 Conclusion - 470
+    
+* 43 (WIP) Applications: Command Line Interface - 471
+* 44 (WIP) Applications: Kafka Stream Processor - 472
+* 45 (WIP) Applications: gRPC Microservices - 473
+* 46 (WIP) Applications: REST API - 474
+* 47 (WIP) Applications: GraphQL API - 475
+* 48 (WIP) Applications: Spark - 476
+* 49 Appendix: The Scala Type System - 477
+** 49.1 Types And Values - 477
+** 49.2 Subtyping - 478
+** 49.3 Any And Nothing - 479
+*** 49.3.1 Any - 479
+*** 49.3.2 Nothing - 481
+    
+** 49.4 Product And Sum Types - 483
+*** 49.4.1 Product Types - 483
+*** 49.4.2 Sum Types - 484
+*** 49.4.3 Combining Product And Sum Types - 485
+    
+** 49.5 Intersection And Union Types - 485
+*** 49.5.1 Intersection Types - 485
+*** 49.5.2 Union Types - 487
+    
+** 49.6 Type Constructors - 489
+** 49.7 Conclusion - 491
+    
+* 50 Appendix: Mastering Variance - 492
+** 50.1 Definition of Variance - 492
+** 50.2 Covariance - 495
+** 50.3 Contravariance - 499
+** 50.4 Invariance - 502
+** 50.5 Advanced Variance - 505
+** 50.6 Conclusion - 509

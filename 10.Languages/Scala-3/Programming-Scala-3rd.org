@@ -1904,31 +1904,134 @@
    
 ** TODO Recap and What's Next
     
-* 11. Variance Behavior and Equality
-** Parameterized Types: Variance Under Inheritance
-*** Functions Under the Hood
-*** Variance of Mutable Types
-*** Improper Variance of Java Arrays
+* TODO 11. Variance Behavior and Equality - =READING=
+** =TAKE NOTES=  
+** DONE Parameterized Types: Variance Under Inheritance
+   CLOSED: [2021-06-27 Sun 01:54]
+*** DONE Functions Under the Hood - =NOTE=
+    CLOSED: [2021-06-27 Sun 01:44]
+*** DONE Variance of Mutable Types
+    CLOSED: [2021-06-27 Sun 01:50]
+*** DONE Improper Variance of Java Arrays
+    CLOSED: [2021-06-27 Sun 01:54]
     
-** Equality of Instances
-*** The equals Method
+** DONE Equality of Instances
+   CLOSED: [2021-06-27 Sun 02:03]
+*** The ~equals~ Method
 *** The ~==~ and ~!=~ Methods
-*** The eq and ne Methods
-*** Array Equality and the sameElements Method
+*** The ~eq~ and ~ne~ Methods
+*** Array Equality and the ~sameElements~ Method
     
-** Equality and Inheritance
-** Multiversal Equality
-** Case Objects and hashCode
-** Recap and What’s Next
+** DONE Equality and Inheritance
+   CLOSED: [2021-06-27 Sun 02:03]
+   *TIP* ??? =TODO=
+   
+** DONE Multiversal Equality
+   CLOSED: [2021-06-27 Sun 16:58]
+** =TAKE NOTES=  
+** DONE Case Objects and ~hashCode~
+   CLOSED: [2021-06-27 Sun 16:40]
+   - The notion of equality goes hand in hand with the results of hashing an
+     object, as done by ~hashCode~, which is used in hash-based data structures,
+     like the default ~Map~ and ~Set~ implementations. There is one *gotcha* with
+     the implementation of ~hashCode~ for /case objects/, as demonstrated here:
+     #+begin_src scala
+       case object O1
+       
+       case object O2:
+         val f = "O2"
+         def m(i: Int) = String = i.toString
+       
+       object O3:
+         case object O4
+       
+       println(s"O1:           ${O1.hashCode} == ${"O1".hashCode}")
+       println(s"O2:           ${O2.hashCode} == ${"O2".hashCode}")
+       println(s"O3:           ${O3.hashCode} != ${"O3".hashCode}")
+       println(s"O3.O4:        ${O3.O4.hashCode} != ${"O3.O4".hashCode}")
+       println(s"03.04 vs. 04: ${O3.O4.hashCode} == ${"O4".hashCode}")
+       println(s"03.04 vs. 03: ${O3.O4.hashCode} != ${"O3".hashCode}")
+       
+       // O1:           2498 == 2498
+       // O2:           2499 == 2499
+       // O3:           1595193154 != 2500
+       // O3.O4:        2501 != 74524207
+       // O3.O4 vs. O4: 2501 == 2501
+       // O3.O4 vs. O3: 2501 != 2500
+     #+end_src
+
+   - The *compiler-generated* ~hashCode~ for a /case object/ simply hashes the
+     object's name, *without* considering its members or its nesting inside other
+     /objects/ or /packages/. ~O3~ behaves better, but it's NOT a /case object/.
+
+   - *WARNING*
+     Avoid using ~case object~'s as keys in /maps/ and /sets/ or other contexts
+     where ~hashCode~ is used.
+     
+** DONE =from Jian= Case Objects, ~##~, and ~hashCode~
+   CLOSED: [2021-06-27 Sun 16:40]
+   Some clarification for the previous section.
+
+   - Scala actually uses the ~##~ /method/ in the /hash based data structures/,
+     not ~hashCode~, the /method/ from Java ~Object~.
+     * The ~##~ is a synthetic function.
+     * The ~##~'s behavior is similar to ~hashCode~.
+       The difference:
+       + How to handle ~null~:
+         ~null.##~ returns 0,
+         while ~null.hashCode~ throws NPE.
+
+       + How to handle /Java boxed type/ values:
+         #+begin_src scala
+           val i1Boxed = java.lang.Integer.valueOf(1)
+           val d1Boxed = java.lang.Double.valueOf(1.0)
+           
+           i1Boxed == d1Boxed        // true
+           i1Boxed equals d1Boxed    // false
+           
+           i1Boxed.hashCode   // 1
+           i1Boxed.##         // 1
+           
+           d1Boxed.hashCode  // 1072693248
+           d1Boxed.##        // 1
+         #+end_src
+   
+     * Here is a proof that Scala's collections use ~##~, not ~hashCode~:
+       #+begin_src scala
+         val mp = HashMap(d1Boxed -> 3, 1 -> 4)
+         // val mp: HashMap[Matchable, Int] = HashMap(1.0 -> 4)
+       #+end_src
+       If ~hashCode~ was used, this /hash map/ should include _TWO_ key-value pairs.
+
+   - When *overriding*, we should still /override/ ~hashCode~.
+     Since the ~##~ is a synthetic function, no Scala source code for it.
+     However, from the behavior of ~##~, it seems it calls ~hashCode~ to handle
+     NOT Java boxed type values.
+     * This mean the *WARNING* in the previous section should replace ~hashCode~
+       in it with ~##~.
+         
+** DONE Recap and What's Next
+   CLOSED: [2021-06-27 Sun 16:41]
     
-* 12. Instance Initialization and Method Resolution
-** Linearization of a Type Hierarchy
-** Initializing Abstract Fields
-** Overriding Concrete Fields
-** Abstract Type Members and Concrete Type Aliases
-** Recap and What’s Next
+* TODO 12. Instance Initialization and Method Resolution
+  - A /type/ has a _directed acyclic graph (DAG) of dependencies_ with its /supertypes/.
+    * When the *fields* in a type are spread over this DAG,
+      _initialization order_ can become important to prevent accessing a /field/
+      before it is initialized.
+  
+    * When _ONE OR MORE_ /types/ in the /DAG/ _DEFINE and OVERRIDE_ the same *method*,
+      then /method resolution rules/ need to be understood.
+
+  - This chapter explores these concepts.
+    As we'll see, they are closely related, governed by a concept called /linearization/.
+  
+** TODO Linearization of a Type Hierarchy
+** TODO Initializing Abstract Fields
+** TODO Overriding Concrete Fields
+** TODO Abstract Type Members and Concrete Type Aliases
+** TODO Recap and What's Next
     
-* 13. The Scala Type Hierarchy
+* TODO 13. The Scala Type Hierarchy
 ** Much Ado About ~Nothing~ (and ~Null~)
 ** The ~scala~ Package
 ** Products, Case Classes, Tuples, and Functions
@@ -1943,7 +2046,7 @@
     
 ** Recap and What's Next
     
-* 14. The Scala Collections Library
+* TODO 14. The Scala Collections Library
 ** Different Groups of Collections
 ** Abstractions with Multiple Implementations
 *** The ~scala.collection.immutable~ Package
