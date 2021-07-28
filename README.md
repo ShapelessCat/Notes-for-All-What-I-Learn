@@ -3,7 +3,7 @@
 All my notes for technical book reading.
 Most of these notes are only outlines -- too many things need to learn, and some of them are low priority.
 
-__115 directories, 415 files__:
+__116 directories, 416 files__:
 
 * [00.Basic_Knowledge](./00.Basic_Knowledge)
   * [Arch_Linux](./00.Basic_Knowledge/Arch_Linux)
@@ -399,6 +399,8 @@ __115 directories, 415 files__:
     * [Guides](./10.Languages/Scala-3/Guides)
       * [An-Overview-of-TASTy.org](./10.Languages/Scala-3/Guides/An-Overview-of-TASTy.org)
       * [Migration-from-Scala-2-to-Scala3.org](./10.Languages/Scala-3/Guides/Migration-from-Scala-2-to-Scala3.org)
+    * [Libraries](./10.Languages/Scala-3/Libraries)
+      * [Scala-with-Cats_me.org](./10.Languages/Scala-3/Libraries/Scala-with-Cats_me.org)
     * [Tools](./10.Languages/Scala-3/Tools)
       * [Coursier.org](./10.Languages/Scala-3/Tools/Coursier.org)
     * [Programming-in-Scala-5th.org](./10.Languages/Scala-3/Programming-in-Scala-5th.org)
