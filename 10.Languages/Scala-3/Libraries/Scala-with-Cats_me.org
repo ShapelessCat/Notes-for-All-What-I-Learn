@@ -977,67 +977,60 @@
      * MANY /type classes/ have /syntax/ provided via the ~cats.syntax~ /package/.
 
 * DONE 2 Monoids and Semigroups - 35
-  CLOSED: [2020-02-18 Tue 02:22]
-  /Type classes/ /monoid/ and /semigroup/ allow us to combine values.
-  - There are instances for ~Int~, ~String~, ~List~, ~Option~, and many more.
+  CLOSED: [2021-07-31 Sat 17:17]
+  /Type classes/ /monoid/ and /semigroup/ allow us to *combine values*.
+
+  - There are /instances/ of them for ~Int~, ~String~, ~List~, ~Option~, and many more.
 
 *** DONE Integer addition - 35
-    CLOSED: [2018-10-26 Fri 21:35]
-    - Operation: Closed under integer ~+~
-    - Identity: ~0~
-    - Associativity
+    CLOSED: [2021-07-31 Sat 14:56]
+    - OPERATION: Closed under integer ~+~
+    - IDENTITY: ~0~
+    - ASSOCIATIVITY
 
 *** DONE Integer multiplication - 36
-    CLOSED: [2018-10-26 Fri 21:35]
-    - Operation: Closed under integer ~*~
-    - Identity: ~1~
-    - Associativity
+    CLOSED: [2021-07-31 Sat 14:56]
+    - OPERATION: Closed under integer ~*~
+    - IDENTITY: ~1~
+    - ASSOCIATIVITY
 
 *** DONE String and sequence concatenation - 36
-    CLOSED: [2018-10-26 Fri 21:35]
-    - Operation: Closed under String concatenation ~++~
-    - Identity: ~""~
-    - Associativity
+    CLOSED: [2021-07-31 Sat 14:58]
+    - OPERATION: Closed under String concatenation ~++~
+      * Here we use ~++~ instead of ~+~ to suggest _a parallel with sequences_.
+
+    - IDENTITY: ~""~
+    - ASSOCIATIVITY
 
 ** DONE 2.1 Definition of a ~Monoid~ - 37
-   CLOSED: [2020-02-18 Tue 00:20]
+   CLOSED: [2021-07-31 Sat 15:03]
    - Formally, a /monoid/ for a type ~A~:
      * It has
+       #+begin_src scala
+         // monoid in cats:
+         trait Monoid[A] {
+           def combine(x: A, y: A): A
+           def empty: A
+         }
+       #+end_src
        + an operation ~combine~ with type ~(A, A) => A~
        + an element ~empty~ of type ~A~
+
      * It obeys
+       #+BEGIN_SRC scala
+         // functions that can be used to test the laws:
+         def associativeLaw[A : Monoid](x: A, y: A, z: A): Boolean = {
+           val m = implicitly[A]
+           m.combine(x, m.combine(y, z)) == m.combine(m.combine(x, y), z)
+         }
+         
+         def identityLaw[A : Monoid](x: A): Boolean = {
+           val m = implicitly[A]
+           (m.combine(x, m.empty) == x) && (m.combine(m.empty, x) == x)
+         }
+       #+END_SRC
        + association laws
        + identity laws
-
-   - /Monoid/ in Cats:
-     #+BEGIN_SRC scala
-       trait Monoid[A] {
-         def combine(x: A, y: A): A
-         def empty: A
-       }
-     #+END_SRC
-
-   - Only the ~combine~ and ~empty~ /methods/ of this ~trait~ *CANNOT* guarantee
-     the _monoid in math_ -- /monoids/ *must formally obey* several /laws/, here
-     are functions that can be used to _test_ the /laws/:
-     #+BEGIN_SRC scala
-       def associativeLaw[A : Monoid](x: A, y: A, z: A): Boolean = {
-         val m = implicitly[A]
-         m.combine(x, m.combine(y, z)) == m.combine(m.combine(x, y), z)
-       }
-
-       def identityLaw[A : Monoid](x: A): Boolean = {
-         val m = implicitly[A]
-         (m.combine(x, m.empty) == x) && (m.combine(m.empty, x) == x)
-       }
-     #+END_SRC
-     * =from Jian=
-       Scala does NOT contain a system that can prove a thing defined as monoid-like
-       is really a /monoid/. We write down laws, and then prove it with some proof
-       system (including a person with pen and paper :-)). In Scala, a more applicable
-       way is write down the laws in code, and use tests to show some proof (of
-       course, this is often not comprehensive). Even in Scala, we should do the
-       paper and pen proof for complicated user-defined monoid.
 
    - /Integer subtraction/ does *NOT* obey the /associative law (for /monoid/)/,
      and there is NO /monoid/ under /integer subtraction/ operation.
@@ -1050,7 +1043,7 @@
      It will yield *unpredictable results*.
 
 ** DONE 2.2 Definition of a ~Semigroup~ - 38
-   CLOSED: [2020-02-18 Tue 00:24]
+   CLOSED: [2021-07-31 Sat 15:04]
    /Semigroups/ have only ~combine~ and NO ~empty~.
 
    - /Semigroups/ are often /monoids/.
@@ -1086,45 +1079,62 @@
      trait Monoid[A] extends Semigroup[A] {
        def empty: A
      }
-
-     object Monoid {
-       def apply[A](implicit monoid: Monoid[A]) =
-         monoid
-     }
    #+end_src
 
-   Then let's define the ~Boolean~ related ~Monoid~ (NOT only one):
-   #+BEGIN_SRC scala
-     implict val booleanAndMonoid = new Monoid[Boolean] {
-       def combine(x: Boolean, y: Boolean): Boolean = x && y
-       def empty: Boolean = true
-     }
+   - Then let's define the ~Boolean~ related ~Monoid~ (NOT only one):
+     The /identity law/ holds in each case is straightforward.
+     The /associative law/ can be proved by enumerating the cases -- enumerate
+     ~Boolean~ values are easy.
+     * ~&&~
+       #+begin_src scala
+         given booleanAndMonoid = new Monoid[Boolean] {
+           def combine(x: Boolean, y: Boolean): Boolean = x && y
+           def empty: Boolean = true
+         }
+       #+end_src
 
-     implict val booleanOrMonoid = new Monoid[Boolean] {
-       def combine(x: Boolean, y: Boolean): Boolean = x || y
-       def empty: Boolean = false
-     }
+     * ~||~
+       #+begin_src scala
+         given booleanOrMonoid = new Monoid[Boolean] {
+           def combine(x: Boolean, y: Boolean): Boolean = x || y
+           def empty: Boolean = false
+         }
+       #+end_src
 
-     implict val booleanXorMonoid = new Monoid[Boolean] {
-       def combine(x: Boolean, y: Boolean): Boolean = (x && !y) || (!x && y)
-       def empty: Boolean = false
-     }
+     * ~xor~
+       #+begin_src scala
+         given booleanXorMonoid = new Monoid[Boolean] {
+           def combine(x: Boolean, y: Boolean): Boolean = (x && !y) || (!x && y)
+           def empty: Boolean = false
+         }
+       #+end_src
 
-     implict val booleanXnorMonoid = new Monoid[Boolean] {
-       def combine(x: Boolean, y: Boolean): Boolean = (!x || y) && (x || !y)
-       def empty: Boolean = true
-     }
-   #+END_SRC
-   The /identity law/ holds in each case is straightforward.
-   The /associative law/ can be proved by enumerating the cases.
+     * ~xnor~
+       #+begin_src scala
+         given booleanXnorMonoid = new Monoid[Boolean] {
+           def combine(x: Boolean, y: Boolean): Boolean = (x || !y) && (!x || y)
+           def empty: Boolean = true
+         }
+       #+end_src
 
-** DONE 2.4 Exercise: All ~Set~ for Monoids - 40
+** DONE 2.4 Exercise: All ~Set~ for Monoids - 40 - =TODO= =???=
    CLOSED: [2020-02-18 Tue 00:52]
-   - ~Monoid[Set[A]]~ exists UNDER /sets/ ~union~ operation with ~Set.empty[A]~ as
-     /identity/:
+   =from Jian=
+   Compare the implementation below (I write it and use Scala 3) with Scala 2
+   implementation.
+   - =from Jian= =QUESTION=
+     Is there a way in Scala 3 that we can tweak the definition of ~setUnionMonoid~
+     to eliminate
+     #+begin_src scala
+       given intSetMonoid = setUnionMonoid[Int]
+       given strSetMonoid = setUnionMonoid[String]
+     #+end_src
+
+   - ~Monoid[Set[A]]~ exists UNDER
+     /sets/ ~union~ operation with ~Set.empty[A]~ as /identity/:
      #+BEGIN_SRC scala
-       implicit def setUnionMonoid[A] = new Monoid[Set[A]] {
-         def combine(x: Set[A], y: Set[A]): Set[A] =
+       def setUnionMonoid[A] = new Monoid[Set[A]] {
+         extension (x: Set[A]) def combine(y: Set[A]): Set[A] =
            x union y
 
          // Now you know why we use `def` for `empty` in the definition of `Monoid`!
@@ -1133,24 +1143,25 @@
      #+END_SRC
      * Use cases:
        #+begin_src scala
-         val intSetMonoid = Monoid[Set[Int]]
-         val strSetMonoid = Monoid[Set[String]]
+         given intSetMonoid = setUnionMonoid[Int]
+         given strSetMonoid = setUnionMonoid[String]
 
-         intSetMonoid.combine(Set(1, 2), Set(2, 3))
+         Set(1, 2).combine(Set(2, 3))
          // res2: Set[Int] = Set(1, 2, 3)
 
-         strSetMonoid.combine(Set("A", "B"), Set("B", "C"))
+         Set("A", "B").combine(Set("B", "C"))
          // res3: Set[String] = Set(A, B, C)
        #+end_src
 
-   - ~Semigroup[Set[A]]~ exists UNDER /sets/ ~intersect~ opertion.
-     There is *NO* ~Monoid[Set[A]]~ under this operation.
+   - ~Semigroup[Set[A]]~ exists UNDER
+     /sets/ ~intersect~ opertion.
+     * There is *NO* ~Monoid[Set[A]]~ under this operation.
 
    - /Set complement/ and /set difference/ are *NOT* /associative/.
      They are not /monoid/ or /semigroup/.
 
-   - ~Monoid[Set[A]]~ exists UNDER /sets/ /symmetric difference/ operation with
-     ~Set.empty[A]~ as /identity/:
+   - ~Monoid[Set[A]]~ exists UNDER
+     /sets/ /symmetric difference/ operation with ~Set.empty[A]~ as /identity/:
      #+BEGIN_SRC scala
        implicit def setSymDiffMonoid[A] = new Monoid[Set[A]] {
          def combine(x: Set[A], y: Set[A]): Set[A] =
@@ -1161,7 +1172,7 @@
      #+END_SRC
 
 ** DONE 2.5 Monoids in Cats - 40
-   CLOSED: [2020-02-18 Tue 01:09]
+   CLOSED: [2021-07-31 Sat 17:06]
    We've seen what /monoids/ are.
    Now let's look at their *implementation in Cats*.
 
@@ -1171,9 +1182,9 @@
      * the /interface/ (syntax)
 
 *** DONE 2.5.1 The Monoid Type Class - 40
-    CLOSED: [2020-02-18 Tue 00:58]
-    ~cats.Monoid~ (an alias of ~cats.kernel.Monoid~) and ~cats.Semigroup~ (an
-    alias of ~cats.kernel.Semigroup~).
+    CLOSED: [2021-07-31 Sat 16:50]
+    ~cats.Monoid~ (an alias of ~cats.kernel.Monoid~)
+    ~cats.Semigroup~ (an alias of ~cats.kernel.Semigroup~)
     #+begin_src scala
       import cats.Monoid
       import cats.Semigroup
@@ -1187,33 +1198,38 @@
       /package/, _they are ALL *aliased* to the ~cats~ package so we RARELY need
       to be aware of the distinction._
 
-      + The /Cats Kernel/ /type classes/ covered in this book:
-        * ~Eq~
-        * ~Semigroup~
-        * ~Monoid~
+      * The /Cats Kernel/ /type classes/ covered in this book:
+        + ~Eq~
+        + ~Semigroup~
+        + ~Monoid~
 
-      + All the other /type classes/ we cover are part of the main Cats project
+      * All the other /type classes/ we cover are part of the main Cats project
         and are defined _directly_ in the ~cats~ /package/.
 
 *** DONE 2.5.2 Monoid Instances - 41
-    CLOSED: [2020-02-18 Tue 00:59]
+    CLOSED: [2021-07-31 Sat 16:56]
+    - ~Monoid~ follows the _standard Cats pattern_ for the _user interface_:
+      the /companion object/ has an ~apply~ method that returns the /type class instance/
+      for a particular type.
+      * With this ~apply~ method help, we can write ~Monoid[SomeType]~ instead of
+        ~Monoid.apply[SomeType]~ or ~summon[Monoid[SomeType]]~.
+
     - Example (usage):
       #+BEGIN_SRC scala
         import cats.Monoid
-        import cats.instances.string._
+        import cats.instances.string.*
 
         Monoid[String].combine("Hi ", "there")  // "Hi there"
         Monoid[String].empty                    // ""
       #+END_SRC
-      + ~Monoid[String]~ is actually ~Monoid.apply[String]~
-
-      + ~Semigroup~ usage is similar.
+      * ~Monoid[String]~ is actually ~Monoid.apply[String]~
+      * ~Semigroup~ usage is similar.
 
     - Aseemble a ~Monoid[Option[Int]]~:
       #+begin_src scala
         import cats.Monoid
-        import cats.instances.int._     // for Monoid
-        import cats.instances.option._  // for Monoid
+        import cats.instances.int.*     // for Monoid
+        import cats.instances.option.*  // for Monoid
 
         val a = Option(22)  // a: Option[Int] = Some(22)
         val b = Option(20)  // b: Option[Int] = Some(20)
@@ -1221,8 +1237,19 @@
         Monoid[Option[Int]].combine(a, b)
       #+end_src
 
+    - =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      As always,
+      UNLESS we have a good reason to import individual instances,
+      we can just import everything
+      #+begin_src scala
+        import cats.*
+        import cats.implicits.*
+      #+end_src
+
 *** DONE 2.5.3 Monoid Syntax - 42
-    CLOSED: [2020-02-18 Tue 01:00]
+    CLOSED: [2021-07-31 Sat 16:59]
     ~|+|~ is the /combine/ operator, which comes from ~cats.syntax.semigroup._~
     #+BEGIN_SRC scala
       import cats.instances.string._
@@ -1237,7 +1264,7 @@
     #+END_SRC
 
 *** DONE 2.5.4 Exercise: Adding All The Things - 43
-    CLOSED: [2020-02-18 Tue 01:06]
+    CLOSED: [2021-07-31 Sat 17:06]
     - Write ~add~ for ~Int~
       #+BEGIN_SRC scala
         def add(items: List[Int]): Int =
@@ -1247,11 +1274,11 @@
     - Write generics that can work for ~Int~ and ~Option[Int]~
       #+BEGIN_SRC scala
         import cats.Monoid
-        import cats.instances.int._
-        import cats.instances.option._
-        import cats.syntax.semigroup._
+        import cats.instances.int.*
+        import cats.instances.option.*
+        import cats.syntax.semigroup.*
 
-        def add[A](items: List[A])(implicit monoid: Monoid[A]): A =
+        def add[A](items: List[A])(using monoid: Monoid[A]): A =
           items.foldLeft(monoid.empty)(_ |+| _)
       #+END_SRC
 
@@ -1263,6 +1290,11 @@
         //           ^
       #+END_SRC
       This is because /Cats/ will ONLY generate a ~Monoid~ for ~Option[Int]~.
+      =TODO= We’ll see how to get around this in a moment.
+      * =from Jian=
+        This would no longer be a problem if ~Option~ and its variants are
+        defined with ~enum~. However, even the current Scala 3 still use ~sealed
+        abstract class~ to define ~Option~.
 
     - Make ~Order~ addable.
       #+BEGIN_SRC scala
@@ -1280,13 +1312,13 @@
         }
       #+END_SRC
 
-** DONE 2.6 Applications of Monoids - 43
-   CLOSED: [2020-02-18 Tue 02:12]
+** DONE 2.6 Applications of Monoids - 43 - =TODO=
+   CLOSED: [2021-07-31 Sat 17:15]
    Here are a few big ideas where /monoids/ play a major role.
-   TODO More detail in case studies later in this book.
+   =TODO= More detail in case studies later in this book.
 
 *** DONE 2.6.1 Big Data - 43
-    CLOSED: [2020-02-18 Tue 02:11]
+    CLOSED: [2021-07-31 Sat 17:12]
     - Use cases (Need process a huge amount of logs, NOT/CANNOT in ONLY one
       computer):
       * Calculate how many total visitors a web site has received.
@@ -1299,39 +1331,48 @@
 
       * If we want to calculate 99% and 95% response times from our server logs,
         we can use a data structure called a ~QTree~ for which there is a /monoid/.
-        TODO _Learn how to design and implement this data structure._
+        =TODO= _Learn how to design and implement this data structure._
 
     - Summary:
       Almost every analysis that we might want to do over a large data set is a
       /monoid/, and therefore we can build an expressive and powerful analytics
       system around this idea.
 
-      This is exactly what Twitter's Algebird and Summingbird projects have
+      =TODO= =LEARN MORE=
+        This is exactly what _Twitter's Algebird and Summingbird projects_ have
       done. We explore this idea further in the map-reduce case study.
 
 *** DONE 2.6.2 Distributed Systems - 44
-    CLOSED: [2020-02-18 Tue 02:11]
-    TODO =Case-Study= We explore this idea further in *the CRDT case study*.
+    CLOSED: [2021-07-31 Sat 17:14]
+    =TODO=
+    =Case-Study= We explore this idea further in *the CRDT case study*.
+
+    - CRDTs :: commutative replicated data types.
 
 *** DONE 2.6.3 Monoids in the Small - 45
-    CLOSED: [2020-02-18 Tue 02:11]
-    There are also many cases where having a monoid around makes it easier to
+    CLOSED: [2021-07-31 Sat 17:15]
+    There are also many cases where having a /monoid/ around makes it easier to
     write a small code fragment.
 
+    =TODO=
     See *case studies* of this book
 
 ** DONE 2.7 Summary - 45
-   CLOSED: [2020-02-18 Tue 02:21]
+   CLOSED: [2021-07-31 Sat 17:17]
 
 * DONE 3 Functors - 47 - =TODO= _contravariant and invariant functors_
   CLOSED: [2020-02-20 Thu 11:22]
   - /Functors/ allow us to represent sequences of operations within a /context/.
 
-  - /Functor/ is the base of /applicative functor/ and /monad/, which are more
-    useful.
+  - /Functors/ on their own are NOT so useful,
+    BUT special cases of /functors/, such as /monad/ and /applicative functor/,
+    which are more useful.
 
-** DONE 3.1 Examples of Functors - 47
-   CLOSED: [2020-02-18 Tue 02:31]
+** TODO 3.1 Examples of Functors - 47
+   - Informally, a /functor/ is anything with a ~map~ method.
+     * =from Jian=
+       Here we don't mentioned the laws for /functors/, which is required.
+
    - Because ~map~ leaves the the /context/ unchanged, we can call it repeatedly
      to *sequence* multiple computations on the _contents_ of an initial data
      structure.
@@ -1345,14 +1386,14 @@
      #+end_src
 
    - We should think of ~map~
-     + *NOT*
+     * *NOT*
        as an /iteration pattern/,
        =from Jian=
        This point of view is not related to composition and is rules
        In the context of category, we don't inspect the object we use in this
        point of view.
 
-     + BUT
+     * BUT
        as a way of *sequencing* computations on values
        IGNORING SOME COMPLICATION dictated by the relevant data type.
 
