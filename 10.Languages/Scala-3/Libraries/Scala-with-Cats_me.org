@@ -65,7 +65,7 @@
 *** Backers - 5
 
 * Part I. Theory - 7
-* DONE 1 Introduction - 9
+* DONE 1 Introduction - 9 - =RE-NOTE=
   CLOSED: [2019-03-23 Sat 02:53]
   Cats contains a wide variety of functional programming tools
     The majority of the tools provided by Cats are delivered in the form of
@@ -1360,81 +1360,89 @@
 ** DONE 2.7 Summary - 45
    CLOSED: [2021-07-31 Sat 17:17]
 
-* DONE 3 Functors - 47 - =TODO= _contravariant and invariant functors_
-  CLOSED: [2020-02-20 Thu 11:22]
+* DONE 3 Functors - 47
+  CLOSED: [2021-08-03 Tue 02:56]
   - /Functors/ allow us to represent sequences of operations within a /context/.
 
   - /Functors/ on their own are NOT so useful,
     BUT special cases of /functors/, such as /monad/ and /applicative functor/,
     which are more useful.
 
-** TODO 3.1 Examples of Functors - 47
+** DONE 3.1 Examples of Functors - 47
+   CLOSED: [2021-08-01 Sun 19:42]
    - Informally, a /functor/ is anything with a ~map~ method.
      * =from Jian=
        Here we don't mentioned the laws for /functors/, which is required.
 
-   - Because ~map~ leaves the the /context/ unchanged, we can call it repeatedly
-     to *sequence* multiple computations on the _contents_ of an initial data
-     structure.
-     #+begin_src scala
-       // Of course, the first two map's can be merged to one,
-       // Here is a illustration example, not best practice:
-       List(1, 2, 3).
-         map(_ + 1).
-         map(_ * 2).
-         map(_ + "!")
-     #+end_src
-
    - We should think of ~map~
-     * *NOT*
-       as an /iteration pattern/,
-       =from Jian=
-       This point of view is not related to composition and is rules
-       In the context of category, we don't inspect the object we use in this
-       point of view.
-
-     * BUT
-       as a way of *sequencing* computations on values
-       IGNORING SOME COMPLICATION dictated by the relevant data type.
+     *NOT* as an /iteration pattern/,
+     *BUT* as a way of *sequencing* computations on values
+     IGNORING SOME COMPLICATION dictated by the relevant /data type/:
+     * ~Option~ - the value may or may not be present;
+     * ~Either~ - there may be a value or an error;
+     * ~List~ - there may be zero or more values.
 
 ** DONE 3.2 More Examples of Functors - 49
-   CLOSED: [2020-02-18 Tue 13:43]
+   CLOSED: [2021-08-01 Sun 22:26]
    1. Before:
-      The ~map~ methods of ~List~, ~Option~, and ~Either~ apply functions eagerly.
+      The ~map~ methods of ~List~, ~Option~, and ~Either~ apply functions *eagerly*.
 
    2. However, the idea of _sequencing computations_ is MORE GENERAL than this.
 
    3. This Section:
       Let's investigate the behaviour of some other functors that apply the
-      pattern in different ways.
+      pattern in *DIFFERENT* ways.
 
-*** DONE ~Futures~ - 49
-    CLOSED: [2020-02-18 Tue 13:16]
-    #+begin_src scala
-      import scala.concurrent.{Future, Await}
-      import scala.concurrent.ExecutionContext.Implicits.global
-      import scala.concurrent.duration._
+*** DONE ~Future~'s - 49
+    CLOSED: [2021-08-01 Sun 22:25]
+    - ~Future~ is a /functor/ that
+      *sequences* /asynchronous computations/ *by queueing* them
+      and
+      *applying* them as their predecessors complete.
 
-      val future: Future[String] =
-        Future(123).
-          map(n => n + 1).
-          map(n => n * 2).
-          map(n => n + "!")
+      * The /type signature/ of its ~map~ method, shown in Figure 3.2, has the
+        _SAME shape_ as the signatures above.
+          However, *the behaviour is very different.*
+    
+    - When we work with a ~Future~ we _have *no guarantees* about its INTERNAL STATE._
+      * The wrapped computation may be _ongoing_, _complete_, or _rejected_.
+        + If the ~Future~ is _complete_, our mapping function can be called
+          *immediately*.
 
-      Await.result(future, 1.second)
-      // res3: String = 248!
-    #+end_src
+        + If not, some UNDERLYING /thread pool/
+          *queues* the /function call/ and
+          comes back to it *later*.
+
+          * We don't know when our functions will be called,
+            BUT we do know what *order* they will be called in.
+          
+    - In this way, ~Future~ provides the same sequencing behaviour seen in ~List~,
+      ~Option~, and ~Either~:
+      #+begin_src scala
+        import scala.concurrent.{Future, Await}
+        import scala.concurrent.ExecutionContext.Implicits.global
+        import scala.concurrent.duration.*
+        
+        val future: Future[String] =
+          Future(123).
+            map(n => n + 1).
+            map(n => n * 2).
+            map(n => n + "!")
+        
+        Await.result(future, 1.second)
+        // res3: String = 248!
+      #+end_src
 
     - *Futures and Referential Transparency*
-      + Scala's ~Future~'s are *NOT* a great EXAMPLE of _pure functional pro-
+      * Scala's ~Future~'s are *NOT* a great EXAMPLE of _pure functional pro-
         gramming_ because they are *NOT* /referentially transparent/.
 
-      + =from Jian=
-        * Q :: Want to use ~Future~ as a /functor/?
-        * A :: ONLY use it to do pure computations.
+      * =from Jian=
+        + Q :: Want to use ~Future~ as a /functor/?
+        + A :: ONLY use it to do pure computations.
 
 *** DONE Functions (?!) - 49
-    CLOSED: [2020-02-20 Thu 09:53]
+    CLOSED: [2021-08-01 Sun 22:25]
     - *It turns out that /single argument functions/ are also /functors/*
 
     - ~map~ for /single argument functions/ is, by concept, /function composition/
@@ -1449,7 +1457,7 @@
         val func1: Int => Double =
           (x: Int) => x.toDouble
 
-        val func2: Int => Double =
+        val func2: Double => Double =
           (y: Double) => y * 2
 
         (func1 map func2)(1)      // composition using `map`
@@ -1484,11 +1492,11 @@
         //        func1.map(func2)
       #+END_SRC
 
-      + TODO EXPLAIN in Seciton 3.8
+      * TODO EXPLAIN in Seciton 3.8
         Use compiler option ~-Ypartial-unification~
 
-** DONE 3.3 Definition of a Functor - 54
-   CLOSED: [2020-02-18 Tue 17:07]
+** DONE 3.3 Definition of a ~Functor~ - 54
+   CLOSED: [2021-08-01 Sun 22:29]
    #+BEGIN_SRC scala
      package cats
 
@@ -1498,18 +1506,18 @@
        def map[A, B](fa: F[A])(f: A => B): F[B]
      }
    #+END_SRC
-   - TODO Next SECTION will explain:
-     + /type constructors/ and /higher kinded types/ -- be related to the ~F[_]~
+   - =TODO= Next SECTION will explain:
+     * /type constructors/ and /higher kinded types/ -- be related to the ~F[_]~
        above.
-     + The ~scala.language~ line.
+     * The ~scala.language~ line.
 
 
    - *Functor Laws*
-     + *Identity*:
+     * *Identity*:
        calling ~map~ with the /identity function/ is the same as doing nothing:
        _(fa map identity) \equiv{} fa_
 
-     + *Composition*:
+     * *Composition*:
        mapping with two functions ~f~ and ~g~ is the same as mapping with ~f~
        and then mapping with ~g~:
        _fa.map(g(f(_))) \equiv{} fa.map(f).map(g)_
@@ -1520,7 +1528,7 @@
        ~fa andThen g(f(_))~ \equiv{} ~fa andThen f andThen g~
 
 ** DONE 3.4 Aside: Higher Kinds and Type Constructors - 55
-   CLOSED: [2020-02-19 Wed 16:01]
+   CLOSED: [2021-08-01 Sun 22:34]
    =IMPORTANT=
    - kinds :: "types" for /types/ -- a concept used to category /types/.
 
@@ -1530,11 +1538,11 @@
    - If a /type/ has "hole" (a /type/ on the left hand side of ~=>~ is a "hole"),
      it is called a /higher kinded type/ or a /type constructor/.
 
-     + For example,
-       ~List~ is a /type constructor/ (/higher kinded type/), and ~List[Int]~ is a
-       /type/ (/kind one type/).
+     * For example,
+       ~List~ is a /type constructor/ (/higher kinded type/),
+       while ~List[Int]~ is a /type/ (/kind one type/).
 
-     + A close analogy:
+     * A close analogy:
        In Scala, function is also a /value/ in general, but we can also call it
        "value constructor", and call the /value/ that cannot take any parameter
        "value".
@@ -1556,26 +1564,33 @@
        val f2 = f andThen f       // Reference
      #+END_SRC
 
+   - the Cats definition of ~Functor~ allows us to create /instances/ for ANY
+     /single‐parameter type constructor/, such as ~List~, ~Option~, ~Future~, or
+     a /type alias/ such as ~MyFunc~.
+
    - *Language Feature Imports*
-     /Higher kinded types/ are considered an _ADVANCED language feature_ in
-     Scala, and you need to enable it in the compiler. There are two ways:
-     + Explicit import:
+     Before Scala 2.13, /higher kinded types/ are considered an _ADVANCED language
+     feature_ in Scala, and you need to enable it in the compiler. There are two
+     ways:
+     * Explicit import:
        ~import scala.language.higherKinds~
        More explicit, use it in this book.
 
-     + Set in =build.sbt=:
+     * Set in =build.sbt=:
        ~scalacOptions += "-language:higherKinds~
        More concise, and you may prefer this in your projects.
+       =from Jian=
+       In pracetice we prefer this way.
 
 ** DONE 3.5 Functors in Cats - 57
-   CLOSED: [2020-02-19 Wed 20:06]
+   CLOSED: [2021-08-01 Sun 22:49]
    Examine the aspects we did for /monoids/:
    1. the /type class/
    2. the /instances/
    3. the /syntax/
 
 *** DONE 3.5.1 The ~Functor~ Type Class - 57
-    CLOSED: [2020-02-19 Wed 16:03]
+    CLOSED: [2021-08-01 Sun 22:37]
     - We *obtain* /instances/ using the STANDARD ~Functor.apply~ /method/ on the
       /companion object/.
 
@@ -1620,9 +1635,17 @@
         liftedFunc(Option(1))
         // res0: Option[Int] = Some(2)
       #+END_SRC
+      
+    - The ~as~ /method/ is the other /method/ you are likely to use.
+      It *replaces* with value inside the ~Functor~ *with* the _given value_.
+      #+begin_src scala
+        val list1 = List(1, 2, 3)
+        Functor[List].as(list1, "As")
+        // res2: List[String] = List("As", "As", "As")
+      #+end_src
 
 *** DONE 3.5.2 ~Functor~ Syntax - 58
-    CLOSED: [2020-02-19 Wed 19:33]
+    CLOSED: [2021-08-01 Sun 22:41]
     Use examples other than ~Option~ and ~List~ as illustration.
     (Rationale: Compiler _always prefer a built-in_ method _over_ an extension
     method).
@@ -1634,7 +1657,7 @@
 
         val func1 = (a: Int) => a + 1
         val func2 = (a: Int) => a * 2
-        val func3 = (a: Int) => a + "!"
+        val func3 = (a: Int) => s"${a}!"
         val func4 = func1.map(func2).map(func3)
 
         func4(123)
@@ -1644,7 +1667,7 @@
     - A method for general /functors/:
       #+begin_src scala
         def doMath[F[_]](start: F[Int])
-                  (implicit functor: Functor[F]): F[Int] =
+                        (using functor: Functor[F]): F[Int] =
           start.map(_ + 2)
 
         import cats.instances.option._
@@ -1680,7 +1703,7 @@
 
       #+end_src
 
-      + Example: =from Jian= The procesure of /implicit search/.
+      * Example: =from Jian= The procesure of /implicit search/.
         We have a expression ~foo.map(_ + 1)~.
         * Assuming ~foo~ has no built-in ~map~ /method/,
           the compiler detects the potential error and wraps the expression in a
@@ -1695,10 +1718,10 @@
           ~foo~ (type ~A~) in scope. If we don't, we get a compiler error.
 
 *** DONE 3.5.3 Instances for Custom Types - 60
-    CLOSED: [2020-02-19 Wed 19:53]
+    CLOSED: [2021-08-01 Sun 22:46]
     - Simple and straightfoward example (already in ~cats.instances~):
       #+BEGIN_SRC scala
-        implicit val optionFunctor: Functor[Option] =
+        given optionFunctor: Functor[Option] =
           new Functor[Option] {
             def map[A, B](value: Option[A])(func: A => B): Option[B] =
               value.map(func)
@@ -1711,8 +1734,8 @@
       Thus, we provide /dependencies/ when summon the required /instance/.
       #+BEGIN_SRC scala
         import scala.concurrent.{Future, ExecutionContext}
-
-        implicit def futureFunctor(implicit ec: ExecutionContext): Functor[Future] =
+        
+        given futureFunctor(using ec: ExecutionContext): Functor[Future] =
           new Functor[Future] {
             def map[A, B](value: Future[A])(func: A => B): Future[B] =
               value.map(func)
@@ -1740,14 +1763,14 @@
       #+end_src
 
 *** DONE 3.5.4 Exercise: Branching out with Functors - 61
-    CLOSED: [2020-02-19 Wed 20:05]
+    CLOSED: [2021-08-01 Sun 22:49]
     #+BEGIN_SRC scala
-      sealed trait Tree[+A]
-
-      final case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
-      final case class Leaf[A](value: A)                        extends Tree[A]
-
-      implicit treeFunctor = new Functor[Tree] {
+      enum Tree[+A] {
+        case Branch(left: Tree[A], right: Tree[A])
+        case Leaf(value: A)
+      }
+      
+      given treeFunctor = new Functor[Tree] {
         def map[A, B](tree: Tree[A])(func: A => B): Tree[B] =
           tree match {
             case Leaf(v)      => Leaf(func(v))
@@ -1755,62 +1778,43 @@
           }
       }
     #+END_SRC
-    1. This is right, but not complete:
-       #+begin_src scala
-         Branch(Leaf(10), Leaf(20)).map(_ * 2)
-         // <console>: 42: error: value map is not a member of wrapper.Branch[Int]
-         //        Branch(Leaf(10), Leaf(20)).map(_ * 2)
-       #+end_src
-       =from Jian= Can dotty new /enum/ resolve this???
 
-    2. Let's add some smart constructors to compensate:
-       #+begin_src scala
-         object Tree {
-           def branch[A](left: Tree[A], right: Tree[A]): Tree[A] =
-             Branch(left, right)
+** DONE 3.6 Contravariant and Invariant Functors - 61
+   CLOSED: [2021-08-03 Tue 02:55]
+   We can think of ~Functor~'s ~map~ method as *“appending”* a _transformation_
+   to a chain -- =from Jian= /Convariant functor/.
 
-           def leaf[A](value: A): Tree[A] =
-             Leaf(value)
-         }
-
-         Tree.leaf(100).map(_ * 2)
-         Tree.branch(Tree.leaf(10), Tree.leaf(20)).map(_ * 2)
-       #+end_src
-
-** DONE 3.6 Contravariant and Invariant Functors - 61 - =TODO=
-   CLOSED: [2019-03-31 Sun 01:56]
-   - The ~Functor~ we explored is actually /covariant functor/, and its ~map~
-     *appends* a transformation to a chain.
-
-   - We're now going to look at _TWO_ other /type classes/:
-     + contravariant functor :: one representing *prepending* operations to a chain,
-     + invariant functor :: one representing building a *bidirectional* chain of operations.
+   - We're now going to look at *TWO other* /type classes/:
+     * contravariant functor :: one representing *prepending* operations to a chain,
+     * invariant functor :: one representing building a *bidirectional* chain of operations.
 
    - *This Section is Optional!*
-     You do _NOT NEED_ to know about /contravariant and invariant functors/ to
-     understand /monads/, the most important pattern in this book.
+     _NOT NEED_ to know about /contravariant and invariant functors/
+     to understand /monads/, the most important pattern in this book.
 
-       HOWEVER, /contravariant/ and /invariant/ do come in HANDY in our
-     discussion of ~Semigroupal~ and ~Applicative~ in Chapter 6.
-     =from Jian= WHY???
+     * HOWEVER, /contravariant/ and /invariant/ do come in HANDY in our
+       discussion of ~Semigroupal~ and ~Applicative~ in Chapter 6.
+       =TODO=
+       =TODO=
+       =TODO=
 
-     _If you want to move on to monads now, feel free to skip straight to
+     _If you want to move on to /monads/ now, feel free to skip straight to
      Chapter 4. Come back here before you read Chapter 6._
 
 *** DONE 3.6.1 Contravariant Functors and the ~contramap~ Method - 62
-    CLOSED: [2019-03-31 Sun 01:55]
+    CLOSED: [2021-08-03 Tue 02:55]
     - /contravariant functor/:
-      + ~contramap~ - "prepending" an operation to a chain.
+      * ~contramap~ - *"prepending"* an operation to a chain.
 
-    - The ~contramap~ /method/ *only makes sense* for
-      _data types that represent transformations._
+    - The ~contramap~ /method/ _ONLY makes sense_ for
+      */data types/ that represent /transformations/.*
       =IMPORTANT=
       For example,
-      + _Can't_
+      * _Can't_
         There is *NO WAY* to feed a value in an ~Option[B]~ backwards through a
         function ~A => B~.
 
-      + _Can_
+      * _Can_
         #+begin_src scala
           trait Printable[A] { self =>
             def format(value: A): String
@@ -1819,7 +1823,7 @@
         #+end_src
 
 **** DONE 3.6.1.1 Exercise: Showing off with Contramap - 63
-     CLOSED: [2019-03-31 Sun 01:55]
+     CLOSED: [2021-08-01 Sun 23:00]
      #+BEGIN_SRC scala
        trait Printable[A] { self =>
          def format(value: A): String
@@ -1833,21 +1837,43 @@
          // def contramap[B](func: B => A): Printable[B] =
          //   value => self.format(func(value))
        }
-
-       def format[A](value: A)(implicit p: Printable[A]): String =
-         p.format(value)
      #+END_SRC
+      * =from Jian= Use /type class/ ~Contravariant~
+        #+begin_src scala
+          import cats.Contravariant
+          
+          trait Printable[A] { self =>
+            def format(value: A): String
+          }
+          
+          given Contravariant[Printable] =
+            new Contravariant[Printable] {
+              override def contramap[A, B](fa: Printable[A])(f: B => A): Printable[B] =
+                new Printable[B] {
+                  def format(value: B): String = fa.format(f(value))
+                }
+                //// More concise version:
+                // value => fa.format(f(value))
+            }
+          
+          val printableString = new Printable[String] {
+            def format(value: String): String = value
+          }
+          
+          val printableSymbol =
+            Contravariant[Printable].contramap(printableString)(_.name)
+        #+end_src
 
      - Exercise:
        ~final case class Box[A](value: A)~
        Define an /instance/ of ~Printable~ for ~Box~.
        #+begin_src scala
-         implicit def boxPrintable[A](implicit p: Printable[A]): Printable[Box[A]] =
+         given boxPrintable[A](using p: Printable[A]): Printable[Box[A]] =
            p.contramap[Box[A]](_.value)
        #+end_src
 
 *** DONE 3.6.2 Invariant functors and the ~imap~ method - 64
-    CLOSED: [2019-03-31 Sun 01:47]
+    CLOSED: [2021-08-03 Tue 02:55]
     /Invariant functors/ implement a method called ~imap~.
 
     - ~imap~ is _INFORMALLY equivalent to a combination of ~map~ and ~contramap~._
@@ -1871,14 +1897,39 @@
           def decode(value: String): A
           def imap[B](dec: A => B, enc: B => A): Codec[B] = ???
         }
-
+        
         def encode[A](value: A)(implicit c: Codec[A]): String =
           c.encode(value)
-
+        
         def decode[A](value: String)(implicit c: Codec[A]): A =
           c.decode(value)
       #+end_src
-
+      * =from Jian= Use /type class/ ~Invariant~
+        #+begin_src scala
+          import cats.Invariant
+          
+          trait Codec[A] {
+            def encode(value: A): String
+            def decode(value: String): A
+          }
+          
+          given Invariant[Codec] =
+            new Invariant[Codec] {
+              override def imap[A, B](fa: Codec[A])(f: A => B)(g: B => A): Codec[B] =
+                new Codec[B] {
+                  override def encode(value: B): String = fa.encode(g(value))
+                  override def decode(value: String): B = f(fa.decode(value))
+                }
+            }
+          
+          val codecString = new Codec[String] {
+            def encode(value: String): String = value
+            def decode(value: String): String = value
+          }
+          
+          val codecSymbol = Invariant[Codec].imap(codecString)(Symbol.apply)(_.name)
+        #+end_src
+      
     - The type chart for imap is shown in *Figure 3.6*. If we have a ~Codec[A]~
       and a pair of functions ~A => B~ and ~B => A~, the imap method creates a
       ~Codec[B]~.
@@ -1886,7 +1937,7 @@
     - As an example use case, imagine we have a basic ~Codec[String]~, whose
       ~encode~ and ~decode~ /methods/ are both a no-op:
       #+begin_src scala
-        implicit val stringCodec: Codec[String] =
+        given stringCodec: Codec[String] =
           new Codec[String] {
             def encode(value: String): String = value
             def decode(value: String): String = value
@@ -1895,20 +1946,20 @@
       We can construct many usefull ~Codec~'s for other types by building off of
       ~stringCodec~ using ~imap~:
       #+begin_src scala
-        implicit val intCodec: Codec[Int] =
+        given intCodec: Codec[Int] =
           stringCodec.imap(_.toInt, _.toString)
 
-        implicit val booleanCodec: Codec[Boolean] =
+        given booleanCodec: Codec[Boolean] =
           stringCodec.imap(_.toBoolean, _.toString)
       #+end_src
 
-    - *Coping with Failure* TODO TODO TODO
-      + Our ~Codec~ /type class/ does NOT account for failures.
+    - *Coping with Failure* =TODO= =TODO= =TODO=
+      * Our ~Codec~ /type class/ does NOT account for failures.
 
-      + If we want to model more sophisticated relationships we can move beyond
+      * If we want to model more sophisticated relationships we can move beyond
         /functors/ to look at /lenses/ and /optics/.
 
-        _This beyond this book (See Julien Truffaut's /Monocle/)._
+        =TODO= _This beyond this book (See Julien Truffaut's /Monocle/)._
 
 **** DONE 3.6.2.1 Transformative Thinking with ~imap~ - 66
      CLOSED: [2019-10-09 Wed 18:20]
@@ -1933,15 +1984,15 @@
      - Exercise:
        Implement ~Codec[Double]~
        #+begin_src scala
-         implicit val doubleCodec =
+         given doubleCodec: Codec[Double] =
            stringCodec.imap(_.toDouble, _.toString)
        #+end_src
 
      - Exercise:
-       ~case class Box[A](value: A)~
+       ~final case class Box[A](value: A)~
        Implement ~Codec[Box]~
        #+begin_src scala
-         implicit def boxCodec[A](implicit aCodec: Codec[A]): Codec[Box[A]] =
+         given boxCodec[A](using aCodec: Codec[A]): Codec[Box[A]] =
            c.imap[Box[A]](Box.apply, _.value)
        #+end_src
 
@@ -1964,8 +2015,8 @@
        =TODO=
        =RE-DO=
 
-** DONE 3.7 Contravariant and Invariant in Cats - 68 - =TODO=
-   CLOSED: [2019-03-31 Sun 02:12]
+** DONE 3.7 Contravariant and Invariant in Cats - 68
+   CLOSED: [2021-08-03 Tue 02:55]
    Cats provide /contravariant and invariant functors/ through /type classes/
    ~cats.Contravariant~ and ~cats.Invariant~. Here is a SIMPLIFIED version:
    #+begin_src scala
@@ -1977,18 +2028,96 @@
        def imap[A, B](fa: F[A])(f: A => B)(g: B => A): F[B]
      }
    #+end_src
+   - =from Jian=
+     The idea of ~Contravariant~ and ~Invariant~ is very common in mathematician:
+     *reduce the problem to one they've already solved!*
 
-*** TODO 3.7.1 Contravariant in Cats - 68
+   - =from Jian=
+     * For a type ~A~ that can have a ~Contravariant~ instance,
+       you only need to know one direction trasfromation ~B => A~,
+       and then you can build a ~Contravariant~ instance for ~B~.
+       + "one direction transformation" also works for ~Functor~, the /covariant
+          functor/, but the transformation should be ~A => B~.
+       
+     * For a type ~A~ that can have a ~Invariant~ instance,
+       you need to know two direction trasfromations ~B => A~ and ~A => B~,
+       and then you can build a ~Invariant~ instance for ~A~.
+         You need to do transformations back and forth to build the new one.
+       + =GUESS= =from Jian=
+         This is because an ~Invariant[F]~ doesn't purely represent *a type of _data_
+         or _transformation_.* Instead, it represents a *combination of both* of
+         them! Combining two transformations through ~imap[A, B]~, and then you
+         can get ~F[B]~ from ~F[A]~.
+         1. Use ~B => A~ to convert the values, and then then known operations
+            for ~A~ can be applied.
+         2. After calculation, convert result ~A~ back to ~B~.
+            
+*** DONE 3.7.1 Contravariant in Cats - 68
+    CLOSED: [2021-08-03 Tue 02:55]
+    Cats provides /instances/ for /data types/ that consume parameters, including
+    ~Eq~, ~Show~, and ~Function1~.
+      We can *summon* /instances/ of ~Contravariant~ using the
+    ~Contravariant.apply~ /method/.
+
     #+begin_src scala
-      // TODO: Example code
+      import cats.Contravariant
+      import cats.Show
+      import cats.instances.string.given
+      
+      val showString = Show[String]
+      
+      val showSymbol =
+        Contravariant[Show].contramap(showString)((sym: Symbol) => s"${sym.name}")
+      
+      showSymbol.show(Symbol("dave"))
+      // res1: String ="'dave"
     #+end_src
+    - The ~cats.syntax.contravariant~ syntax:
+      #+begin_src scala
+        import cats.syntax.contravariant.given  // for contramap
+        
+        showString
+          .contramap[Symbol](sym => s"'${sym.name}")
+          .show(Symbol("dave"))
+        // res2: String = "'dave"
+      #+end_src
 
-*** TODO 3.7.2 Invariant in Cats - 68
-    #+begin_src scala
-      // TODO: Example code
-    #+end_src
+*** DONE 3.7.2 Invariant in Cats - 68
+    CLOSED: [2021-08-03 Tue 02:55]
+    Cats provides an /instance/ of ~Invariant~ for ~Monoid~.
+      This is a little DIFFERENT from the ~Codec~ example we introduced in
+    Section 3.6.2.
+    
+    - Imagine we want to produce a ~Monoid~ for Scala's ~Symbol~ type.
+        Cats _doesn't provide_ a ~Monoid~ for ~Symbol~ _BUT_ it does provide a
+      ~Monoid~ for a similar type: ~String~.
 
-** TODO 3.8 Aside: Partial Unification - 70
+    - We can write our new /semigroup/ with an ~empty~ method that relies on the
+      _empty ~String~,_ and a ~combine~ method that works as follows:
+      1. accept two ~Symbol~'s as parameters;
+      2. convert the ~Symbol~'s to ~String~'s;
+      3. combine the ~String~'s using ~Monoid[String]~;
+      4. convert the result back to a ~Symbol~.
+         
+    - Example:
+      #+begin_src scala
+        import cats.Monoid
+        import cats.instances.string.given  // for Monoid
+        import cats.syntax.invariant.given  // for imap
+        import cats.syntax.semigroup.given  // for |+|
+
+        given symbolMonoid: Monoid[Symbol] =
+          Monoid[String].imap(Symbol.apply)(_.name)
+        
+        Monoid[Symbol].empty
+        // res3: Symbol = '
+        
+        Symbol("a") |+| Symbol("few") |+| Symbol("words")
+        // res4: Symbol = 'afewwords
+      #+end_src
+      
+** DONE 3.8 Aside: Partial Unification - 70
+   CLOSED: [2021-08-03 Tue 02:56]
    - =from Jian= A clear explanation from _djspiewak_ (GitHub name):
      https://gist.github.com/djspiewak/7a81a395c461fd3a09a6941d4cd040f2
      This article doesn't mention the walkaround for right-biased
@@ -3942,7 +4071,7 @@
 * DONE 6 ~Semigroupal~ and ~Applicative~ - 143
   CLOSED: [2020-02-21 Fri 10:42]
   - We'll explore certain types of program flow that they cannot represent.
-    + For example, _form validation_:
+    * For example, _form validation_:
       When we validate a form we want to return all the errors to the user, *not
       stop* on the first error we encounter.
         _If we model this with a /monad/ like ~Either~, we fail fast and lose
@@ -3952,13 +4081,13 @@
     achieve the result we want.
       In this chapter we will look at TWO /type classes/ that support this
     pattern:
-    + ~Semigroupal~ encompasses the notion of *composing pairs of contexts*.
+    * ~Semigroupal~ encompasses the notion of *composing pairs of contexts*.
 
       Cats provides a ~cats.syntax.apply~ module that makes use of ~Semigroupal~
       and ~Functor~ to allow users to _sequence functions with multiple
       arguments_.
 
-    + ~Applicative~ extends ~Semigroupal~ and ~Functor~.
+    * ~Applicative~ extends ~Semigroupal~ and ~Functor~.
       It provides a way of _applying functions to parameters within a context_.
       ~Applicative~ is the source of the ~pure~ /method/ we introduced in
       Chapter 4.
