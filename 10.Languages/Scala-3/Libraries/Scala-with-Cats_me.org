@@ -2244,60 +2244,99 @@
      TODO
      We will revisit them to discuss the ~Semigroupal~ /type class/ later in Chapter 6.
 
-* TODO 4 Monads - 75 - =TODO= =ReRead=
-  - Informally,
+* TODO 4 Monads - 75 - =READING=
+  - INFORMALLY,
     a /monad/ is anything with a /computational context/ and a ~flatMap~
-    /method/ that obey the /monad laws/.
+    /method/, which can "flatten" same /computational contexts/.
+    * =from Jian=
+      Of course, in the formal definition, the /laws/ must be considered!!!
 
-  - _Special syntax_ to SUPPORT /monads/: /for comprehensions/.
+  - _Special syntax in Scala_ that SUPPORTs /monads/: /for comprehensions/.
+    * HOWEVER, despite the ubiquity of the concept,
+      *the Scala standard library lacks a concrete type to encompass "things that
+      can be flatMapped".*
 
-    However, despite the ubiquity of the concept,
-    *the Scala standard library lacks a concrete type to encompass "things that
-    can be flatMapped".*
-
-    =from Jian=
-    Programming languages like Scala and Rust don't want to scare their users
-    with Monad concept support in their standard library.
-      However, because of the good type system and their design, /monad/ is
-    inevitable -- actually we should give a hug to it. I believe They will
-    definitely support /monad/ in their standard libary in the future.
-    =END Comment=
-
-    *This type class is one of the benefits brought to us by Cats.*
+      *This type class is one of the benefits brought to us by Cats.*
 
 ** DONE 4.1 What is a Monad? - 75
-   CLOSED: [2018-10-28 Sun 01:00]
-   - *A /monad/ is a mechanism for _SEQUENCING computations_.*
+   CLOSED: [2021-08-04 Wed 03:30]
+   =IMPORTANT=
+   =IMPORTANT=
+   =IMPORTANT=
+   *A /monad/ is a mechanism for _SEQUENCING computations_.*
+
+   - Q :: WHY NOT /functors/?
+   - A :: In Section 3.1 we said that /functors/ allow us to *sequence computations*
+          ignoring some complication.
+     * The =LIMITATION= of /functors/:
+       *They _ONLY_ allow this complication to _occur once at the beginning_ of
+       the sequence of computations.* They don't account for further complications
+       at each step in the sequence.
 
 **** DONE ~Option~'s - 76
-     CLOSED: [2019-03-31 Sun 04:01]
-     #+begin_src scala
-       import scala.util.Try
+     CLOSED: [2021-08-04 Wed 02:07]
+     1. ~Option~ allows us to sequence computations that _may or may not return
+        values_:
+        #+begin_src scala
+          def parseInt(str: String): Option[Int] =
+            scala.util.Try(str.toInt).toOption
+          
+          def divide(a: Int, b: Int): Option[Int] =
+            Option.when(b != 0)(a / b)
+        #+end_src
+        As a /functor/, we can use the ~map~ method to append computations to
+        ~Option~ values.
+        - Use ~map~ to do calculation, and *ignore detail(s)* (for ~Option~ values,
+          it is "may NOT return values").
+          * The *ignore* here means do handle "may NOT return values" *implicitly*
+            and *obey the /functor laws/.*
+              This also means the ~map~ can't accept a function that also generate an
+            ~Option~ value -- /functors/ and _its laws_ do *NOT promise* this.
 
-       def parseInt(str: String): Option[Int] =
-         Try(str.toInt).toOption
+     2. ~Option~, as a /monad/, allows us to *ignore detail(s)* (for ~Option~ values,
+        it is "may NOT return values") when we sequence operations:
+        #+begin_src scala
+          def strignDivideBy(aStr: String, bStr: String): Option[Int] =
+            parseInt(aStr).flatMap { aNum =>
+              parseInt(bStr).flatMap { bNum =>
+                divide(aNum, bNum)
+              }
+            }
+          
+          // Use the for comprehension syntax.
+          def strignDivideBy(aStr: String, bStr: String): Option[Int] =
+            for {
+              aNum <- parseInt(aStr)
+              bNum <- parseInt(bStr)
+              ans <- divide(aNum, bNum)
+            } yield ans
+        #+end_src
+        - The _SEMANTICS_ are: =FIXME= =Use ordered list=
+          1. the first call to ~parseInt~ returns a ~None~ or a ~Some~;
+          2. if it returns a ~Some~, the ~flatMap~ method calls our function and
+             passes us the integer ~aNum~;
+          3. the second call to ~parseInt~ returns a ~None~ or a ~Some~;
+          4. if it returns a ~Some~, the ~flatMap~ method calls our function and
+             passes us ~bNum~;
+          5. the call to ~divide~ returns a ~None~ or a ~Some~, which is our result.
+             
+        - This results in the *fail-fast error handling* behaviour that we know
+          and love.
+          * Here the "error" in *fail-fast error handling* doesn't necessarily mean
+            a literal error, something that is unexpected, or bad, or described
+            by other negative adjectives.
+              For ~Option~ it means the ~None~, or in another words, the
+            "NOT return values" case.
 
-       def divide(a: Int, b: Int): Option[Int] =
-         if (b == 0) None else Some(a / b)
-
-       def strignDivideBy(aStr: String, bStr: String): Option[Int] =
-         parseInt(aStr).flatMap { aNum =>
-           parseInt(bStr).flatMap { bNum =>
-             divide(aNum, bNum)
-           }
-         }
-
-       def strignDivideBy(aStr: String, bStr: String): Option[Int] =
-         for {
-           aNum <- parseInt(aStr)
-           bNum <- parseInt(bStr)
-           ans <- divide(aNum, bNum)
-         } yield ans
-     #+end_src
-
-**** DONE ~List~'s - 78
-     CLOSED: [2019-03-31 Sun 03:55]
-     The for-comprehension form with ~List~'s looks very like imperative for loops.
+          * =from Jian=
+            This comes from the *sequence computations* nature.
+            It is required by _the monad laws_.
+            =TODO=
+            Write a proof!
+          
+**** DONE ~List~'s - 78 - =TODO= =RE-THINK the Mental Model=
+     CLOSED: [2021-08-04 Wed 02:42]
+     The for-comprehension form with ~List~'s LOOKS VERY LIKE _imperative for loops_.
      #+begin_src scala
        for {
          x <- List(1, 2, 3)
@@ -2306,21 +2345,59 @@
      #+end_src
 
      _HOWEVER_, there is _ANOTHER_ *mental model* we can apply that highlights the
-      /monadic behaviour/ of ~List~:
-      if we think of ~List~'s as sets of /intermediate results/, ~flatMap~ becomes
-      a construct that calculates _permutations and combinations_.
+     /monadic behaviour/ of ~List~:
+     if we think of ~List~'s as sets of /intermediate results/, ~flatMap~ becomes
+     a construct that calculates _permutations and combinations_.
+     =from jian=
+     =Re-think=
 
 **** DONE ~Future~'s - 79
-     CLOSED: [2019-03-31 Sun 03:51]
-     This section we give example with for-comprehension, and ~Future~'s *are
-     sequenced*.
-       We *can* run /futures/ in _parallel_, but this is another story and shall
-     be told another time. =TODO= =TODO= =TODO=
+     CLOSED: [2021-08-04 Wed 02:57]
+     =from Jian=
+     ~Future~'s are widely used, but they are not good examples for functional
+     programming -- they are /functors/ or /monads/ only when the computations
+     in them are pure. This is also repeatedly mentioned by this book author, but
+     he also repeatedly use ~Future~ as an illustration example.
+       _If ~Future~'s are NOT *"widely used"* (UNFORTUNATELY, they are widely
+     used), it's better not use them to explain functional programming concepts!_
+     
+     =from Jian= =My HOPE=
+     Use /effects/ instead of ~Future~'s as examples.
+     
+     #+begin_src scala
+       import scala.concurrent.Future
+       import scala.concurrent.ExecutionContext.Implicits.global
+       
+       def doSomethingLongRunning: Future[Int] = ???
+       def doSomethingElseLongRunning: Future[Int] = ???
+       def doSomethingVeryLongRunning: Future[Int] =
+         for {
+           result1 <- doSomethingLongRunning
+           result2 <- doSomethingElseLongRunning
+         } yield result1 + result2
+     #+end_src
+     This exmaple shows that ~Future~'s *are sequenced*, which can be seen more
+     easily if we expand above for-comprehension into the ~flatMap~ form:
+     #+begin_src scala
+       def doSomethingVeryLongRunning: Future[Int] =
+         doSomethingLongRunning.flatMap { result1 =>
+           doSomethingElseLongRunning.map { result2 =>
+             result1 + result2
+           }
+         }
+     #+end_src
+     
+     - =from Jian= =Also mentioned in this book=
+       *CAUTION*:
+       ~Future~'s are /Monads/ that can be sequenced (see the above example),
+       BUT since the computation in them are triggered when each ~Future~ value
+       is created, the computations represented by them can run in parallel.
+       * This is another story and shall be told another time. =from this Book=
 
-     *Monads are all about sequencing.*
+     - *Monads are all about sequencing.*
 
 *** DONE 4.1.1 Definition of a Monad - 80
-    CLOSED: [2018-10-28 Sun 00:04]
+    CLOSED: [2021-08-04 Wed 03:05]
     #+BEGIN_SRC scala
       import scala.language.higherKinds
 
@@ -2330,29 +2407,42 @@
         def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
       }
     #+END_SRC
+    - ~pure~ abstracts over /constructors/,
+      providing a way to create a /new monadic context/ from a _plain value_.
+
+    - ~flatMap~ provides the _sequencing step_ we have already discussed,
+      1. *extracting* the value from a /context/ and
+      2. *generating* the _NEXT_ /context/ in the sequence. 
+
+    - footnote 1:
+      Terminology preferences:
+      * Scalaz use ~point~ instead of ~pure~
+      * Haskell use ~return~ instead of ~pure~
+      * Haskell use ~>>=~ to represent the ~flatMap~ operation
 
     - *Monad Laws*
       ~pure~ and ~flatMap~ must obey a set of /laws/ that allow us to sequence
-      operations freely *WITHOUT* unintended glitches and side-effects:
+      operations freely
+      *WITHOUT* _unintended glitches_ and _side-effects_:
 
-      + Left identity:
+      * Left identity:
         calling ~pure~ and transforming the result with ~func~ is the same as
         calling ~func~:
         ~pure(a).flatMap(func)~ \equiv{} ~func(a)~
 
-      + Right identity:
+      * Right identity:
         passing ~pure~ to ~flatMap~ is the same as doing nothing:
         ~m.flatMap(pure)~ \equiv{} ~m~
 
-      + Associativity:
+      * Associativity:
         flatMapping over two functions ~f~ and ~g~ is the same as flatMapping
         over ~f~ and then flatMapping over ~g~:
         ~m.flatMap(f).flatMap(g)~ \equiv{} ~m.flatMap(x => f(x).flatMap(g))~
 
 *** DONE 4.1.2 Exercise: Getting Func-y - 81
-    CLOSED: [2018-10-28 Sun 00:04]
+    CLOSED: [2021-08-04 Wed 03:30]
     #+BEGIN_SRC scala
-      import scala.language.higherKinds
+      import scala.language.higherKinds  // for Scala earlier than 2.13.1
 
       trait Monad[F[_]] {
         def pure[A](a: A): F[A]
@@ -2365,13 +2455,26 @@
           // can I write: flatMap(value)(func andThen pure)
       }
     #+END_SRC
+    - =from Jian=
+      The code above avoid writing ~trait Monad[F[_]] extends Functor[F]~.
+      This will be clear in the _Chapter 6 ~Semigroupal~ and ~Applicative~:_
+      ~Monad[F[_]]~ doesn't directly extend ~Functor[F[_]]~.
 
-** DONE 4.2 ~Monad~'s in Cats - 82
+    - =from Jian=
+      The reason why do we define ~map~ with ~pure~ and ~flatMap~ will be
+      clear after reading the _Chapter 6 ~Semigroupal~ and ~Applicative~._
+      
+    - My way (in the comment of the code above) is better:
+      1. It is conciser.
+      2. For functions of type ~Function1[A, ?]~,
+         its ~map~ is mapped to ~andThen~, they are identical.
+      
+** DONE 4.2 ~Monad~'s in Cats - 82 - =START READING=
    CLOSED: [2018-10-28 Sun 01:00]
    Still
-   - type class
-   - instances
-   - syntax
+   - /type class/
+   - /instances/
+   - /syntax/
 
 *** DONE 4.2.1 The ~Monad~ Type Class - 82
     CLOSED: [2019-04-01 Mon 13:32]
