@@ -2469,37 +2469,58 @@
       2. For functions of type ~Function1[A, ?]~,
          its ~map~ is mapped to ~andThen~, they are identical.
       
-** DONE 4.2 ~Monad~'s in Cats - 82 - =START READING=
-   CLOSED: [2018-10-28 Sun 01:00]
+** DONE 4.2 ~Monad~'s in Cats - 82
+   CLOSED: [2021-08-06 Fri 00:58]
    Still
    - /type class/
    - /instances/
    - /syntax/
 
 *** DONE 4.2.1 The ~Monad~ Type Class - 82
-    CLOSED: [2019-04-01 Mon 13:32]
+    CLOSED: [2021-08-06 Fri 00:41]
     - ~Monad~ extends _TWO_ other /type classes/:
-      + ~FlatMap~, which provides ~flatMap~;
-      + ~Applicative~, which provides ~pure~.
+      * ~FlatMap~, which provides ~flatMap~
+      * ~Applicative~, which provides ~pure~
+        + ~Applicative~ extends ~Functor~, which provides ~map~
 
+    - Examples that using ~pure~, ~flatMap~, and ~map~ directly:
+      #+begin_src scala
+        import cats.Monad
+        import cats.instances.option.*  // for Monad
+        import cats.instances.list.*    // for Monad
+        
+        val opt1 = Monad[Option].pure(3)                          // Some(3)
+        val opt2 = Monad[Option].flatMap(opt1)(a => Some(a + 2))  // Some(5)
+        val opt3 = Monad[Option].map(opt2)(100 * _)               // Some(500)
+        
+        val list1 = Monad[List].pure(3)                                     // List(3)
+        val list2 = Monad[List].flatMap(List(1, 2, 3))(a => List(a, a*10))  // List(1, 10, 2, 20, 3, 30) 
+        val list3 = Monad[List].map(list2)(_ + 123)                         // List(124, 133, 125, 143, 126, 153)
+      #+end_src
+      
 *** DONE 4.2.2 Default Instances - 83
-    CLOSED: [2019-04-01 Mon 13:32]
+    CLOSED: [2021-08-06 Fri 00:49]
     Still inside ~cats.instances~
 
     - There is a ~Monad~ for ~Future~.
       However, the ~ExecutionContext~ should be provided when summon it.
       #+begin_src scala
+        import cats.instances.future.given
+        import scala.concurrent.{Await, Future}
+        import scala.concurrent.durition.given
         import scala.concurrent.ExecutionContext.Implicits.global
-
+        
         val fm = Monad[Future]
+        val future = fm.flatMap(fm.pure(1))(x => fm.pure(x + 2))
+        println(Await.result(future, 1.second))
       #+end_src
 
 *** DONE 4.2.3 ~Monad~ Syntax - 84
-    CLOSED: [2019-04-01 Mon 13:44]
+    CLOSED: [2021-08-06 Fri 00:58]
     - The syntax for /monads/ comes from _THREE_ places:
-      + ~cats.syntax.flatMap~ provides syntax for ~flatMap~;
-      + ~cats.syntax.functor~ provides syntax for ~map~;
-      + ~cats.syntax.applicative~ provides syntax for ~pure~.
+      * ~cats.syntax.flatMap~ provides syntax for ~flatMap~;
+      * ~cats.syntax.functor~ provides syntax for ~map~;
+      * ~cats.syntax.applicative~ provides syntax for ~pure~.
 
       In practice it's often easier to import everything in one go from
       ~cats.implicits~. For clarity here, we do individual imports.
@@ -2507,9 +2528,9 @@
     - We can use ~pure~ to construct /instances/ of a /monad/.
       Disambiguate with the /type parameter/.
       #+begin_src scala
-        import cats.instances.option._       // for Monad
-        import cats.instances.list._         // for Monad
-        import cats.instances.applicative._  // for pure
+        import cats.instances.option.*    // for Monad
+        import cats.instances.list.*      // for Monad
+        import cats.syntax.applicative.*  // for pure
 
         l.pure[Option]
         // res4: Option[Int] = Some(1)
@@ -2521,15 +2542,15 @@
     - Usage:
       #+begin_src scala
         import cats.Monad
-        import cats.syntax.functor._ // for map
-        import cats.syntax.flatMap._ // for flatMap
-        import scala.language.higherKinds
+        import cats.syntax.functor.given  // for map
+        import cats.syntax.flatMap.given  // for flatMap
+        // import scala.language.higherKinds  /// before Scala 2.13.1
 
         def sumSquare[F[_]: Monad](a: F[Int], b: F[Int]): F[Int] =
           a.flatMap(x => b.map(y => x*x + y*y))
 
-        import cats.instances.option._ // for Monad
-        import cats.instances.list._ // for Monad
+        import cats.instances.option.given  // for Monad
+        import cats.instances.list.given    // for Monad
 
         sumSquare(Option(3), Option(4))
         // res8: Option[Int] = Some(25)
@@ -2538,7 +2559,7 @@
         // res9: List[Int] = List(17, 26, 20, 29, 25, 34)
       #+end_src
 
-      + The /comprehension/ version:
+      * The /comprehension/ version:
         #+begin_src scala
           def sumSquare[F[_]: Monad](a: F[Int], b: F[Int]): F[Int] =
             for {
@@ -2554,24 +2575,67 @@
         #+end_src
 
 ** DONE 4.3 The ~Identity~ Monad - 86
-   CLOSED: [2019-04-01 Mon 14:33]
-   - TODO NOTE
-   - TODO NOTE
-   - TODO NOTE
+   CLOSED: [2021-08-06 Fri 02:55]
+   The ~sumSquare~ function defined in the previous section for /monadic objects/
+   works for ~Option~ and ~List~ if we import their /given instances/.
 
-*** 4.3.1 Exercise: Monadic Secret Identies - 88
+   - Q :: How to make that function works for _plan values_?
+   - A :: Use ~cats.Id~.
+     =CAUTION=:
+       The book doesn't mention ~import cats.catsInstancesForId~.
+       It is critical! The imported ~catsInstancesForId~ actually comes from
+       ~cats.Invariant~.
+     #+begin_src scala
+       import cats.Id
+       import cats.catsInstancesForId
+       
+       sumSquare(3: Id[Int], 4: Id[Int])
+       //  res1: Id[Int] = 25
+     #+end_src
+     * Here is the definition of ~Id~
+       #+begin_src scala
+         type Id[A] = A
+       #+end_src
+       
+   - The ability to _abstract over monadic and non-monadic code_ is *extremely
+     powerful*.
+     =IMPORTANT= =IMPORTANT= =IMPORTANT=
+       For example, we can run code /asynchronously/ in production using ~Future~
+     and /synchronously/ in test using ~Id~.
+     =TODO= We'll see this in our first case study in Chapter 8.
+
+*** DONE 4.3.1 Exercise: Monadic Secret Identies - 88
+    CLOSED: [2021-08-06 Fri 02:55]
     #+begin_src scala
-      trait Id[A] extends Functor[A] with Applicative[A] with Monoad[A] {
-        def pure[A]: Id[A] =
-          this.value
-
-        def map[B](f: A => B): Id[B] =
-          f(this.value)
-
-        def flaMap[B](f: A => Id[B]): Id[B] =
-          f(this.value)
-      }
+      given idMonad: Moand[Id] =
+        new Monad[Id[_]] {
+          extension [A](value: A)
+            def pure: Id[A] =
+              value
+      
+          extension [A, B](initial: Id[A]) {
+            def map(f: A => B): Id[B] =
+              f(initial)
+      
+            def flatMap(f: A => Id[B]): Id[B] =
+              f(initial)
+          }
+        }
     #+end_src
+    - =from Jian=
+      This is a conceptual definition.
+      In reality, when using _the Cats library_,
+      ~Monad~ need to implement *THREE* /methods/:
+      #+begin_src scala
+        trait Monad[F[_]] {  // In reality, this extends FlatMap[F] and Applicative[F]
+          def pure[A](value: A): F[A]
+        
+          def flatMap[A, B](initial: F[A])(fn: A => F[B]): F[B]
+        
+          def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B]
+        }
+      #+end_src
+
     - The Scala compiler is able to interpret values of type ~A~ as ~Id[A]~ and
       vice versa by the context in which they are used.
 
@@ -2581,8 +2645,26 @@
       _when searching for /implicits/._
         Hence our need to re-type ~Int~ as ~Id[Int]~ in the call to ~sumSquare~
       at the opening of this section: ~sumSquare(3 : Id[Int], 4 : Id[Int])~
+      * =from Jian=
+        Add to type system shouldn't be hard, but it is bad: a trick that need to
+        know the identity type name is impossible. Force all people to use ~Id~
+        is also a bad idea.
+        + Q :: WHAT SHOULD WE DO?
+        + A :: If you don't like write /type annotation/, you may prefer a _function
+                call syntax_. I can't say which one is better, but I think the _function
+                call syntax_ is more natural sometimes or for some people.
+                  Provide a helper function, *instead of* writing something like
+                ~3: Id[Int]~ (assume the /identity type/ _name_ you choose in a
+                specific context is ~IdXXX~), *write*:
+          #+begin_src scala
+            import IdXXX  // type IdXXX[A] = A
+            
+            inline def idlize[A](v: A): IdXXX[A] = v
+            
+            sumSquare(idlize(3), idlize(4))
+          #+end_src
 
-** DONE 4.4 ~Either~ - 88
+** DONE 4.4 ~Either~ - 88 - =START READING=
    CLOSED: [2019-04-13 Sat 20:05]
    - In Scala 2.11 and earlier,
      many people didn't consider ~Either~ a /monad/ because it didn't have ~map~
