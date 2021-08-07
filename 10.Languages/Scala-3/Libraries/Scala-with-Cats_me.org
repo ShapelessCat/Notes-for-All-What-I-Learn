@@ -3126,23 +3126,27 @@
           age.pure.ensure(new IllegalArgumentException("Age must be greater than or equal to 18"))(_ >= 18)
       #+end_src
 
-** DONE 4.6 The ~Eval~ Monad - 100 - =START READING=
-   CLOSED: [2019-04-02 Tue 17:57]
-   ~cats.Eval~ is a /monad/ that allows us to _abstract over different models of
-   evaluation._
+** DONE 4.6 The ~Eval~ Monad - 100
+   CLOSED: [2021-08-07 Sat 03:04]
+   ~cats.Eval~ is a /monad/ that allows us to _abstract over DIFFERENT
+   /models of evaluation/._
 
-   - We typically hear of _TWO_ such models: /eager/ and /lazy/.
-       ~Eval~ throws in a _further distinction_ of whether or not a result is
-     /memoized/.
+   - We typically talk of *TWO* such models:
+     /eager/ and /lazy/, also called /call-by-value/ and /call-by-name/
+     respectively.
+     * ~Eval~ also allows for a result to be /memoized/, which gives us
+       /call-by-need/ evaluation.
+       
+   - ~Eval~ is also /stack-safe/, which means we can use it in
+     _very DEEP recursions_ WITHOUT blowing up the /stack/.
 
 *** DONE 4.6.1 Eager, Lazy, Memoized, Oh My! - 100
-    CLOSED: [2019-04-02 Tue 15:33]
-    - /Eager computations/ HAPPEN _immediately_
-      whereas
-      /Lazy computations/ HAPPEN _on access_.
-
-      /Memoized computations/ are run *ONCE* _on first access_,
-      after which the results are *cached*.
+    CLOSED: [2021-08-07 Sat 02:27]
+    - Three common evaluations:
+      * /Eager computations/ HAPPEN _immediately_
+      * /Lazy computations/ HAPPEN _on each access_.
+      * /Memoized computations/ are run *ONCE* _on first access_,
+        after which the results are *cached*.
 
     - For example,
       in Scala (the _evaluation properties_ of the three ways below can be shown
@@ -3154,14 +3158,17 @@
             math.random
           }
           // Computing X
-          // x: Double = 0.0657586956104027
+          // x: Double = 0.0396922778013471
 
           x  // first access
-          // res0: Double = 0.0657586956104027
+          // res0: Double = 0.0396922778013471
 
           x  // second access
-          // res1: Double = 0.0657586956104027
+          // res1: Double = 0.0396922778013471
         #+end_src
+        This is an example of /call-by-value evaluation/:
+        + the computation is evaluated at point where it is defined (*eager*); and
+        + the computation is evaluated once (*memoized*).
 
       * ~def~'s are /lazy/ and *NOT* /memoized/.
         #+begin_src scala
@@ -3173,12 +3180,15 @@
 
           y  // first access
           // Computing Y
-          // res2: Double = 0.9184384488125138
+          // res2: Double = 0.5270290953284378
 
           y  // second access
           // Computing Y
-          // res3: Double = 0.20807113447602488
+          // res3: Double = 0.348549829974959
         #+end_src
+        These are the properties of /call-by-name evaluation/:
+        + the computation is evaluated at the point of use (*lazy*); and
+        + the computation is evaluated each time it is used (*NOT memoized*).
 
       * ~lazy val~'s are /lazy/ and /memoized/.
         #+begin_src scala
@@ -3195,84 +3205,71 @@
           z  // second access
           // res5: Double = 0.1783014120350146
         #+end_src
+        These are the properties of /call-by-need evaluation/:
+        + evaluation at the point of use (*lazy*); and
+        + values are saved once evaluated (*memoized*).
+
+    - There are three possible combinations of these properties:
+      * /call-by-value/: *eager* and *memoized*;
+      * /call-by-name/: *lazy* and *not memoized*;
+      * /call-by-need/: *lazy* and *memoized*.
+      The final combination, _eager and not memoized, is *not possible*._
 
 *** DONE 4.6.2 Eval's Models of Evaluation - 102
-    CLOSED: [2019-04-02 Tue 16:19]
-    - ~Eval~ has THREE /subtypes/: ~Now~, ~Later~, and ~Always~.
+    CLOSED: [2021-08-07 Sat 02:35]
+    - ~Eval~ has THREE /subtypes/:
+      * ~Now~
+      * ~Later~
+      * ~Always~
 
     - We construct these with _THREE /constructor methods/,_ which create
       instances of the THREE /classes/ and *return them typed as ~Eval~:*
       #+begin_src scala
         import cats.Eval
-
+        
         val now = Eval.now(math.random + 1000)
-        // now: cats.Eval[Double] = Now(1000.885603643474)
-
-        val later = Eval.later(math.random + 2000)
-        // later: cats.Eval[Double] = cats.Later@679671c
-
+        // now: cats.Eval[Double] = Now(1000.7009661848473)
+        
         val always = Eval.always(math.random + 3000)
-        // always: cats.Eval[Double] = cats.Always@396fe27e
+        // always: cats.Eval[Double] = cats.Always@2a4e7955
+        
+        val later = Eval.later(math.random + 2000)
+        // later: cats.Eval[Double] = cats.Later@7684da18
       #+end_src
+      =From Jian=
+      Use these /constructor methods/, rather then the /constructors/ of EACH
+      /subtypes/, to avoid the overly narrowed types.
 
-      =From Jian= =START=
-      It's critical that we should use these /constructor methods/, rather then
-      the /constructors/ of EACH /subtypes/.
-
-      *The return type is important!!!*
-
-      The compiler needs ~Eval~, rather than its /subtypes/, too narrow types
-      can make the compiler be confused. TODO =MORE DETAILS= =???=
-      =From Jian= =END=
-
-    - Extract the result of an ~Eval~ using its ~value~ /method/:
+    - *Extract* the result of an ~Eval~ using its ~value~ /method/:
       #+begin_src scala
-        now.value
-        // res6: Double = 1000.885603643474
-
-        later.value
-        // res7: Double = 2000.1770874422618
-
-        always.value
-        // res8: Double = 3000.637554292833
+        now.value     // res6: Double = 1000.7009661848473
+        always.value  // res7: Double = 3000.5158510235524
+        later.value   // res8: Double = 2000.6995448328964
       #+end_src
 
-    - ~Eval.now~ captures a value _right now_.
-      Its semantics are similar to a ~val~ -- /eager/ and /memoized/.
+    - =from Jian=
+      Check the examples in the book for illustration!!!
 
-    - ~Eval.always~ captures a /lazy/ computation, similar to a ~def~ -- /lazy/
-      and *NOT* /memoized/.
-
-    - ~Eval.later~ captures a /lazy/, /memoized/ computation, similar to a
-      ~lazy val~ -- /lazy/ and /memoized/.
-
-    - The three behaviours are summarized below:
+    - The THREE behaviours are summarized below:
       | Scala      | Cats     | Properties         |
       |------------+----------+--------------------|
       | ~val~      | ~Now~    | eager, memoized    |
       | ~lazy val~ | ~Later~  | lazy, memoized     |
       | ~def~      | ~Always~ | lazy, not memoized |
 
-    - =From Jian=
-      We *DO NOT* have /eager/ and *NOT* /memoized/ evaluation model, which is
-      not reasonable -- just like copy and paste a segment of code everywhere,
-      Everytime see them evaluate them. Even though they are the same code
-      segment, sometimes even same calculation (when no side effect), but no
-      connections built between them.
-
 *** DONE 4.6.3 ~Eval~ as a ~Monad~ - 104
-    CLOSED: [2019-04-02 Tue 17:20]
-    - Like all monads, Eval's ~map~ and ~flatMap~ /methods/ add computations to a
-      _chain_.
+    CLOSED: [2021-08-07 Sat 02:49]
+    - Like all /monads/, Eval's ~map~ and ~flatMap~ /methods/ add computations to
+      a _chain_.
 
-    - In the case of ~Eval~, the _chain_ is stored explicitly as _a list of functions_.
+    - In the case of ~Eval~, the _chain_ is stored EXPLICITLY as _a list of functions_.
       The functions are NOT run until we call ~Eval~'s ~value~ /method/ to request
       a result:
       #+begin_src scala
-        val greeting = Eval.
-          always { println("Step 1"); "Hello" }.
-          map { str => println("Step 2"); s"$str world" }
-        // greeting: cats.Eval[String] = cats.Eval$$anon$8@157f7b8c
+        val greeting = Eval
+          .always { println("Step 1"); "Hello" }
+          .map { str => println("Step 2"); s"$str world" }
+        // greeting: cats.Eval[String] = cats.Eval$$anon$4@496b9f25
 
         greeting.value
         // Step 1
@@ -3304,6 +3301,15 @@
         // Adding A and B
         // res17: Int = 42
       #+end_src
+      =from Jian=
+      * All the /monadic combinators/ *promise* /referential transparency/.
+        The substitution rule can be applied.
+
+      =from Jian=
+      * ~value~ is not a /monadic combinator/, and
+        it doesn't need to have /referential transparency/,
+        or in another words, force it to promise /referential transparency/
+        conflicts with our target: simulation all possible evaluation strategies.
 
     - Some times we don't want the ~def~ /semantics/, and ~Eval~ has a ~memoize~
       /method/ that allows us to _memoize a chain of computations_
@@ -3311,29 +3317,30 @@
         whereas
       * calculations after the call _RETAIN their ORIGINAL_ /semantics/:
       #+begin_src scala
-        val saying = Eval.
-          always { println("Step 1"); "The cat" }.
-          map { str => println("Step 2"); s"$str sat on" }.
-          memoize.
-          map { str => println("Step 3"); s"$str the mat" }
-        // saying: cats.Eval[String] = cats.Eval$$anon$8@2196a9a1
+        val saying = Eval
+          .always { println("Step 1"); "The cat" }
+          .map { str => println("Step 2"); s"$str sat on" }
+          .memoize
+          .map { str => println("Step 3"); s"$str the mat" }
+        // saying: cats.Eval[String] = cats.Eval$$anon$4@77e677ee
 
         saying.value  // first access
         // Step 1
         // Step 2
         // Step 3
-        // res18: String = The cat sat on the mat
+        // res19: String = The cat sat on the mat  /// first evaluation after `memoize`
 
         saying.value  // second access
         // Step 3
-        // res19: String = The cat sat on the mat
+        // res20: String = The cat sat on the mat  /// second evaluation after `memoize`
       #+end_src
 
 *** DONE 4.6.4 Trampolining and ~Eval.defer~ - 105
-    CLOSED: [2019-04-02 Tue 17:56]
+    CLOSED: [2021-08-07 Sat 03:04]
     =from Jian= Try to learn more about /trampolining/.
+    
     ~Eval~'s ~map~ and ~flatMap~ /methods/ are /trampolined/, which means we can
-    nest calls to ~map~ and ~flatMap~ *ARBITRARILY without consuming stack
+    nest calls to ~map~ and ~flatMap~ _ARBITRARILY_ *without consuming stack
     frames.*
 
     _We call this property /stack safety/._
@@ -3357,12 +3364,12 @@
 
          This still doesn't work, and we will see
          #+begin_src scala
-           factorial(50000).value
+           factorial(500000).value
            // java.lang.StackOverflowError
            // ...
          #+end_src
 
-         The problem here is we didn't avoid the ~factorial~ call stack overflow
+         The problem here is we didn't avoid the ~factorial~ call /stack overflow/
          -- only ~Eval.now(n)~ in the base case and make the return value of type
          ~Eval[BigInt]~ is NOT enough.
 
@@ -3383,40 +3390,61 @@
       method (iterative traverse of a tree).
 
     - There are still limits on how deeply we can nest computations,
-      BUT they are *bounded by the size of the /heap/ rather than the /stack/.*
+      BUT they are *bounded by the size of the /heap/ _rather than_ the /stack/.*
 
-*** TODO 4.6.5 Exercise: Safer Folding using ~Eval~ - 107
-    =from Jian= I made a mistake at my first try. Try to do it again later.
+*** DONE 4.6.5 Exercise: Safer Folding using ~Eval~ - 107
+    CLOSED: [2021-08-07 Sat 03:04]
+    #+begin_src scala
+      def foldRight[A, B](xs: List[A], acc: B)(fn: (A, B) => B): B =
+        xs match {
+          case head :: tail => fn(head, foldRight(tail, acc)(fn))
+          case Nil          => acc
+        }
+    #+end_src
+    
+    - Solution:
+      #+begin_src scala
+        def foldRight[A, B](xs: List[A], acc: B)(fn: (A, B) => B): B =
+          foldRightEval(xs, Eval.now(acc)) { (a, eb) =>
+            eb.map(fn(a, _))
+          }.value
+        
+        def foldRightEval[A, B](xs: List[A], acc: Eval[B])(fn: (A, Eval[B]) => Eval[B]): Eval[B] =
+          xs match {
+            case hd :: tl => Eval.defer(fn(hd, foldRightEval(tl, acc)(fn)))
+            case Nil      => acc
+          }
+      #+end_src
 
-** TODO 4.7 The ~Writer~ Monad - 107
-   ~cats.data.Writer~ is a /monad/ that lets us carry a log along with a
-   computation.
+** DONE 4.7 The ~Writer~ Monad - 107
+   CLOSED: [2021-08-07 Sat 04:53]
+   ~cats.data.Writer~ is a /monad/ that lets us
+   _carry a log along with a computation._
 
    - We can use it to
-     1. record messages, errors, or additional data about a computation
+     1. *record* messages, errors, or additional data about a computation
         AND
-     2. extract the log alongside the final result.
+     2. *extract* the log alongside the FINAL result.
 
-   - One common use for ~Writer~'s is _recording sequences of steps in multi-threaded
-     computations_ where
-     * standard imperative logging techniques can result in *interleaved messages
-       from different contexts*.
-
-     * With ~Writer~ the log for the computation is _tied to the result_, so we can
-       run concurrent computations *without mixing logs*.
+   - One common use for ~Writer~'s is
+     _recording sequences of steps in multi-threaded computations_ where
+     standard imperative logging techniques can result in *interleaved messages
+     from different contexts*.
+       With ~Writer~ the log for the computation is _tied to the result_, so we
+     can run concurrent computations *WITHOUT mixing logs*.
 
    - *Cats Data Types*
      ~Writer~ is the FIRST /data type/ we've seen from the ~cats.data~ package.
 
-     - This package provides instances of various /type classes/ that *produce
-       useful semantics*.
+     - This /package/ provides instances of various /type classes/ that
+       *produce useful semantics*.
 
      - Other examples from ~cats.data~ include the /monad transformers/ that we
        will see in the next chapter, and the ~Validated~ type we will encounter
-       in Chapter 6. TODO TODO TODO
+       in Chapter 6. =TODO=
 
 *** DONE 4.7.1 Creating and Unpacking Writers - 108
-    CLOSED: [2019-04-13 Sat 23:55]
+    CLOSED: [2021-08-07 Sat 03:37]
     - A ~Writer[W, A]~ carries two values:
       * a log of type ~W~
       * a result of type ~A~
@@ -3424,23 +3452,24 @@
     - We can create a ~Writer~ from values of each type as follows:
       #+begin_src scala
         import cats.data.Writer
-        import cats.instances.vector._  // for Monoid
+        import cats.instances.vector.given  // for Monoid
 
         Writer(Vector("It was the best of times",
                       "it was the wrost of times"),
                1859)
-        // res0: cats.data.WriterT[cats.Id,scala.collection.immutable.Vector[String], Int] =
-        //       WriterT((Vector(It was the best of times, it was the wrost of times),1859))
+        // res0: cats.data.WriterT[cats.Id, Vector[String], Int] =
+        //   WriterT((Vector(It was the best of times, it was the wrost of times),1859))
       #+end_src
       Cats implements ~Writer~ in terms of another type, ~WriterT~:
-      ~type Writer[W, A] = Writer[Id, W, A]~ (ignore this before Chapter 5).
+      ~type Writer[W, A] = Writer[Id, W, A]~
+      (=TODO= please ignore this before Chapter 5).
 
     - When you only have a result (type ~A~), in scope there must be a ~Monoid[W]~
       which help Cats find proper empty log value.
       For instance,
       #+begin_src scala
-        import cats.instances.vector._    // for Monoid
-        import cats.syntax.applicative._  // for pure
+        import cats.instances.vector.given    // for Monoid
+        import cats.syntax.applicative.given  // for pure
 
         type Logged[A] = Writer[Vector[String], A]
 
@@ -3449,13 +3478,13 @@
       #+end_src
 
     - Similary, you may have a log and no result.
-      You can create a ~Writer[Unit]~ using ~tell~ syntax from
+      You can create a ~Writer[T, Unit]~ using ~tell~ syntax from
       ~cats.syntax.writer~:
       #+begin_src scala
         import cats.syntax.writer._  // for tell
 
         Vector("msg1", "msg2", "msg3").tell
-        // res3: cats.data.Writer[scala.collection.immutable.Vector[String],Unit] = WriterT((Vector(msg1, msg2, msg3),()))
+        // res3: cats.data.Writer[Vector[String], Unit] = WriterT((Vector(msg1, msg2, msg3), ()))
       #+end_src
 
     - If we have both a log and a result,
@@ -3463,16 +3492,17 @@
       * ~Writer.apply~
         #+begin_src scala
           val a = Writer(Vector("msg1", "msg2", "msg3"), 123)
-          // a: cats.data.WriterT[cats.Id.scala.collection.immutable.Vector[String],Int] =
-          //    WriterT((Vector(msg1, msg2, msg3),123))
+          // a: cats.data.WriterT[cats.Id, Vector[String], Int] =
+          //    WriterT((Vector(msg1, msg2, msg3), 123))
         #+end_src
         OR
       * the ~writer~ sytnax from ~cats.syntax.writer~:
         #+begin_src scala
-          import cats.syntax.writer._  // for writer
-
+          import cats.syntax.writer.given  // for writer
+          
           val b = 123.writer(Vector("msg1", "msg2", "msg3"))
-          // b: cats.data.WriterT[cats.Id.scala.collection.immutable.Vector[String],Int] = WriterT((Vector(msg1, msg2, msg3),123))
+          // b: cats.data.WriterT[cats.Id, Vector[String], Int] =
+          //   WriterT((Vector(msg1, msg2, msg3), 123))
         #+end_src
 
     - Extract result or log:
@@ -3487,12 +3517,12 @@
     - We can extract both values at the same time:
       #+begin_src scala
         val (log, result) = b.run
-        // log: scala.collection.immutable.Vector[String] = Vector(msg1, msg2, msg3)
+        // log: Vector[String] = Vector(msg1, msg2, msg3)
         // result: Int = 123
       #+end_src
 
 *** DONE 4.7.2 Composing and Transforming Writers - 110
-    CLOSED: [2019-04-14 Sun 01:49]
+    CLOSED: [2021-08-07 Sat 03:48]
     As a /moand/, ~Writer~ can be preserved when applying ~map~ or ~flatMap~
     over it.
 
@@ -3506,19 +3536,21 @@
           _ <- Vector("a", "b", "c").tell
           b <- 32.writer(Vector("x", "y", "z"))
         } yield a + b
-        // writer1: cats.data.WriterT[cats.Id,Vector[String],Int] = WriterT((Vector(a, b, c, x, y, z),42))
-
+        // writer1: cats.data.WriterT[cats.Id, Vector[String], Int] =
+        //   WriterT((Vector(a, b, c, x, y, z),42))
+        
         writer1.run
-        // res4: cats.Id[(Vector[String], Int)] = (Vector(a, b, c, x, y, z) ,42)
+        // res3: cats.Id[(Vector[String], Int)] = (Vector(a, b, c, x, y, z), 42)
       #+end_src
 
     - Transform the log in a /writer/:
       #+begin_src scala
         val writer2 = writer1.mapWritten(_.map(_.toUpperCase))
-        // writer2: cats.data.WriterT[cats.Id,scala.collection.immutable.Vector[String],Int] = WriterT((Vector(A, B, C, X, Y, Z),42))
-
+        // writer2: cats.data.WriterT[cats.Id, Vector[String], Int] =
+        //   WriterT((Vector(A, B, C, X, Y, Z), 42))
+        
         writer2.run
-        // res5: cats.Id[(scala.collection.immutable.Vector[String], Int)] = (Vector(A, B, C, X, Y, Z),42)
+        // res5: cats.Id[(Vector[String], Int)] = (Vector(A, B, C, X, Y, Z), 42)
       #+end_src
 
     - Transform both log and result simultaneously using
@@ -3527,24 +3559,22 @@
           log => log.map(_.toUpperCase),
           res => res * 100
         )
-        // writer3: cats.data.WriterT[cats.Id,scala.collection.immutable.Vector[String],Int] =
-        //   WriterT((Vector(A, B, C, X, Y, Z),4200))
+        // writer3: cats.data.WriterT[cats.Id, Vector[String], Int] =
+        //   WriterT((Vector(A, B, C, X, Y, Z), 4200))
 
         writer3.run
-        // res6: cats.Id[(scala.collection.immutable.Vector[String], Int)] =
-        //   (Vector(A, B, C, X, Y, Z),4200)
+        // res5: cats.Id[(Vector[String], Int)] = (Vector(A, B, C, X, Y, Z), 4200)
 
         val writer4 = writer1.mapBoth { (log, res) =>
           val log2 = log.map(_ + "!")
           val res2 = res * 1000
           (log2, res2)
         }
-        // writer4: cats.data.WriterT[cats.Id,scala.collection.immutable.Vector[String],Int] =
-        //   WriterT((Vector(a!, b!, c!, x!, y!, z!),4200))
+        // writer4: cats.data.WriterT[cats.Id, Vector[String], Int] =
+        //   WriterT((Vector(a!, b!, c!, x!, y!, z!), 4200))
 
         writer4.run
-        // res7: cats.Id[(scala.collection.immutable.Vector[String], Int)] =
-        //   (Vector(A, B, C, X, Y, Z),4200)
+        // res6: cats.Id[(Vector[String], Int)] = (Vector(A, B, C, X, Y, Z), 4200)
       #+end_src
       * ~bimap~, which accept two function parameters for log and result respectively.
       * ~mapBoth~, which accept single function parameter that accept two parameters.
@@ -3553,44 +3583,50 @@
       Swap log and result with ~swap~.
       #+begin_src scala
         val writer5 = writer1.reset
-        // writer5: cats.data.WriterT[cats.Id,Vector[String],Int] = WriterT((Vector(),42))
+        // writer5: cats.data.WriterT[cats.Id, Vector[String], Int] = WriterT((Vector(), 42))
 
         writer5.run
-        // res8: cats.Id[(Vector[String], Int)] = (Vector(),42)
+        // res7: cats.Id[(Vector[String], Int)] = (Vector(), 42)
 
         val writer6 = writer1.swap
-        // writer6: cats.data.WriterT[cats.Id,Int,Vector[String]] = WriterT((42,Vector(a, b, c, x, y, z)))
+        // writer6: cats.data.WriterT[cats.Id, Int, Vector[String]] = WriterT((42, Vector(a, b, c, x, y, z)))
 
         writer6.run
-        // res9: cats.Id[(Int, Vector[String])] = (42,Vector(a, b, c, x, y, z))
+        // res9: cats.Id[(Int, Vector[String])] = (42, Vector(a, b, c, x, y, z))
       #+end_src
 
 *** DONE 4.7.3 Exercise: Show Your Working - 112
-    CLOSED: [2019-04-14 Sun 02:04]
+    CLOSED: [2021-08-07 Sat 04:52]
     =from Jian= Can we make it look better???
+                Can the ~match~ part be simplified???
     #+begin_src scala
+      import cats.data.Writer
+      import cats.instance.vector.given
+      import cats.syntax.applicative.given
+      
       def slowly[A](body: => A) =
         try body finally Thread.sleep(100)
-
-      type IntWriter = Writer[Vector[String], Int]
-
-      def factorial(n: Int): IntWriter =
+      
+      type Logged[A] = Writer[Vector[String], A]
+      
+      def factorial(n: Int): Logged[Int] =
         for {
           ans <- n match {
-            case 0 => 1.pure[IntWriter]
+            case 0 => 1.pure[Logged]
             case _ => slowly(factorial(n - 1).map(_ * n))
           }
-
+      
           _ <- Vector(s"fact $n $ans").tell
         } yield ans
     #+end_src
 
-** TODO 4.8 The ~Reader~ Monad - 114
+** DONE 4.8 The ~Reader~ Monad - 114
+   CLOSED: [2021-08-07 Sat 05:26]
    ~cats.data.Reader~ is a /monad/ that allows us to *sequence operations that
    depend on some input*.
 
    - Instances of ~Reader~
-     * *wrap up* functions of _ONE argument_,
+     * *wrap up* functions of _ONE_ argument,
      * providing us with useful methods for *composing* them.
 
    - *One common use for ~Reader~'s is /dependency injection/.*
@@ -3600,17 +3636,17 @@
        configuration_, we can
        + _chain_ them together using a ~Reader~ to produce one large operation
          that
-         accepts the configuration _as a parameter_
+         _accepts_ the configuration _as a parameter_
          and
-         runs our program _in the order specified_.
+         _runs_ our program _in the order specified_.
 
 *** DONE 4.8.1 Creating and Unpacking Readers - 114
-    CLOSED: [2019-04-16 Tue 17:12]
+    CLOSED: [2021-08-07 Sat 04:58]
     1. Create a ~Reader[A, B]~ from a function ~A => B~ using the ~Reader.apply~.
       #+begin_src scala
         import cats.data.Reader
 
-        case class Cat(name: String, favoriteFood: String)
+        final case class Cat(name: String, favoriteFood: String)
 
         val catName: Reader[Cat, String] =
           Reader(_.name)
@@ -3624,17 +3660,17 @@
          // res0: cats.Id[String] = Garfield
        #+end_src
 
-    3. TODO What advantage do ~Reader~'s give us over the raw functions???
+    3. _QUESTION:_ What advantage do ~Reader~'s give us over the raw functions???
 
 *** DONE 4.8.2 Composing Readers - 114
-    CLOSED: [2019-04-16 Tue 17:12]
+    CLOSED: [2021-08-07 Sat 05:01]
     The power of ~Reader~'s comes from their ~map~ and ~flatMap~ /methods/, which
     represent _DIFFERENT kinds of *function composition*._
       We typically create a set of ~Reader~'s that accept the *SAME type* of
     configuration, combine them with ~map~ and ~flatMap~, and then call ~run~ to
-    /inject/ the config at the end.
+    *inject* the _config_ at the end.
 
-    - ~map~ extends the computation in the ~Reader~ by passing its result through
+    - ~map~ *extends the computation* in the ~Reader~ by passing its result through
       a function:
       #+begin_src scala
         val greetKitty: Reader[Cat, String] =
@@ -3644,7 +3680,7 @@
         // res1: cats.Id[String] = Hello Heathcliff
       #+end_src
 
-    - ~flatMap~ combine /readers/ that depend on the _SAME input type_.
+    - ~flatMap~ *combine* /readers/ that depend on the _SAME input type_.
       #+begin_src scala
         val feedKitty: Reader[Cat, String] =
           Reader(cat => s"Have a nice bowl of ${cat.favoriteFood}")
@@ -3663,7 +3699,7 @@
       #+end_src
 
 *** DONE 4.8.3 Exercise: Hacking on Readers - 115
-    CLOSED: [2019-04-17 Wed 15:06]
+    CLOSED: [2021-08-07 Sat 05:22]
     The classic use of ~Reader~'s is to build programs that accept a configuration
     as a parameter.
 
@@ -3691,27 +3727,29 @@
         #+end_src
 
       * Create ~checkLogin~ /method/ to check the password for a given user ID.
-        =from Jian= This code does not have good look!!!!!
+        =from Jian= This code does not have a good look!!!!!
         #+begin_src scala
           def checkLogin(usedId: Int, password: String): DbReader[Boolean] =
             for {
-              oUsername <- findUsername(userId)
-              oPassword = username.map(un => checkPassword(un, passowrd))
-              passwordOk <- oPassword.getOrElse(false.pure[DbReader])
+              username <- findUsername(userId)
+              canLogin = username.map(un => checkPassword(un, passowrd))
+              passwordOk <- canLogin.getOrElse(false.pure[DbReader])
             } yield passwordOk
         #+end_src
 
 *** DONE 4.8.4 When to Use Readers? - 117
-    CLOSED: [2019-04-17 Wed 15:22]
+    CLOSED: [2021-08-07 Sat 05:26]
     - ~Reader~'s provide a tool for doing /dependency injection/.
       1. Write steps of our program as /instances/ of ~Reader~
       2. Chain them together with ~map~ and ~flatMap~
       3. Build a function that accepts the /dependency/ as input.
 
-    - There are many ways of implementing /dependency injection/ in Scala, from
-      _SIMPLE TECHNIQUES like /methods/ with multiple parameter lists_, through
-      _/implicit parameters/ and /type classes/,_ to _COMPLEX TECHNIQUES like
-      the /cake pattern/ and /DI frameworks/._
+    - There are many ways of implementing /dependency injection/ in Scala,
+      * from _SIMPLE TECHNIQUES_ like
+        /methods/ with multiple parameter lists,
+      * through _/implicit parameters/ and /type classes/,_
+      * to _COMPLEX TECHNIQUES_ like =TODO=
+        the /cake pattern/ and /DI frameworks/. =TODO= =TODO=
 
     - ~Reader~'s are most useful in situations where:
       * we are constructing a batch program that can EASILY be *represented by a
@@ -3732,24 +3770,29 @@
       where a program _isn't easily represented as a pure function_, TODO =EXAMPLE???=
       _other /dependency injection/ techniques tend to be more appropriate_.
 
-    - *Kleisli Arraows*
+    - *Kleisli Arrows*
       You may have noticed from console output that ~Reader~ is implemented
       in terms of another type called ~Kleisli~.
 
       * /Kleisli arrows/ provide a _more general form_ of ~Reader~ that _generalise
         over the type constructor of the result type_.
 
-      * TODO We will encounter ~Kleislis~ again in Chapter 5.
+      * =TODO= We will encounter ~Kleislis~ again in Chapter 5.
+        =TODO=
+        =TODO=
+        =IMPORTANT=
+        =IMPORTANT=
+        =IMPORTANT=
 
-** TODO 4.9 The ~State~ Monad - 118
+** TODO 4.9 The ~State~ Monad - 118 - =START READING=
    ~cats.data.State~ allows us to
    pass additional /state/ around as part of a computation.
    =from Jian= /state/ as /computation context/.
 
    - We define ~State~ /instances/ representing /atomic state/ operations and
      thread them together using ~map~ and ~flatMap~.
-       In this way *we can model /mutable state/ in a purely functional way,
-     without using mutation.*
+       In this way we can *MODEL /mutable state/ in a purely functional way,
+     WITHOUT using mutation.*
 
 *** DONE 4.9.1 Creating and Unpacking State - 118
     CLOSED: [2020-02-20 Thu 11:52]
