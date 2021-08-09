@@ -2244,7 +2244,8 @@
      TODO
      We will revisit them to discuss the ~Semigroupal~ /type class/ later in Chapter 6.
 
-* TODO 4 Monads - 75 - =READING=
+* DONE 4 Monads - 75
+  CLOSED: [2021-08-07 Sat 19:16]
   - INFORMALLY,
     a /monad/ is anything with a /computational context/ and a ~flatMap~
     /method/, which can "flatten" same /computational contexts/.
@@ -3784,18 +3785,19 @@
         =IMPORTANT=
         =IMPORTANT=
 
-** TODO 4.9 The ~State~ Monad - 118 - =START READING=
+** DONE 4.9 The ~State~ Monad - 118 - =RE-DO Exercise=
+   CLOSED: [2021-08-07 Sat 14:42]
    ~cats.data.State~ allows us to
    pass additional /state/ around as part of a computation.
    =from Jian= /state/ as /computation context/.
 
-   - We define ~State~ /instances/ representing /atomic state/ operations and
+   - We define ~State~ /instances/ representing atomic _state operations_ and
      thread them together using ~map~ and ~flatMap~.
        In this way we can *MODEL /mutable state/ in a purely functional way,
      WITHOUT using mutation.*
 
 *** DONE 4.9.1 Creating and Unpacking State - 118
-    CLOSED: [2020-02-20 Thu 11:52]
+    CLOSED: [2021-08-07 Sat 12:46]
     The instance of /state monad/ ~State[S, A]~ represent functions of type
     ~S => (S, A)~, where ~S~ is the /type/ of the /state/ and ~A~ is the /type/
     of the result.
@@ -3820,7 +3822,6 @@
       * ~runS~
       * ~runA~
       they return different combinations of /state/ and /result/.
-      =TODO= =???= =???= =???= =TODO=
         _Each_ /method/ returns an /instance/ of ~Eval~, which ~State~ uses to
       maintain /stack safety/.
 
@@ -3841,7 +3842,7 @@
       #+end_src
 
 *** DONE 4.9.2 Composing and Transforming State - 119
-    CLOSED: [2020-02-20 Thu 12:59]
+    CLOSED: [2021-08-07 Sat 13:16]
     As we've seen with ~Reader~ and ~Writer~, the power of the ~State~ /monad/
     comes from *combining* /instances/.
 
@@ -3855,26 +3856,26 @@
           val ans = num + 1
           (ans, s"Result of step1: $ans")
         }
-        // step1: cats.data.State[Int,String] = cats.data.IndexedStateT@7c6e31c4
+        // step1: cats.data.State[Int, String] = cats.data.IndexedStateT@7c6e31c4
 
         val step2 = State[Int, String] { num =>
           val ans = num * 2
           (ans, s"Result of step2: $ans")
         }
-        // step2: cats.data.State[Int,String] = cats.data.IndexedStateT@7428b330
+        // step2: cats.data.State[Int, String] = cats.data.IndexedStateT@7428b330
 
         val both = for {
           a <- step1
           b <- step2
         } yield (a, b)
-        // both: cats.data.IndexedStateT[cats.Eval,Int,Int,(String, String)] = cats.data.IndexedStateT@716401f3
+        // both: cats.data.IndexedStateT[cats.Eval, Int, Int, (String, String)] = cats.data.IndexedStateT@716401f3
 
         val (state, result) = both.run(20).value
         // state: Int = 42
-        // result: (String, String) = (Result of step1: 21,Result of step2: 42)
+        // result: (String, String) = (Result of step1: 21, Result of step2: 42)
       #+end_src
 
-    - The general model for using the State monad is to represent each step of a
+    - The general model for using the ~State~ monad is to represent each step of a
       computation as an instance and compose the steps using the _standard monad
       operators_.
         Cats provides several convenience constructors for creating primitive
@@ -3885,34 +3886,34 @@
           // getDemo: cats.data.State[Int, Int] = cats.data.IndexedStateT@4df6ba6a
 
           getDemo.run(10).value
-          // res3: (Int, Int) = (10, 10)
+          // res1: (Int, Int) = (10, 10)
         #+end_src
 
       * ~set~ updates the state and returns unit as the result;
         #+begin_src scala
-          val setDemo = State.get[Int](30)
+          val setDemo = State.set[Int](30)
           // setDemo: cats.data.State[Int, Unit] = cats.data.IndexedStateT@4620d0ef
 
           setDemo.run(10).value
-          // res4: (Int, Unit) = (30, ())
+          // res2: (Int, Unit) = (30, ())
         #+end_src
 
       * ~pure~ ignores the state and returns a supplied result;
         #+begin_src scala
           val pureDemo = State.pure[Int, String]("Result")
-          // pureDemo: cats.data.State[Int,String] = cats.data.IndexedStateT@988d7b2
+          // pureDemo: cats.data.State[Int, String] = cats.data.IndexedStateT@988d7b2
 
           pureDemo.run(10).value
-          // res5: (Int, String) = (10,Result)
+          // res3: (Int, String) = (10, Result)
         #+end_src
 
       * ~inspect~ extracts the state via a transformation function;
         #+begin_src scala
-          val inspectDemo = State.pure[Int, String](_ + "!")
-          // inspectDemo: cats.data.State[Int,String] = cats.data.IndexedStateT@13734a20
+          val inspectDemo = State.inspect[Int, String](_ + "!")
+          // inspectDemo: cats.data.State[Int, String] = cats.data.IndexedStateT@13734a20
 
           inspectDemo.run(10).value
-          // res6: (Int, String) = (10,10!)
+          // res6: (Int, String) = (10, 10!)
         #+end_src
 
       * ~modify~ updates the state using an update function.
@@ -3921,12 +3922,12 @@
           // modifyDemo: cats.data.State[Int,Unit] = cats.data.IndexedStateT@79493b6e
 
           modifyDemo.run(10).value
-          // res7: (Int, Unit) = (10,())
+          // res7: (Int, Unit) = (11, ())
         #+end_src
 
     - Use /comprehension/:
       #+begin_src scala
-        import State._
+        import State.*
 
         val program: State[Int, (Int, Int, Int)] = for {
           a <- get[Int]
@@ -3939,16 +3940,109 @@
 
         val (state, result) = program.run(1).value
         // state: Int = 3
-        // result: (Int, Int, Int) = (1,2,3000)
+        // result: (Int, Int, Int) = (1, 2, 3000)
+      #+end_src
+      * =from Jian=
+        after applying ~run(1)~ on this state:
+        #+begin_src scala
+          for {
+            a <- get[Int]            // (1, 1)
+            _ <- set[Int](a + 1)     // (2, ())
+            b <- get[Int]            // (2, 2)
+            _ <- modify[Int](_ + 1)  // (3, ())
+            c <- inspect[Int, Int](_ * 1000)  // (3, 3000)
+          } yield (a, b, c)  // (1, 2, 3000)
+        #+end_src
+
+*** TODO 4.9.3 Exercise: Post-Order Calculator - 121 - =RE-READ=
+    - =from Jian=
+      In Scala 3, improve the signature of ~evalOne~ by replacing input type with
+      ~Int | String~:
+      #+begin_src scala
+        import cats.data.State
+        
+        type CalcState[A] = Sate[List[Int], A]
+        
+        def evalOne(sym: Int | String): CalcState[Int] = ???
       #+end_src
 
-*** DONE 4.9.3 Exercise: Post-Order Calculator - 121 - =TODO= =RE-READ=
-    CLOSED: [2020-02-20 Thu 14:20]
+** DONE 4.10 Defining Custom Monads - 125 - =RE-DO Exercise=
+   CLOSED: [2021-08-07 Sat 15:17]
+   - To define a custom /monad/, three methods must be implemented:
+     * ~flatMap~
+     * ~pure~
+     * ~tailRecM~
+       + =TODO= =READ= Paper written by Phil Freeman - 2015
 
-** TODO 4.10 Defining Custom Monads - 125
-   - =TODO=
+   - Implementation of ~Monad~ for ~Option~ as an example:
+     #+begin_src scala
+       import cats.Monad
+       import scala.annotation.tailrec
+       
+       val optionMonad = new Monad[Option] {
+         def flatMap[A, B](opt: Option[A])
+                          (fn: A => Option[B]): Option[B] =
+           opt.flatMap(fn)
+       
+         def pure[A](opt: A): Option[A] =
+           Some(opt)
+       
+         @tailrec
+         def tailRecM[A, B](a: A)
+                           (fn: A => Option[Either[A, B]]): Option[B] =
+           fn(a) match {
+             case None           => None
+             case Some(Left(a1)) => tailRecM(a1)(fn)
+             case Some(Right(b)) => Some(b)
+           }
+       }
+     #+end_src
 
-*** TODO 4.10.1 Exercise: Branching out Further with Monads - 127
+   - To motivate its use
+     let's use the following example:
+     * Suppose we want to write a method that calls a function until the function
+       indicates it should stop.
+       + The function will return a /monad instance/
+         BECAUSE, as we know,
+         - /monads/ represent sequencing and
+         - MANY /monads/ have some notion of stopping
+     
+     * Naive solution:
+       #+begin_src scala
+         import cats.syntax.flatMap.given
+         
+         def retry[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+           f(start).flatMap { a =>
+             retry(a)(f)
+           }
+       #+end_src
+       + Retry a large number, and you can see ~StackOverflowError~.
+       
+     * The stack-safe solution:
+       #+begin_src scala
+         import cats.syntax.functor.given  // for `map`
+         
+         // Version 1: use `tailRecM` explicitly
+         def retryTailRecM[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+           Monad[F].tailRecM(start) { a =>
+             f(a).map(a2 => Left(a2))
+           }
+         
+         retryTailRecM(100000)(a => Option.when(a != 0)(a - 1))
+         // res2: Option[Int] = None
+         
+         
+         // Version 2: use another provided combinator
+         import cats.syntax.monad.given  // for `iteratewhileM`
+         
+         def retryM[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+           start.iterateWhileM(f)(a => true)
+         
+         retryM(100000)(a => Option.when(a != 0)(a - 1))
+         // res3: Option[Int] = None
+       #+end_src
+       
+*** TODO 4.10.1 Exercise: Branching out Further with Monads - 127 - =TODO=
     #+begin_src scala
       enum Tree[+A] {
         case Branch(left: Tree[A], right: Tree[A])
@@ -3978,20 +4072,27 @@
       }
     #+end_src
 
-** TODO 4.11 Summary - 128
+    =TODO=
+    Tail recursion version of ~tailRecM~.
+    Read solution and read related paper!
+    
+** DONE 4.11 Summary - 128
+   CLOSED: [2021-08-07 Sat 19:16]
    In this chapter we've seen monads up-close.
-   - We saw that ~flatMap~ can be viewed as an operator for sequencing computations,
-     dictating the order in which operations must happen. From this viewpoint,
-     * ~Option~ represents a computation that can fail without an error message,
-     * ~Either~ represents computation that can fail with a message,
-     * ~List~ represents multiple POSSIBLE results,
-     * ~Future~ represents a computation that may produce a value at some point
-       in the future.
+   - We saw that ~flatMap~ can be viewed as an operator for *sequencing*
+     computations, dictating the order in which operations must happen.
+     * From this viewpoint,
+       + ~Option~ represents a computation that can fail without an error message,
+       + ~Either~ represents computation that can fail with a message,
+       + ~List~ represents multiple POSSIBLE results,
+       + ~Future~ represents a computation that may produce a value at some point
+                   in the future.
 
    - =from Jian=
-     CAUTION: Use the data type mentioned above as monad only when the *monad
-     laws* are satisfied!!! For instance, ~Future~'s are often used with side
-     effects, and are actually _not always_ /monad/.
+     *CAUTION*:
+     Use the data type mentioned above as monad only when the *monad
+     laws* are satisfied!!! For instance, ~Future~'s are often used with /side
+     effects/, and they actually _don't ALWAYS_ obey /monad laws/.
 
    - Learn some of the custom types and data structures that Cats provides, including
      * ~Id~
@@ -3999,7 +4100,7 @@
      * ~Writer~
      * ~State~
 
-   - Finally, in the unlikely event that we have to implement a custom monad,
+   - Finally, in the *UNLIKELY* event that we have to implement a _custom /monad/,_
      we've learned about defining our own instance using ~tailRecM~.
      * ~tailRecM~ is an odd wrinkle that is a concession to building a functional
        programming library that is stack-safe by default.
@@ -4009,22 +4110,21 @@
        + _BUT_ having it around gives us benefits of which we can be grateful when
          writing monadic code.
 
-* TODO 5 Monad Transformers - 129
+* DONE 5 Monad Transformers - 129
+  CLOSED: [2021-08-08 Sun 00:53]
   /Monads/ can potentially bloat the code base through nested
   for-comprehensions.
 
   - Example:
     #+begin_src scala
       def lookupUserName(id: Long): Either[Error, Option[String]] =
-        for (optUser <- lookupUser(id))
-        yield {
-          for (user <- optUser)
-          yield user.name
-        }
+        for {
+          optUser <- lookupUser(id)
+        } yield for { user <- optUser } yield user.name
     #+end_src
 
 ** DONE 5.1 Exercise: Composing Monads - 130
-   CLOSED: [2020-02-15 Sat 20:23]
+   CLOSED: [2021-08-07 Sat 19:43]
    - Q :: Do /monads/ compose???
    - A :: Generally speaking, No! It is easy to show this:
      #+begin_src scala
@@ -4055,7 +4155,7 @@
        For example, if ~M2~ is ~Option~, we can implement ~flatMap~ as:
        #+begin_src scala
          def flatMap[A, B](fa: Composed[A])
-                          (f: A => Composed[B]): Composed[B] =
+                          (f: A => Composed[B]}: Composed[B] =
            fa.flatMap(_.fold(None.pure[M1])(f))
        #+end_src
        This is the idea behind /monad transformers/ -- =from Jian= extra info is
@@ -4065,9 +4165,9 @@
      knowledge we need to compose that monad with others.
 
 ** DONE 5.2 A Transformative Example - 131
-   CLOSED: [2020-02-15 Sat 22:28]
+   CLOSED: [2021-08-07 Sat 19:52]
    - Cats /monad transformer/ naming convetion:
-     Inner monad name suffixed with T. For example, ~OptionT~ and ~EitherT~.
+     _Inner monad_ name SUFFIXED with _T_. For example, ~OptionT~ and ~EitherT~.
 
    - We often alias a composed monad.
      For example, alias ~OptionT[List, A]~ to ~ListOption[A]~.
@@ -4112,10 +4212,10 @@
 
      2. In order to generate our ~Applicative[ListOption]~ we need _instances of
         ~Applicative~ for ~List~ and ~OptionT~._
-        + ~OptionT~ is a Cats data type so its instance is provided by its
+        * ~OptionT~ is a Cats data type so its instance is provided by its
           /companion object/.
 
-        + The instance for ~List~ comes from ~cats.instances.list~
+        * The instance for ~List~ comes from ~cats.instances.list~
 
      3. We're not importing ~cats.syntax.functor~ or ~cats.syntax.flatMap~.
         This is because ~OptionT~ is a _CONCRETE_ data type with its own explicit
@@ -4125,8 +4225,8 @@
      universal Cats import, ~cats.implicits~.
 
 ** DONE 5.3 Monad Transformers in Cats - 132
-   CLOSED: [2020-02-16 Sun 01:21]
-   Each /monad transformer/ is a data type, defined in ~cats.data~, that allows
+   CLOSED: [2021-08-07 Sat 23:19]
+   Each /monad transformer/ is a /data type/, defined in ~cats.data~, that allows
    us to _WRAP stacks of /monads/ TO produce NEW /monads/._
 
    - The main concepts we have to cover to understand /monad transformers/:
@@ -4136,7 +4236,7 @@
      * how to PULL APART a stack to ACCESS the wrapped /monads/.
 
 *** DONE 5.3.1 The Monad Transformer Classes - 133
-    CLOSED: [2020-02-15 Sat 23:48]
+    CLOSED: [2021-08-07 Sat 19:56]
     - In fact, MANY /monads/ in Cats are defined by *combining*
       * a /monad transformer/
         with
@@ -4161,8 +4261,14 @@
         ~Kleisli~'s on the console.
 
 *** DONE 5.3.2 Building Monad Stacks - 133
-    CLOSED: [2020-02-16 Sun 00:35]
-    - Many /monads/ and all transformers have AT LEAST _two_ /type parameters/,
+    CLOSED: [2021-08-07 Sat 21:18]
+    - All of these /monad transformers/ follow the SAME _CONVENTION_:
+      * The /transformer/ itself represents the /inner monad/ in a stack,
+      * while the _first_ /type parameter/ specifies the /outer monad/.
+      * The _remaining_ /type parameters/ are the types we've used to form the
+        corresponding /monads/.
+
+    - Many /monads/ and all /transformers/ have AT LEAST _two_ /type parameters/,
       so we often have to _define /type aliases/ for intermediate stages_.
 
     - Example:
@@ -4170,8 +4276,8 @@
       ~Either~. We need to use ~Either~ as the FIRST /type parameter/ of ~OptionT~.
       _However, ~Either~ itself has *TWO* /type parameters/ and /monads/ ONLY have
       one._
-        We *need* (=from Jian= and *must use*) a /type alias/ to convert the
-      type constructor to the correct shape:
+        We *need* a /type alias/ to convert the /type constructor/ to the
+      correct shape:
       #+begin_src scala
         // Alias `Either` to a type constructor with one parameter:
         type ErrorOf[A] = Either[String, A]
@@ -4179,32 +4285,11 @@
         // Build our final monad stack using `OptionT`:
         type ErrorOrOption[A] = OptionT[ErrorOr, A]
       #+end_src
-      * =from Jian=
-        We can't define the NEW /monad/ as ~OptionT[Either[String, _], A]~
-        + Q :: Can Scala support syntax like this without any ambiguity???
-        + A :: =Jian's Guess=:
-               I'm not sure, even suppose the compiler understand the ~_~
-               syntax, I guess the compiler won't allow this because it can't
-               know ~String~ here is a part of the context -- for the compiler,
-               it may thing both ~String~ and ~A~ are /type parameters/.
-
-      * Usage:
+      * In Scala 3, we can use the syntax:
         #+begin_src scala
-          import cats.instances.either._  // for Monad
-
-          val a = 10.pure[ErrorOrOption]
-          // a: ErrorOrOption[Int] = OptionT(Right(Some(10)))
-
-          val b = 32.pure[ErrorOrOption]
-          // a: ErrorOrOption[Int] = OptionT(Right(Some(32)))
-
-          // val c = a.flatMap(x => b.map(y => x)
-          for {
-            x <- a
-            y <- b
-          } yield x + y
-          // c: cats.data.OptionT[ErrorOr,Int] = OptionT(Right(Some(42)))
+          type ErrorOrOption[A] = OptionT[Either[String, _], A]
         #+end_src
+        ~Either[String, _]~ is a shorthand for ~[X] =>> Either[String, X]~
 
     - Things become even more confusing when we want to stack three or more /monads/.
       For example, let's create a ~Future~ of an ~Either~ of ~Option~.
@@ -4220,30 +4305,36 @@
           - ~F[_]~ is the _outer monad_ in the stack (~Either~ is the inner);
           - ~E~ is the _error type_ for the ~Either~.
           - ~A~ is the _result type_ for the ~Either~.
-          -
+          - 
 
       * Definition and usage:
         #+begin_src scala
           import scala.concurrent.Future
           import cats.data.{EitherT, OptionT}
-
-          type FutureEither[A] = EitherT[Future, String, A]
-          type FutureEitherOption[A] = OptionT[FutureEither, A]
-
-          import cats.instances.future._  // for Monad
+          
+          type FutureEitherOption[A] = OptionT[EitherT[Future, String, _], A]
+          
+          import cats.instances.future.given  // for Monad
           import scala.concurrent.Await
           import scala.concurrent.ExecutionContext.Implicits.global
-          import scala.concurrent.duration._
-
+          import scala.concurrent.duration.given
+          
           val futureEitherOr: FutureEitherOption[Int] =
             for {
               a <- 10.pure[FutureEitherOption]
               b <- 32.pure[FutureEitherOption]
             } yield a + b
+          
+          println(Await.result(futureEitherOr.value.value, 2.seconds))
         #+end_src
+        + =from Jian=
+          I add the last ~println~ statement.
+          If not, the import statements for ~Await~ and ~duration.given~ are not
+          used.
+          =FIXME= =Report to the author=
 
     - *Kind Projector*
-      /Kind projector/ is a compiler plugin that *enhances* Scala's type syntax
+      /Kind projector/ is a _compiler plugin_ that *enhances* Scala's type syntax
       to _make it EASIER to define_ /partially applied type constructors/.
       * For example,
         #+begin_src scala
@@ -4260,7 +4351,7 @@
         definitions _needed to keep our code readable_.
 
 *** DONE 5.3.3 Constructing and Unpacking Instances - 136
-    CLOSED: [2020-02-16 Sun 00:52]
+    CLOSED: [2021-08-07 Sat 23:07]
     - Use the ~apply~ method or ~pure~ method to create _transformed monad stacks
       instances_:
       * Use ~apply~
@@ -4276,7 +4367,7 @@
         #+end_src
 
     - Use the ~value~ /method/ to unpack, and
-      each ~value~ can upack one level:
+      _EACH_ ~value~ can *upack* _one_ level:
       #+begin_src scala
         // Extracting the untransformed monad stack:
         errorStack1.value
@@ -4302,92 +4393,145 @@
       #+end_src
 
 *** DONE 5.3.4 Default Instances - 137
-    CLOSED: [2020-02-16 Sun 00:57]
+    CLOSED: [2021-08-07 Sat 23:09]
     - Some of the Cats monads defined by /monad transformers/:
       #+begin_src scala
         type Reader[E, A] = ReaderT[Id, E, A]  // = Kleisli[Id, E, A]
         type Writer[W, A] = WriterT[Id, W, A]
         type State[S, A] = StateT[Id, S, A]
       #+end_src
+      This is reassuring as
+      it confirms that the APIs for /monads/ and /transformers/ are *identical*.
 
-    - In other cases, /monad transformers/ are defined separately to their
-      _corresponding_ /monads/, and the /methods/ of the transformer *tend to
-      MIRROR the /methods/ on the /monad/.* For example,
+    - In other cases, /monad transformers/ are defined _SEPARATELY_ to their
+      _corresponding_ /monads/, and the /methods/ of the /transformer/
+      *tend to MIRROR the /methods/ on the /monad/.* For example,
       * ~OptionT~ defines ~getOrElse~
       * ~EitherT~ defines ~fold~, ~bimap~, ~swap~, and other useful /methods/.
 
 *** DONE 5.3.5 Usage Patterns - 138
-    CLOSED: [2020-02-16 Sun 01:21]
-    The system with /monad transformers/ need to be well designed.
-    _Without careful thought_, developers of code based on this system may
-    end up having to unpack and repack /monads/ in different configurations to
-    operate on them in differnt contexts.
+    CLOSED: [2021-08-07 Sat 23:18]
+    The system with /monad transformers/ need to *be well designed*.
+    
+    - _Without careful thought_, developers of code based on this system may
+      end up having to *unpack* and *repack* /monads/ in different configurations
+      to operate on them in differnt contexts.
 
-    - Unfortunately, there aren't one-size-fits-all approaches to working with
-      /monad transformers/. The two common approaches:
+    - UNFORTUNATELY,
+      _there aren't one-size-fits-all approaches to working with /monad
+      transformers/._
+      The TWO common approaches:
       1. For *small* OR/AND *homogenous* code bases,
          we can define a single "super stack", and stick ot it throughout our
          code base.
-         =from Jian= Even in large and heterogeneous code base, we may find some
-         "super stacks", though most of the stacks are not of this kind.
+         * Example in page 138
 
       2. For *large* AND/OR *heterogeneous* code bases,
          we often identify and make local /monad transformers/, use them in
          local, and untansform them before passing them on through _module
          boundaries_.
-
-    - Example code: 138 and 139
+         * Example in page 139
 
     - The approache 2 is more universal, but it also need more consideration and
       trade off.
-        Try to experiment more and gather feedback from colleagures to determine
-      whether monad transformers are a good fit.
+      =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      * Try to experiment more and gather feedback from colleagures
+        to determine whether /monad transformers/ are a good fit.
 
 ** DONE 5.4 Exercise: Monads: Transform and Roll Out - 140
-   CLOSED: [2020-02-16 Sun 01:55]
+   CLOSED: [2021-08-08 Sun 00:50]
+   #+begin_src scala
+     import cats.data.EitherT
+     import cats.instances.future._ // for Monad
+     
+     import scala.concurrent.ExecutionContext
+     import scala.concurrent.ExecutionContext.Implicits.global
+     import scala.concurrent.Future
+     
+     type Response[A] = EitherT[Future, String, A]
+     
+     val powerLevels = Map(
+       "Jazz" -> 6,
+       "Bumblebee" -> 8,
+       "Hot Rod" -> 10
+     )
+     
+     def getPowerLevel(ally: String)(using ExecutionContext): Response[Int] =
+       powerLevels.get(ally) match {
+         case Some(avg) => EitherT.right(Future(avg))
+         case None      => EitherT.left(Future(s"$ally unreachable"))
+       }
+     
+     def canSpecialMove(ally1: String, ally2: String)(using ExecutionContext): Response[Boolean] =
+       for {
+         power1 <- getPowerLevel(ally1)
+         power2 <- getPowerLevel(ally2)
+       } yield (power1 + power2) > 15
+     
+     def tacticalReport(ally1: String, ally2: String)(using ExecutionContext): String = {
+       val stack = canSpecialMove(ally1, ally2).map {
+         if _
+         then s"$ally1 and $ally2 are ready to roll out!"
+         else s"$ally1 and $ally2 need a recharge."
+       }.value
+     
+       Await.result(stack, 1.second) match {
+         case Left(msg)  => s"Comms error: $msg"
+         case Right(msg) => msg
+       }
+     }
+   #+end_src
    
 ** DONE 5.5 Summary - 141
-   CLOSED: [2020-02-16 Sun 01:36]
-   In this chapter we *introduced* /monad transformers/, which *eliminate* the
-   need for /NESTED for comprehensions/ and /pattern matching/ when working with
-   "stacks" of _NESTED monads_.
+   CLOSED: [2021-08-08 Sun 00:53]
+   - In this chapter we *introduced* /monad transformers/, which *eliminate* the
+     need for /NESTED for comprehensions/ and /pattern matching/ when working
+     with "stacks" of _NESTED monads_.
+     
+   - The type signature of /monad transformers/ are written *from the inside out*.
 
-* DONE 6 ~Semigroupal~ and ~Applicative~ - 143
-  CLOSED: [2020-02-21 Fri 10:42]
-  - We'll explore certain types of program flow that they cannot represent.
-    * For example, _form validation_:
-      When we validate a form we want to return all the errors to the user, *not
-      stop* on the first error we encounter.
-        _If we model this with a /monad/ like ~Either~, we fail fast and lose
-      errors. This is because one depends on the previous one._
+* TODO 6 ~Semigroupal~ and ~Applicative~ - 143 - =START READING=
+  We'll explore certain types of program flow that /functors/ and /monads/
+  cannot represent.
+  - For example, _form validation_:
+    When we validate a form
+    we want to return *ALL* the errors to the user,
+    *not stop on the first* error we encounter.
+      _If we model this with a /monad/ like ~Either~, we fail fast and lose
+    errors._
 
-  - We need a weaker construct -- one that does _NOT guarantee_ sequencing -- to
+  - ~map~ and ~flatMap~ can't exploit the independent of one another.
+    We need a weaker construct -- one that doesn't guarantee sequencing -- to
     achieve the result we want.
-      In this chapter we will look at TWO /type classes/ that support this
+      In this chapter we will look at *three* /type classes/ that support this
     pattern:
     * ~Semigroupal~ encompasses the notion of *composing pairs of contexts*.
-
-      Cats provides a ~cats.syntax.apply~ module that makes use of ~Semigroupal~
+        Cats provides a ~cats.syntax.apply~ module that makes use of ~Semigroupal~
       and ~Functor~ to allow users to _sequence functions with multiple
       arguments_.
+      
+    * ~Parallel~ converts /types/ with _a ~Monad~ instance_ to _a RELATED /type/
+      with a ~Semigroupal~ instance._
 
     * ~Applicative~ extends ~Semigroupal~ and ~Functor~.
       It provides a way of _applying functions to parameters within a context_.
-      ~Applicative~ is the source of the ~pure~ /method/ we introduced in
-      Chapter 4.
+      + ~Applicative~ is the source of the ~pure~ /method/ we introduced
+        in Chapter 4.
 
   - ~Applicative~'s are often formulated in terms of function application, instead
     of the /semigroupal/ formulation that is _emphasised in Cats_.
       This alternative formulation provides a link to other libraries and languages
     such as Scalaz and Haskell.
-    TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-    We'll take a look at different formulations of ~Applicative~, as well as the
+    =TODO= =TODO= =TODO=
+    We'll take a look at DIFFERENT formulations of ~Applicative~, as well as the
     relationships between ~Semigroupal~, ~Functor~, ~Applicative~, and ~Monad~,
     towards the end of the chapter.
     =IMPORTANT=
 
 ** DONE 6.1 ~Semigroupal~ - 145
-   CLOSED: [2020-02-20 Thu 14:42]
+   CLOSED: [2021-08-09 Mon 00:56]
    ~cat.Semigroupal~ is a /type class/ that allows us to *combine contexts*:
    If we have two objects of type ~F[A]~ and ~F[B]~, a ~Semigroupal[F]~ allows
    us to combine them to form an ~F[(A, B)]~.
@@ -4401,18 +4545,17 @@
      * More freedom than ~Monad~:
        ~fa~ and ~fb~ are mutually independent, and we can compute them *in either
        order* before passing them to ~product~.
-
-       This is in contrast to ~flatMap~, which *imposes a strict order* on its
-       parameters.
+       + This is in contrast to ~flatMap~, which *imposes a strict order* on its
+         parameters.
 
 *** DONE 6.1.1 Joining Two Contexts - 145
-    CLOSED: [2020-02-20 Thu 14:40]
+    CLOSED: [2021-08-09 Mon 00:51]
     While ~Semigroup~ allows us to *join* /values/,
     ~Semigroupal~ allows us to *join* /contexts/.
     - For example,
       #+begin_src scala
         import cats.Semigroupal
-        import cats.instances.option._  // for Semigroupal
+        import cats.instances.option.given  // for Semigroupal
 
         Semigroupal[Option].product(Some(123), Some("abc"))
         // res0: Option[(Int, String)] = Some((123,abc))
@@ -4425,9 +4568,9 @@
       #+end_src
 
 *** DONE 6.1.2 Joining Three or More Contexts - 146
-    CLOSED: [2020-02-20 Thu 14:42]
-    The companion object for ~Semigroupal~ defines a set of methods on top of
-    ~product~.
+    CLOSED: [2021-08-09 Mon 00:55]
+    The /companion object/ for ~Semigroupal~ defines
+    a set of /methods/ *on top of ~product~.*
 
     - ~tuple2~ to ~tuple22~ generalise ~product~ to different arities:
       #+begin_src scala
@@ -4449,23 +4592,31 @@
         Semigroupal.map2(Option(1), Option.empty[Int])(_ + _)
         // res6: Option[Int] = None
       #+end_src
+      
+    - =from Jian=
+      =TODO= =IMPORTANT=
+      * Any improvement about this 2 ~ 22 in Scala 3???
+      * I can't see changes until Cats 2.6.1.
 
-    - There are also:
-      =TODO= NO detail in this book. Learn to use these methods!!!
+    - There are also: =TODO= =TODO= =TODO=
       * ~contramap2~ to ~contramap22~ for ~Contravariant~;
       * ~impa2~ to ~imap22~ for ~Invariant~.
 
 *** DONE 6.1.3 Semigroupal Laws - 146
+    CLOSED: [2021-08-09 Mon 00:56]
+    #+begin_src text
+      product(a, product(b, c)) == product(product(a, b), c)
+    #+end_src
     
 ** DONE 6.2 ~Apply~ Syntax - 147
-   CLOSED: [2020-02-20 Thu 14:47]
+   CLOSED: [2021-08-09 Mon 01:04]
    /Apply syntax/, ~cats.syntax.apply~, is a shorthand for the /methods/
    described above.
 
    - Import the syntax form ~cats.syntax.apply~.
      #+begin_src scala
-       import cats.instances.option._  // for Semigroupal
-       import cats.syntax.apply._      // for tupled and mapN
+       import cats.instances.option.given  // for `Semigroupal`
+       import cats.syntax.apply.given      // for `tupled` and `mapN`
      #+end_src
 
    - The ~tupled~ /method/ is implicitly added to the tuple of ~Option~'s.
@@ -4473,15 +4624,12 @@
      ~Option~'s, creating a single ~Option~ of a tuple:
      #+begin_src scala
        (Option(123), Option("abc")).tupled
-       // res7: Option[(Int, String)] = Some((123,abc))
-
-     #+end_src
-
-     This can be up to 22 values.
-     #+begin_src scala
+       // res8: Option[(Int, String)] = Some((123,abc))
+       
        (Option(123), Option("abc"), Option(true)).tupled
-       // res8: Option[(Int, String, Boolean)] = Some((123,abc,true))
+       // res9: Option[(Int, String, Boolean)] = Some((123,abc,true))
      #+end_src
+     This trick can be used on tuples of up to 22 values.
 
    - ~mapN~:
      #+begin_src scala
@@ -4492,30 +4640,30 @@
         Option("Orange & black")).mapN(Cat.apply)
        // res9: Option[Cat] = Some(Cat(Garfield,1978,Orange & black))
      #+end_src
-     * It's nice to see that this syntax is type checked!!!
+     * It's nice to see that this syntax is *type checked*!!!
        You must guarantee _RIGHT ARITY_, or there will be *compile time error*
        (_GOOOOOOD!!!_).
 
      * Internally ~mapN~ uses the ~Semigroupal~ to extract the values from the
        ~Option~ and the ~Functor~ to apply the values to the function.
 
+   - Of all the methods mentioned here, it is most common to use ~mapN~.
+     =IMPORTANT=
+     
 *** DONE 6.2.1 Fancy Functors and Apply Syntax - 148 - =TODO= =???=
     CLOSED: [2020-02-20 Thu 14:50]
     /Apply syntax/ also has ~contramapN~ and ~imapN~ /methods/ that accept
-    /Contravariant functors/ and /Invariant functors/.
+    /Contravariant functors/ and /Invariant functors/ (Section 3.6).
 
-    - WHY??????????????
-      =TODO= =IMPORTANT= =TODO=
-      Why do we combine ~Monoid~ with ~Invariant~, rather than others?
-
-    - For example, we can combine ~Monoid~'s using ~Invariant~:
+    - We can combine ~Monoid~'s using ~Invariant~.
+      Here's an example:
       #+begin_src scala
         import cats.Monoid
-        import cats.instances.int._ // for Monoid
-        import cats.instances.invariant._ // for Semigroupal
-        import cats.instances.list._ // for Monoid
-        import cats.instances.string._ // for Monoid
-        import cats.syntax.apply._ // for imapN
+        import cats.instances.int.given        // for `Monoid`
+        import cats.instances.invariant.given  // for `Semigroupal`
+        import cats.instances.list.given       // for `Monoid`
+        import cats.instances.string.given     // for `Monoid`
+        import cats.syntax.apply.given         // for `imapN`
 
         case class Cat(
           name: String,
@@ -4529,7 +4677,7 @@
         val catToTuple: Cat => (String, Int, List[String]) =
           cat => (cat.name, cat.yearOfBirth, cat.favoriteFoods)
 
-        implicit val catMonoid: Monoid[Cat] = (
+        given catMonoid: Monoid[Cat] = (
           Monoid[String],
           Monoid[Int],
           Monoid[List[String]]
@@ -4539,7 +4687,7 @@
       ~Monoid~ allows us to create "empty" ~Cat~'s, and add ~Cat~'s together
       using the /syntax/ from Chapter 2:
       #+begin_src scala
-        import cats.syntax.semigroup._ // for |+|
+        import cats.syntax.semigroup.given // for |+|
 
         val garfield = Cat("Garfield", 1978, List("Lasagne"))
         val heathcliff = Cat("Heathcliff", 1988, List("Junk Food"))
@@ -4623,7 +4771,7 @@
      Same reason as we see in the last section (~List~).
      =TODO= Explain later.
 
-*** DONE 6.3.1 Semigroupal Applied to Monads - 151
+*** DONE 6.3.1 ~Semigroupal~ Applied to Monads - 151
     CLOSED: [2020-02-20 Thu 15:29]
     The reason for the surprising results for ~List~ and ~Either~ is that they are
     both /monads/.
@@ -4769,8 +4917,7 @@
 ** DONE 6.6 Summary - 159
    CLOSED: [2020-02-21 Fri 10:42]
 
-* DONE 7 ~Foldable~ and ~Traverse~ - 161
-  CLOSED: [2020-02-22 Sat 00:56]
+* TODO 7 ~Foldable~ and ~Traverse~ - 161
   _TWO_ /type classes/ that capture *iteration over collecons*:
   - ~Foldable~ abstracts the familiar ~foldLeft~ and ~foldRight~ operations;
 
