@@ -5011,17 +5011,20 @@
    CLOSED: [2020-02-21 Fri 10:42]
 
 * TODO 7 ~Foldable~ and ~Traverse~ - 161
-  _TWO_ /type classes/ that capture *iteration over collecons*:
-  - ~Foldable~ abstracts the familiar ~foldLeft~ and ~foldRight~ operations;
+  - In this chapter we'll look at
+    _TWO_ /type classes/ that capture *iteration over collecons*:
+    * ~Foldable~ abstracts the familiar ~foldLeft~ and ~foldRight~ operations;
 
-  - ~Traverse~ is a higher-level abstraction that uses ~Applicative~'s to *iterate*
-    _with LESS pain than folding_. TODO
+    * ~Traverse~ is a higher-level abstraction that uses ~Applicative~'s to *iterate*
+    _with LESS pain than folding_. =TODO=
 
-  We'll start by looking at ~Foldable~, and then _examine cases where folding
-  becomes complex and ~Traverse~ becomes convenient._ TODO =IMPORTANT=
+  - We'll
+    1. start by looking at ~Foldable~, and
+    2. THEN _examine cases where folding becomes complex and ~Traverse~ becomes
+       convenient._ =TODO= =IMPORTANT=
 
 ** DONE 7.1 ~Foldable~ - 161
-   CLOSED: [2020-02-21 Fri 15:08]
+   CLOSED: [2021-08-12 Thu 13:57]
    - The ~Foldable~ /type class/ captures the ~foldLeft~ and ~foldRight~ /methods/
      we're used to in sequences like ~List~'s, ~Vector~'s, and ~Stream~'s.
 
@@ -5037,17 +5040,21 @@
      =TODO= =???=
 
 *** DONE 7.1.1 Folds and Folding - 162
-    CLOSED: [2020-02-21 Fri 10:52]
+    CLOSED: [2021-08-12 Thu 10:29]
+    - =TODO= =NOTE= for the folding operation in general.
+
     - Depending on the operation we're performing, the order in which we fold may
       be important. Thus there are _TWO_ standard variants of /fold/:
-      + ~foldLeft~ traverses from "left" to "right" (start to finish)
-      + ~foldRight~ traverses from "right" to "left" (finish to start)
+      * ~foldLeft~ traverses from "left" to "right" (start to finish)
+      * ~foldRight~ traverses from "right" to "left" (finish to start)
+
+    - Figure 7.1: Illustration of ~foldLeft~ and ~foldRight~
 
     - ~foldLeft~ and ~foldRight~ are equivalent if our binary operation is
       /associative/.
 
 *** DONE 7.1.2 Exercise: Reflecting on Folds - 163
-    CLOSED: [2020-02-21 Fri 10:52]
+    CLOSED: [2021-08-12 Thu 10:30]
     Try using ~foldLeft~ and ~foldRight~ with _empty lists_ as accumulator and
     ~::~ as the binary operator. See the result.
     #+begin_src scala
@@ -5065,7 +5072,7 @@
     #+end_src
 
 *** DONE 7.1.3 Exercise: Scaf-fold-ing Other Methods - 163
-    CLOSED: [2020-02-21 Fri 10:57]
+    CLOSED: [2021-08-12 Thu 10:35]
     Implement ~List~'s ~map~, ~flatMap~, ~filter~, and ~sum~ /methods/ in terms
     of ~foldRight~:
     #+begin_src scala
@@ -5084,35 +5091,31 @@
           if (p(e)) e :: acc else acc
         }
 
-      def sum[A](list: List[A])(implicit m: Monoid[A]): A =
+      def sum[A](list: List[A])(using m: Monoid[A]): A =
         list.foldRight(m.empty)(m.combine)
     #+end_src
 
 *** DONE 7.1.4 Foldable in Cats - 163
-    CLOSED: [2020-02-21 Fri 15:08]
+    CLOSED: [2021-08-12 Thu 13:56]
     Cats' ~Foldable~ abstracts ~foldLeft~ and ~foldRight~ into a /type class/.
     - Instances of ~Foldable~
       1. _define_ these TWO /methods/
-
       2. _inherit_ a host of /derived methods/.
 
-    - Cats provides out-of-the-box /instances/ of ~Foldable~ for a handful of
-      Scala data types: ~List~, ~Vector~, ~Stream~, and ~Option~.
+    - Cats provides _out-of-the-box_ /instances/ of ~Foldable~ for a handful of
+      /Scala data types/: ~List~, ~Vector~, ~LazyList~, and ~Option~.
 
     - ~List~ with ~Foldable~:
       #+begin_src scala
         import cats.Foldable
-        import cats.instance.list._  // for Foldable
+        import cats.instance.list.given  // for Foldable
 
         val ints = List(1, 2, 3)
 
         Foldable[List].foldLeft(ints, 0)(_ + _)
-        // res1: Int = 6
+        // res0: Int = 6
       #+end_src
-
-    - =from Jian=
-      Suggestion to this book:
-      Replace ~Stream~ (Deprecated) with ~LazyList~.
+      * Other sequences like ~Vector~ and ~LazyList~ work in the same way.
 
     - ~Option~ with ~Foldable~:
       #+begin_src scala
@@ -5122,60 +5125,76 @@
         val maybeInt = Option(123)
 
         Foldable[Option].foldLeft(maybeInt, 10)(_ * _)
-        // res3: Int = 1230
+        // res1: Int = 1230
       #+end_src
 
-**** DONE 7.1.4.1 Folding Right - 168 - TODO =RE-READ=
-     CLOSED: [2020-02-21 Fri 14:36]
+**** DONE 7.1.4.1 Folding Right - 168 - =TODO= =Verification=
+     CLOSED: [2021-08-12 Thu 11:45]
      ~Foldable~ defines ~foldRight~ differently to ~foldLeft~, in terms of the
      ~Eval~ /monad/:
      #+begin_src scala
        def foldRight[A, B](fa: F[A], lb: Eval[B])
-                    (f: (A, Eval[B]) => Eval[B]): Eval[B]
+                          (f: (A, Eval[B]) => Eval[B]): Eval[B]
      #+end_src
+     =FIXME= code alignment in this book.
+
      The ~Eval~ /monad/ can promise /stack safe/,
 
-     - =from Jian= I think this sentence is *Misleading*!!!
-       EVEN WHEN the collection's default definition of ~foldRight~ is NOT.
-
-       =from Jian= Suggestion: delete!
-
      - Example:
-       =from Jian= Replace ~Stream~ with other data types. Might not be
-       ~LazyList~, I guess ~LazyList~ might have already done the right thing.
-       =from Jian= =IMPORTANT= TODO TODO
+       =TODO=
+       The old version use ~Stream~. The author said its built-in ~foldRight~
+       is not stack-safe.
+
+       The new version replace ~Stream~ wiht ~LazyList~, and still say its
+       built-in ~foldRight~ is not stack-safe.
+       =I doubt about this!!! Maybe the author simply replace the ~Stream~ with
+       ~LazyList~ without checking=
+       =Try directly will trigger GC exception first=
+       =Need to increase -Xmx or change GC, and re-try=
 
        #+begin_src scala
          import cats.Eval
          import cats.Foldable
          import cats.instance.stream._  // for Foldable
-
-         def bigData = (1 to 100000).toStream
-
+         
+         def bigData = (1 to 100000).to(LazyList)
+         
          bigData.foldRight(0L)(_ + _)
          // java.lang.StackOverflowError ...
+         // 
+         // from Jian: This number doesn't trigger StackOverflowError in my laptop
+         // from Jian: Raise 100000 to Int.MaxValue also can't trigger StackOverflowError
+         //            It triggers GC Exception first!
 
-
+         
+         // (1 to 100000).toStream.foldRight(0L)(_ + _)
+         // can trigger StackOverflowError in my laptop!!!
+         
+         
          val eval: Eval[Long] =
            Foldable[Stream].
              foldRight(bigData, Eval.now(0L)) { (num, eval) =>
                eval.map(_ + num)
              }
-
+         
          eval.value
-         // res7: Long = 5000050000
+         // res3: Long = 5000050000L
        #+end_src
+       =TODO= Read source code!!!
 
      - *Stack Safety in the Standard Library*
-       /Stack Safety/ is NOT typically an issue when using the standard library.
+       /Stack Safety/ is *NOT* typically an issue when using the standard
+       library.
+       * The most commonly used collection types, such as ~List~ and ~Vector~,
+         provide /stack safe/ implementations of ~foldRight~.
 
-       The most commonly used collection types, such as ~List~ and ~Vector~,
-       provide /stack safe/ implementations of ~foldRight~.
-
-       We use ~Stream~ here is just because ~Stream~ is an exception.
+       * We use ~Stream~ here is just because ~Stream~ is an exception.
+         =FIXME= the author didn't replace this with ~LazyList~, which enhance
+         my consideration about this not-stack-safety only exists in ~Stream~
+         =from Jian= Need verification!!!
 
 **** DONE 7.1.4.2 Folding with Monoids - 170
-     CLOSED: [2020-02-21 Fri 14:39]
+     CLOSED: [2021-08-12 Thu 13:52]
      - ~Foldable~ provides us with a host of useful /methods/ defined on top of
        ~foldLeft~. Many of these are facsimilies of familiar methods from the
        standard library:
@@ -5191,38 +5210,38 @@
        + ~combineAll~ (and its alias ~fold~) combines all elements in the sequence
          using their ~Monoid~;
          #+begin_src scala
-           import cats.instances.int._  // for Monoid
+           import cats.instances.int.given  // for Monoid
 
            Foldable[List].combineAll(List(1, 2, 3))
-           // res12: Int = 6
+           // res8: Int = 6
          #+end_src
 
        + ~foldMap~ maps a user-supplied function over the sequence and combines
          the results using a ~Monoid~.
          #+begin_src scala
-           import cats.instances.string._  // for Monoid
+           import cats.instances.string.given  // for Monoid
 
-           Foldable[List].combineAll(List(1, 2, 3))(_.toString)
-           // res12: Int = 123
+           Foldable[List].foldMap(List(1, 2, 3))(_.toString)
+           // res9: Int = 123
          #+end_src
 
      - Finally, we can compose ~Foldable~'s to support deep traversal of nested
-       sequences: TODO =IMPORTANT= details ??? TODO
+       sequences:
        #+begin_src scala
-         import cats.instance.vector._  // for Monoid
-
+         import cats.instances.int.given    // for Monoid
+         import cats.instance.vector.given  // for Monoid
+         
          val ints = List(Vector(1, 2, 3), Vector(4, 5, 6))
-
+         
          (Foldable[List] compose Foldable[Vector]).combineAll(ints)
-         // res15: Int = 21
+         // res10: Int = 21
        #+end_src
+       =FIXME= ~res11~ is not properly numbered if consider the context!
 
 **** DONE 7.1.4.3 Syntax for Foldable - 171
-     CLOSED: [2020-02-21 Fri 15:08]
-     With syntax imported, the first argument to the /static method/ becomes
-     the /receiver/ of the /method/ call:
+     CLOSED: [2021-08-12 Thu 13:56]
      #+begin_src scala
-       import cats.syntax.foldable._  // for combineAll and foldMap
+       import cats.syntax.foldable.given  // for `combineAll` and `foldMap`
 
        List(1, 2, 3).combineAll
        // res16: Int = 6
@@ -5236,21 +5255,19 @@
          For example,
          * Use the ~foldLeft~ defined on ~List~:
            #+begin_src scala
-             List(1, 2, 3).foldLeft(0)(_ + _)  // res18: Int = 6
+             List(1, 2, 3).foldLeft(0)(_ + _)  // res14: Int = 6
            #+end_src
 
          * The following generic code will use ~Foldbale~:
            #+begin_src scala
-             import scala.language.higherKinds
-
              def sum[F[_]: Foldable](values: F[Int]): Int =
                values.foldLeft(0)(_ + _)
-             // sum: [F[_]](values: F[Int])(implicit evidence$1: cats.Foldable[F])Int
            #+end_src
+           =FIXME= remove the empty lines in this code example.
 
-       + If we need a *stack-safe implementation* of ~foldRight~, using ~Eval~ as
-         the accumulator is enough to force the compiler to select the method
-         from Cats.
+       + If we need a *stack-safe implementation* of ~foldRight~,
+         using ~Eval~ as the /accumulator/ is enough to force the compiler to
+         *select* the method from Cats.
 
 ** DONE 7.2 ~Traverse~ - 168 - =TODO= 7.2.2 =RE-READ=
    CLOSED: [2020-02-22 Sat 00:56]
@@ -5261,12 +5278,12 @@
    iteration.
 
 *** DONE 7.2.1 Traversing with ~Future~'s - 168
-    CLOSED: [2020-02-21 Fri 15:17]
+    CLOSED: [2021-08-12 Thu 14:16]
     - Question:
       A list of server hostnames and method to poll a host for its uptime:
       #+begin_src scala
-        import scala.concurrent._
-        import scala.concurrent.duration._
+        import scala.concurrent.*
+        import scala.concurrent.duration.given
         import scala.concurrent.ExecutionContext.Implicits.global
 
         val hostnames = List(
@@ -5279,10 +5296,10 @@
           Future(hostname.length * 60)  // just for demonstration
       #+end_src
 
-    - We can't simply map over ~hostnames~ because the result -- a ~List[Future[Int]]~
-      -- would contain more than one ~Future~.
-        We need to reduce the results to a single ~Future~ to get something we can
-      block on. Let's start by doing this manually using a ~fold~:
+    - We *CAN'T* simply map over ~hostnames~ because the result --
+      a ~List[Future[Int]]~ -- would contain more than one ~Future~.
+        We need to reduce the results to a single ~Future~ to get something we
+      can block on. Let's start by doing this manually using a _fold_:
       #+begin_src scala
         val allUptimes: Future[List[Int]] =
           hostnames.foldLeft(Future(List.empty[Int])) { (accum, host) =>
@@ -5296,34 +5313,42 @@
         Await.result(allUptimes, 1.second)
         //res2: List[Int] = List(1020, 960, 840)
       #+end_src
+      Conceptually, this iteration is simple, but the code is fairly unwieldy
+      BECAUSE OF the need to _create and combine_ ~Future~'s *at EVERY iteration*.
 
-    - Expected when simplified:
-      #+begin_src scala
-        val allUptimes: Future[List[Int]] =
-          Future.traverse(hostname)(getUptime)
-
-        Await.result(allUptimes, 1.second)
-        // res3: List[Int] = List(1020, 960, 840)
-      #+end_src
-      * How does this implementated?
-        If we ignore distractions like ~CanBuildFrom~ and ~ExecutionContext~,
+      * Expected when simplified:
         #+begin_src scala
-          def traverse[A, B](values: List[A])
-                            (func: A => Future[B]): Future[List[B]] =
-            values.foldLeft(Future(List.empty[A])) { (accum, host) =>
-              val item = func(host)
-              for {
-                acc <- accum
-                e   <- item
-              } yield acc :+ e
-            }
+          val allUptimes: Future[List[Int]] =
+            Future.traverse(hostname)(getUptime)
+          
+          Await.result(allUptimes, 1.second)
+          // res3: List[Int] = List(1020, 960, 840)
         #+end_src
+        + Q :: How does this implementated?
+        + A :: If we ignore distractions like ~CanBuildFrom~ and ~ExecutionContext~,
+          #+begin_src scala
+            def traverse[A, B](values: List[A])
+                              (func: A => Future[B]): Future[List[B]] =
+              values.foldLeft(Future(List.empty[A])) { (accum, host) =>
+                val item = func(host)
+                for {
+                  acc <- accum
+                  e   <- item
+                } yield acc :+ e
+              }
+          #+end_src
 
-      * This is essentially the same as our example code above.
-        It gives us a clean high-level interface to do what we want:
-        + start with a ~List[A]~
-        + provide a function ~A => Future[B]~
-        + end up with a ~Future[List[B]]~
+        * This is essentially the same as our example code above.
+          - ~Future.traverse~ is *abstracting _AWAY_ the pain* of
+            _folding_ and _defining_ /accumulators/ and /combination functions/.
+            =IMPORTANT=
+            =IMPORTANT=
+            =IMPORTANT=
+
+          - It gives us a clean high-level interface to do what we want:
+            * start with a ~List[A]~
+            * provide a function ~A => Future[B]~
+            * end up with a ~Future[List[B]]~
 
     - There is also a ~Future.sequence~ method defined as
       #+begin_src scala
@@ -5341,25 +5366,30 @@
       ~Future.traverse~ and ~Future.sequence~ work with *any* standard Scala
       collection.
 
-    - Cats' ~Traverse~ /type class/ generalises these patterns to work with any
-      type of ~Applicative~: ~Future~, ~Option~, ~Validated~, and so on.
+    - =IMPORTANT=
+      Cats' ~Traverse~ /type class/ *generalises* these patterns to work with
+      *ANY type* of ~Applicative~:
+      ~Future~, ~Option~, ~Validated~, and so on.
 
     - We'll approach ~Traverse~ in the next sections in two steps:
-      1. We'll generalise over the ~Applicative~, then we'll generalise over the
-         /sequence type/.
+      1. We'll *generalise* over the ~Applicative~,
+         then we'll *generalise* over the /sequence type/.
 
-      2. We'll end up with an extremely valuable tool that trivialises many
+      2. We'll _end up_ with an extremely valuable tool that trivialises many
          operations involving sequences and other data types.
+         =TODO= =TODO= =TODO= =TODO= =TODO=
+         =TODO= =TODO= =TODO= =TODO= =TODO=
+         =TODO= =TODO= =TODO= =TODO= =TODO=
 
-*** DONE 7.2.2 Traversing with ~Applicative~'s - 171 - =TODO=
-    CLOSED: [2020-02-21 Fri 15:51]
+*** DONE 7.2.2 Traversing with ~Applicative~'s - 171 - =TODO= - =READING=
+    CLOSED: [2021-08-12 Thu 14:26]
     - We'll see that we can _rewrite_ ~traverse~ in terms of an ~Applicative~.
-      Our accumulator from the example above:
+      Our /accumulator/ from the example above:
       ~Future(List.empty[Int])~ is equivalent to ~Applicative.pure~:
       #+begin_src scala
         import cats.Applicative
-        import cats.instances.future._    // for Applicative
-        import cats.syntax.applicative._  // for pure
+        import cats.instances.future.given    // for Applicative
+        import cats.syntax.applicative.given  // for pure
 
         List.empty[Int].pure[Future]
 
@@ -5376,7 +5406,7 @@
       #+end_src
       is now equivalent to ~Semigroupal.combine~:
       #+begin_src scala
-        import cats.syntax.apply._ // for mapN
+        import cats.syntax.apply.given // for mapN
 
         // Combining accumulator and hostname using an Applicative:
         def newCombine(accum: Future[List[Int]],
@@ -5384,11 +5414,9 @@
           (accum, getUptime(host)).mapN(_ :+ _)
       #+end_src
 
-    - By substituting these snippets back into the definition of ~traverse~ we can
-      generalise it to to work with any ~Applicative~:
+    - By substituting these snippets back into the definition of ~traverse~ we
+      can generalise it to to work with any ~Applicative~:
       #+begin_src scala
-        import scala.language.higherKinds
-
         def listTraverse[F[_]: Applicative, A, B](list: List[A])
                                                  (func: A => F[B]): F[List[B]] =
           list.foldLeft(List.empty[B].pure[F]) { (accum, item) =>
@@ -5406,9 +5434,9 @@
         #+end_src
 
 **** DONE 7.2.2.1 Exercise: Traversing with ~Vector~'s - 177
-     CLOSED: [2019-07-14 Sun 13:58]
+     CLOSED: [2021-08-12 Thu 14:25]
      #+begin_src scala
-       import cats.instances.vector._  // for Applicative
+       import cats.instances.vector.given  // for Applicative
 
        listSequence(List(Vector(1, 2), Vector(3, 4)))
      #+end_src
@@ -5416,17 +5444,17 @@
        ~Vector(List(1, 3), List(1, 4), List(2, 3), List(2, 4))~
 
 **** DONE 7.2.2.2 Exercise: Traversing with ~Option~'s - 177
-     CLOSED: [2020-02-21 Fri 15:48]
+     CLOSED: [2021-08-12 Thu 14:26]
      #+begin_src scala
-       import cats.instances.option._  // for Applicative
+       import cats.instances.option.given  // for Applicative
 
        def process(inputs: List[Int]) =
-         listTraverse(inputs)(n => if (n % 2 == 0) Some(n) else None)
+         listTraverse(inputs)(Option.when(n % 2 == 0)(n))
      #+end_src
-     - What is the _return type_ of this method?
-       ~Option[List[Int]]~
+     - Q :: What is the _return type_ of this method?
+     - A :: ~Option[List[Int]]~
 
-     - What does it produce for the following inputs?
+     - Q :: What does it produce for the following inputs?
        #+begin_src scala
          process(List(2, 4, 6))
          // Some(List(2, 4, 6))
@@ -5436,13 +5464,13 @@
        #+end_src
 
 **** DONE 7.2.2.3 Exercise: Traversing with ~Validated~ - 177 - =TODO= - =WHY=
-     CLOSED: [2020-02-21 Fri 15:51]
+     CLOSED: [2021-08-12 Thu 14:26]
      #+begin_src scala
        import cats.data.Validated
-       import cats.instances.list._ // for Monoid
-
+       import cats.instances.list.given  // for Monoid
+       
        type ErrorsOr[A] = Validated[List[String], A]
-
+       
        def process(inputs: List[Int]): ErrorsOr[List[Int]] =
          listTraverse(inputs) { n =>
            n % 2 match {
@@ -5450,6 +5478,12 @@
              case _ => Validated.invalid(List(s"$n is not even"))
            }
          }
+       
+       process(List(2, 4, 6))
+       // res17: ErrorsOr[List[Int]] = Valid(List(2, 4, 6))
+       
+       process(List(1, 2, 3))
+       // res18: ErrorsOr[List[Int]] = Invalid(List("1 is not even", "3 is not even"))
      #+end_src
 
 *** DONE 7.2.3 ~Traverse~ in Cats - 174
