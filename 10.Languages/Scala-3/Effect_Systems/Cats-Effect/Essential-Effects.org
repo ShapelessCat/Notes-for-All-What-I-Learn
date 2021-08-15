@@ -5,17 +5,29 @@
 #+STARTUP: entitiespretty
 
 * DONE Preface - 7
-  CLOSED: [2021-07-17 Sat 03:09]
+  CLOSED: [2021-08-13 Fri 03:04]
 ** DONE Acknowledgements - 7
-   CLOSED: [2021-07-17 Sat 02:31]
+   CLOSED: [2021-08-13 Fri 03:04]
 ** DONE About this book - 7
-   CLOSED: [2021-07-17 Sat 02:31]
+   CLOSED: [2021-08-13 Fri 03:03]
+   - /Cats Effect/ is a library that makes it easy to write code that effectively
+     * uses multiple cores and
+     * doesn't leak resources.
+
+   - This book aims to
+     introduce the _core concepts_ in /Cats Effect/,
+     giving you the knowledge you need to go further with the library in your
+     own applications.
+
    - This book is *NOT* a detailed dive into every aspect of /Cats Effect/.
+     Our aim is to
+     1. give you the understanding you need so you can rapidly apply it,
+     2. while setting you up to learn any additional details on your own if needed.
 
    - Essential Effects will teach you to:
      * *Understand* the MEANING and ROLE of /side effects/ and /effects/.
      * *Understand* how to *encapsulate* /side effects/ in _a SAFER form._
-     * Use ~parMapN~ and other /combinators/ to _run effects in parallel._
+     * Use ~parMapN~ and other /combinators/ to _run /effects/ in parallel._
      * *Fork* independent work *into* /concurrent tasks/,
        then *cancel* or *join* them.
      * Learn how to *SEPARATE* /CPU-bound work/ from /blocking, I/O-bound work/.
@@ -28,27 +40,32 @@
      like /parallelism/, /concurrency/, and so on.
        However, rather than programming with an _abstract effect type_ that uses
      /typeclass constraints/ -- a perfectly valid programming technique! -- this
-     book uses the concrete ~cats.effect.IO~ type as the main vehicle to discuss
-     and demonstrate programming with effects
+     book uses the concrete ~cats.effect.IO~ type as the main vehicle to _discuss
+     and demonstrate_ programming with /effects/.
 
    - *A functional programming curriculum*
      
 ** DONE Cats Effect versions - 9
-   CLOSED: [2021-07-17 Sat 02:39]
-   CE2 - 2.2.0
-   CE3
+   CLOSED: [2021-08-13 Fri 02:44]
+   CE2 - 2.2.0 (=from Jian= The latest is 2.5.3)
+   CE3 (=from Jian= The latest is 3.2.2)
    
 ** DONE Source code for examples and exercises - 10
-   CLOSED: [2021-07-17 Sat 02:39]
+   CLOSED: [2021-08-13 Fri 02:49]
+   https://github.com/inner-product/essential-effects-code
+
+   - Solutions are in a branch of this repo, along with being presented both in
+     the text and in an appendix. 
+     
 ** DONE Prerequisites - 10
-   CLOSED: [2021-07-17 Sat 03:09]
-*** DONE Functors - 10
+   CLOSED: [2021-08-13 Fri 03:03]
+*** DONE Functors - 10 - =RE-READ=
     CLOSED: [2021-07-17 Sat 03:08]
-    - I don't know this before here:
+    - =from Jian= I don't know this before here:
       #+begin_src scala
         import cats.implicits._
         
-        val fa: F[A] = ???
+        val fa: F[A] = ???  // `F` here has a functor instance.
         
         val replaced: F[String] = fa.map(_ => "replacement")
         // Re-write
@@ -60,8 +77,8 @@
         val voided: F[Unit] = fa.void
       #+end_src
       
-*** DONE Applicatives - 11
-    CLOSED: [2021-07-17 Sat 03:08]
+*** DONE Applicatives - 11 - =RE-READ=
+    CLOSED: [2021-08-13 Fri 03:02]
     - ~map~ and ~mapN~
       #+begin_src scala
         def map[B](A => B): F[B]
@@ -71,7 +88,11 @@
         def mapN[Z]((A, ...) => Z): F[Z]
       #+end_src
 
-    - I don't know this before here:
+    - In /Essential Effects/
+      we will use /applicative methods/ to *compose*
+      _MULTIPLE_, _INDEPENDENT_ /effects/, such as during /parallel computation/.
+
+    - =from Jian= I don't know this before here:
       #+begin_src scala
         import cats.implicits._
         
@@ -84,10 +105,10 @@
       #+end_src
       
 *** DONE Monads - 12
-    CLOSED: [2021-07-17 Sat 03:09]
+    CLOSED: [2021-08-13 Fri 03:03]
    
 * DONE 1. Effects: evaluation and execution - 14
-  CLOSED: [2021-07-16 Fri 18:52]
+  CLOSED: [2021-08-15 Sun 00:56]
   - To explore what /effects/ are, and how we can leverage them,
     * We'll distinguish _TWO aspects of code_:
       + *computing values*
@@ -97,7 +118,7 @@
       describing these aspects, and what we as programmers can do about it.
 
 ** DONE 1.1. The substitution model of evaluation - 14
-   CLOSED: [2021-07-15 Thu 20:54]
+   CLOSED: [2021-08-14 Sat 16:24]
    Use two examples to show the difference between *computing values* and
    *interacting with the environment*. The latter doesn't is not /referential
    transparent/, and _simple /substitution/ doesn't work_.
@@ -107,39 +128,90 @@
        No need to look anywhere except the (literal) definition of ~plusOne~.
        There are no references to anything outside of it.
        + =from Jian=
-         /Local reasoning/ is good, but it is not very useful if there is no
-         /referential transparency/ inside it.
+         /Local reasoning/ is good,
+         BUT it is not always simple if there is no /referential transparency/
+         inside it.
 
      * referential transparency ::
-       Under /substitution/, programs mean the same result if they evaluate to the
-       same value.
+       Under /substitution/, programs mean the same result
+       if they evaluate to the same value.
        + =from Jian=
          It doesn't matter when and where the evaluation happen.
+
+   - Here are a few you might have thought of:
+     1. When printing to the console.
+     2. When reading values from the outside world.
+     3. When expressions refer to mutable variables.
    
 ** DONE 1.2. Dealing with side effects - 16
-   CLOSED: [2021-07-15 Thu 23:44]
-   - /Localization/ is a nice trick,
+   CLOSED: [2021-08-14 Sat 16:38]
+   We really need /side effects/ to actually do something in our programs,
+   BUT /side effects/ are unsafe.
+   - Q :: How to maintain the ability to reason about code that includes impure
+          code?
+
+   - A :: One way is to *localize* the “impure” code that BREAKS /substitution/.
+     * To the outside world,
+       + The code will look -- and evaluate -- _AS IF_ /substitution/ is taking
+          place.
+       + But inside the boundary, there are dragons.
+
+     * Example of localizing the _impure code_:
+       #+begin_src scala
+         def sum(ints: List[Int]): Int = {
+           var sum = 0
+           ints.foreach(i => sum += i)
+           sum
+         }
+       
+         sum(List(1, 2, 3))
+       #+end_src
+       + From the callers' point of view, /subsititution/ _is maintained_.
+
+       + Within the _impure code_,
+         1. we can't leverage the reasoning that /substitution/ gives us,
+         2. so
+            to prove to ourselves the code behaved
+            we'd have to use other techniques that are outside the scope of this
+            book.
+
+   - CONCLUSION:
+     /Localization/ is a nice trick,
      BUT _WON'T WORK for everything that breaks /substitution/._
-     
-** DONE 1.3. The Effect Pattern - 17 - =TODO= =NOTE=
-   CLOSED: [2021-07-16 Fri 01:30]
-   - If we impose some conditions,
-     we can tame the /side effects/ into something safer;
-     we'll call these /effects/. There are _TWO parts:_
+     * Q :: Is there a better (more universal) way?
+
+** DONE 1.3. The Effect Pattern - 17 - =NOTE=
+   CLOSED: [2021-08-14 Sat 18:48]
+   - Effects :: some conditions that ifi they are imposed, the /side effects/ can
+                be tamed into something safer. There are _TWO parts:_
      1. The /type/ of the program _SHOULD tell us_
         *what kind of /effects/ the program will perform,
         in addition to the /type/ of the value it will produce.*
+        * Given the impure code a /type/, and make it visible!
+        * At the same time, continue to track the /type/ of the result of the
+          computation. 
 
      2. If the behavior we want relies upon some _EXTERNALLY-VISIBLE_ /side effect/,
-        we *separate* describing the effects we want to happen *from* actually
-        making them happen. THEN we can FREELY *substitute* the _description of
-        effects_ *until* the point we run them.
+        we
+        *separate* describing the /effects/ we want to happen
+        *from* actually making them happen.
+          THEN we can FREELY *substitute* the _description of effects_ *until*
+        the point we run them.
+        * This idea is exactly the _SAME_ as the /localization/ idea,
+          *EXCEPT* that
+          + _instead of_
+            performing the side effect at the innermost layer of code
+            and
+            hiding it from the outer layers,
+          + we _delay_ the /side effect/ so it executes *OUTSIDE of ANY evaluation,*
+            ensuring /substitution/ still holds within.
 
-   - We'll call these conditions the *Effect Pattern*, and apply it
+   - We'll call these described above conditions the *Effect Pattern*, and apply it
      * to studying and describing the /effects/ we use every day, and
      * to new kinds of /effects/.
 
-   - *Effect Pattern Checklist*
+   - =IMPORTANT=
+     *Effect Pattern Checklist*
      1. Does the /type/ of the program tell us
         a. _what kind of_ /effects/ the program will perform; and
         b. _what type of_ /value/ it will produce?
@@ -148,20 +220,22 @@
         is the _effect description_ *separate from* the _execution_?
         =FIXME= separate ==> separated
 
+   - =from Jian=
+     You should always use this checklist to identify and confirm /effects/.
+     
 *** TODO 1.3.1. Example: Is ~Option~ an effect? - 18
     - *Effect Pattern Checklist:* ~Option[A]~
       =TODO=
       =TODO= =NOTE= =QUESITON= =???= =RE-READ= the second item of the checklist!!!
       =TODO=
       
-*** DONE 1.3.2. Example: Is ~Future~ an effect? - 20
-    CLOSED: [2021-07-16 Fri 01:30]
+*** TODO 1.3.2. Example: Is ~Future~ an effect? - 20
     - *Effect Pattern Checklist:* ~Future[A]~
       =TODO= =NOTE=
    
 ** DONE 1.4. Capturing arbitrary side effects as an effect - 23
-   CLOSED: [2021-07-16 Fri 01:41]
-   - The ~IO~ /effect/ type in ~cats.effect~ is a data type that allows us to
+   CLOSED: [2021-08-14 Sat 18:54]
+   - The ~IO~ /effect/ type in ~cats.effect~ is a /data type/ that allows us to
      *capture* ANY /side effect/, but *in a SAFE way*, following our /Effect Pattern/.
 
    - Let's implement our own (toy) version (mental model) of ~IO~ to understand
@@ -170,7 +244,8 @@
        #+begin_src scala
          package com.innerproduct.ee.effects
          
-         case class MyIO[A](unsafeRun:() => A)
+         final case class MyIO[A](unsafeRun:() => A)
+         
          object MyIO {
            def putStr(s: => String): MyIO[Unit] =
              MyIO(() => println(s))
@@ -179,17 +254,20 @@
          object Printing extends App {
            val hello = MyIO.putStr("hello!")
          
-           hello.unsafeRun()
+           hello.unsafeRun()  // Explicitly run the effect
          }
        #+end_src
-       Try to do evaluation by substitution, and you can see the code above
+       The ~unsafeRun~ name is selected to let everyone know this function
+       *does NOT maintain /substitution/.*
+       
+     * Try to do evaluation by /substitution/, and you can see the code above
        equals to the ~println("hello!")~.
-
+       
 ** DONE 1.5. Composing effects - 25
-   CLOSED: [2021-07-16 Fri 18:52]
-   Add /combinators/ like ~map~ (modify the output of an effect) and ~flatMap~
-   (use the output of an effect to create a new effect) to ~MyIO~.
-     *But be careful!* Composing effects *must not execute* them.
+   CLOSED: [2021-08-15 Sun 00:08]
+   Add /combinators/ like ~map~ (modify the output of an /effect/) and ~flatMap~
+   (use the output of an /effect/ to create a new /effect/) to ~MyIO~.
+     *But be careful!* Composing /effects/ *MUST NOT* _execute_ them.
    We require composition to *maintain substitution*, so we may _build /effects/
    out of other /effects/._
    #+begin_src scala
@@ -230,55 +308,129 @@
      =DONE=
      
 *** DONE 1.5.1. ~MyIO~ as an effect - 27
-    CLOSED: [2021-07-16 Fri 18:52]
+    CLOSED: [2021-08-14 Sat 23:54]
     - *Effect Pattern Checklist:* ~MyIO[A]~
 
     - *What's a "thunk"?*
+      * thunk :: a delayed computation
+        + The name is a pun on the past tense of "think",
+          so the value of the /thunk/ is available after the "thinking" of
+          the computation is complete.
+
+        + A /thunk/ may _optionally_ /memoize/ its result,
+          avoiding recomputation when subsequently evaluated.
+
+      * /Call-by-name parameters/ can't themselves be values,
+        + =from Jian=
+          My understanding is this means /call-by-name parameter syntax/ specifies
+          the way to evaluate a parameter, not a value itself.
+          _A /value/ is certain evaluation result._
+          
+        + =from Jian=
+          In another point of view,
+          The /call-by-name parameter syntax/ doesn't give us a full control:
+          we can't decide to evaluate it or not, it only promises that a
+          call-by-name parameter won't evaluate if we don't access it.
+          *This is _NOT_ enough!*
+
+        + We need to find a way to annotate /thunk values/. See below.
+        
+        so a /thunk/ can alternatively have the /type signature/ ~() => A~:
+        _a zero-argument function_ that produces a /value/ of type ~A~ when evaluated.
+        =FIXME=
+        the ~() => A~ above in the book uses the single character arrow.
      
+    - People do *NOT* always use the terminology *strictly*.
+      * Sometimes,
+        people call the ~MyIO~ a /thunk/,
+        SINCE you can use it to
+        + *produce* a _delayed computation_,
+        + rather than the more literal interpretation of it *having* a /thunk/.
+      
 ** DONE 1.6. Summary - 29
-   CLOSED: [2021-07-16 Fri 18:52]
-   =RE-READ=
-   
+   CLOSED: [2021-08-15 Sun 00:56]
+   1. The /substitution model of evaluation/ gives us
+      - /local reasoning/
+      - /fearless refactoring/.
+
+   2. *Interacting* with the /environment/ can *break* /substitution/.
+      _ONE SOLUTION_ is to *localize* these /side effects/ so they don’t affect
+      evaluation.
+
+   3. _ANOTHER SOLUTION_ is the /Effect Pattern/:
+      a set of conditions that makes the presence of /effects/ more _VISIBLE_
+      while ensuring /substitution/ is maintained.
+
+      - An /effect type/ tells us what kind of /effects/ the program will perform,
+        in addition to the /type/ of the value it will produce.
+
+      - /Effects/
+        *separate*
+        describing what we want to happen
+        *from*
+        actually making it happen.
+        * We can freely
+          *substitute* _the description of /effects/_ *up*
+          UNTIL the point we run them.
+
+      - =from Jian=
+        I think the /effect pattern/ is superior than the first solution.
+        Both of these solutions use the same fundamental idea, but the /effect pattern/
+        can expand the /local/ to a larger scale (until ~unsafeRun~ is called), and
+        /effect pattern/ introduce /effect types/ and /combinators/ systematically,
+        which can make the /effect pattern/ solution scalable and more elegant.
+
+   4. We demonstrated a way to *safely capture* /side effects/ via the ~MyIO[A]~ type,
+      which *delayed* the /side effect/ until the ~unsafeRun~ method is called.
+      - We produced new ~MyIO~ values with the ~map~ and ~flatMap~ /combinators/.
+      
 * DONE 2. Cats Effect ~IO~ - 31
-  CLOSED: [2021-07-17 Sat 01:48]
-  We already built our ~MyIO~ effect. We'll learn ~cats.effect.IO~, which as the
-  same properties.
-    We'll also show how to build applications using effects with ~cats.effect.IOApp~.
+  CLOSED: [2021-08-15 Sun 05:33]
+  We already built our ~MyIO~ /effect/. We'll learn ~cats.effect.IO~, which as
+  the SAME properties.
+    We'll also show how to *build applications* using /effects/ with
+  ~cats.effect.IOApp~.
   
 ** DONE 2.1. Constructing ~IO~ values - 31
-   CLOSED: [2021-07-16 Fri 19:59]
-   Use ~IO.delay~ to construct an ~IO~ effect. ~IO.apply~ is an alias of ~IO.delay~.
+   CLOSED: [2021-08-15 Sun 04:19]
+   Use ~IO.delay~ to construct an ~IO~ effect.
+   ~IO.apply~ is an alias of ~IO.delay~.
    #+begin_src scala
      def delay[A](a: => A): IO[A]
    #+end_src
 
-   - Q :: When the /effect/ is executed, what happens if the /side effect/
-          _throws an exception_?
+   - Q :: When the /effect/ is executed,
+          what happens if the /side effect/ _throws an exception_?
           For example, ~IO.delay(throw new RuntimeException("oh noes!"))~
 
    - A :: This can only happen when you running a /effect/.
      * =from Jian=
        If a /effect/ is constructed properly.
      
-   - Construct ~IO~ effect from a pure value less common, but it can be done:
-     ~IO.pure(12)~.
+   - Construct ~IO~ /effect/ from a pure value _LESS common_,
+     but it can be done: ~IO.pure(12)~.
 
-   - Do not perform any side effects when calling ~IO.pure~,
+   - Do *NOT* perform ANY /side effects/ when calling ~IO.pure~,
      * because
        1. they will _be eagerly evaluated_, and
        2. that will _break substitution_.
      
      * If you are not sure, use ~IO.delay~.
        =from Jian=
-       Or if you don't want this eagerly evaluation.
+       Or if you don't want this _eagerly evaluation_.
        
    - Lift an exception into ~IO~:
      ~IO.raiseError(new RuntimeException("oh noes!"))~
      * No ~throw~ here
 
-   - Since it is a common alternative /effect type/, =FIXME=
+   - Since it is a common alternative /effect type/,
+     =FIXME=
+     
      =DOES this mean ~Future~ is a common alternative /effect type/=
-     =I think there is a missing "of" after alternative=
+     
+     =I think there is a CRITICAL missing "of" after "alternative", since we
+     already discussed ~Future~ doesn't fulfill the /effect pattern/.=
+     
      there is a general way to *transform* ~scala.concurrent.Future~ values into
      ~IO~ values:
      #+begin_src scala
@@ -286,26 +438,38 @@
        
        val fut: IO[String] = IO.fromFuture(IO(futurish))
      #+end_src
+     In this way, we successfully convert ~Future[T]~ to ~IO[T]~.
      
 ** DONE 2.2. Transforming ~IO~ values - 32
-   CLOSED: [2021-07-16 Fri 20:23]
+   CLOSED: [2021-08-15 Sun 05:05]
    - ~IO~ is
      * a /functor/: ~IO(12).map(_ + 1)~
      * an /applicative/: ~(IO(12), IO("hi")).mapN((i, s) => s"$s: $i")~
-     * a /monad/: Use ~flatMap~ and ~for~-comprehension.
+     * a /monad/: Use ~flatMap~ and ~for~-comprehension:
+       #+begin_src scala
+         for {
+           i <- IO(12)
+           j <- IO(i + 1)
+         } yield j.toString
+       #+end_src
 
    - There are many other /combinators/ available.
-     =TODO=
+     =TODO= =TODO= =TODO=
      _Check the Appendix A, Cheatsheets_
    
-*** 2.2.1. Error handling - 33
+*** DONE 2.2.1. Error handling - 33 - =RE-READ=
+    CLOSED: [2021-08-15 Sun 05:05]
+    footnote 9:
+    The error handling methods mentioned here are defined in ~ApplicativeError~
+    and ~MonadError~ /type classes/ of the Cats library.
+
     - As we've seen, an ~IO~ computation can *fail*,
       * either by _throwing an exception_ during execution,
       * or by _capturing an existing exception_ via ~IO.raiseError~.
         
     - We can, however, detect these _failures_ and do something about it.
-      A common combinator for _error handling_ is ~handleErrorWith~, which has a
-      similar signature to ~flatMap~ *except* it accepts _error values_:
+      A common combinator for _error handling_ is ~handleErrorWith~,
+      which *has a SIMILAR /signature/ to ~flatMap~ EXCEPT it accepts _error values_:*
       #+begin_src scala
         def handleErrorWith[AA >: A](f: Throwable => IO[AA]): IO[AA]
       #+end_src
@@ -327,29 +491,38 @@
             ohNoes.handleErrorWith(t => IO.raiseError(new OtherException(t)))
           #+end_src
 
-        + If the transformation between errors are what you expect, you can
-          simplify the above code as ~ohNoes.adaptError(t => new OtherException(t))~
-          _This is equivalent to the above code!_
+        + If the _transformation between errors_ are what you expect,
+          you can simplify the above code as
+          ~ohNoes.adaptError(t => new OtherException(t))~
+          _This is equivalent to the above ~ohNoes.handleErrorWith(...)~ code!_
         
         + You can also transform an error to a ~Left~ value of ~Either~:
           ~def attempt: IO[Either[Throwable, A]]~
           #+begin_src scala
             ohNoes.attempt
           #+end_src
-          This expose the error, and delay it handling by lifting the error into
-          a successful ~IO~ effect.
-          - This is equivalent to
-            #+begin_src scala
-              ohNoes
-                .map(i => Right(i): Either[Throwable, Int])
-                .handleErrorWith(t => Left(t))
-            #+end_src
+
+    - _Instead of_ hiding the error-handling
+      we're now exposing the error,
+      BUT *delay* it handling by lifting the error into a successful ~IO~ effect.
+      - This is equivalent to
+        #+begin_src scala
+          val attempted: IO[Either[Throwable, Int]] =
+            ohNoes
+              .map(i => Right(i): Either[Throwable, Int])
+              .handleErrorWith(t => Left(t))
+
+          // is equivalent to
+          
+          val attempted: IO[Either[Throwable, Int]] =
+            ohNoes.attempt
+        #+end_src
 
     - *Error-handling Decision Tree*
       =IMPORTANT=
       =IMPORTANT=
       =IMPORTANT=
-      If an error occurs in your IO[A] do you want to...
+      If an error occurs in your ~IO[A]~ do you want to...
       1. *perform* an /effect/?
          Use ~onError(pf: PartialFunction[Throwable, IO[Unit]]): IO[A]~.
 
@@ -368,15 +541,16 @@
       6. *make errors visible* BUT *delay error-handling*?
          Use ~attempt: IO[Either[Throwable, A]]~.
 
-      Otherwise, use ~handleErrorWith(f: Throwable ⇒ IO[A]): IO[A]~.
+      Otherwise, use ~handleErrorWith(f: Throwable => IO[A]): IO[A]~.
+      =FIXME= The arrow
    
 ** DONE 2.3. Executing ~IO~ values - 35
-   CLOSED: [2021-07-17 Sat 01:30]
-   - We've *delayed* ANY /side effects/ by encapsulating them into an ~IO~ value.
-     When we're done composing our program we'll finally execute the /effects/.
-     * There are a number of /methods/ to *execute* them, and they *ALL* are
-       *prefixed with* ~unsafe~ to denote that /side effects/ will get executed
-       and that our substitution process no longer applies.
+   CLOSED: [2021-08-15 Sun 05:11]
+   We've *delayed* ANY /side effects/ by *encapsulating* them *into* an ~IO~ value.
+   When we're done *composing* our program we'll finally *execute* the /effects/.
+     There are a number of /methods/ to *execute* them, and they *ALL* are
+   *prefixed with* ~unsafe~ to denote that /side effects/ will get executed
+   and that our /substitution/ process *no longer applies*.
        
    - The most common ~unsafe~ method you'll encounter is ~unsafeRunSync~.
      * Inspect this name:
@@ -390,22 +564,34 @@
        def unsafeRunSync: A
      #+end_src
 
-   - Use ~unsafeToFuture~ to integrate your effectful code with legacy interfaces
+   - Use ~unsafeToFuture~ to integrate your effectful code with _legacy interfaces_
      that many consume ~scala.concurrent.Future~.
+     #+begin_src scala
+       def unsafeToFuture: Future[A]
+     #+end_src
+     * =from Jian=
+       If there is a chance to use cats-effect, you should never use ~Future~.
+       + Maybe there are _exceptions_, if performance is taken into account. I'm not sure!!!
 
    - *CAUTION*:
      * As a general rule,
        + you *should not* be invoking _any ~unsafe~ method_ in your code.
        + When *experimenting in the REPL* or some other throw-away code, *sure*.
 
-     * In an app, always delegate this responsibility to types like ~IOApp~.
+     * In an app, *ALWAYS* _delegate_ this responsibility to types like ~IOApp~.
 
 ** DONE 2.4. ~IO~ as an effect - 36
-   CLOSED: [2021-07-17 Sat 01:31]
+   CLOSED: [2021-08-15 Sun 05:13]
    - *Error Pattern Checklist:* ~IO[A]~
       
 ** DONE 2.5. Executing effects in applications with ~IOApp~ - 37
-   CLOSED: [2021-07-17 Sat 01:48]
+   CLOSED: [2021-08-15 Sun 05:26]
+   To execute /effects/, the _Cats Effects_ provides the ~IOApp~ type for _applications_.
+   ~IOApp~ is _an /executable Scala type/ -- something that has a ~main~ method_ --
+   that requires you to declare your /effects/ as a *single* ~IO~ value,
+   and
+   it performs the task of executing those /effects/. 
+
    - Examples 3. "Hello World" as an ~IOApp~ program. Code available at
      =resources/HelloWorld.scala=
      #+begin_src scala
@@ -421,22 +607,74 @@
            IO(println("Hello world!"))
        }
      #+end_src
+     * The application /entry point/ is the ~run~ /method/,
+       which MUST return ~IO[ExitCode]~.
+
+     * ~ExitCode~ is a enumeration.
 
    - *Exercise 2: Ticking Clock*
+     #+begin_src scala
+       package com.innerproduct.ee.io
+       
+       import cats.effect.*
+       import cats.implicits.given
+       import scala.concurrent.duration.given
+       
+       object TickingClock extends IOApp {
+       
+         def run(args: List[String]): IO[ExitCode] =
+           tickingClock.as(ExitCode.Success)
+       
+         val tickingClock: IO[Unit] = {
+           val currentTime = IO(System.currentTimeMillis())
+           for {
+             _ <- IO(println(System.currentTimeMillis()))
+             _ <- IO.sleep(1.second)
+             _ <- tickingClock
+           } yield ()
+         }
+       
+       }
+     #+end_src
      
 ** DONE 2.6. Summary - 39
-   CLOSED: [2021-07-17 Sat 01:48]
+   CLOSED: [2021-08-15 Sun 05:33]
+   1. ~cats.effect.IO~ is an /effect/ that can *encapsulate* ANY /side effect/.
+      - Constructors produce an ~IO~ from
+        * pure values,
+        * delayed /side effects/,
+        * errors, and
+        * other types like ~Future~.
+         
+      - /Combinators/ let you
+        * *build* new /effects/,
+        * *transform* their outputs, and
+        * *handle* errors.
+
+        It is _ESSENTIAL_ that
+        EVERY /combinator/ *AVOIDS the execution* of ANY /effect/,
+        otherwise /substitution/ will be broken.
+         
+      - We can execute ~IO[A]~ values, who produce
+        * EITHER a /value/ of type ~A~
+        * OR raise an /exception/.
+
+        You should only run them at the very “edges” of your programs via its
+        /unsafe-prefixed methods/.
+
+   2. ~cats.effect.IOApp~ lets you _describe your application_
+      as a SINGLE ~IO~ /effect/ that it executes.
    
-* DONE 3. Parallel execution - 41 - =NOTE=
-  CLOSED: [2021-07-19 Mon 02:19]
-  - First we'll discuss if ~IO~ itself _supports /parallelism/, or NOT._
+* DONE 3. Parallel execution - 41
+  CLOSED: [2021-08-16 Mon 19:56]
+  1. First we'll discuss if ~IO~ itself _supports /parallelism/, or NOT._
     
-  - We'll then talk about
-    * HOW ~IO~ can support /parallelism/, and
-    * HOW that /parallelism/ is implemented.
+  2. We'll then talk about
+     - HOW ~IO~ can support /parallelism/, and
+     - HOW that /parallelism/ is implemented.
     
-  - We'll then see some examples of _DIFFERENT WAYS_ to
-    *compose* ~IO~ values *in* /parallel/.
+  3. We'll then see some examples of _DIFFERENT WAYS_ to
+     *compose* ~IO~ values _in parallel_.
 
 ** DONE 3.1. Does ~IO~ support parallelism? - 41 - =RE-READ= =RE-NOTE=
    CLOSED: [2021-07-19 Mon 00:26]
@@ -551,7 +789,7 @@
        
 ** DONE 3.2. The ~Parallel~ typeclass - 46
    CLOSED: [2021-07-19 Mon 01:32]
-   Follow the #1 of our Effect Pattern, there is a ~cats.effect~ type for
+   Follow the #1 of our /Effect Pattern/, there is a ~cats.effect~ type for
    /parallelism/. Its name is ~IO.Par~.
    #+begin_src scala
      sealed abstract class IO[+A] { /* ... */ }
@@ -600,7 +838,7 @@
        val ic: IO[C] = IO.Par.unwrap(ipc)
      #+end_src
 
-   - The ~Parallel~ /typeclass/ from cats (NOT cats-effect):
+   - The ~Parallel~ /type class/ from _cats_ (NOT _cats-effect_):
      #+begin_src scala
        trait Parallel[S[_]] {
          type P[_]
@@ -664,14 +902,119 @@
        #+end_src
        See Figure 4
      
-** TODO 3.3. Inspecting parallelism - 50 - =NOTE=
-** DONE 3.4. ~parMapN~ - 52
-   CLOSED: [2021-07-19 Mon 01:55]
-*** DONE 3.4.1. ~parMapN~ behavior in the presence of errors - 54
+** DONE 3.3. Inspecting parallelism - 50
+   CLOSED: [2021-08-16 Mon 00:26]
+   - Q :: How to get a feel for what is executing?
+   - A :: Use a helper method, ~debug~, to add to our code through
+          ~import com.innerproduct.ee.debug._~
+          =from Jian= CAUTION: this is not a part of _cats-effect_!
+     * Example 10. =parallel/DebugExample.scala=
+       #+begin_src scala
+         package com.innerproduct.ee.parallel
+         
+         import cats.effect._
+         import cats.implicits._
+         
+         import com.innerproduct.ee.debug._
+         
+         object DebugExample extends IOApp {
+           def run(args: List[String]): IO[ExitCode] =
+             seq.as(ExitCode.Success)
+         
+           val hello = IO("hello").debug
+           val world = IO("world").debug
+         
+           val seq =
+             (hello, world)
+               .mapN((h, w) => s"$h $w")
+               .debug
+         }
+       #+end_src
+       + At /runtime/, the ~debug~ method will print
+         - the _name_ of the _CURRENT /thread/,_
+         - along with the _value_ produced by the /effect/ (as a string produced by invoking ~toString~):
+         #+begin_src text
+           [ioapp-compute-0] hello
+           [ioapp-compute-0] world
+           [ioapp-compute-0] hello world
+         #+end_src
+
+       + The source for ~debug~:
+         #+begin_src scala
+           package com.innerproduct.ee
+           
+           import cats.effect._
+           
+           /** `import com.innerproduct.ee.debug._` to access
+            ,*  the `debug` extension methods.
+            ,*/
+           object debug {
+             /** Extension methods for an effect of type `IO[A]`. */
+             implicit class DebugHelper[A](io: IO[A]) {
+           
+               /** Print to the console the value of the effect
+                ,*  along with the thread it was computed on.
+                ,*/
+               def debug: IO[A] =
+                 for {
+                   a <- ioa
+                   tn = Thread.currentThread.getName
+                   _ = println(s"[${Colorize.reversed(tn)}] $a")
+                 } yield a
+             }
+           }
+         #+end_src
+   
+** DONE 3.4. ~parMapN~ - 52 - =TODO= mutiple ~raiseError~'s handling of ~parMapN~ and ~parTupled~
+   CLOSED: [2021-08-16 Mon 16:08]
+   ~parMapN~ is the _parallel version of the /applicative/ ~mapN~ method_.
+   It lets us *combine* multiple /effects/ *into* one, _in parallel_, by
+   specifying how to *combine* the outputs of the /effects/.
+
+   - =from Jian=
+     The above metions _parallel version of the /applicative/ ~mapN~ method_.
+     Just a reminder, the /applicative ~mapN~ method/ can be parallel or not, which
+     depends on if a type have an /monad instance/.
+       ~parMapN~ can help its user and guarantee this operation is in parallel.
+     
+   - Use the ~debug~ introduced in the previous section, we can inspect the ~parMapN~:
+     #+NAME: parallel/ParMapN.scala
+     #+begin_src scala
+       package com.innerproduct.ee.parallel
+       
+       import cats.effect._
+       import cats.implicits._
+       import com.innerproduct.ee.debug._
+       
+       object ParMapN extends IOApp {
+         def run(args: List[String]): IO[ExitCode] =
+           par.as(ExitCode.Success)
+       
+         val hello = IO("hello").debug
+         val world = IO("world").debug
+         val par =
+           (hello, world)
+             .parMapN((h, w) => s"$h $w")
+             .debug
+       }
+       
+       // [ioapp-compute-1] world
+       // [ioapp-compute-0] hello
+       // [ioapp-compute-0] hello world
+     #+end_src
+     * The /execution order/ of /parallel tasks/ is *non-deterministic*,
+       so you may see =hello= and =world= be printed in a _different order_ when
+       you run the program.
+     
+*** DONE 3.4.1. ~parMapN~ behavior in the presence of errors - 54 - =TODO= =NOTE=
     CLOSED: [2021-07-19 Mon 01:46]
     =MORE NOTES=
     The *FIRST failure* to happen is used AS _the failure of the composed /effect/._
 
+    =FIXME=
+    Example 13 last `parMapN` should be `mapN`
+    Already sent a email to the author.
+   
 *** DONE 3.4.2. ~parTupled~ - 56
     CLOSED: [2021-07-19 Mon 01:55]
     The ~parMapN((_, _) => ())~ code looks a bit *UGLY*.
@@ -693,7 +1036,7 @@
       val e1 = (ok, ko1).parMapN(???).void
     #+end_src
     
-    can be re-written as
+    can be re-written with the /method/ ~parTupled~ as
     
     #+begin_src scala
       val e1 = (ok, ko1).parTupled.void
@@ -707,7 +1050,7 @@
       #+end_src
     
 ** DONE 3.5. ~parTraverse~
-   CLOSED: [2021-07-19 Mon 02:19]
+   CLOSED: [2021-08-16 Mon 19:49]
    ~parTraverse~ is the *parallel version* of ~traverse~; both have the type
    signature: ~F[A] => (A => G[B]) => G[F[B]]~
 
@@ -715,15 +1058,18 @@
      then _(par)traverse_ would be a function from a ~List[A]~ to an ~IO[List[B]]~
      when given a function ~A => IO[B]~.
      ~List[A] => (A => IO[B]) => IO[List[B]]~
+     
+     - We can inspect the run with ~debug~'s.
 
-   - =todo= =???= =READ SOURCE CODE???=
+   - =TODO= =READ SOURCE CODE=
      That being said, ~parTraverse~ is actually written in terms of ~traverse~,
      where it transforms every ~IO~ into ~IO.Par~.
        Since ~traverse~ only requires the /effect/ to have _an ~Applicative~
      instance_, the ~Applicative[IO.Par]~ is where the /parallelism/ “happens”.
-     =IMPORTANT= =RE-READ=
+     =IMPORTANT=
 
-*** 3.5.1. Another view of ~parTraverse~ - 59
+*** DONE 3.5.1. Another view of ~parTraverse~ - 59
+    CLOSED: [2021-08-16 Mon 19:49]
     _(par)traverse_ is similar to _(par)mapN_, where results are collected,
     *BUT* EVERY INPUT /effect/ has the *SAME* /output type/:
     #+begin_src scala
@@ -732,12 +1078,14 @@
       (f(1), f(2)).parMapN((a, b) => List(a, b))                          // IO[List[Int]]
       (f(1), f(2), f(3)).parMapN((a, b, c) => List(a, b, c))              // IO[List[Int]]
       (f(1), f(2), f(3), f(4)).parMapN((a, b, c, d) => List(a, b, c, d))  // IO[List[Int]]
+      
       List(1, 2, 3, 4).parTraverse(f)                                     // IO[List[Int]]
     #+end_src
     
-** TODO 3.6. ~parSequence~ - 59
-   (par)sequence turns a nested structure "inside-out"
-   =from Jian= like the ~sequence~ method.
+** DONE 3.6. ~parSequence~ - 59
+   CLOSED: [2021-08-16 Mon 19:51]
+   _(par)sequence_ turns a nested structure "inside-out"
+   =from Jian= like the ~sequence~ method from _cats_.
    ~F[G[A]] => G[F[A]]~
 
    - For example, if you have a ~List~ of ~IO~ effects, the value types
@@ -748,8 +1096,30 @@
      ~x.sequence~ is ~x.traverse(identity)~, and
      ~x.traverse(f)~ is ~x.map(f).sequence~.
    
-** TODO 3.7. Summary - 61
-   
+** DONE 3.7. Summary - 61 - =TODO=
+   CLOSED: [2021-08-16 Mon 19:56]
+   1. ~IO~ does *not support* _parallel operations_ itself, because it is a ~Monad~.
+
+   2. The ~Parallel~ /type class/ specifies the *TRANSLATION between a pair of
+      /effect types/:*
+      one that is a ~Monad~ and the other that is “only” an ~Applicative~.
+
+   3. ~Parallel[IO]~ connects the ~IO~ /effect/ to its _PARALLEL counterpart, ~IO.Par~._
+
+   4. _Parallel ~IO~ composition_ requires the *ABILITY* to
+      _shift_ computations _to_ other /threads/ within the CURRENT ~ExecutionContext~.
+      This is how parallelism is “implemented”.
+
+   5. ~parMapN~, ~parTraverse~, ~parSequence~ are the _PARALLEL_ versions of (the
+      sequential) ~mapN~, ~traverse~, and ~sequence~.
+      
+      =???= Errors are managed in a fail-fast manner.
+      =from Jian=
+      The example of ~parMapN~ is wrong, and it can crash in more than one
+      ~raiseError~ value.
+
+
+
 * DONE 4. Concurrent control - 62
   CLOSED: [2021-07-23 Fri 04:58]
   - So far _we've been working with rather *opaque* /effects/:_
@@ -762,41 +1132,48 @@
         
         val c: C = i3.unsafeRunSync()
       #+end_src
-      1. we can *describe* them and *eventually run* them to produce a value (or
-         an error).
-      2. _BUT_ we do *NOT* yet have any way to *CONTROL* a running computation.
+      1. we can *describe* them and *eventually run* them to produce
+         a value (or an error).
+      2. _BUT_ we do *NOT YET* have any way to *CONTROL* a running computation.
 
-  - In this chapter we'll discuss
+  =START HERE=
+  - In this chapter we WILL DISCUSS
     * how to *fork* and *join* a /concurrent effect/, *cancel* a _concurrently
       running effect_, and
     * how to *race* MULTIPLE /effects/ concurrently.
 
   - *Concurrency vs. parallelism*
-    - concurrent :: Computations are concurrent when their /execution lifetimes/
-                    *overlap*.
+    - concurrent :: Computations when their /execution lifetimes/ *overlap*.
 
-    - parallel :: Computations are parallel when their *executions occur at the
-                  SAME instant* in time.
+    - parallel :: Computations when their *executions occur at the SAME instant*
+                  in time.
 
     - That is to say,
       * /concurrency/ is about the looking at
         + the *structure* of the computations and
-        + how their lifetimes *align*,
+        + how their /lifetimes/ *align*,
       * whereas
         /parallelism/ is more about the _operational utilization of resources_
         during the execution.
 
-    - One /thread/
-      * _CAN_ still run tasks *concurrently*,
-      * BUT _NO way_ to run in *parallel*.
+    - For example,
+      * with _two_ /threads/ you could run _two_ computations in /parallel/ (and
+        /concurrently/ =from Jian= _if they have overlap /lifetimes/!_).
 
-    - /Concurrency/ emphasizes the *non-deterministic aspects* of computation:
-      we _CAN'T_ tell when anything happens, _ONLY_ that their *lifetimes overlap*.
-        Whereas /parallelism/ requires *determinism*: no matter how many resources you
-      have, you must produce the same answer. =TODO= =TODO= =TODO= =???=
+      * with _one_ /thread/ _CAN_ still run two computations *concurrently*:
+        if you can *"pause"* one and *switch*, using the same /thread/, to the
+        other, and vice-versa.
+        + BUT _NO way_ to run in *parallel*.
+
+    - /Concurrency/ EMPHASIZES the *non-deterministic aspects* of computation:
+      * we _CAN'T_ tell when anything happens,
+      * _ONLY_ that their *lifetimes overlap*.
+    - WHEREAS /parallelism/ requires *determinism*:
+      no matter how many resources you have, you must produce the same answer.
+      =TODO= =???= =TODO= =LEARN MORE=
     
 ** DONE 4.1. Decomposing the behavior of ~parMapN~ - 64
-   CLOSED: [2021-07-22 Thu 00:53]
+   CLOSED: [2021-08-17 Tue 10:54]
    To demonstrate *forking*, *joining*, and *cancelation* of /concurrent effects/,
    we'll write our own version of ~parMapN~, which involves each of them.
    We only _write two-argument variation of ~parMapN~._
@@ -805,38 +1182,43 @@
        ???
    #+end_src
    - =IMPORTANT= 
-     The criterion of a quanlified ~myParMapN~ -- just like ~parMapN~, needs to:
-     1. *start* both the ~ia~ and ~ib~ computations so they run _concurrently
-        (“fork” them);_
+     The criterion of a quanlified ~myParMapN~ --
+     just like ~parMapN~, needs to:
+     1. *start* both the ~ia~ and ~ib~ computations
+        so they _run concurrently (*"fork"* them);_
      2. *wait* for each result;
-     3. *cancel* the “other” effect if ~ia~ or ~ib~ _fails_; and
+     3. *cancel* the "other" /effect/ if ~ia~ or ~ib~ _fails_; and
      4. finally *combine* the results with the ~f~ function.
 
-   - It's important to note that _in order to_ “wait” and “cancel”,
-     we'll need something to _“wait” and “cancel” ON_,
-     a kind of handle to the “started” computation.
+   - It's important to note that _in order to_ *"wait"* and *"cancel"*,
+     we'll need *SOMETHING to "wait" and "cancel" ON,*
+     a kind of handle to the _"started" computation_.
      * In _Cats Effect_ that concept is a /fiber/.
 
-   - Fiber :: a _STARTED computation_ that can be _“wait” and “cancel” ON_.
+   - Fiber :: a _STARTED computation_ that can be *"wait" and "cancel" ON*.
      =from Jian= =re-phrase the previous sentence=
      
 ** DONE 4.2. Gaining control with ~Fiber~ - 64
-   CLOSED: [2021-07-22 Thu 00:53]
-   - When we write an expression like
-     #+begin_src scala
-       for {
-         result <- effect
-         ...
-     #+end_src
-     We're essentially waiting until the results is avialable to continue the computation.
-     1. Instead of waiting for the ~result~, we could instead *fork* an /effect/:
+   CLOSED: [2021-08-17 Tue 13:37]
+   When we write an expression like
+   #+begin_src scala
+     for {
+       result <- effect
+       ...
+   #+end_src
+   the value result only exists once it is produced by the /effect/. We're
+   essentially *waiting until* the ~result~ is available to *continue* the
+   computation.
+     
+   - Instead of waiting for the ~result~, we could 
+     1. instead *fork* an /effect/:
         the /effect/ will be *started*, but we _aren't interested in waiting_ for
         its completion.
 
-     2. The _result of forking_ is a value that lets us manage the /forked effect/:
+     2. The _result of forking_ is a _value_ that lets us manage the /forked effect/:
         a /fiber/. 
      
-   - In Cats Effect, use the ~start~ /method/ to *fork* an /effect/.
+   - In Cats Effect, use the ~start~ /method/ to *fork* an /effect/:
      * _Example 17. Forking an effect with start. Code available at =control/Start.scala=._
        #+begin_src scala
          package com.innerproduct.ee.control
@@ -859,6 +1241,8 @@
          // [ioapp-compute-1] task
          // [ioapp-compute-0] task was started
        #+end_src
+       When you ~start~ an /effect/ its execution is *“forked”*:
+       it is *shifted to* a DIFFERENT /thread/.
 
      * The (simplified) signature of ~start~:
        #+begin_src scala
@@ -866,26 +1250,28 @@
        #+end_src
        + It returns a ~Fiber~, a data type which lets us *act on* the /start-ed
          effect/.
-       + Q :: But why does start return the ~Fiber~ inside an ~IO~?
-       + A :: It returns a ~Fiber~ inside an ~IO~
-               BECAUSE _if it instead produced, directly, a Fiber, that would
-               mean our original IO is running right now,_ BUT *in reality it isn't*.
-               - The source ~IO~ ONLY executes when we explicitly run it, so we
-                 need to delay access to this /fiber/ -- by wrapping it in an
-                 effect -- until the source ~IO~ is executed.
+       + Q :: But why does ~start~ RETURN _the ~Fiber~ *inside* an ~IO~?_
+       + A :: BECAUSE _if it instead produced, directly, a ~Fiber~, that would
+               mean our original ~IO~ is running right now,_
+               BUT *in reality it isn't*.
+         - The source ~IO~ ONLY executes when we explicitly run it,
+           so we need to
+           *delay ACCESS* to this /fiber/ -- by wrapping it in an effect --
+           *until* the source ~IO~ is executed.
 
      * Now that we’ve demonstrated _forking_ a ~Fiber~,
        we feel the need to *offer a warning*:
        a ~Fiber~ is a *VERY “low-level” mechanism* for /concurrent control/.
        + WHILE it's absolutely necessary for implementing the /concurrency/ and
-          /parallelism/ of Cats Effect,
+          /parallelism/ of _Cats Effect_,
        + as a developer you can often _BETTER_ achieve your goals by *using
          higher-level abstractions and operations.*
+         =IMPORTANT=
    
 **** DONE 4.2.1. Continuing ~myParMapN~: forking effects - 66
-     CLOSED: [2021-07-22 Thu 00:53]
-     - We can use ~start~ to fork a /concurrent effect/,
-       so let's use it to implement our ~myParMapN~.
+     CLOSED: [2021-08-17 Tue 11:12]
+     - We can use ~start~ to *fork* a /concurrent effect/,
+       so let's use it for our ~myParMapN~.
        #+begin_src scala
          def myParMapN[A, B, C](ia: IO[A], ib: IO[B])(f: (A, B) => C): IO[C] =
            for {
@@ -893,20 +1279,20 @@
              fiberB <- ib.start
            } yield ???
        #+end_src
-       * We *start* each effect to run them /concurrently/.
+       * We *start* each /effect/ to run them /concurrently/.
 
-       * We *DON'T YET KNOW*
+       * We *DON'T YET* KNOW
          how to *gather* their results or possibly *cancel* them.
          =from Jian= This is what we should discuss in the following sections.
 
      - Here's our progress for the requirements:
        ☑ *start* both the ia and ib computations so they run concurrently (“fork” them);
-       ☐ wait for each result;
-       ☐ cancel the “other” effect if ia or ib fails; and
-       ☐ finally combine the results with the f function.
+       ☐ *wait* for each result;
+       ☐ *cancel* _the “OTHER” /effect/_ if ~ia~ or ~ib~ fails; and
+       ☐ finally *combine* the results with the ~f~ function.
        
 **** DONE 4.2.2. Joining a running ~Fiber~ - 66
-     CLOSED: [2021-07-22 Thu 00:53]
+     CLOSED: [2021-08-17 Tue 13:37]
      When we call ~start~ on an ~IO[A]~ value we receive a ~Fiber[IO, A]~ value.
      It lets us talk about _the execution of an ~IO[A]~ computation._
 
@@ -921,7 +1307,7 @@
        #+end_src
        ~join~ will _return the result_ of the /forked ~IO~ effect/.
        1. Because of this *join*, we're *giving up* the control the /fiber/ gave us, and
-       2. subsequently we can only talk about the eventual result of the previously
+       2. subsequently we can ONLY talk about the eventual result of the previously
           _forked value_.
 
      - Q :: What happens if we *join* the ~Fiber~ that we just ~start~-ed?
@@ -952,12 +1338,22 @@
          // [ioapp-compute-1] task
          // [ioapp-compute-1] post-join
        #+end_src
-       =IMPORTANT= =IMPORTANT= =IMPORTANT=
-       When we ~join~ a ~Fiber~, execution *continues on the /thread/ the Fiber was
-       running on* (in this case, ioapp-compute-1).
+       - =from Jian=
+         The order of the first two log messages are undeterministic.
+         We see this order is because the ~IO.sleep(2.seconds) *>~ in the
+         definition of ~task~.
+
+       - Notice that ~task~ is on a *different* /thread/ than the ="pre-join"=
+         output.
+           We also see =task= printed twice, once for the ~IO("task").debug~ and
+         once for the ~fiber.join.debug~.
+
+       - =IMPORTANT= =IMPORTANT= =IMPORTANT=
+         When we ~join~ a ~Fiber~, execution *continues on the /thread/ the Fiber
+         was running on* (in this case, ioapp-compute-1).
      
 **** DONE 4.2.3. Continuing ~myParMapN~: joining forked effects - 68
-     CLOSED: [2021-07-22 Thu 00:53]
+     CLOSED: [2021-08-17 Tue 13:37]
      - Since we an await the results of a /concurrent effect/ with ~join~,
        we can update our ~myParMapN~.
        #+begin_src scala
@@ -978,7 +1374,7 @@
        ☑ finally *combine* the results with the ~f~ function.
      
 ** DONE 4.3. Canceling a running ~Fiber~ - 68
-   CLOSED: [2021-07-23 Fri 04:10]
+   CLOSED: [2021-08-17 Tue 21:19]
    The second thing we can do with a ~Fiber~ is to *cancel* it.
    #+begin_src scala
      def cancel: cats.effect.CancelToken[IO]
@@ -990,14 +1386,12 @@
      It produces a ~Unit~ value once the /effect/ is *canceled*.
 
    - Q :: Why might we want to stop a running task?
-     * Reason of Cancelation ::
-       Usually it is because we've learned some information that tells us the
-       computation isn't needed any longer.
-
+   - A :: Usually it is because we've learned some information that tells us the
+          computation isn't needed any longer.
      * For example,
        we might start a fetch from a (relatively slow) datastore, but if the
-       user decides to cancel the overall operation, we should cancel the fetch
-       to the underlying datastore.
+       user decides to _cancel_ the overall operation, we should _cancel_ the
+       fetch to the underlying datastore.
 
    - Example 19. =control/Cancel.scala=
      #+begin_src scala
@@ -1029,12 +1423,15 @@
        // [ioapp-compute-0] canceled
      #+end_src
      * =TODO= =from Jian= =email=
-       The order is undeterministic!
-       The "task" can even be after the "canceled". WHY???
+       The order is undeterministic! The first two messages can be any order.
+         I get the order mentioned above, which is different from the order in
+       this book. Both are right, but the order in book is rare. In my laptop, I
+       can easily get that order by preprend ~IO.sleep(15.millis) *>~ to the
+       current ~task~ definition. Or use the code below:
        #+begin_src scala
          def t: String = {
            Thread.sleep(3.seconds)
-           "taks"
+           "task"
          }
          
          val task: IO[String] =
@@ -1047,11 +1444,14 @@
        a canceled task will continue to be canceled.
 
      * =CAUTION=
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
        However, _if you ~join~ after you ~cancel~,_ the ~join~ will *NEVER FINISH*,
        + *REASON*: no result will ever be produced.
        
 *** DONE 4.3.1. How does cancelation work? - 70
-    CLOSED: [2021-07-23 Fri 03:50]
+    CLOSED: [2021-08-17 Tue 21:19]
     Let's set up a situation where there's _a /long-lived effect/ running CONCURRENTLY_
     with an /effect/ that produces an error. For the former we’ll use the previously
     written "ticking clock":
@@ -1090,26 +1490,26 @@
           - *"know"* if they've *been canceled*?
           - *react* to that information?
 
-    - To define the behavior of cancelation, Cats Effect uses the concept of a
-      /cancelation boundary/.
-      * Cancelation boundary :: =TODO= =BETTER DESCRIPTION???=
-        As an effect executes, if a /cancelation boundary/ -- whatever that is --
-        is encountered,
-        then the _cancelation status_ for the current effect is checked, and *if
-        that effect has been canceled then execution will stop.*
+    - To define the behavior of /cancelation/,
+      _Cats Effect_ uses the concept of a /cancelation boundary/.
+      * Cancelation boundary ::
+        As an effect executes,
+        if a /cancelation boundary/ -- whatever that is -- is encountered,
+        then the _cancelation status_ for the CURRENT /effect/ is checked, and *if
+        that /effect/ has been canceled then execution will stop.*
       
     - From one perspective, *cancelation is "AUTOMATIC"*
-      BECAUSE Cats Effect itself *periodically inserts* a /cancelation boundary/
-      during effect execution.
+      BECAUSE _Cats Effect_ itself *periodically inserts* a /cancelation boundary/
+      during _effect execution_.
       * Alternatively, one can *"manually" insert* a /cancelation boundary/ with
         ~IO.cancelBoundary~.
         + =footnote 15=
-          ~IO.cancelBoundary~ ony exists in Cats Effect 2.
+          ~IO.cancelBoundary~ only exists in Cats Effect 2.
           Read the footnotes 14 and 15 to get more details and the rationale.
           =IMPORTANT=
       
-*** DONE 4.3.2. Continuing ~myParMapN~: cancelation-on-error behavior - 71 - =RE-READ=
-    CLOSED: [2021-07-23 Fri 04:10]
+*** DONE 4.3.2. Continuing ~myParMapN~: cancelation-on-error behavior - 71
+    CLOSED: [2021-08-17 Tue 21:19]
     If an _error_ *occurs DURING* one of our /effects/,
     we need to *cancel* "the other" /fiber/.
 
@@ -1131,6 +1531,7 @@
        couple it to the result of ~fiberA.join~.
          But if we do that, then we won't be _registering the ~onError~ handler_
        with the result of ~fiberB~ until after ~fiberA~ has actually finished.
+       =from Jian= Blocking?
 
     3. We need to instead _ENSURE_ that _both ~onError~ handlers are registered._
        If only we could write
@@ -1146,9 +1547,13 @@
            )(f)
          } yield c
        #+end_src
-       =from Jian= Circular Reference!!!
-       but that would be using the method we are trying to write! (And it would
-       incorrectly handle cancelation).
+       * =from Jian=
+         Use ~=~ insteand ~<-~ to separate the value building of coupling
+         /fiber join/ and /error handler registration/ from /effect/ running.
+       
+       * BUT that would be using the method we are trying to write! (And it
+         would incorrectly handle cancelation).
+         =from Jian= Circular Reference!!!
 
     4. If we tried something "clever" like:
        #+begin_src scala
@@ -1163,26 +1568,25 @@
            b <- registerB.join
          } yield f(a, b)
        #+end_src
-       this too will not properly handle cancelation:
+       this too will not properly handle /cancelation/:
        IF one of the /effects/ is *cancelled*,
        THEN a _SUBSEQUENT join_ will *never complete*.
 
-    5. *We're stuck*:
+    5. *We're stuck*!!!:
        we need to *avoid* doing a ~join~ *on* a _potentially cancelled effect_,
        BUT here either /effect/ could be cancelled first -- we don't know which.
-       
-       - The ~Fiber~ API *isn't expressive enough* to give us the information we need.
-       - _To solve the problem,_
-          we need a DIFFERENT *"primitive" operation*:
+       1) The ~Fiber~ API *isn't expressive enough* to give us the information we need.
+
+       2) _To solve the problem,_ we need a DIFFERENT *"primitive" operation*:
           we'll instead /race/ two /effects/, which will
           1. let us know which /effect/ finishes first
           2. so that we can subsequently _join the OTHER /effect/._
     
 ** DONE 4.4. Racing multiple effects - 72
-   CLOSED: [2021-07-23 Fri 04:58]
-   When we compose multiple effects concurrently with ~parMapN~,
-   we provide a function to _transform the gathered output of every concurrently
-   executing effect._
+   CLOSED: [2021-08-17 Tue 21:40]
+   When we *compose* multiple /effects/ *concurrently* with ~parMapN~,
+   we provide a function to ~parMapN~ to _transform the gathered output of every
+   concurrently executing effect._
 
    - Q :: What if instead we were
      ONLY INTERESTED IN _the /effect/ that *completed first*,_
@@ -1271,12 +1675,12 @@
 
          - If you do want to
            *act when a timeout occurs*
-           INSTEAD OF only having the effect canceled (=from Jian= and throw an exception),
+           INSTEAD OF only having the /effect/ _canceled (=from Jian= and throw an exception),_
            you could use the ~IO.timeoutTo~ method which lets you provide an
            _alternative ~IO~ value_ to evaluate if the timeout expires.
      
 *** DONE 4.4.1. Racing without automatic cancelation - 75
-    CLOSED: [2021-07-23 Fri 04:58]
+    CLOSED: [2021-08-17 Tue 21:40]
     ~IO.race~ is built upon a _SIMPLER_ /combinator/, ~IO.racePair~,
     which *doesn't provide cancelation* of _the "losing" effect_.
       Instead you receive the _"winning" value_ along with the ~Fiber~ of the
@@ -1296,19 +1700,38 @@
           }
       #+end_src
  
-    - We're done with ~myParMapN~:
+    - We're _DONE_ with ~myParMapN~:
       ☑ start both the ~ia~ and ~ib~ computations so they run concurrently (“fork” them);
       ☑ wait for each result;
       ☑ cancel the “other” effect if ~ia~ or ~ib~ fails; and
       ☑ finally combine the results with the ~f~ function.
 
     - If you feel a bit cheated relying on ~racePair~ to _REGISTER the cancelation_
-      for us, that’s alright, you’re entitled to feeling that way.
-        ~Fiber~ itself *doesn't give us enough control* to implement _cancelation-on-error_.
+      for us, that’s alright, you’re entitled to feeling that way --
+      ~Fiber~ itself *doesn't give us enough control* to implement _cancelation-on-error_.
+      (=from Jian= this is one sub-conclusion we get, but not the main
+      conclusion, the implementation of ~myParMapN~, of this section).
     
 ** DONE 4.5. Summary - 76
-   CLOSED: [2021-07-23 Fri 04:58]
+   CLOSED: [2021-08-17 Tue 21:48]
+   1. /Concurrency/ allows us to CONTROL running computations.
+
+   2. A ~Fiber~ is our handle to this CONTROL.
+      After we /start/ a concurrent computation,
+      we can
+      - /cancel/ it or
+      - /join/ it (wait for completion).
+
+   3. /Concurrently executing effects/ *can be* /cancelled/.
+      _Cancelled effects_ are expected to *stop executing* VIA
+      implicit or explicit /cancelation boundaries/.
+
+   4. We can *race* two computations to know who finished first.
+      /Higher-order effects/ like timeouts (~timeout~, ~timeoutTo~, etc.) can be
+      _constructed_ using *races*.
    
+
+
 * TODO 5. Shifting contexts - 77 - =Start reading=
   - Parallelism makes use of a set of resources to execute effects.
     * On the /JVM/, this is a /thread pool/:

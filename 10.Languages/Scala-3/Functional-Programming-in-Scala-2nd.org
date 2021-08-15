@@ -1,0 +1,2967 @@
+#+TITLE: Functional Programming in Scala
+#+VERSION: 2nd - 2021 MEAP Version 1
+#+PUBLICATION TIME: 2022 (Estimated)
+#+AUTHOR: Michael Pilquist, Rúnar Bjarnason, Paul Chiusano
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* foreword
+  - _It would be nice_ if we could DISTINGUISH _pure and impure functions_ in
+    Scala,
+    (but) I believe we _have not yet found_ a way to do so that is lightweight
+    and flexible enough to be added to Scala without hesitation.
+
+* preface
+* acknowledgments
+* DONE about this book
+  CLOSED: [2017-03-18 Sat 04:51]
+
+** How this book is structured =IMPORTANT=
+   - wiki: https://github.com/fpinscala/fpinscala/wiki
+** Audience
+   - We WON'T spend a lot of time and space discussing Scala's syntax and
+     language features.
+
+   - References:
+     * Book: http://scala-lang.org/documentation/books.html
+     * Doc: http://scala-lang.org/documentation/
+
+** How to read this book
+   - A _filled-in square_ next to an exercise means the exercise is _CRITICAL_.
+   - An _open square_ means the exercise is _OPTIONAL_.
+** Code conventions and downloads
+** Setting expectations
+   - Take your questions to
+     * the Google Group: https://groups.google.com/forum/#!topic/scala-functional/ or
+     * the IRC channel (=#fp-in-scala= on =irc.freenode.net=).
+
+** Author Online
+
+_EN_:
+intriguing title
+haphazardly
+a patchwork of
+mourn
+Coalesce
+
+* TODO PART 1 Introduction to functional programming - 1
+  - We BEGIN this book with a _radical premise_:
+    that we will *restrict* ourselves to constructing programs *using only pure
+    functions* with no side effects such as reading from files or mutating memory.
+
+    This idea, of /functional programming/, leads to a very different way of
+    writing programs than you may be used to.
+      We therefore start from the very beginning, *relearning* how to write the
+    simplest of programs *in a functional way*.
+
+  - Outlines for the Chapter 1 ~ 6:
+    * Chapter 1 explains exactly
+      + *WHAT* functional programming means
+        AND
+      + give you some idea of its *benefits*.
+
+    * The rest of the chapters in part 1 introduce the _basic techniques_ for
+      /functional programming/ in Scala.
+      + Chapter 2 introduces Scala the language and covers fundamentals LIKE
+        - how to write loops functionally
+
+        - manipulate functions as ordinary values.
+
+      + Chapter 3 deals with /in-memory data structures/ that may change over time.
+
+      + Chapter 4 talks about _handling errors in pure functions_, and
+
+      + Chapter 5 introduces the *notion* of /non-strictness/, which can be used
+        to improve the /efficiency/ and /modularity/ of functional code.
+
+      + Chapter 6 introduces _modeling STATEFUL programs using pure functions_.
+
+  - The intent of this first part of the book is
+    * to get you thinking about programs purely in terms of functions from inputs
+      to outputs,
+      and
+    * to teach you the techniques you'll need in part 2, when we start writing
+      some practical code.
+
+** DONE 1 What is functional programming? - 3
+   CLOSED: [2017-03-15 Wed 21:01]
+   - A function has a /side effect/ if it does something
+     /other than simply return a result/, for example:
+     * Modifying a variable
+     * Modifying a data structure in place
+     * Setting a field on an object
+     * Throwing an exception or halting with an error =TODO=
+     * Printing to the console or reading user input
+     * Reading from or writing to a file
+     * Drawing on the screen
+
+   - Q :: Then how is it even possible to write useful programs at all?
+   - A :: functional programming
+     * is _a restriction on_ _HOW_ we write programs,
+     * but _not_ on _WHAT_ programs we can express.
+
+   - Over the course of this book, we'll learn how to express all of our
+     programs without side effects, and that includes programs that perform I/O,
+     handle errors, and modify data.
+
+   - _tremendously beneficial_ of FP: the increase in /modularity/
+
+   - Because the increased /modularity/, pure functions are easier to
+     * test
+     * reuse
+     * parallelize
+     * generalize
+     * reason about
+
+   - /referential transparency/
+
+   - /the substitution model/
+
+*** 1.1 The benefits of FP: a simple example - 4
+**** 1.1.1 A program with side effects - 4
+**** 1.1.2 A functional solution: removing the side effects - 6
+     - FP is a truly radical shift in _how programs are organized_
+       at every level -- _from_ the simplest of loops _to_ high-level program
+       architecture.
+       
+*** 1.2 Exactly what is a (pure) function? - 9
+    - ~A => B~ is pronounced as "A to B" or "A arrow B".
+
+    - A function has _NO observable effect_ on the execution of the program
+      _other than_ to compute a result given its inputs;
+      we say that it has _no side effects_.
+
+    - /Referential transparency (RT)/ :: An expression e is referentially trans-
+         parent if, for all programs p, all occurrences of e in p can be replaced
+         by the result of evaluating e without affecting the meaning of p.
+
+    - /purity/ :: A function f is /pure/ if the expression f(x) is referentially
+                  transparent for all referentially transparent x.
+
+*** 1.3 Referential transparency, purity, and the substitution model - 10
+    - Referential transparency _force/enables_ /substitution model/
+
+    - Computation proceeds by applying /substitution model/ (substituting
+      /equals for equals/).
+        In other words, RT enables /equational reasoning/ about programs.
+
+    - Two examples,
+      1. a RT example
+      2. a non-RT example
+
+    - RT featured code a purely local, and we NEED NOT mentally simulate
+      sequences of state updates to understand the code. ONLY /local reasoning/.
+
+    - RT => pure locality (only the expression being evaluated) => /modularity/
+                                                                        |
+                                                                        V
+                                                                 /composability/
+
+    - A pure function is /modular/ and /composable/
+      because it _separates_
+      the logic of the computation itself
+                   _from_
+      “what to do with the result” and “how to obtain the input”; it's a black
+      box.
+
+    - From the process of eliminating the side effect from the ~buyCoffee~
+      example, we were more easily to be able to reuse the logic of the function,
+      both for purposes of _testing_ and for purposes of _further composition_.
+
+*** 1.4 Summary - 13
+
+** DONE 2 Getting started with functional programming in Scala - 14
+   CLOSED: [2017-04-05 Wed 16:52]
+   - /tail recursive functions/
+
+   - /higher-order functions (HOFs)/
+
+   - /polymorphic HOFs/
+
+*** DONE 2.1 Introducing Scala the language: an example - 15
+    CLOSED: [2017-03-15 Wed 21:37]
+    - A method of ~String~: ~format~ with C language like placeholder.
+
+    - If you're familiar with Java,
+      declaring an ~object~ in Scala
+      is a lot _like_
+      creating a _new instance of an anonymous class_.
+
+    - Scala has no equivalent to Java's ~static~ keyword, and ~object~ is often
+      used in Scala where you might use a class with static members in Java.
+
+    - /left-hand side/ or /signature/: the part of declaration _before_ the
+      equals sign.
+
+    - /right-hand side/ or /definition/: the part of declaration _after_ the
+      equals sign.
+
+    - Finally, our ~main~ method is an outer shell that calls into our purely
+      functional core and prints the answer to the console.
+        We'll sometimes call such methods /procedures (or impure functions)/
+      rather than functions.
+      #+BEGIN_SRC scala
+      def main(args: Array[String]): Unit =
+        println(formatAbs(-42))
+      #+END_SRC
+
+*** DONE 2.2 Running our program - 17
+    CLOSED: [2017-03-18 Sat 03:11]
+    - Book's source code repo: http://github.com/fpinscala/fpinscala
+
+    - Compilation way:
+      #+BEGIN_SRC bash
+      #>
+      scalac MyModule.scala
+      # Then get MyModule.class
+      #>
+      scala MyModule
+      #+END_SRC
+
+    - Interpretation Way:
+      #+BEGIN_SRC bash
+      #>
+      scala MyModule.scala
+      #+END_SRC
+
+    - Interactive Interpretation Way:
+      * ~:load~
+        #+BEGIN_SRC scala
+        //> scala   # in shell
+
+        // scala> :load MyModule.scala
+        // Loading MyModule.scala...
+        // defined module MyModule
+
+        // scala>
+        MyModule.abs(-42)
+        // res0: Int = 42
+        #+END_SRC
+
+      * ~:paste~
+
+*** DONE 2.3 Objects and namespaces - 18
+    CLOSED: [2017-03-18 Sat 03:20]
+    - /namespace/
+
+    - Every value in Scala is what's called an /object/
+
+    - /module/: An object whose _primary purpose_ is giving its members a
+      /namespace/.
+
+    - A member can be declared with ~def~, ~val~, or ~object~, etc (=TODO=).
+
+    - TWO ways to access members within their enclosing object:
+      * unqualified (without prefixing the object name)
+      * ~this~ prefixed/qualified
+
+    - Scala has no special notion of /operators/. ONLY method calls.
+
+    - Single argument methods can be used as infix operations:
+      * ~MyModule.abs(42)~ is the same as ~Module abs 42~.
+      * ~set1.union(set2)~ is the same as ~set1 union set2~.
+
+*** DONE 2.4 Higher-order functions: passing functions to functions - 19
+    CLOSED: [2017-04-05 Wed 16:52]
+    - _functions are values_
+
+    - /higher-order function (HOF)/: A function that accepts other functions as
+      arguments.
+
+**** 2.4.1 A short detour: writing loops functionally - 20
+     - /inner function (or local definition)/: functions that are local to the
+       body of another function.
+       =COMMENT= In functional programming, we shouldn't consider this a bigger
+                 deal than local integers or strings
+
+**** 2.4.2 Writing our first higher-order function - 21
+     - _Variable-naming conventions_: It's a common convention to use names like
+       ~f~, ~g~, and ~h~ for parameters to a higher order function.
+          In functional programming, we tend to use very short variable names,
+       even one-letter names.
+
+     - _Rationale to Variable-naming conventions_:
+       * This is usually because HOFs are so general that they have no opinion
+         on what the argument should actually do.
+           All they know about the argument is its type.
+
+       * Many functional programmers feel that short names make code easier to
+         read, since it makes the structure of the code easier to see at a
+         glance.
+
+*** DONE 2.5 Polymorphic functions: abstracting over types - 22
+    CLOSED: [2017-03-18 Sat 04:18]
+    - /monomorphic/
+
+    - /polymorphic/
+
+**** 2.5.1 An example of a polymorphic function - 23
+     - a /polymorphic/ function, sometimes called a /generic/ function.
+
+     - _Type Parameter Names Convention_: Use short, one-letter, uppercase type
+       parameter names like [ ~A~, ~B~, ~C~ ].
+
+     - /type variables/
+
+**** 2.5.2 Calling HOFs with anonymous functions - 24
+     - /anonymous functions/ and /function literals/ have the same meaning.
+       Example:
+       #+BEGIN_SRC scala
+       (x: Int) => x == 9
+       #+END_SRC
+
+     - _Functions as values in Scala_: =TODO: RE-READ=
+       * When we define a /function literal/, what is ACTUALLY being defined in
+         Scala is
+         an _object_ with a method called ~apply~.
+
+       * Scala has a special rule for this method name, so that objects that have
+         an ~apply~ method can be called _as if they were themselves methods_.
+
+       * When we define a /function literal/ like ~(a, b) => a < b~, this is
+         REALLY /syntactic sugar/ for /object/ creation:
+         #+BEGIN_SRC scala
+         val lessThan = new Function2[Int, Int, Boolean] {
+           def apply(a: Int, b: Int) = a < b
+         }
+         #+END_SRC
+         Here
+         + ~lessThan~ has type ~Function2[Int, Int, Boolean]~, which is usually
+           written ~(Int, Int) => Boolean~.
+         + ~Function2~ is an oridinary (provided by the standard Scala library)
+           trait, and it has an ~apply~ method. It represent function objects
+           that take two arguments. Also provied are ~Function1~, ~Function3~,
+           and others.
+         + ~lessThan(10, 20)~ is REALLY syntatic sugar for calling its ~apply~
+           method: ~lessThan.apply(10, 20)~
+         + /first-class values/: ordinary Scala objects.
+         + We'll often use /function/ to refer to either such a first-class
+           function or a method, _depending on context_.
+
+*** DONE 2.6 Following types to implementations - 25
+    CLOSED: [2017-03-18 Sat 16:22]
+    - In some cases, you'll find that the universe of possibilities for a given
+      polymorphic type is constrained such that _ONLY ONE_ implementation is
+      possible!
+
+    - ~compose~:
+      #+BEGIN_SRC scala
+      def compose(f: B => C, g: A => B): A => C =
+        x => f(g(x))
+      #+END_SRC
+
+    - ~andThen~: ~g andThen f~ is the same as ~f compose g~.
+
+    - Polymorphic, higher-order functions often end up being _extremely widely
+      applicable_,
+      precisely because they say nothing about any particular domain and are
+      simply abstracting over a common pattern that occurs in many contexts.
+
+*** DONE 2.7 Summary - 28
+    CLOSED: [2017-03-18 Sat 04:20]
+
+** DONE 3 Functional data structures - 29
+   CLOSED: [2017-03-18 Sat 22:02]
+*** DONE 3.1 Defining functional data structures - 29
+    CLOSED: [2017-03-18 Sat 16:37]
+    - /functional data structures/ are by definition _immutable_.
+
+    - Adding ~sealed~ in front means that all implementations of the ~trait~
+      _MUST_ be declared in this file.
+
+    - the ~+~ indicates that the type parameter ~A~ is covariant -- see sidebar
+      "More about variance" for more information.
+
+    - Each data constructor also introduces a /pattern/ that can be used for
+      /pattern matching/ as in the given examples.
+
+    - _More about variance_ =RE-READ=
+
+*** DONE 3.2 Pattern matching - 32
+    CLOSED: [2017-03-18 Sat 17:21]
+    - _Companion objects in Scala_
+      Companion objects are more of a convention in Scala.
+
+    - _Variadic functions in Scala_ =TODO: RE-READ=
+      Example:
+      #+BEGIN_SRC scala
+      def apply[A] (as: A*): List[A] =
+        if (as.isEmpty) Nil
+        else Cons(as.head, apply(as.tail: _*))
+      #+END_SRC
+      For data types,
+      * it's a common idiom to have a _variadic_ ~apply~ method in the companion
+        object to conveniently construct instances of the data type.
+
+      * By placing it in the companion object, we can invoke it with syntax like
+        ~List(1,2,3,4)~ or ~List("hi","bye")~, with as many values as we want
+        separated by commas (we sometimes call this the /list literal/ or just
+        /literal syntax/).
+
+      * Variadic functions are just providing a little
+        _syntactic sugar_
+        for
+        creating and passing a ~Seq~ of elements explicitly.
+
+      * ~Seq~ is the interface in Scala's collections library implemented by
+        sequence. Inside apply, the argument ~as~ will be bound to a ~Seq[A]~,
+        The special ~_*~ type annotation allows us to pass a ~Seq~ to a variadic
+        method.
+
+*** DONE 3.3 Data sharing in functional data structures - 35
+    CLOSED: [2017-03-18 Sat 18:34]
+    - /data sharing/: The new data reuses the immutable data.
+      Example:
+      1. ~Cons(1, xs)~ doesn't copy =xs=.
+      2. _tail_ operation doesn't real remove the head from a list, just returns
+         a new reference pointer to the same linked list but a different element.
+
+    - Sharing of immutable data often lets us implement functions more
+      efficiently
+
+    - footnote 6:
+      Conclusion: We find that _in the large_, FP can often achieve _greater_
+      efficiency than approaches that rely on side effects,
+      _due to much greater sharing of data and computation_.
+
+    - /persistent/
+
+    - =TODO= Exercise 3.2
+
+**** 3.3.1 The efficiency of data sharing - 36
+     - Adds all the elements of one list to the end of another:
+       #+BEGIN_SRC scala
+       def append[A](a1: List[A], a2: List[A]): List[A] =
+         a1 match {
+           case Nil => a2
+           case Cons(h,t) => Cons(h, append(t, a2))
+         }
+       #+END_SRC
+       The time complexity is O(a2.length)
+
+     - If we were to implement this same function for two arrays, which is
+       mutable in Scala,
+       we'd be forced to _copy all_ the elements in both arrays into the result.
+       In this case, the immutable linked list is much more efficient than an array!
+
+     - Writing purely functional data structures that support different opera-
+       tions efficiently
+       _is all about finding clever ways to exploit data sharing_. =IMPORTANT=
+
+     - Exercise 3.6,
+       Q: Why can't this function be implemented in constant time like ~tail~?
+       A: One ~case~ in pattern matching of this function body is
+          ~case Cons(hd, tl) => Cons(hd, init(tl))~, which shows a copying
+          operation and ~Cons~ construction.
+          =Jian's Sentiment=: A linked list can be pointed by multiple head, but
+                              it can't point to multiple tails.
+          =IMPORTANT=
+
+     - =TODO: Learn Vector in Scala standard library=
+
+*** DONE 3.4 Recursion over lists and generalizing to higher-order functions - 38
+    CLOSED: [2017-03-18 Sat 21:34]
+    - _Underscore notation for anonymous functions_
+      * The anonymous function ~(x,y) => x + y~ can be written as ~_ + _~ in
+        situations where the types of ~x~ and ~y~ _could be inferred_ by Scala.
+
+      * This is a useful shorthand in cases where _the function parameters are
+        mentioned just once_ in the body of the function.
+
+      * _Each underscore_ in an anonymous function expression like ~_ + _~
+        _introduces a new (unnamed) function parameter_ and references it.
+
+      * Arguments are introduced in _left-to-right order_.
+
+    - Exercise 3.7 =TODO= Return to in chapter 5
+      =Jian's Answer (now)=: For now, I can't add any short-circuit behavior
+      to them without adding a ~if...else...~ test to eache of them.
+
+**** 3.4.1 More functions for working with lists - 41
+***** LISTS IN THE STANDARD LIBRARY
+      - We'll use the standard library version in subsequent chapters.
+
+      - Differences between
+        our ~List~ library
+        and
+        The ~List~ in the standard library:
+        * We developed ~Cons~.
+        * In the standard library, ~Cons~ is called ~::~, which is a
+          right-associate infix operator.
+
+      - Useful ~List~ methods in the standard library:
+        * ~def take(n: Int): List[A]~
+        * ~def takeWhile(f: A => Boolean): List[A]~
+        * ~def forall(f: A => Boolean): Boolean~ is like the bulit-in ~all~ in
+          Python.
+        * ~def exists(f: A => Boolean): Boolean~ is like the bulit-in ~any~ in
+          Python.
+        * ~scanLeft~ and ~scanRight~ returns the List of partial results.
+
+**** TODO 3.4.2 Loss of efficiency when assembling list functions from simpler components - 44
+     - One of the problems with ~List~ is that,
+       * _GOOD_: although we can often express operations and algorithms in terms
+         of _very general-purpose functions_,
+
+       * _BAD_: the resulting _implementation isn't always efficient_ -- * we may
+         + end up making _multiple passes_ over the same input, or else
+         + have to write _explicit recursive loops_ to _allow early termination_.
+
+     - =TODO= EXERCISE 3.24, improve on it in chapter 5
+
+*** DONE 3.5 Trees - 44
+    CLOSED: [2017-03-18 Sat 22:01]
+    - /Algebraic Data Type (ADT)/
+
+    - Somewhat confusingly, ADT is sometimes used elsewhere to stand for
+      /ABSTRACT data type/.
+
+    - =TODO= footnote 14 =TODO=
+
+    - _Tuple types in Scala_
+      * ~(String,Int)~, which is syntactic sugar for ~Tuple2[String,Int]~.
+
+    - Tree data structure:
+      #+BEGIN_SRC scala
+      sealed trait Tree[+A]
+      case class Leaf[A] (value: A) extends Tree[A]
+      case class Branch[A] (left: Tree[A], right: Tree[A]) extends Tree[A]
+      #+END_SRC
+
+    - Pattern matching again provides a convenient way of operating over elements
+      of our ADT. =IMPORTANT=
+
+    - _ADTs and encapsulation_:
+      * Objection to ADTs ::
+           _algebraic data types violate encapsulation by making public the_
+           _internal representation of a type_.
+
+      * Things are different in FP ::
+           In FP, we approach concerns about encapsulation differently
+        + we don't typically have delicate mutable state which could lead to
+          bugs or violation of invariants if exposed publicly.
+
+        + _Exposing_ the _data constructors_ of a type is _often fine_, and
+          the decision to do so is approached much like any other decision about
+          what the public API of a data type should be.
+
+    - =TODO= footnote 15 I don't understand.
+
+*** DONE 3.6 Summary - 47
+    CLOSED: [2017-03-18 Sat 22:02]
+
+** DONE 4 Handling errors without exceptions - 48 =ing...=
+   CLOSED: [2018-06-28 Thu 01:16]
+   - The functional solution, of returning errors as values, is
+     * safer and
+     * retains referential transparency,
+     and through the use of higher-order functions, we can preserve the
+     _primary benefit_ of exceptions -- /consolidation of error-handling logic/.
+
+*** DONE 4.1 The good and bad aspects of exceptions - 48
+    CLOSED: [2017-03-19 Sun 23:05]
+    - NO RT and substitution model can be applied:
+      #+BEGIN_SRC scala
+      def failingFn(i: Int): Int = {
+        val y: Int = throw new Exception("fail!")
+
+        try {
+          val x = 42 + 5
+          x + y
+        }
+        catch { case e: Exception => 43 }
+      }
+      #+END_SRC
+
+      is different from
+      #+BEGIN_SRC scala
+      def failingFn(i: Int): Int = {
+        try {
+          val x = 42 + 5
+          x + (throw new Exception("fail!"))
+        }
+        catch { case e: Exception => 43 }
+      }
+      #+END_SRC
+
+    - There are _two_ main problems with /exceptions/:
+      1. /Exceptions/ break /referential transparency/ and
+         introduce /context dependence/,
+
+      2. /Exceptions/ are *NOT* /type-safe/.
+         For example: There is a function ~failingFn: Int => Int~.
+         * It tells us nothing about the fact that  /exceptions/ may occur.
+
+         * It doesn't force us to handle those exceptions.
+
+         * If we forget to check for an exception in ~failingFn~, this won't be
+           detected until runtime.
+
+    - _Checked exceptions_: Java's checked exceptions
+      * GOOD: _at least_ force a decision about whether to handle or reraise an
+        error
+
+      * BAD:
+        + significant boilerplate for callers
+
+        + Don't work for higher-order functions. For example:
+          #+BEGIN_SRC scala
+          def map[A,B](l: List[A])(f: A => B): List[B] = {
+            // ...
+          }
+          #+END_SRC
+          This ~map~ doesn't know what exceptions were possible be thrown by ~f~.
+
+    - _Primary benefit of exceptions_
+      They allow us to /consolidate/ and /centralize error-handling/ _logic_,
+
+    - The technique we use is based on an old idea:
+      _instead of_ *throwing* an /exception/,
+      we *return* a /value/ indicating that an exceptional condition has occurred.
+      This is like the /return codes/ in the C language.
+
+    - However, unlike C-style error codes,
+      * the error-handling strategy we use is /completely type-safe/, and
+
+      * we get full assistance from the type-checker in *forcing* us to deal with
+        errors,
+
+      * with a minimum of syntactic noise.
+
+        =From Jian=
+        Avoid error-handling blocks before you really want to deal with it.
+
+        In Java, you must re-throw the /exception/ if you don't want to deal with
+        it in some places.
+
+*** DONE 4.2 Possible alternatives to exceptions - 50
+    CLOSED: [2017-03-19 Sun 23:05]
+    - /partial function/: it's not defined for some inputs.
+
+    - A function is typically /partial/
+      BECAUSE it _makes some assumptions_ about its inputs that are *NOT implied
+      by the /input types/.*
+
+    - One "solution" is to return some sort of _bogus value_ of its type, this is
+      how error handling is often doen in languages WITHOUT /exceptions/.
+      We *REJECT* this solution for a few reasons:
+      1. It allows errors to silently propagate
+         * Callers should check this condition manually, but they may forget
+           (error-prone).
+
+         * If a caller forgets to check this, compiler won't alert because the
+           returned value is legal.
+
+         * Often the error won't be detected until much later in the code.
+
+      2. It a caller do the right thing to check the error codes, he/she at same
+         time introduces a fair amout of boilerplate code at each errorcode-check
+         required call site.
+
+      3. It's not applicable to polymorphic code. You CANNOT find a proper value
+         for all possible types of the type variable ~A~.
+         _NOTE_: ~null~ doesn't work for /primitive types/.
+
+         =From Jian= Even if Scala's /primitive types/ can have /methods/, which
+         is different from Java, they still CANNOT be assigned with ~null~.
+         =???= A wierd design?!
+
+      4. It demands a _special policy_ or _calling convention of callers_ --
+         proper use of this kind of functions would require that callers do
+         something other than call ~mean~ and make use of the result.
+           Giving functions special policies like this makes it difficult to
+         pass them to higher-order functions, which must treat all arguments
+         uniformly.
+
+    - The second possibile "solution" is to force the call to supply an argument
+      that tells us what to do in case we don't know how to handle the input,
+      for example:
+      #+BEGIN_SRC scala
+      def mean_1(xs: IndexedSeq[Double], onEmpty: Double): Double =
+        if (xs.isEmpty) onEmpty
+        else xs.sum / xs.length
+      #+END_SRC
+      It has DRAWBACKS -- it requires
+      1. _immediate callers_ have direct knowledge of how to handle the undefined
+         case
+         and
+      2. limits them to returning a ~Double~ (the type of the addtional argument).
+           What if ~mean_1~ is called as part of a larger computation and we'd
+         like to abort that computation if /mean/ is undefined?
+         Or
+           perhaps we'd like to take some completely different branch in the
+         larger computation in this case?
+
+         Simply passing an ~onEmpty~ parameter doesn't give us this freedom.
+
+*** DONE 4.3 The ~Option~ data type - 52
+    CLOSED: [2018-06-27 Wed 20:42]
+    - The solution is to represent EXPLICITLY in the /return type/ that
+      a function _may not always_ have an answer.
+        We can think of this as _DEFERRING_ to the caller for the error-handling
+      strategy.
+
+    - Re-creating the ~Option~ type in the Scala standard library:
+      #+BEGIN_SRC scala
+        sealed trait Option[+A]
+        case class Some[+A](get: A) extends Optioin[A]
+        case object None extends Option[Nothing]
+      #+END_SRC
+
+**** DONE 4.3.1 Usage patterns for ~Option~ - 53
+     CLOSED: [2018-06-27 Wed 18:44]
+***** BASIC FUNCTIONS ON OPTION
+      - Listing 4.2 The ~Option~ data type
+        #+BEGIN_SRC scala
+          trait Option[+A] {
+            def map[B](f: A => B): Option[B]
+            def flatMap[B](f: A => Option[B]): Option[B]
+            def getOrElse[B >: A](default: => B): B
+            def orElse[B >: A](ob: => Option[B]): Option[B]
+            def filter(f: A => Boolean): Option[A]
+          }
+        #+END_SRC
+
+***** USAGE SCENARIOS FOR THE BASIC OPTION FUNCTIONS
+      - ~Option[A].map(f)~:
+        1. proceeding with a computation on the assumption that an error hasn't
+           occurred;
+        2. deferring the error handling to later code.
+
+      - ~Option[A].flatMap(f)~ is similar, except that the function we provide
+        to transform the result can itself fail.
+
+      - EXERCISE 4.2:
+        I don't like the /anonymous function/ passed ~flatMap~ in this exercise --
+        it's too long to understand with only one glance.
+
+        My solution:
+        #+BEGIN_SRC scala
+          def variance(xs: Seq[Double]): Option[Double] =
+            for {
+              m <- mean(xs)
+              r <- mean(xs.map(x => math.pow(x - m, 2)))
+            } yield r
+        #+END_SRC
+
+      - We can use ~filter~ to *CONVERT successes INTO failures* _if the successful
+        values DO NOT MATCH the given predicate_.
+
+      - _A common pattern_:
+        transform an ~Option~ via calls to ~map~, ~flatMap~, and/or ~filter~,
+        and then
+        use ~getOrElse~ to _do error handling_ at the end:
+        #+BEGIN_SRC scala
+        val dept: String =
+          lookupByName("Joe").
+          map(_.dept).
+          filter(_ != "Accounting").
+          getOrElse("Default Dept")
+        #+END_SRC
+
+      - ~orElse~: this is often useful when we need to _chain together possibly
+        failing computations_, trying the second if the first hasn't succeeded.
+
+      - A common idiom is to do ~o.getOrElse(throw new Exception("FAIL"))~ to convert
+        the ~None~ case of an ~Option~ back to an exception.
+
+        _The general rule of thumb_:
+        We use /exceptions/ *ONLY* _if NO REASONABLE program would ever catch the
+        exception_.
+
+      - _Note_:
+        1. We don't have to check for ~None~ at each stage of the computation --
+           we can apply several transformations and then check for and handle
+           ~None~ when we're ready -- the computation will _stop immediately_
+           when it notice nothing need to be done, for example, ~map~, ~flatMap~,
+           and ~filter~ has no cost if the ~this~ is ~None~.
+
+        2. But we _also get additional safety_:
+           since ~Option[A]~ is a DIFFERENT type than ~A~, the compiler will *NOT*
+           let us forget to explicitly defer or handle the possibility of ~None~.
+
+**** DONE 4.3.2 ~Option~ composition, lifting, and wrapping exception-oriented APIs - 56
+     CLOSED: [2018-06-27 Wed 20:42]
+     - Q :: How to apply a ~Option~ _unrelated_ functions to an ~Option~ value
+            *WITHOUT* rewrite a whole function?
+
+     - A :: We can use /lift/:
+       #+BEGIN_SRC scala
+         def lift[A, B](f: A => B): Option[A] => Option[B] = _ map f
+       #+END_SRC
+
+     - One example of applying ~lift~:
+       ~val absO: Option[Double] => Option[Double] = lift(math.abs)~
+
+     - The ~Try~ function is a general-purpose function we can use to *convert _FROM_
+       an exception-based API _TO_ an ~Option~-oriented API*.
+         This uses a non-strict or lazy argument, as indicated by the ~=> A~ as the
+       /type/ of ~a~.
+       #+BEGIN_SRC scala
+         def parseInsuranceRateQuote(
+             age: String,
+             numberOfSpeedingTickets: String): Option[Double] = {
+           val optAge: Option[Int] = Try(age.toInt)
+           val optTickets: Option[Int] = Try(numberOfSpeedingTickets.toInt)
+           insuranceRateQuote(optAge, optTickts)
+         }
+
+         def Try[A](a: => A): Option[A] =
+           try Some(a)
+           catch { case e: Exception => None }
+       #+END_SRC
+
+     - =Exercise 4.3
+       Implement ~def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C]~
+
+     - With ~map2~, we can do:
+       #+BEGIN_SRC scala
+         def parseInsuranceRateQuote(
+             age: String,
+             numberOfSpeedingTickets: String): Option[Double] = {
+           val optAge: Option[Int] = Try { age.toInt }
+           val optTickets: Option[Int] = Try { numberOfSpeedingTickets.toInt }
+           map2(optAge, optTickes)(insuranceRateQuote)
+         }
+       #+END_SRC
+
+     - Exercise 4.4
+       ~def sequence[A](a: List[Option[A]]): Option[List[A]]~
+
+     - Exercise 4.5
+       ~def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]]~
+
+     - *For-comprehensions*
+
+       =From Jian= I prefer ~for~-comprehensions in some senarios -- they
+       sometimes can be less clutter then using the /methods/ of ~Option~
+       directly.
+         I give my solution to solve Exercise 4.2 above with ~for~-comprehension.
+
+     - =IMPORTANT=
+       Between ~map~, ~lift~, ~sequence~, ~traverse~, ~map2~, ~map3~, and so on,
+       you should _NEVER have to modify any existing functions_ to work with
+       optional values.
+
+*** DONE 4.4 The ~Either~ data type - 60
+    CLOSED: [2018-06-28 Thu 01:16]
+    The _big idea_ in this chapter:
+    Represent _failures_ and /exceptions/ with _ordinary values_, and write
+    functions that abstract out common patterns of error handling and recovery.
+
+    - ~Option~ never tells you what went wrong, and it only tells there is no
+      available value. Sometimes, we may need more information.
+
+    - ~Either~ basic Definition:
+      #+BEGIN_SRC scala
+        sealed trait Either[+E, +A]
+        case class Left[+E](value: E) extends Either[E, Nothing]
+        case class Right[+A](value: A) extends Either[Nothing, A]
+      #+END_SRC
+      It is a /disjoint union/ of _two_ types.
+
+    - ~Either~ is also often used more generally to encode one of two
+      possibilities in cases where it isn't worth defining a fresh data type.
+
+    - ~Option~ and ~Either~ in the standard library
+      * Read both API's in the Scala standard library.
+
+      * ~Either~ doesn't define a right-biased ~flatMap~ directly like we do here
+        (in this chapter).
+
+    - Examples:
+      * ~mean~
+        #+BEGIN_SRC scala
+          def mean(xs: IndexedSeq[Double]): Either[String, Double] =
+            if (xs.isEmpty)
+              Left("mean of empty list!")
+            else
+              Right(xs.sum / xs.length)
+        #+END_SRC
+
+      * Sometimes we might want to include more information about the error, for
+        example a stack trace showing the location of the error in the source
+        code. In such cases we can simply return the exception in the ~Left~
+        side of an ~Either~:
+        #+BEGIN_SRC scala
+          def safeDiv(x: Int, y: Int): Either[Exception, Int] =
+              try Right(x / y)
+              catch { case e: Exception => Left(e) }
+        #+END_SRC
+
+    - As we did with ~Option~ , we can write a function, ~Try~, which _factors
+      out_ this common pattern of converting /thrown exceptions/ to values:
+      #+BEGIN_SRC scala
+        def Try[A](a: => A): Either[Exception, A] =
+          try Right(a)
+          catch { case e: Exception => Left(e) }
+      #+END_SRC
+
+    - EXERCISE 4.6
+
+    - EXERCISE 4.7
+
+    - EXERCISE 4.8
+
+*** DONE 4.5 Summary - 63
+    CLOSED: [2018-06-28 Thu 01:16]
+    - The bigger idea:
+      * represent exceptions _as ordinary values_
+
+      * use higher-order functions to encapsulate common patterns of
+        _handling_
+        and
+        _propagating_ errors.
+
+        =From Jian= Rather than *explicit* /pattern matching/.
+
+    - =TODO= In the next chapter, we'll look more closely at why /non-strictness/
+      is important and how it can buy us greater modularity and efficiency in our
+      functional programs.
+
+** DONE 5 Strictness and laziness - 64
+   CLOSED: [2017-03-22 Wed 21:40]
+   - Example that can show the inefficiency of chaining operations call
+     on ~List~'s:
+     #+begin_src scala
+       List(1, 2, 3, 4).map(_ + 10).filter(_ % 2 == 0).map(_ * 3)
+     #+end_src
+     * How does this code is evaluated?
+       #+begin_src scala
+         List(11, 12, 13, 14).filter(_ % 2 == 0).map(_ * 3)
+         List(12, 14).map(_ * 3)
+         List(36, 42)
+       #+end_src
+       During the calculation of this example, two temporary lists are
+       created, and they are used once and discard immediately.
+
+     * _QUESTION_:
+       Can we
+       1. create a more efficiency calculation about this:
+          one pass, no temporary lists.
+          
+       2. *constraint* for the above point 1:
+          keep the same highlevel composition style
+          + Write a loop can eliminate the intermediate temporary lists,
+            but it won't retain the highlevel composition style.
+            - ~while~ solution =from Jian=:
+              #+begin_src scala
+                import scala.collection.mutable
+                
+                val inputList = List(1, 2, 3, 4)
+                val iter = List.iterator
+                val buffer = mutable.ListBuffer.empty[Int]
+                
+                while (iter.hasNext) {
+                  val e = iter.next()
+                  val e1 = e + 10
+                  if (e1 % 2 == 0)
+                    buffer.append(e1 * 3)
+                }
+                
+                buffer.toList
+              #+end_src
+
+            - ~for~ solution =from Jian=:
+              #+begin_src scala
+                import scala.collection.mutable
+                
+                val inputList = List(1, 2, 3, 4)
+                val buffer = mutable.ListBuffer.empty[Int]
+                
+                for (e <- inputList; e1 = e + 10) {
+                  if (e1 % 2 == 0)
+                    buffer.append(e1 * 3)
+                }
+                
+                buffer.toList
+              #+end_src
+
+   - =From Jian=:
+     I think _function composition_ is a good solution, but this chapter will
+     talk about another solution: _non-strictness functions_.
+     * _I THINK_ provide an example that can't be solved simply through function
+       composition will be better.
+
+     * _function composition_ solution: from the OPERATION viewpoint.
+
+     * _non-strictness functions_ solution: from the veiwpoints of
+       + non-strictness DATA STRUCTION
+       + non-strictness functions
+
+   - We'll see that /non-strictness/ _is a fundamental technique_ for improving
+     on the
+     * efficiency
+       and
+     * modularity
+     of functional programs in general.
+
+*** DONE 5.1 Strict and non-strict functions - 65
+    CLOSED: [2021-06-05 Sat 14:06]
+    - Q :: What are /strictness/ and /non-strictness/?
+    - Q :: How are these concepts expressed in Scala?
+
+    - /Non-strictness/ is a PROPERTY of a /function/.
+      * In Scala, you can declare a funciton with specifying some or all of its
+        parameters is/are non-strict.
+
+    - Simulate the ~if~ built-in with a non-strict ~if2~ function:
+      * No syntactic sugar:
+        #+begin_src scala
+          def if2[A](cond: Boolean, onTrue: () => A, onFalse: () => A): A =
+            if cond then onTrue() else onFalse()
+          
+          // call
+          if2(a < 22,
+              () => println("a"),
+              () => println("b")
+          )
+        #+end_src
+        + Thunk :: the unevaluated form of an expression.
+          - You can /force/ the /thunk/ to evaluate the expression and get _result_.
+
+      * With syntactic Sugar:
+        #+BEGIN_SRC scala
+          def if2[A](cond: Boolean, onTrue: => A, onFalse: => A): A =
+            if cond then onTrue else onFalse
+        #+END_SRC
+
+    - =IMPORTANT=
+      With either of those two syntax mentioned above,
+      Scala *will _NOT (by default) cache_ the result* of evaluating an argument.
+        This is _NOT a big trouble in /strict evaluation/,_ while it is a _big
+      trouble in /no-strict evaluation/._ Use ~lazy~ to *cache* the value:
+      #+BEGIN_SRC scala
+        // uncached
+        def maybeTwice(b: Boolean, i: => Int) =
+          if b then i+i else 0
+        
+        val x = maybeTwice(b = true, { println("hi"); 1 + 41 })
+        // hi
+        // hi
+        // x: Int = 84
+        
+        // cached
+        def maybeTwice2(b: Boolean, i: => Int) = {
+          lazy val j = i
+          if b then j+j else 0
+        }
+        
+        val x = maybeTwice2(b = true, { println("hi"); 1 + 41 })
+        // hi
+        // x: Int = 84
+      #+END_SRC
+      * =from Jian=
+        + A non-strict parameter with no manually assignment to a ~lazy~ value,
+          it so-called /call-by-name parameter/.
+          
+        + A non-strict parameter with an assignment to a ~lazy~ value,
+          it so-called /call-by-need parameter/.
+          - There is no simple syntax to declare a /call-by-need parameter/.
+
+    - _Formal definition of strictness_
+      If the evaluation of an expression _runs forever_ or _throws an error_
+      INSTEAD OF _returning a definite value_, we say that the expression
+      doesn't terminate, or that it evaluates to /bottom/.
+
+      * /strictness/:
+        A function ~f~ is /strict/ if the expression ~f(x)~ evaluates to /bottom/
+        for all ~x~ that evaluate to /bottom/.
+
+    - /Non-strict function/ in Scala takes its arguments _by name_ rather than _by
+      value_.
+
+*** DONE 5.2 An extended example: lazy lists - 68
+    CLOSED: [2021-06-05 Sat 18:06]
+**** DONE 5.2.1 Memoizing lazy lists and avoiding recomputation - 69
+     CLOSED: [2021-06-05 Sat 18:05]
+     We typically want to cache the values of a ~Cons~ node, once they are forced.
+
+     - Therefore, we mostly can't use the ~Cons~ data constructor directly, this code
+       will actually compute ~expensive(x)~ twice:
+       #+begin_src scala
+         val x = Cons(() => expensive(x), tl)
+         val h1 = x.headOption
+         // ...
+         val h2 = x.headOption
+       #+end_src
+
+     - To avoid this non-cached, repeated evaluation, we create /smart constructors/,
+       which is waht we call a funciton for constructing a data type that _ENSURE_
+       * some additional invariant or
+
+       * provides a slightly different signature than the "real" constructors
+         used for pattern matching.
+         + =from Jian=
+           For this, purpose, in Scala 3, if we use ~enum~ INSTEAD OF
+           ~sealed trait/class~ to define ADTs, /smart constructors/ are _no
+           longer required._
+       
+     - *CONVENTION*:
+       A /smart constructor/ is typically named with the corresponding data
+       constructor, but lowercase the first letter.
+
+     - The smart constructor ~cons~:
+       #+BEGIN_SRC scala
+         def cons[A] (hd: => A, tl: => Scream[A]): Stream[A] = {
+           lazy val head = hd
+           lazy val tail = tl
+           Cons(() => head, () => tail)
+         }
+       #+END_SRC
+       This ~cons~ takes care of memoizing the by-name arguments for the head
+       and tail of the ~Cons~.
+         *There is a common trick, the ~lazy val~'s, and it ensures that our
+       /thunk/ will only do its work once, when forced for the first time.*
+       Subsequent forces will return the _CACHED_ ~lazy val~'s.
+
+     - The ~empty~ smart constructor just returns ~Empty~, but annotates ~Empty~
+       as a ~Stream[A]~, which is better for /type inference/ in some cases.
+       * _footnote 4_:
+         Recall that Scala uses /subtyping/ to represent data constructors, but we
+         almost always want to infer ~Stream~ as the type, not ~Cons~ or ~Empty~.
+         Making /smart constructors/ that return the base type is a common trick.
+         + =from Jian=
+           I explained above, and if use ~enum~ in Scala 3, the /type inference/
+           will be as expected, and no need to use /smart constructors/ for /type
+           inference/ reason.
+
+**** DONE 5.2.2 Helper functions for inspecting lazy lists - 69
+     CLOSED: [2021-06-05 Sat 18:06]
+     - EXERCISE 5.1
+
+     - EXERCISE 5.2
+
+     - EXERCISE 5.3
+       =from Jian=
+       I think the solution can be optimized a little bit by caching the ~Stream~ head.
+     
+*** TODO 5.3 Separating program description from evaluation - 70 - =RE-NOTE=
+    - A major theme in functional programming:
+      /separation of concerns/.
+
+    - For example,
+      1. First-class functions capture some computation in their bodies but only
+         execute it once they receive their arguments.
+
+      2. Used ~Option~ to capture the fact that an error occurred, where the
+         decision of what to do about it became a separate concern.
+
+      3. With ~Stream~, we're able to build up a computation that produces a
+         sequence of elements without running the steps of that computation
+         until we actually need those elements.
+
+    - More generally speaking,
+      laziness lets us _separate_
+      * the description of an expression
+        from
+      * the evaluation of that expression.
+
+    - This gives us a powerful ability:
+      we may choose to describe a "larger" expression that we need, and
+      then evaluate only a portion of it.
+
+    - =From Jian=: This is powerfull because sometimes describe the WHOLE
+      expression is simpler than decribe part of this expression. In another
+      words,
+      * The WHOLE expression contains the general calculation ONLY.
+      * Part of the whole expression contains the general calculation and the
+        boundary condition. In real calculation, put the boundary condition in
+        operation may simplify the expression, though it depneds.
+
+    - Lazy ~foldRight~ can deal with the case of terminating early.
+      #+BEGIN_SRC scala
+      // Explicit recursion version
+      def existExplicitRecur(p: A => Boolean): Boolean = this match {
+        case Cons(h, t) => p(h()) || t().exists(p)
+        case _ => false
+      }
+
+      // Lazy ```foldRight``` and ```exist``` implemented with this
+      // ```foldRight```
+      def foldRight[B] (z: => B) (f: (A, => B) => B): B =
+        this match {
+          case Cons(h, t) => f(h(), t().foldRight(z)(f))
+          case _ => z
+        }
+
+      def exists(p: A => Boolean): Boolean =
+        foldRight(false) ((a, b) => p(a) || b)
+      #+END_SRC
+
+    - Good Example: Listing 5.3 Program trace for Stream
+
+    - This ~find~ is a method of ~Stream~, with the help of (lazy method) filter
+      it only evaluate elements of ~this~ stream to the first founded element.
+      #+BEGIN_SRC scala
+      def find(p: A => Boolean): Option[A] =
+        filter(p).headOption
+      #+END_SRC
+
+    - =TODO= We'll have a lot more to say about defining memory-efficient
+      streaming calculations, in particular calculations that require I/O, in
+      part 4 of this book.
+
+*** TODO 5.4 Infinite lazy lists and corecursion - 73
+    - An example of /infinite streams/:
+      ~val ones: Stream[Int] = Stream.cons(1, ones)~
+
+    - It's easy to write expressions that _never terminate_ or _aren't stack-safe_.
+      =TODO: aren't stack-safe???=
+
+    - /corecursive/: Whereas a recursive function consumes data, a corecursive function
+      _produces_ data.
+
+    - =TODO= Exercise 5.11 ~ 5.16
+
+*** 5.5 Summary - 77
+
+
+
+=TODO=    
+=TODO=    
+=TODO=    
+=TODO=    
+=TODO=    
+=TODO=    
+=TODO=    
+* NOT YET in MEAP    
+** TODO 6 Purely functional state - 78
+   We'll see how to write purely functional programs that manipulate /state/.
+
+   - Using the simple domain of /random number generation/ as the example.
+       This is NOT the most compelling use case, but a good first example that is
+     simple enough.
+
+   - =TODO=
+     More compelling use cases in _parts 3 and 4_ of the book, ESPECIALLY part 4,
+     where we'll say a lot more about dealing with /state/ and /effects/.
+
+   - *GOAL*:
+     give you a basic pattern for how to *make _ANY_ /stateful API/ purely
+     functional*.
+
+*** DONE 6.1 Generating random numbers using side effects - 78
+    CLOSED: [2018-06-30 Sat 09:31]
+    - Scala has ~scala.util.Random~ with a pretty typical /imperative API/ that
+      relies on /side effects/.
+      #+BEGIN_SRC scala
+        val rng = new scala.util.Random
+
+        rng.nextDouble  // res1: Double = 0.9867076608154569
+        rng.nextDouble  // res2: Double = 0.8455696498024141
+        rng.nextInt     // res3: Int = -623297295
+        rng.nextInt(10) // res4: Int = 4
+      #+END_SRC
+      + Even if we don't know ~scala.util.Random~,
+        we can assume an object ~rng~ has some /INTERNAL state/ that *gets updated
+        after each invocation*,
+          since we'd _otherwise_ get the SAME VALUE EACH TIME we called ~nextInt~ or
+        ~nextDouble~.
+
+        The _state updates_ are performed as a /side effect/, these /methods/ are
+        *NOT* /referentially transparent/ -- this implies that they are *NOT* as
+        /testable/, /composable/, /modular/, and /easily parallelized/ as they
+        could be.
+
+    - You *cannot* control the exact value of a random number.
+      You *cannot* get a value a second time as you wish, or else it is NOT random.
+
+    - Q :: If we can't control the random number values, how about pass in a
+           generator?
+
+    - A :: Even the "SAME" /generator/ has to
+      + be both created with the *same* /seed/, and
+      + also be in the *same* /state/.
+
+      This means its /methods/ have been called a certain number of times since it
+      was created -- this will be really difficult to guarantee, because every time
+      we call ~nextInt~, for example, the PREVIOUS /state/ of the random number
+      generator is *destroyed*.
+        Do we now need a separate mechanism to keep track of how many times
+      we've called the /methods/ on ~Random~?
+
+    - The answer to all of this is that *we should eschew /side effects/ on principle*!
+
+    - =EN=
+      eschew - 避
+
+*** DONE 6.2 Purely functional random number generation - 80
+    CLOSED: [2018-06-30 Sat 09:45]
+    The key to *recovering* /referential transparency/ is to make the *state
+    updates* _EXPLICIT_ -- do NOT update /state/ as a /side effect/, but simply
+    return the new /state/ along with the value that we're generating.
+
+    - Here is one possible interface to a random number generator with *explicit
+      state updates*.
+      #+BEGIN_SRC scala
+        trait RNG {
+          def nextInt: (Int, RNG)
+        }
+      #+END_SRC
+      Rather than work as ~scala.util.Random~, we return
+      the random number *and* the new /state/,
+      leaving the OLD /state/ unmodified.
+
+      In effect, *SEPARATE* the concern of _computing_ what the NEXT /state/ is
+      from the concern of _communicating_ the NEW /state/ to the rest of the
+      program.
+
+    - *No GLOBAL mutable memory is being used* -- we simply return the NEXT /state/
+      back to the caller.
+        This leaves *the caller of ~nextInt~ in _COMPLETE control_ of what to do
+      with the NEW /state/.*
+
+    - We need an implementation to illustrate the principles.
+      Here is a simple one, use the /linear congruential generator/ algorithm, which
+      is the same as the algorithm of the ~scala.util.Random~.
+      #+BEGIN_SRC scala
+        case class SimpleRNG(seed: Long) extends RNG {
+          def nextInt: (Int, RNG) = {
+            val newSeed = (seed * 0x5DEECE66DL + 0xBL) & 0xFFFFFFFFFFFFL
+            val nextRNG = SimpleRNG(newSeed)
+            val n = (newSeed >>> 16).toInt
+            (n, nextRNG)
+          }
+        }
+      #+END_SRC
+      + Usage examples:
+        #+BEGIN_SRC scala
+          val rng = SimpleRNG(42)
+          val (n1, rng2) = rng.nextInt
+          // n1: Int = 16159453
+          // rng2: RNG = SimpleRNG(1059025964525)
+
+          val (n2, rng3) = rng2.nextInt
+          // n2: Int = -1281479697
+          // rng3: RNG = SimpleRNG(197491923327988)
+        #+END_SRC
+        If you call ~rng.nextInt~ or ~rng2.nextInt~ again, you'll get back the
+        same random numbers again, respectively.
+
+*** DONE 6.3 Making stateful APIs pure - 81
+    CLOSED: [2018-09-02 Sun 19:41]
+    - _footnote 4_:
+      1. Efficiency loss and reason.
+      2. Efficient purely functional data structures may help.
+      3. Mutate the data in place without breaking RT, part 4 =TODO=
+
+    - For instance:
+      #+BEGIN_SRC scala
+        class Foo {
+          private var s: FooState = ...
+          def bar: Bar
+          def bza: Int
+        }
+
+        // Suppose `bar` and `baz` each mutate `s` in some way.
+
+        // We can mechanically translate this to the purely functional API by making
+        // explicit the transition from one state to the next:
+        trait Foo (
+          def bar: (Bar, Foo)
+          def baz: (Int, Foo)
+        )
+      #+END_SRC
+      * Whenever we use this pattern,
+        we make the caller responsible for passing the computed /next state/
+        through the rest of the program.
+
+    - Examples:
+      #+BEGIN_SRC scala
+        def randomPair(rng: RNG): (Int,Int) = {
+          val (i1, _) = rng.nextInt
+          val (i2, _) = rng.nextInt
+          (i1, i2)
+        }
+        // `i1` will always be the same with `i2`
+
+
+        def randomPair(rng: RNG): ((Int,Int), RNG) = {
+          val (i1,rng2) = rng.nextInt
+          val (i2,rng3) = rng2.nextInt
+          ((i1, i2), rng3)
+        }
+      #+END_SRC
+
+    - *Dealing with awkwardness in functional programming*
+      * _Awkwardness like this is ALMOST ALWAYS a sign of some *missing abstraction*
+        waiting to be discovered._
+
+      * With practice, experience, and more familiarity with the idioms contained
+        in this book, expressing a program functionally will become _effortless
+        and natural_.
+          Of course, good design is still hard, but programming using pure
+        functions _greatly simplifies the design space_.
+
+    - You can see the general pattern, and perhaps you can also see how it might
+      get tedious to use this API directly.
+
+      =IMPORTANT=
+      Let's write a few functions to
+      1. generate random values
+         and
+      2. see if we notice any repetition that we can factor out.
+
+*** DONE 6.4 A better API for state actions - 84
+    CLOSED: [2018-09-03 Mon 18:13]
+    - state action (or /state transitions/) ::
+      A function has a type of the form ~StatefulValueType => (A, StatefulValueType)~.
+      They transform ~StatefulValue~ states from one to the next.
+      * These /state actions/ can be *combined* using /combinators/, which are
+        /higher-order functions/ that we'll define in this section.
+
+    - We want our /combinators/ to pass the /state/ from one action to the next
+      _AUTOMATICALLY_, rather than writing down all the deails explicitly like we
+      did before this section in the purely functional API random number example.
+      1. ~type Rand[+A] = RNG => (A, RNG)~
+
+      2. A simple ~RNG~ state transition:
+         pass the ~RNG~ /state/ through without using it, always returning a
+         constant value rather than a random value:
+         #+BEGIN_SRC scala
+           def unit[A](a: A): Rand[A] =
+             rng => (a, rng)
+         #+END_SRC
+
+      3. Transform the output of a /state action/ _WITHOUT modifying_ the /state/
+         itself.
+           Remember, ~Rand[A]~ is just a /type alias/ for a /function type/ ~RNG
+         => (A, RNG)~, so this is just a kind of /function composition/:
+         #+BEGIN_SRC scala
+           def map[A, B](s: Rand[A])(f: A => B): Rand[B] =
+             rng => {
+               val (a, rng2) = s(rng)
+               (f(a), rng2)
+             }
+         #+END_SRC
+         * Usage:
+           #+BEGIN_SRC scala
+             def nonNegativeEven: Rand[Int] =
+               map(nonNegativeInt)(i => i - i % 2)
+           #+END_SRC
+
+    - EXERCISE 6.5
+      =DONE=
+
+**** DONE 6.4.1 Combining state actions - 85
+     CLOSED: [2021-06-21 Mon 17:55]
+     The ~map~ we defined above is NOT strong enough to combine _two_ ~RNG~ action.
+     We need a new combinator ~map2~ that can combine two ~RNG~ actions into one
+     using a binary rather than unary function.
+
+    - EXERCISE 6.6
+      Implement ~map2~
+
+    - ~map2~ Examples:
+      #+BEGIN_SRC scala
+        def both[A,B](ra: Rand[A], rb: Rand[B]): Rand[(A,B)] =
+          map2(ra, rb)((_, _))
+
+        val randIntDouble: Rand[(Int, Double)] =
+          both(int, double)
+
+        val randDoubleInt: Rand[(Double, Int)] =
+          both(double, int)
+      #+END_SRC
+
+    - EXERCISE 6.7
+      =DONE=
+
+**** TODO 6.4.2 Nesting state actions - 86
+     - =TODO=
+       NOTE
+
+     - EXERCISE 6.8
+
+     - EXERCISE 6.9
+
+     - With the ~nonNegativeLessThan~, including the off-by-one error we had before:
+       ~def rollDie: Rand[Int] = nonNegativeLessThan(6)~
+
+       Fix the off-by-one error is trival:
+       ~def rollDie: Rand[Int] = map(nonNegativeLessThan(6))(_ + 1)~
+
+*** TODO 6.5 A general state action data type - 87
+    The combinators we defined before this section, ~unit~, ~map~, ~map2~,
+    ~flatMap~, and ~sequence~, can be general purpose combinators.
+      The only thing we need change to make them can be used in general cases is
+    their type.
+
+    #+BEGIN_SRC scala
+      case class State[S, +A](run: S => (A, S))
+
+      // and then
+      type Rand[A] = State[RNG, A]
+    #+END_SRC
+
+    - EXERCISE 6.10
+
+*** TODO 6.6 Purely functional imperative programming - 88
+    - *Aren't imperative and functional programming opposites?*
+
+    - EXERCISE 6.10
+
+*** DONE 6.7 Summary - 91
+    CLOSED: [2018-09-03 Mon 04:39]
+    - Topic of this chapter:
+      how to write purely functional programs that have state.
+
+    - Motivating Example:
+      random number generation
+
+    - The overall pattern we developed in this chapter comes up in many different
+      domains.
+
+      The idea is simple:
+      use a pure function that accepts a state as its argument, and it returns
+      the new state along-side its result.
+
+    - Suggestion:
+      Try to apply this pattern in you work:
+      1. *convert* an /imperative API/ to a /purely functional API/
+      2. Use some of the functions we wrote here to make working with it more convenient.
+
+* TODO PART 2 Functional design and combinator libraries - 93
+  - In part 1, we covered the fundamentals of FP and saw how the commitment to
+    using only pure functions affects the basic building blocks of programs:
+    /loops/, /data structures/, /exceptions/, and so on.
+
+  - In this part, we'll see how the assumptions of functional programming _affect_
+    *library design*.
+
+  - We'll create _THREE_ useful libraries in this part
+    1. parallel and asynchronous computation
+
+    2. testing programs
+
+    3. parsing text
+
+  - The primary goal *is NOT* to teach you about parallelism, testing, and parsing.
+
+    The primary goal *IS* to _help you *develop skill in designing functional
+    libraries*,_ even for domains that look nothing like the ones here.
+
+  - One final note:
+    as you work through part 2, you may notice *repeated patterns* of similar-looking
+    code. Keep this in the back of your mind. _When we get to part 3_, we'll discuss
+    * how to remove this duplication, and
+
+    * we'll discover an entire world of fundamental abstractions that are common
+      to all libraries.
+
+** TODO 7 Purely functional parallelism - 95
+   In this chapter, we'll BUILD a _purely functional library_ for creating /parallel
+   and asynchronous computations/.
+
+   - We'll _rein in_ (控制住) the complexity inherent in parallel programs _by
+     describing them using ONLY /pure functions/._ This will let us
+     * use the /substitution model/ to *simplify* our reasoning
+       and
+     * hopefully make working with /concurrent computations/ both easy and enjoyable.
+
+   - *MAIN CONCERN*:
+     make our library _HIGHLY_ /composable/ and /modular/.
+     To this end, we'll keep with our theme of
+     *separating* the concern of _describing a computation_ *from* actually _running it_.
+
+     * Goal:
+       We want to allow users of our library to write programs at a very high level,
+       *insulating* them *from* the nitty-gritty (事實真相) of how their
+       programs will be executed.
+
+       For example, towards the end of the chapter we'll develop a combinator,
+       ~parMap~, that will let us easily apply a function ~f~ to every element in
+       a collection simultaneously: ~val outputList = parMap(inputList)(f)~
+
+   - _To get this goal, we'll work iteratively._
+     1. We'll begin with a _SIMPLE use case_ that we’d like our library to handle,
+        and
+
+     2. then develop an interface that facilitates this use case.
+
+     3. Only then will we consider what our implementation of this interface should be.
+
+     4. As we keep refining our design, we'll *oscillate between* the /interface/
+        and /implementation/ (go back to step 2 and then 3) as we gain a better
+        understanding of the domain and the design space through progressively
+        _MORE COMPLEX use cases_.
+
+   - We'll
+     * emphasize *algebraic reasoning*
+       and
+     * introduce the idea that
+       *an API can be described by an _algebra_ that OBEYS specific /laws/.*
+
+   - In this particular case,
+     our *fundamental assumption* will be that our library admits *absolutely
+     no* /side effects/.
+
+*** TODO 7.1 Choosing data types and functions - 96
+    - Example for Illustration: summing a list of integers.
+
+    - The *sequential* solution that often used (if not call ~sum~ /method/ directly):
+      #+BEGIN_SRC scala
+        def sum(ints: Seq[Int]): Int =
+          ints.foldLeft(0)((a, b) => a + b)
+      #+END_SRC
+
+    - Instead of folding /sequentially/,
+      we could use a /divide-and-conquer algorithm/ (this is a start point of
+      /non-sequential solution/ -- it can be parallelized, though the code below
+      is still /sequential/):
+      #+BEGIN_SRC scala
+        def sum(ints: IndexedSeq[Int]): Int =
+          if (ints.size <= 1)
+            ints.headOption getOrElse 0
+          else {
+            val (l,r) = ints.splitAt(ints.length/2)
+            sum(l) + sum(r)
+          }
+      #+END_SRC
+      * ~IndexedSeq~
+        + A /superclass/ of /random-access sequences/ like ~Vector~.
+        + _UNLIKE_ /lists/, these sequences provide an *efficient* ~splitAt~ /method/
+          for dividing them into two parts at a particular index.
+
+      * _UNLIKE_ the ~foldLeft~-based implementation, this implementation *can be
+        parallelized* — the two halves can be summed _in parallel_.
+
+        *currently, no need to convert "can be" to "be"*
+
+    - _Instead of_ learning how to work with the implementation APIs directly (likely
+      related to ~java.lang.Thread~ and ~java.util.concurrent~),
+        we'll design our own ideal API as illuminated by our examples and work
+      backward from there to an implementation.
+
+    - The ~sum~ example is used ONLY as an illustration.
+
+      In the real world,
+      summation is so fast that _parallelism add overhead_ rather than speedup
+      the calculation.
+
+**** DONE 7.1.1 A data type for parallel computations - 97
+     CLOSED: [2018-10-05 Fri 18:16]
+     - Look at the line ~sum(l) + sum(r)~, which invokes ~sum~ on the two halves recursively.
+       * *Observe* to find requirements:
+         this line we can see ANY /data type/ we might choose to represent our
+         /parallel computations/ needs to be able to *contain a result*:
+         + that result will *have some meaningful type* (in this case ~Int~),
+
+         + we *require some way of extracting this result*.
+
+       * *Design*
+         For now, we can just
+         + invent a /container type/ for our result, ~Par[A]~, and
+         + legislate the existence of the functions we need:
+           - ~def unit[A](a: => A): Par[A]~
+             for
+             _TAKING_ an *unevaluated* ~A~ (you see the /lazy/ hit ~=>~) and
+             _RETURNING_ a computation that _MIGHT evaluate it in a SEPARATE /thread/._
+
+             * ~unit~ here means *create a unit* of /parallelism/ that just wraps a
+               single value.
+
+           - ~def get[A](a: Par[A]): A~
+             for *extracting* the resulting value *from* a _parallel computation_.
+
+     - No need to consider too much implementation details for now.
+       =TODO= RE-PHRASE and complete NOTE
+
+     - Listing 7.2  Updating ~sum~ with our custom data type
+       #+BEGIN_SRC scala
+         def sum(ints: IndexedSeq[Int]): Int =
+           if (ints.size <= 1)
+             ints.headOption.getOrElse(0)
+           else {
+             val (l, r) = ints.splitAt(ints.length/2)
+             val sumL: Par[Int] = Par.unit(sum(l))
+             val sumR: Par[Int] = Par.unit(sum(r))
+             Par.get(sumL) + Par.get(sumR)
+           }
+       #+END_SRC
+
+     - *The problem with using concurrency primitives directly*
+       * Transcribed partial excerpt of ~java.lang.Thread~ and ~Runnable~ into Scala:
+         #+BEGIN_SRC scala
+           trait Runnable { def run: Unit }
+
+           class Thread(r: Runnable) {
+             def start: Unit  // Begins running `r` in a separate thread.
+             def join: Unit   // Blocks the calling thread until `r` finishes running.
+           }
+         #+END_SRC
+
+       * A problem of both of the types ~Runnable~ and ~Thread~ is their core
+         functions do _NOT have meaningful type_ -- they are used for /side effect/.
+         This is BAD for /compositionality/.
+
+       * ~Thread~ also has the _DISADVANTAGE_ that it maps directly onto /operating
+         system threads/, which are a scarce resource.
+           It would be preferable to create as many /logical threads/ as is natural
+         for our problem, and LATER deal with mapping these onto actual /OS threads/.
+
+         + This kind of thing can be handled by something like
+           ~java.util.concurrent.Future~, ~ExecutorService~, and friends.
+
+           - Q :: Why don't we use them directly?
+           - A :: Here's a portion of their API:
+             #+BEGIN_SRC scala
+               class ExecutorService {
+                 def submit[A](a: Callable[A]): Future[A]
+               }
+
+               trait Future[A] {  // ATTENTION: This is Java's `Future`, NOT Scala's
+                 def get: A
+               }
+             #+END_SRC
+             * Though this is *a /good abstraction/ OVER /physical threads/,* it
+               is still _a *lower level* of abstraction_ -- lower than the
+               library we want to create in this chapter.
+
+             * A call to ~Future.get~, for example, *blocks* the calling /thread/
+               *until* the ~ExecutorService~ has finished executing it, and
+               + *Blocking* is in general not acceptable in many services.
+
+             * The API of (java) ~Future~ provides _no means of composing /futures/._
+
+       * =TODO=
+         Of course,
+         + we can build the implementation of our library *on top of these tools*
+           (and this is in fact what we end up doing later in the chapter),
+
+         + BUT they do *NOT* present a /modular and compositional API/ that we'd
+           want to use directly from functional programs.
+
+     - A choice about the meaning of ~unit~ and ~get~:
+       * ~unit~ could begin evaluating its argument immediately in a separate
+         (logical) thread, or
+       * it could simply hold onto its argument until get is called and begin
+         evaluation then.
+     - But note that in this example, if we want to obtain any degree of
+       /parallelism/, we require that ~unit~
+       =RE-READ= footnote 2
+       * *begin evaluating* its argument *concurrently* and
+       * *return immediately*.
+
+     - However,
+       * if ~unit~ begins evaluating its argument concurrently, then
+         _calling ~get~ arguably *breaks* /referential transparency/:_
+         We can see this by replacing ~sumL~ and ~sumR~ with their definitions
+         -- if we do so, we still get the same result, but our program is
+         *no longer parallel*:
+         #+begin_src scala
+           Par.get(Par.unit(sum(l))) + Par.get(Par.unit(sum(r)))
+         #+end_src
+
+       * If ~unit~ _starts evaluating its argument right away,_ the next thing to
+         happen is that ~get~ will *wait for* that evaluation to complete. So the
+         two sides of the ~+~ sign won't run *in parallel* if we _simply inline_ the
+         ~sumL~ and ~sumR~ variables.
+           We can see that ~unit~ has a DEFINITE /side effect/, but *only with
+         regard to ~get~.*
+         That is, ~unit~ simply returns a ~Par[Int]~ in this case, representing
+         an /asynchronous computation/. But _as soon as we pass_ that ~Par~ to
+         ~get~, we explicitly wait for it, exposing the /side effect/.
+
+       * Conclusion:
+         So it seems that we want to
+         *AVOID* calling ~get~, or
+         at least *delay* calling it *until the very end.*
+           We want to be able to *combine* /asynchronous computations/ *without
+         waiting* for them to finish. =from Jian= Non-blocking!!!
+       
+**** DONE 7.1.2 Combining parallel computations - 100 - =NOTE= - =RE-READ=
+     CLOSED: [2021-07-17 Sat 23:54]
+     - EXERCISE 7.1
+
+**** DONE 7.1.3 Explicit forking - 102 - =NOTE= - =RE-READ=
+     CLOSED: [2021-07-18 Sun 00:11]
+
+*** DONE 7.2 Picking a representation - 104
+    CLOSED: [2021-07-18 Sun 00:18]
+*** TODO 7.3 Refining the API - 105 - =READING=
+    - EXERCISE 7.3
+
+    - EXERCISE 7.4
+
+    - *Adding infix syntax using implicit conversions*
+
+    - EXERCISE 7.5
+
+    - EXERCISE 7.6
+      
+*** TODO 7.4 The algebra of an API - 110
+**** TODO 7.4.1 The law of mapping - 110
+     - EXERCISE 7.7
+       
+**** TODO 7.4.2 The law of forking - 112
+**** TODO 7.4.3 Breaking the law: a subtle bug - 113
+     - EXERCISE 7.8
+
+     - *Why laws about code and proofs are important*
+       
+     - EXERCISE 7.9
+       
+**** TODO 7.4.4 A fully non-blocking Par implementation using actors - 115
+     - *Using local side effects for a pure API*
+
+     - EXERCISE 7.10
+
+*** TODO 7.5 Refining combinators to their most general form - 120
+    - *About the exercises in this section*
+
+    - EXERCISE 7.11
+      
+    - EXERCISE 7.12
+
+    - EXERCISE 7.13
+
+    - EXERCISE 7.14
+
+    - *Recognizing the expressiveness and limitations of an algebra*
+      
+*** TODO 7.6 Summary - 123
+
+** TODO 8 Property-based testing - 124
+*** TODO 8.1 A brief tour of property-based testing - 124
+*** TODO 8.2 Choosing data types and functions - 127
+**** 8.2.1 Initial snippets of an API - 127
+**** 8.2.2 The meaning and API of properties - 128
+**** 8.2.3 The meaning and API of generators - 130
+**** 8.2.4 Generators that depend on generated values - 131
+**** 8.2.5 Refining the Prop data type - 132
+
+*** TODO 8.3 Test case minimization - 134
+*** TODO 8.4 Using the library and improving its usability - 136
+**** 8.4.1 Some simple examples - 137
+**** 8.4.2 Writing a test suite for parallel computations - 138
+
+*** TODO 8.5 Testing higher-order functions and future directions - 142
+*** TODO 8.6 The laws of generators - 144
+*** TODO 8.7 Summary - 144
+
+** TODO 9 Parser combinators - 146
+   We'll work through the design of a /combinator library/ for creating /parsers/.
+   We'll use JSON parsing as a motivating use case.
+
+     This chapter, like chapters 7 and 8, is *NOT so much about* /parsing/
+   as it is about *providing further insight into the process of functional design.*
+
+   - *What is a parser?*
+     * parser :: a specialized program
+       + _input_: _UNSTRUCTURED data_ (such as text, or any kind of stream of symbols, numbers, or tokens)
+
+       + _output_: a _STRUCTURED REPRESENTATION of that data_.
+
+     * Examples:
+       + CSV parser:
+         output can be a list of lists, and each inner list represents one csv line.
+
+       + XML or JSON parser:
+         parse them into a tree-like data structure.
+
+     * Parser Combinator library:
+       + a parser can parse only some specific small pieces of input.
+
+       + we can create some combinators to assemble composite parsers from elementary
+         ones, and still more complex parsers from those.
+
+   - This chapter will *introduce* a _design approach_ that we'll call /algebraic
+     design/ -- this is just a natural evolution of what we've already been
+     doing to different degrees in past chapters.
+     * algebraic design :: =IMPORTANT=
+       1. Design our /interface/ first along with /associated laws/,
+       2. Letting this guide our choice of /data type representations/.
+
+   - *Parser combinators versus parser generators*
+     * /parser generators/ generated parser:
+       + It can be very efficient.
+
+       + It also comes _with ALL the usual problems_ of /code generation/
+         - the libraries produce as their output a MONOLITHIC CHUNK of code that's
+           *difficult to debug*.
+
+         - It's also *difficult to reuse* _fragments of logic_, since we *CAN'T*
+           introduce NEW /combinators/ or /helper functions/ to abstract over
+           common patterns in our parsers.
+
+     * /parser combinators/:
+       It doesn't "generate" a parser. Itself as a whole is a parser.
+       Parsers inside it are just ordinary first-class values.
+       Reusing parsing logic is trivial, and we don't need any sort of external
+       tool separate from our programming language.
+
+*** TODO 9.1 Designing an algebra, first - 147
+    - There are MANY different kinds of _parsing libraries_.
+
+      Ours will be designed for /expressiveness/ (we’d like to be able to parse
+      ARBITRARY grammars), /speed/, and /GOOD error reporting/.
+
+    - For simplicity and for speed,
+      our library will create parsers that _operate on strings_ as input.
+
+    - We need to pick some parsing tasks to help us discover a good algebra for our parsers.
+
+      * As the first parsing task JSON or HTML are NOT simple enough!
+
+        A good and simple domain to start with is parsing various combinations of
+        _repeated letters_ and _gibberish words_ like "abracadabra" and "abba".
+
+        We’ll see how simple examples like this help us ignore extraneous details
+        and focus on the essence of the problem.
+
+    - Let's start with the simplest of parsers.
+      * ~def char(c: Char): Parser[Char]~
+
+      * ~def run[A](p: Parser[A])(input: String): Either[ParseError, A]~
+
+      * --
+        #+BEGIN_SRC scala
+          trait Parsers[ParseError, Parser[+_]] {
+            def run[A](p: Parser[A])(input: String): Either[ParseError, A]
+            def char(c: Char): Parser[Char]
+          }
+        #+END_SRC
+
+      * ~run(char(c))(c.toString) == Right(c)~
+
+      * ~def string(s: String): Parser[String]~
+
+    - xxxx
+
+    - *The advantages of algebraic design*
+
+*** TODO 9.2 A possible algebra - 152
+**** 9.2.1 Slicing and nonempty repetition - 154
+
+*** TODO 9.3 Handling context sensitivity - 156
+*** TODO 9.4 Writing a JSON parser - 158
+**** 9.4.1 The JSON format - 158
+**** 9.4.2 A JSON parser - 159
+
+*** TODO 9.5 Error reporting - 160
+**** 9.5.1 A possible design - 161
+**** 9.5.2 Error nesting - 162
+**** 9.5.3 Controlling branching and backtracking - 163
+
+*** TODO 9.6 Implementing the algebra - 165
+**** 9.6.1 One possible implementation - 166
+**** 9.6.2 Sequencing parsers - 166
+**** 9.6.3 Labeling parsers - 167
+**** 9.6.4 Failover and backtracking - 168
+**** 9.6.5 Context-sensitive parsing - 169
+
+*** TODO 9.7 Summary - 171
+
+* TODO PART 3 Common structures in functional design - 173
+** TODO 10  Monoids - 175
+   - We'll see how /monoids/ are useful in _TWO_ ways:
+     * they facilitate _parallel computation_ by giving us the freedom to break
+       our problem into chunks that can be computed in parallel; and
+
+     * they can be _composed to assemble_ complex calculations from simpler
+       pieces.
+
+*** DONE 10.1 What is a monoid? - 175
+    CLOSED: [2018-09-02 Sun 03:44]
+    - *Monoid Laws* ::
+      * /associativity/
+      * /identity/
+
+    - A /monoid/ consists of the following:
+      * Some type ~A~;
+
+      * An /associative binary operation/, ~op~.
+        For any ~x: A~, ~y: A~, and ~z: A~, ~op(op(x,y), z) == op(x, op(y,z))~
+
+      * An /identity/ value, ~zero: A~, for that operation ~op~:
+        For any ~x: A~,
+        #+BEGIN_SRC haskell
+          op(x, zero) == x
+          op(zero, x) == x
+        #+END_SRC
+
+    - Examples of /monoid/:
+      * ~Int~ with the ~+~ operation.
+        + identity is ~0~
+
+      * ~Int~ with the ~*~ operation.
+        + identity is ~1~
+
+      * ~Boolean~ with the ~||~ operation.
+        + identity is ~false~
+
+      * ~Boolean~ with the ~&&~ operation.
+        + identity is ~true~
+
+    - Standard way to _read out_ this algebraic system:
+
+      Type ~A~ forms a /monoid/ under the operations defined by the ~Monoid[A]~
+      instance.
+
+    - Stated tersely,
+      a /monoid/ is
+      * a /type/
+        together with
+      * a /binary operation (op) over that type/,
+      satisfying /associativity/ and having an /identity/ element (zero).
+
+    - The ~Monoid~ /trait/:
+      #+BEGIN_SRC scala
+        trait Monoid[A] {
+          def op(a1: A, a2: A): A  // Must satisfy `op(op(x, y), z) == op(x, op(y, z))`
+          def zero: A              // Must satisfy `op(zero, x) == x`
+        }
+      #+END_SRC
+
+    - Examples:
+      #+BEGIN_SRC scala
+        // String Monoid
+        val stringMonoid = new Monoid[String] {
+          def op(a1: String, a2: String) = a1 + a2
+          val zero = ""
+        }
+
+
+        // List Monoid
+        def listMonoid[A] = new Monoid[List[A]] {
+          def op(a1: List[A], a2: List[A]) = a1 ++ a2
+          val zero = Nil
+        }
+      #+END_SRC
+
+    - =TODO= Can we write any interesting programs, knowing nothing about a type
+      other than that it forms a monoid? Absolutely! Let's look at some examples.
+
+*** DONE 10.2 Folding lists with monoids - 178
+    CLOSED: [2018-09-02 Sun 03:44]
+    /Monoids/ have an *intimate connection* with /lists/.
+
+    If you look at the signatures of ~foldLeft~ and ~foldRight~ on ~List~,
+    _you might notice something about the /argument types/:_
+    #+BEGIN_SRC scala
+      def foldRight[B](z: B)(f: (A, B) => B): B
+      def foldLeft[B](z: B)(f: (B, A) => B): B
+    #+END_SRC
+
+    - Q :: What happens when ~A~ and ~B a~re the *same* /type/?
+           #+BEGIN_SRC scala
+             def foldRight(z: A)(f: (A, A) => A): A
+             def foldLeft(z: A)(f: (A, A) => A): A
+           #+END_SRC
+
+    - A :: The components of a /monoid/ fit these /argument types/ like a glove.
+           #+BEGIN_SRC scala
+             val l: List[MonoidType] = v
+             l.foldRight(monoidType.zero)(monoidType.op)
+             l.foldLeft(monoidType.zero)(monoidType.op)
+           #+END_SRC
+      * You can see, because of the /monoid laws/ of /associativity/ and /identity/
+        hold, it is doesn't matter if we choose ~foldLeft~ or ~foldRight~ -- given
+        that both have tail-recursive implementations.
+
+      * We can write a general function ~concatenate~ that folds a /list/ with
+        a /monoid/:
+        #+BEGIN_SRC scala
+          def concatenate[A](xs: List[A], m: Monoid[A]): A =
+            xs.foldLeft(m.zero)(m.op)
+        #+END_SRC
+
+    - Q :: What if our /list/ has an /element type/ that does *NOT* have a ~Monoid~
+           instance?
+
+    - A :: You can /map/ over the list to turn it into a type that does:
+           #+BEGIN_SRC scala
+             // Answer to the EXERCISE 10.5
+             def foldMap[A, B](xs: List[A], m: Monoid[B])(f: A => B): B =
+               xs.view.
+                 map(f).
+                 foldLeft(m.zero)(m.op)
+           #+END_SRC
+
+    - EXERCISE 10.6 is HARD
+      =TODO= =TODO= =TODO= Try this later!!!
+
+*** TODO 10.3 Associativity and parallelism - 179
+    - /Balanced Fold/, like ~op(op(a, b), op(c, d))~, can have *less times of
+      calculations*
+
+      than
+
+      /fold right/ ~op(a, op(b, op(c ,d)))~ and /fold left/ ~op(op(op(a, b), c), d)~.
+
+*** TODO 10.4 Example: Parallel parsing - 181
+*** TODO 10.5 Foldable data structures - 183
+*** TODO 10.6 Composing monoids - 184
+**** 10.6.1 Assembling more complex monoids - 185
+**** 10.6.2 Using composed monoids to fuse traversals - 186
+
+*** TODO 10.7 Summary - 186
+
+** TODO 11  Monads - 187
+   Purely algebraic trait.
+
+*** DONE 11.1 Functors: generalizing the ~map~ function - 187
+    CLOSED: [2018-10-05 Fri 14:57]
+    #+BEGIN_SRC scala
+      trait Functor[F[_]] {
+        def map[A,B](fa: F[A])(f: A => B): F[B]
+
+        def distribute[A,B](fab: F[(A, B)]): (F[A], F[B]) =
+          (map(fab)(_._1), map(fab)(_._2))
+
+        def codistribute[A,B](e: Either[F[A], F[B]]): F[Either[A, B]] =
+          e match {
+            case Left(fa)  => map(fa)(Left.apply)
+            case Right(fb) => map(fb)(Right.apply)
+          }
+      }
+
+      object Functor {
+        val listFunctor: Functor[List] =
+          new Functor[List] {
+            def map[A,B](as: List[A])(f: A => B): List[B] = as map f
+          }
+      }
+    #+END_SRC
+
+**** DONE 11.1.1 Functor laws - 189
+     CLOSED: [2018-10-05 Fri 14:57]
+     - Whenever we create an abstraction like ~Functor~, we should consider
+       * NOT ONLY what abstract methods it should have,
+       * BUT which laws we expect to hold for the implementations.
+
+     - The /laws/ you stipulate for an abstraction are entirely up to you, and of
+       course Scala will NOT enforce any of these laws.
+
+       =from Jian= and *footnote 3*
+       Though, mostly, we want to follow the /laws/ of some corresponding
+       /mathematical structures/, which are strict and guaranteed to be
+       consistent.
+
+     - /Laws/ are IMPORTANT for _two_ reasons:
+       * /Laws/ help an interface form a new semantic level whose algebra may be
+         reasoned about independently of the instances.
+
+         For example,
+         with the /monoid laws/, when we take the product of a ~Monoid[A]~ and a
+         ~Monoid[B]~ to form a ~Monoid[(A,B)]~, we don't need to know irrelevant
+         details about ~A~ and ~B~ -- only /monoid laws/ are enough.
+
+       * More concretely, we often rely on laws when writing various combinators
+         derived from the functions of some abstract interface like ~Functor~.
+
+         =from Jian= If there is no clear /laws/, of course there will be no
+         constraints, there will also no deterministic relations -- constraints
+         and relations are the two sides of one thing -- then, you don't know
+         how to combine things, and not even mention get /combinators/.
+
+         =TODO=
+         We'll see examples of this later.
+
+     - functor law 1:
+       ~map(x)(identity)~ \equiv{} ~x~
+
+       This implies that the ~map~ operation should maintain the structure (or
+       more general, say "computation context") of a ~Functor~.
+
+       For example, when you map an ~Option~ type, this operation shouldn't change
+       ~Some~ to ~None~ or ~None~ to ~Some~ -- ONLY the inside values can be
+       changed.
+
+     - functor laws 2 and 3:
+       The concrete methods ~distributed~ and ~codistribute~ that we defined
+       with the help of ~map~ in the ~Functor~ /trait/.
+
+     - This kind of algebraic reasoning can potentially save us a lot of work,
+       since we don't have to write separate tests for these properties.
+       =TODO= =IMPORTANT=
+       =from Jian= REALLY DO NOT??? Even without dependent type system???
+       =from Jian= In what cases, we really don't need???
+
+*** TODO 11.2 Monads: generalizing the ~flatMap~ and ~unit~ functions - 190
+**** 11.2.1 The Monad trait - 191
+     - Exercise 11.1
+
+     - Exercise 11.2
+       *HARD*
+
+*** TODO 11.3 Monadic combinators - 193
+    - Exercise 11.3
+
+    - Exercise 11.4
+      *HARD*
+
+    - Exercise 11.5
+
+    - Exercise 11.6
+
+*** TODO 11.4 Monad laws - 194
+**** 11.4.1 The associative law - 194
+**** 11.4.2 Proving the associative law for a specific monad - 196
+     - Exercise 11.7
+       *HARD*
+
+     - Exercise 11.8
+
+     - Exercise 11.9
+
+**** 11.4.3 The identity laws - 197
+     - Exercise 11.10
+     - Exercise 11.11
+     - Exercise 11.12
+     - Exercise 11.13
+     - Exercise 11.14
+     - Exercise 11.15
+     - Exercise 11.16
+
+*** TODO 11.5 Just what is a monad? - 198
+**** 11.5.1 The identity monad - 199
+     - Exercise 11.17
+
+**** 11.5.2 The State monad and partial type application - 200
+     - Exercise 11.18
+     - Exercise 11.19
+     - Exercise 11.20
+
+*** TODO 11.6 Summary - 204
+
+** TODO 12  Applicative and traversable functors - 205
+   - In the previous chapter on monads, we saw how a lot of the functions we've been
+     writing for different combinator libraries can be expressed in terms of a
+     single interface, ~Monad~.
+
+     /Monads/ provide a powerful interface, as evidenced by the fact that we can
+     use ~flatMap~ to *essentially write imperative programs in a purely functional
+     way.*
+
+   - In this chapter, we'll learn about a related abstraction, /applicative functors/,
+     which are
+     * _LESS powerful_ than /monads/,
+     * BUT _MORE general_ (and hence more common).
+
+   - The process of arriving at /applicative functors/ will also provide some
+     insight into how to discover such abstractions, and we'll use some of these
+     ideas to uncover another useful abstraction, /traversable functors/.
+
+*** DONE 12.1 Generalizing monads - 205
+    CLOSED: [2019-04-30 Tue 13:41]
+    TODO NOTE
+
+*** DONE 12.2 The Applicative trait - 206
+    CLOSED: [2019-04-30 Tue 15:03]
+    #+begin_src scala
+      trait Applicative[F[_]] extends Functor[F] {
+        // primitive combinators
+        def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
+        def unit[A](a: => A): F[A]
+
+        // derived combinators
+        def map[B](fa: F[A])(f: A => B): F[B] =
+          map2(fa, unit(()))((a, _) => f(a))
+
+        def traverse[A, B](as: List[A])(f: A => F[B]): F[List[B]] =
+          as.foldRight(unit(List.empty[B]))((a, fbs) => map2(f(a), fbs)(_ :: _))
+
+      }
+    #+end_src
+    - ALL /applicatives/ are /functors/.
+
+    - We can move other /combinators/ into ~Applicative~ that do _NOT depend directly
+      on_ ~flatMap~ or ~join~.
+
+    - Exercise 12.1 -- =TODO=
+      #+begin_src scala
+        def sequence[A](fas: List[F[A]]): F[List[A]] =
+          traverse(fas)(identity)
+
+        def replicateM[A](n: Int, fa: F[A]): F[List[A]] =
+          sequence(List.fill(n)(fa))
+
+        def product[A,B](fa: F[A], fb: F[A]): F[(A,B)] = ???
+      #+end_src
+
+    - Exercise 12.2
+      + Create ~map~ and ~map2~ from ~unit~ and ~apply~
+        #+begin_src scala
+          trait Applicative[F[_]] extends Functor[F] {
+            def unit[A](a: => A): F[A]
+            def apply[A,B](fab: F[A => B])(fa: F[A]): F[B]
+
+            def map[A,B](fa: F[A])(f: A => B): F[B] =
+              apply(unit(f))(fa)
+
+            def map2[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] =
+              apply(apply(unit(f.curried))(fa))(fb)
+              // apply(map(fa)(f.curried))(fb)
+          }
+        #+end_src
+
+      + Create ~map~ and ~apply~ from ~unit~ and ~map2~
+        #+begin_src scala
+          trait Applicative[F[_]] extends Functor[F] {
+            def unit[A](a: => A): F[A]
+            def map2[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
+
+            def apply[A,B](fab: F[A => B])(fa: F[A]): F[B] =
+              map2(fab, fa)((a, b) => a(b))
+
+            def map[A,B](fa: F[A])(f: A => B): F[B] =
+              map2(unit(f), fa)((a, b) => a(b))
+          }
+        #+end_src
+
+    - Exercise 12.3 -- =from Jian= No answer in the source code??? =TODO=
+      #+begin_src scala
+        def map3[A,B,C,D](fa: F[A],
+                          fb: F[B],
+                          fc: F[C])(f: (A, B, C) => D): F[D] =
+          apply(apply(apply(unit(f.curried))(fa))(fb))(fc)
+
+        def map4[A,B,C,D,E](fa: F[A],
+                            fb: F[B],
+                            fc: F[C],
+                            fd: F[D])(f: (A, B, C, D) => E): F[E] =
+          apply(apply(apply(apply(unit(f.curried))(fa))(fb))(fc))(fd)
+      #+end_src
+
+    - Now we can make ~Monad[F]~ a /subtype/ of ~Applicative[F]~ by providing
+      the default implementation of ~map2~ in terms of ~flatMap~.
+      *All monads are applicative functors.*
+      #+begin_src scala
+        // Listing 12.2 Making Monad a subtype of Applicative
+
+        trait Monad[F[_]] extends Applicative[F] {
+          def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = join(map(fa)(f))
+
+          def join[A](ffa: F[F[A]]): F[A] = flatMap(ffa)(identity)
+
+          def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] =
+            a => flatMap(f(a))(g)
+
+          def map[B](fa: F[A])(f: A => B): F[B] =
+            flatMap(fa)((a: A) => unit(f(a)))
+
+          def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] =
+            flatMap(fa)(a => map(fb)(b => f(a, b)))
+        }
+      #+end_src
+
+      + =from Jian=
+        /Applicatives/ were introduced into programming languages later than /monads/
+        (first in Haskell). In the earlier version of Haskell, /monads/ are not
+        created based on /applicatives/.
+
+*** TODO 12.3 The difference between monads and applicative functors - 208
+**** TODO 12.3.1 The Option applicative versus the Option monad - 209
+     - *"Effects" in FP*
+
+**** TODO 12.3.2 The Parser applicative versus the Parser monad - 210
+
+*** TODO 12.4 The advantages of applicative functors - 211
+**** 12.4.1 Not all applicative functors are monads - 211
+     - Exercise 12.4
+     - Exercise 12.5
+     - Exercise 12.6
+
+*** TODO 12.5 The applicative laws - 214
+    - footnote 4 :: There are various other ways of presenting the /laws for ~Applicative~./
+                    See the chapter notes for more information. =TODO=
+
+**** DONE 12.5.1 Left and right identity - 214
+     CLOSED: [2019-04-30 Tue 15:50]
+     - /Applicatives/ should definitely obey the /functor laws/.
+       + _map(v)(id) \equiv{} v_
+       + _map(map(v)(g))(f) \equiv{} map(v)(f compose g)_
+
+     - This _implies_ some other laws for /applicative functors/ because of how we
+       have implemented ~map~ in terms of ~map2~ and ~unit~.
+       Recall the definition of ~map~:
+       #+begin_src scala
+         def map[B](fa: F[A])(f: A => B): F[B] =
+           map2(fa, unit(()))((a, _) => f(a))
+
+         // You may notice there is some arbitrary:
+         // We could have just as easily put the `unit` on the left side of the call to `map2`:
+         def map[B](fa: F[A])(f: A => B): F[B] =
+           map2(unit(()), fa)((_, a) => f(a))
+       #+end_src
+       + Both these implementations of ~map~ respect the /functor laws/.
+           In other words, ~map2~ of some ~fa: F[A]~ with ~unit~ *preserves the
+         structure* of ~fa~.
+
+       + The laws (/left and right identity/) abstracted from the ~map~ definitions
+         above:
+         * _map2(unit(()), fa)((_, a) => a) \equiv{} fa_
+         * _map2(fa, unit(()))((a, _) => a) \equiv{} fa_
+
+**** DONE 12.5.2 Associativity - 215 - =Re-Read=
+     CLOSED: [2019-04-30 Tue 16:26]
+     - To see the next law, /associativity/, let's look at the signature of ~map3~:
+       #+begin_src scala
+         def map3[A,B,C,D](fa: F[A],
+                           fb: F[B],
+                           fc: F[C])(f: (A, B, C) => D): F[D]
+       #+end_src
+
+     - We can state the /associativity law/ in terms of ~product~.
+       #+begin_src scala
+         def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
+           map2(fa, fb)((_, _))
+       #+end_src
+
+     - TODO NOTE More-Details-Required!!!
+       If there is no /associativity/, for instance, when we create _map3_, we
+       need _map3L_ and _map3R_, depending on the grouping, and we'd get an
+       explosion of other /combinators/ based on having to distinguish between
+       different groupings.
+
+     - And if we have pairs nested on the right, we can always turn those into
+       pairs nested on the left:
+       #+begin_src scala
+         def assoc[A, B, C](p: (A, (B, C))): ((A, B), C) =
+           p match { case (a, (b, c)) => ((a, b), c) }
+       #+end_src
+
+     - The associativity law for /applicative functors/:
+       _product(product(fa, fb), fc) \equiv{} map(product(fa, product(fb, fc)))(assoc)_
+
+**** TODO 12.5.3 Naturality of product - 216
+     - Naturality law:
+       _map2(a, b)(productF(f, g)) \equiv{} product(map(a)(f), map(b)(g))_
+
+     - Here
+       #+begin_src scala
+         def productF[I, O, I2, O2](f: I => O, g: I2 => O2): (I, I2) => (O, O2) =
+           (i, i2) => (f(i), g(i2))
+       #+end_src
+
+     - Exercise 12.7
+
+     - Exercise 12.8
+
+     - Exercise 12.9
+
+     - Exercise 12.10
+
+     - Exercise 12.11
+
+*** TODO 12.6 Traversable functors - 218
+    We discovered /applicative functors/ by noticing that our ~traverse~ and
+    ~sequence~ functions (and several other operations) did _NOT depend directly
+    on ~flatMap~._
+      We can spot another abstraction by generalizing ~traverse~ and ~sequence~
+    once again. Look again at the signatures of ~traverse~ and ~sequence~:
+    #+begin_src scala
+      def traverse[F[_], A, B](as: List[A])(f: A => F[B]): F[List[B]]
+      def sequence[F[_], A](fas: List[F[A]]): F[List[A]]
+    #+end_src
+
+    - Q :: When you want to generalize ~traverse~ and ~sequence~, you first think
+           that can we use an /abstract type/ rather than ~List~ in their
+           signatures? We don't want a concrete type in an abstract interface
+           like ~Applicative~. The analogy is ~Foldable~. Do we have similar
+           thing?
+
+    - A :: /Traversable data types/ are too numerous for us to write specialized
+           ~sequence~ and ~traverse~ /methods/ for each of them. What we need is a
+           new interface. We'll call it Traverse:
+           #+begin_src scala
+             trait Traverse[F[_]] {
+               def traverse[G[_]:Applicative,A,B](fa: F[A])(f: A => G[B]): G[F[B]] =
+                 sequence(map(fa)(f))
+
+               def sequence[G[_]:Applicative,A](fga: F[G[A]]): G[F[A]] =
+                 traverse(fga)(ga => ga)
+             }
+           #+end_src
+           + footnote 6 :: There is a ~Traversable~ /trait/ already in the standard
+                           library. It is _unrelated to our discussion_.
+                           =from Jian= Fortunately, it will be deprecated in the
+                           new Scala collection framework since 2.13.
+
+    - TODO
+
+    - Exercise 12.12
+      #+begin_src scala
+        def sequenceMap[K, V](ofa: Map[K, F[V]]): F[Map[K, V]] =
+          (ofa foldLeft unit(Map.empty[K, V])) { case (fMp, (k, fv)) =>
+            map2(fMp, fv)((mp, v) => mp + (k -> v))
+          }
+      #+end_src
+
+    - Exercise 12.13
+      TODO
+
+*** TODO 12.7 Uses of Traverse - 219
+    Explore the large set of operations that can be implemented quite generally
+    using ~Traverse~.
+      We'll only scratch the surface here. =TODO= check references in chapter notes.
+
+    - Exercise 12.14 TODO =Re-Do=
+      #+begin_src scala
+        trait Traverse[F[_]] extends Functor[F] {
+          def traverse[G[_], A, B](fa: F[A])(f: A => G[B])(
+              implicit G: Applicative[G]): G[F[B]] =
+            sequence(map(fa)(f))
+
+          def sequence[G[_], A](fga: F[G[A]])(
+              implicit G: Applicative[G]): G[F[A]] =
+            traverse(fga)(identity)
+
+          def map[A, B](fa: F[A])(f: A => B): F[B] =
+            traverse(fa)(f)(idMonad)
+
+          val idMonad = new Monad[Id] {
+            def unit[A](a: => A): A = a
+            def flatMap[A](a: A)(f: A => B): B = f(a)
+          }
+
+          type Id[A] = A
+        }
+      #+end_src
+
+    - =TODO=
+      What is the relationship between ~Traverse~ and ~Foldable~?
+      The answer involves a connection between ~Applicative~ and ~Monoid~.
+
+**** TODO 12.7.1 From monoids to applicative functors - 220
+     - Exercise 12.15
+
+**** TODO 12.7.2 Traversals with State - 221
+     - Exercise 12.16
+     - Exercise 12.17
+
+**** TODO 12.7.3 Combining traversable structures - 223
+**** TODO 12.7.4 Traversal fusion - 224
+     - Exercise 12.18
+
+**** TODO 12.7.5 Nested traversals - 224
+     - Exercise 12.19
+
+**** TODO 12.7.6 Monad composition - 225
+     - Exercise 12.20
+
+*** TODO 12.8 Summary - 226
+
+* TODO PART 4 Effects and I/O - 227
+  In this part, we'll apply what we covered in parts 1-3 of this book to show how
+  FP can express these effectful programs.
+
+  - TODO outline
+
+** TODO 13 External effects and I/O - 229
+   In this chapter, we'll take what we've learned so far about /monads/ and /algebraic
+   data types/ and _EXTEND it to handle /external effects/ like reading from
+   databases and writing to files_.
+
+   - We'll develop a /monad/ for I/O, aptly called ~IO~, that will allow us to handle
+     such /external effects/ in a purely functional way.
+
+   - We'll make an IMPORTANT *distinction* in this chapter between /effects/ and /side
+     effects/.
+       The IO monad provides a straightforward way of embedding imperative
+     programming with I/O effects in a pure program while preserving referential
+     transparency.
+
+     It clearly separates effectful code -- code that needs to have some effect
+     on the outside world -- from the rest of our program.
+
+   - This will also illustrate a key technique for dealing with /external effects/
+     -- using pure functions to compute a description of an effectful computation,
+     which is then executed by a separate interpreter that actually performs those
+     effects.
+
+     *Essentially we're crafting an /embedded domain-specific language (EDSL)/
+     for imperative programming.* _This is a powerful technique that we'll use
+     throughout the rest of part 4._
+
+   - Our goal :: equip you with the skills needed to craft your own EDSLs for
+                 describing effectful programs.
+
+*** DONE 13.1 Factoring effects - 229
+    CLOSED: [2019-04-29 Mon 15:11]
+    - Simple Example
+      #+begin_src scala
+        // Listing 13.1 Program with side effects
+
+        case class Player(name: String, score: Int)
+
+        def contest(p1: Player, p2: Player): Unit =
+          if (p1.score > p2.score)
+            println(s"${p1.name} is the winner!")
+          else if (p2.score > p1.score)
+            println(s"${p2.name} is the winner!")
+          else
+            println("It's a draw.")
+      #+end_src
+
+    - Factor the logic into its own pure function, ~winner~:
+      #+begin_src scala
+        def winner(p1: Player, p2: Player): Option[Player] =
+          if (p1.score > p2.score)      Some(p1)
+          else if (p1.score < p2.score) Some(p2)
+          else                          None
+
+        def contest(p1: Player, p2: Player): Unit = winner(p1, p2) match {
+          case Some(Player(name, _)) => println(s"$name is the winner!")
+          case None                  => println(s"It's a draw.")
+        }
+      #+end_src
+
+    - =TODO= NOTE
+
+    - Factor the ~contest~ even further to make it print message only -- factor out
+      compute which message to display to a separate function.
+      #+begin_src scala
+        // Hash the responsibility of determining which message is appropriate
+        def winnerMsg(p: Option[Player]): String = p map {
+          case Player(name, _) => s"$name is the winner!"
+        } getOrElse "It's a draw."
+
+        // Has the responsibility of printing the message to the console
+        def contest(p1: Player, p2: Player): Unit =
+          println(winnerMsg(winner(p1, p2)))
+      #+end_src
+      * This refactor might be beneficial if we later decide to display the result
+        in some sort of UI or write it to a file instead.
+
+      * Note how the /side effect/, ~println~, is now only _in the *outermost* layer_
+        of the program, and what's inside the call to ~println~ is a /pure expression/.
+
+      * The insight here is that *inside every function with /side effects/ is a /pure
+        function/ waiting to get out*.
+
+      * We can _formalize_ this insight a bit.
+        Given an /IMPURE function/ _f_ of type ~A => B~, we can _split_ _f_ into _TWO_
+        functions:
+        + A /pure function/ of type ~A => D~, where ~D~ is some description of
+          the result of _f_.
+
+        + An /impure function/ of type ~D => B~, which can be thought of as an
+          *interpreter of these descriptions*.
+
+    - We'll extend this to handle "input" effects shortly.
+      For now, let's consider applying this strategy repeatedly to a program.
+      Each time we apply it, we
+      * _make more functions pure_
+        and
+      * _push /side effects/ to the outer layers_.
+
+        We could call these /impure functions/ the *"imperative shell"* around the
+      *pure "core"* of the program. Eventually, we reach functions that seem to
+      necessitate /side effects/ like the built-in ~println~, which has type
+      ~String => Unit~.
+
+      =TODO= What do we do then? =TODO=
+
+*** DONE 13.2 A simple IO type - 231 - =TODO= TAKE NOTE
+    CLOSED: [2019-04-29 Mon 17:16]
+    It turns out that even procedures like ~println~ are doing more than one
+    thing.
+      And they can be factored in much the same way, by _introducing a new /data
+    type/ that we'll call ~IO~:_
+    #+begin_src scala
+      trait IO { def run: Unit }
+
+      def PrintLine(msg: String): IO =
+        new IO { def run = println(msg) }
+
+      def contest(p1: Player, p2: Player): IO =
+        PrintLine(winnerMsg(winner(p1, p2)))
+    #+end_src
+    - ~contest~
+      =TODO= NOTE
+
+    - ~effect~ or is ~effectful~
+      =TODO= NOTE
+
+    - =TODO= NOTE
+
+    - Add combinators to ~IO~:
+      #+begin_src scala
+        trait IO { self =>
+          def run: Unit
+
+          def ++(io: IO): IO = new IO {
+            def run = {self.run; io.run }
+          }
+        }
+
+        object IO {
+          def empty: IO = new IO { def run = () }
+        }
+      #+end_src
+
+**** TODO 13.2.1 Handling input effects - 232
+     The ~IO~ we have now is too simple.
+       It's very easy to encounter some situations that you think ~IO~ seems
+     useful but you can't find a way to use it.
+
+     *There must be something missing!*
+
+     - Example that you can't use current ~IO~:
+       #+begin_src scala
+         // Listing 13.2 Imperative program that converts Fahrenheit to Celsius
+         def fahrenheitToCelsius(f: Double): Double =
+           (f - 32) * 5.0/9.0
+
+         def converter: Unit = {
+           println("Enter a temperature in degrees Fahrenheit: ")
+           val d = readLine.toDouble
+           println(fahrenheitToCelsius(d))
+         }
+       #+end_src
+
+       * Try to use ~IO~ to refactor these imperative style code, and you will be
+         stuck:
+         #+begin_src scala
+           def fahrenheitToCelsius(f: Double): Double =
+             (f - 32) * 5.0/9.0
+
+           def converter: IO = {
+             val prompt: IO = PrintLine(
+               "Enter a temperature in degrees Fahrenheit: ")
+             // now what ???
+           }
+         #+end_src
+         In Scala, readLine is a def with the side effect of capturing a line of input from the
+         console. It returns a String. We could wrap a call to readLine in IO, but we have
+         nowhere to put the result! We don’t yet have a way of representing this sort of effect.
+         The problem is that our current IO type can’t express computations that yield a value
+         of some meaningful type—our interpreter of IO just produces Unit as its output.
+         Should we give up on our IO type and resort to using side effects? Of course not!
+
+     - Solution: *Extend* our ~IO~ type to allow /input/, *by adding* a /type parameter/.
+       #+begin_src scala
+         sealed trait IO[A] { self =>
+           def run: A
+
+           def map[B](f: A => B): IO[B] =
+             new IO[B] { def run = f(self.run) }
+
+           def flatMap[B](f: A => IO[B]): IO[B] =
+             new IO[B] { def run = f(self.run).run }
+         }
+       #+end_src
+       * An ~IO~ computation can now return a _meaningful value_.
+
+       * With the help of ~map~ and ~flatMap~, ~IO~ can be used in /for-comprehensions/.
+
+       * An ~IO~ now forms a ~Monad~:
+         #+begin_src scala
+           object IO extends Monad[IO] {
+             def unit[A](a: => A): IO[A] = new IO[A] { def run = a }
+
+             def flatMap[A,B](fa: IO[A])(f: A => IO[B]) = fa flatMap f
+
+             def apply[A](a: => A): IO[A] = unit(a)
+           }
+         #+end_src
+
+     - We can now write our ~converter~ example:
+       #+begin_src scala
+         def ReadLine: IO[String] = IO { readLine }
+         def PrintLine(msg: String): IO[Unit] = IO { println(msg) }
+
+         def converter: IO[Unit] = for {
+           _ <- PrintLine("Enter a temperature in degreees Fahrenheit: ")
+           d <- ReadLine.map(_.toDouble)
+           _ <- PrintLine(fahrenheitToCelsius(d).toString)
+         } yield ()
+       #+end_src
+       * Here our ~converter~ definition no longer has /side effect/ -- it's a
+         referentially transparent description of a computation with /effects/,
+         and ~convert.run~ is the /interpreter/ that will actually *execute*
+         those /effects/.
+
+       * Now we can apply all /monadic combinators/ we wrote previously to ~IO~.
+
+     - Here are some other example usages of ~IO~:
+       * ~val echo = ReadLine.flatMap(PrintLine)~
+         An ~IO[Unit]~ that reads a line from the console and echoes it back
+
+       * ~val readInt = ReadLine.map(_.toInt)~
+         An ~IO[Int]~ that parses an ~Int~ by reading a line from the console
+
+       * ~val readInts = readInt ** readInt~ =TODO= haven't read
+         An ~IO[(Int,Int)]~ that parses an ~(Int,Int)~ by reading two lines from
+         the console
+
+       * ~replicateM(10)(ReadLine)~ =TODO= haven't read
+         An ~IO[List[String]]~ that will read 10 lines from the console and
+         return the list of results
+
+     - Listing 13.3 An imperative program with a doWhile loop
+       =TODO= NOTE
+
+     - *Additional monad combinators*
+       =TODO= NOTE
+
+**** TODO 13.2.2 Benefits and drawbacks of the simple IO type - 235
+     NOTE
+     NOTE
+     NOTE
+
+*** DONE 13.3 Avoiding the _StackOverflowError_ - 237
+    CLOSED: [2019-04-30 Tue 13:28]
+    - TODO NOTE
+
+**** 13.3.1 Reifying control flow as data constructors - 237
+     #+begin_src scala
+       sealed trait IO[A] {
+         def flatMap[B](f: A => IO[B]): IO[B] =
+           FlatMap(this, f)
+
+         def map[B](f: A => B): IO[B] =
+           flatMap(f andThen (Return(_)))
+       }
+
+       case class Return[A](a: A) extends IO[A]
+       case class Suspend[A](resume: () => A) extends IO[A]
+       case class FlatMap[A, B](sub: IO[A], k: A => IO[B]) extends IO[B]
+     #+end_src
+
+     - Three /case classes/ are /data constructors/, _representing_ the three different
+       kinds of /control flow/ that we want to interpreter of this data type to support.
+       =TODO= =MORE-DETAILED-NOTE=
+       * ~Return[A]~
+         A _PURE computation_ that *immediately returns* an ~A~ *without* any further
+         steps.
+           _WHEN ~run~ SEES_ this constructor, it knows the computation _HAS FINISHED_.
+
+       * ~Suspend[A]~
+         A /suspension/ of the computation where ~resume~ is a function that _takes
+         NO arguments_, but _has some /effect/ and yields a /result/._
+
+       * ~FlatMap~
+         A *composition* of _TWO steps_.
+         Reifies ~flatMap~ as a /data constructor/ rather than a function.
+         When run sees this, it should
+         1. first process the subcomputation ~sub~
+            and
+         2. then continue with k once sub produces a result.
+
+     - Update our ~printLine~ example to use this new ~IO~ type:
+       #+begin_src scala
+         def printLine(s: String): IO[Unit] =
+           Suspend(() => Return(println(s)))
+
+         val p = IO.forever(printLine("Still going..."))
+       #+end_src
+
+     - What this actually creates is an infinite nested structure, much like a
+       ~LazyList~ (/stream/).
+         The "head" of the /stream/ is a ~Function0~, and the rest of the
+       computation is like the "tail":
+       #+begin_src scala
+         FlatMap(Suspend(() => println(s)),
+                 _ => FlatMap(Suspend(() => println(s)),
+                              _ => FlatMap(...)))
+       #+end_src
+
+     - Here's the /tail-recursive/ interpreter that _traverses_ the structure and
+       _performs_ the /effects/:
+       #+begin_src scala
+         @annotation.tailrec
+         def run[A](io: IO[A]): A = io match {
+           case Return(a)     => a
+           case Suspend(r)    => r()
+           case FlatMap(x, f) => x match {
+             case Return(a)     => run(f(a))
+             case Suspend(r)    => run(f(r()))
+             case FlatMap(x, f) => run(y flatMap (a => g(a) flatMap f))
+           }
+         }
+       #+end_src
+
+**** 13.3.2 Trampolining: a general solution to stack overflow - 239
+     - _Nothing says that the ~resume~ functions in our ~IO~ /monad/ have to perform
+       /side effects/._
+
+       The ~IO~ type we have so far is in fact a general data structure for
+       /trampolining computations/ -- EVEN pure computations that don't do any
+       I/O at all!
+
+     - Example: TODO
+
+     - If we want to use ~IO~ to do all the work including pure computations, it
+       is obvious that ~IO~ is a bit of a misnomer.
+
+       It really gets that name from the fact that ~Suspend~ can contain a
+       /side-effecting function/. But what we have is _NOT really a /monad/ for
+       I/O_. -- it's actually a /monad/ for tail-call elimination!
+       Let's change the name to reflect that:
+       #+begin_src scala
+         sealed trait TailRec[A] {
+           def flatMap[B](f: A => TailRec[B]): TailRec[B] =
+             FlatMap(this, f)
+
+           def map[B](f: A => B): TailRec[B] =
+             flatMap(f andThen (Return(_)))
+         }
+
+         case class Return[A](a: A) extends TailRec[A]
+         case class Suspend[A](resume: () => A) extends TailRec[A]
+         case class FlatMap[A, B](sub: TailRec[A], k: A => TailRec[B]) extends TailRec[B]
+       #+end_src
+       * We can use the ~TailRec~ data type to add /trampolining/ to *ANY* /function
+         type/ ~A => B~
+         + _by MODIFYING the /return type/ ~B~ to ~TailRec[B]~ instead_.
+
+         + The program just had to be modified to use ~flatMap~ in /function
+           composition/ and to ~Suspend~ BEFORE EVERY /function call/.
+           - footnote :: /Kleisli composition/ (TODO from Chapter 11)
+
+       * Using ~TailRec~ _can be slower_ (not always, even faster in most cases
+         -- check the footnote 8 =TODO= =RE-READ=) than direct function calls,
+         but its advantage is that we gain predictable stack usage.
+
+*** TODO 13.4 A more nuanced IO type - 241
+**** 13.4.1 Reasonably priced monads - 242
+**** 13.4.2 A monad that supports only console I/O - 243
+**** 13.4.3 Pure interpreters - 246
+
+*** TODO 13.5 Non-blocking and asynchronous I/O - 247
+*** TODO 13.6 A general-purpose IO type - 250
+**** 13.6.1 The main program at the end of the universe - 250
+
+*** TODO 13.7 Why the IO type is insufficient for streaming I/O - 251
+*** TODO 13.8 Summary - 253
+
+** TODO 14 Local effects and mutable state - 254
+*** TODO 14.1 Purely functional mutable state - 254
+*** TODO 14.2 A data type to enforce scoping of side effects - 256
+**** 14.2.1 A little language for scoped mutation - 256
+**** 14.2.2 An algebra of mutable references - 258
+**** 14.2.3 Running mutable state actions - 259
+**** 14.2.4 Mutable arrays - 262
+**** 14.2.5 A purely functional in-place quicksort - 263
+
+*** TODO 14.3 Purity is contextual - 264
+**** 14.3.1 What counts as a side effect? - 266
+
+*** TODO 14.4 Summary - 267
+
+** TODO 15 Stream processing and incremental I/O - 268
+*** TODO 15.1 Problems with imperative I/O: an example - 268
+*** TODO 15.2 Simple stream transducers - 271
+**** 15.2.1 Creating processes - 272
+**** 15.2.2 Composing and appending processes - 275
+**** 15.2.3 Processing files - 278
+
+*** TODO 15.3 An extensible process type - 278
+**** 15.3.1 Sources - 281
+**** 15.3.2 Ensuring resource safety - 283
+**** 15.3.3 Single-input processes - 285
+**** 15.3.4 Multiple input streams - 287
+**** 15.3.5 Sinks - 290
+**** 15.3.6 Effectful channels - 291
+**** 15.3.7 Dynamic resource allocation - 201
+
+*** TODO 15.4 Applications - 292
+*** TODO 15.5 Summary - 293
+
+* Tips
+  - Variable-naming conventions
