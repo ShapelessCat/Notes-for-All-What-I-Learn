@@ -1,29 +1,202 @@
 #+TITLE: Cats Effect 3.x
 #+SUBTITLE: The IO Monad for Scala
-#+VERSION: 3.1.1
+#+VERSION: 3.2.2
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
 * TODO Overview
-** Getting Started
-*** REPL
-*** Testing
-**** Other Testing Frameworks
-**** ScalaCheck
+** DONE Getting Started
+   CLOSED: [2021-08-19 Thu 00:45]
+   - Initialize a Cats Effect 3 project:
+     * Add this dependency to =build.sbt=:
+       #+begin_src scala
+         libraryDependencies += "org.typelevel" %% "cats-effect" % "3.2.2"
+       #+end_src
+       + When using _Scala.js_, replace ~%%~ with ~%%%~.
 
-** Tutorial
-*** Introduction
-*** Setting things up
-*** Copying files - basic concepts, resource handling and cancelation
+       + When using _Scala 2_, it is highly recommended:
+         #+begin_src scala
+           addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+         #+end_src
+   
+     * Use the Cats Effect 3 Giter8 template:
+       #+begin_src shell
+         sbt new typelevel/ce3.g8
+       #+end_src
+       
+   - Create a new Cats Effect application:
+     #+begin_src scala
+       import cats.effect.{IO, IOApp}
+
+       object HelloWorld extends IOApp.Simple {
+         val run = IO.println("Hello, World!")
+       }
+     #+end_src
+     - Use ~sbt run~ to run it.
+
+     - Applications written in this style have _FULL ACCESS_ to
+       * /timers/,
+       * /multithreading/,
+       * all of the bells and whistles that you would expect from a full application.
+     
+   - A very silly version of FizzBuzz which runs _FOUR_ concurrent _lightweight threads_,
+     or /fibers/,
+     * one of which *counts* up an ~Int~ value once per second,
+     * while the others *poll* that value for changes and *print* in response:
+     #+begin_src scala
+       import cats.effect.{IO, IOApp}
+       import scala.concurrent.duration._
+
+       // obviously this isn't actually the problem definition, but it's kinda fun
+       object StupidFizzBuzz extends IOApp.Simple {
+         val run =
+           for {
+             ctr <- IO.ref(0)
+
+             wait = IO.sleep(1.seconds)
+             poll = wait *> ctr.get
+
+             _ <- poll.flatMap(IO.println(_)).foreverM.start
+             _ <- poll.map(_ % 3 == 0).ifM(IO.println("fizz"), IO.unit).foreverM.start
+             _ <- poll.map(_ % 5 == 0).ifM(IO.println("buzz"), IO.unit).foreverM.start
+
+             _ <- (wait *> ctr.update(_ + 1)).foreverM.void
+           } yield ()
+       }
+     #+end_src
+     =TODO= Can understand this soon!
+     
+*** DONE REPL
+    CLOSED: [2021-08-18 Wed 20:03]
+    #+begin_src scala
+      // In Ammonite:
+
+      import $ivy.`org.typelevel::cats-effect:3.2.2`
+
+      import cats.effect.unsafe.implicits._
+      import cats.effect.IO
+
+      val program = IO.println("Hello, World!")
+      // program.unsafeRunSync()
+    #+end_src
+    - ~unsafeRunSync()~ function is not meant to be used within a normal application,
+      BUT it is very useful for REPL-based experimentation and sometimes useful
+      for testing.
+      
+    - As the name suggest, the implementation of ~unsafeRunSync()~ is *unsafe in several ways.*
+      =from Jian= =Learn more?!?!=
+    
+*** DONE Testing
+    CLOSED: [2021-08-19 Thu 00:45]
+    The easiest way to write /unit tests/ which use _Cats Effect_ is with _MUnit Cats Effect_.
+
+    - To get started, add the dependency:
+      #+begin_src scala
+        libraryDependencies += "org.typelevel" %% "munit-cats-effect-3" % "1.0.3" % Test
+      #+end_src
+
+    - Example:
+      #+begin_src scala
+        import cats.effect.{IO,  SyncIO}
+        import munit.CatsEffectSuite
+
+        class ExampleSuite extends CatsEffectSuite {
+          test("make sure IO computes the right result") {
+            IO.pure(1).map(_ + 2) flatMap { result =>
+              IO(assertEquals(result, 3))
+            }
+          }
+        }
+      #+end_src
+      * =from Jian=
+        Why not use
+        #+begin_src scala
+          IO.pure(1).map(_ + 2) map { result =>
+            assertEquals(result, 3)
+          }
+        #+end_src
+    
+**** DONE Other Testing Frameworks
+     CLOSED: [2021-08-19 Thu 00:45]
+     - The _Cats Effect Testing_ library provides seamless integration with most
+       major test frameworks:
+       * ScalaTest
+       * Specs2
+       * µTest
+       * MiniTest
+
+     - Simply add a /dependency/ on the module which is appropriate to your test framework of choice.
+       For example, _Specs2_:
+       #+begin_src scala
+         libraryDependencies += "org.typelevel" %% "cats-effect-testing-specs2" % "1.1.1" % Test
+       #+end_src
+
+     - Once this is done, you can write specifications in the familiar _Specs2_
+       style, except where each example may now return *in* ~IO~:
+       #+begin_src scala
+         import cats.effect.IO
+         import cats.effect.testing.specs2.CatsEffect
+
+         import org.specs2.mutable.Specification
+
+         class ExampleSpec extends Specification with CatsEffect {
+           "my example" should {
+             "make sure IO computes the right result" in {
+               IO.pure(1).map(_ + 2) flatMap { result =>
+                 IO(result mustEqual 3)
+               }
+             }
+           }
+         }
+       #+end_src
+       * =from Jian=
+         Why not use
+         #+begin_src scala
+           IO.pure(1).map(_ + 2) map { result =>
+             result mustEqual 3
+           }
+         #+end_src
+     
+**** DONE ScalaCheck
+     CLOSED: [2021-08-19 Thu 00:45]
+     Special support is available for _ScalaCheck_ /properties/ in the form of the
+     _ScalaCheck Effect_ project. This library makes it possible to write
+     /properties/ using a special ~forAllF~ syntax which
+     _evaluate *ENTIRELY within* ~IO~ *WITHOUT blocking* /threads/._
+
+** TODO Concepts
+*** Fibers
+    - Put another way: with fibers, there is no difference between a callback and a ~return~.
+     
+**** Cancelation
+
+*** Terminology
+**** Asynchronous
+**** Concurrent
+***** Structured Concurrency
+
+**** Parallel
+     
+*** Effects
+**** Side-Effects
+    
+** TODO Tutorial
+*** TODO Introduction
+*** TODO Setting things up
+*** TODO Copying files - basic concepts, resource handling and cancelation
 **** Acquiring and releasing ~Resource~'s
 **** What about ~bracket~?
 **** Copying data
 **** Dealing with cancelation
 **** ~IOApp~ for our final program
+***** Copy program code
+      
 **** Polymorphic cats-effect code
+***** Copy program code, polymorphic version
+      
 **** Exercises: improving our small ~IO~ program
      
-*** Producer-consumer problem - concurrency and fibers
+*** TODO Producer-consumer problem - concurrency and fibers
 **** Intro to fibers
 **** First (and inefficient) implementation
 **** A more solid implementation of the producer/consumer problem
@@ -31,20 +204,36 @@
 **** Taking care of cancelation
 **** Exercise: build a concurrent queue
      
-*** Conclusion  
+*** TODO Conclusion
    
-** Migration Guide
-*** Summary
+** TODO Tracing
+*** TODO Introduction
+**** General note on stack tracing performance
+     
+*** TODO Ansynchronous stack tracing
+**** Configuration
+     
+*** TODO Stack tracing modes
+**** ~none~
+**** ~cached~
+**** ~full~
+     
+*** TODO Enhanced exceptions
+**** Complete code
+    
+** TODO Migration Guide
+*** TODO Summary
 **** Before You Begin: This Isn't A "Quick Start" Guide
 **** Need Help?
 **** Context: What's Changed, What's the Same?
      
-*** Make Sure Your Dependencies Have Upgraded
-*** Run the Scalafix Migration
-*** Upgrade Dependencies
+*** TODO Make Sure Your Dependencies Have Upgraded
+*** TODO Run the Scalafix Migration
+*** TODO Upgrade Dependencies
 **** Which Modules Should I Use?
      
-*** Fix Remaining Compilation Issues
+*** TODO Fix Remaining Compilation Issues
+***** New Type Class Hierarchy
 **** Async
 **** ~Blocker~
 **** ~Bracket~
@@ -57,42 +246,42 @@
 **** ~IO~
 **** ~IOApp~
 **** ~MVar~
-**** Sync
+**** ~Sync~
 **** ~Resource~
 **** Timer
 **** Tracing
      
-*** Test Your Application
-*** FAQ / Examples
-**** Why does ~Outcome#Succeeded~ contain a value of type ~F[A]~ rather than type ~A~?   
+*** TODO Test Your Application
+*** TODO FAQ / Examples
+    - Why does ~Outcome#Succeeded~ contain a value of type ~F[A]~ rather than type ~A~?   
 
-** Thread Model
-*** High-level goals
-*** The IO runloop
+** TODO Thread Model
+*** TODO High-level goals
+*** TODO The ~IO~ runloop
 **** Fibers
 **** Thread blocking
 **** Semantic blocking
      
-*** Summary thus far
-*** Cats Effect 2
+*** TODO Summary thus far
+*** TODO Cats Effect 2
 **** Context shift
 **** Blocker
 **** Local reasoning
 **** Auto-yielding
 **** Obtaining a handle to the compute pool
      
-*** Cats Effect 3
+*** TODO Cats Effect 3
 **** Spawn
 **** Blocking
 **** Work-stealing pool
      
-*** And that's it!   
+*** TODO And that's it!
 
-** Schedulers
-*** JVM
+** TODO Schedulers
+*** TODO JVM
 **** Handling Blocking
      
-*** JavaScript
+*** TODO JavaScript
 **** Yielding
 ***** ~setTimeout~
 ***** ~Promise~
@@ -100,22 +289,24 @@
    
 * TODO Typeclasses
 ** Overview
-** MonadCancel
-** Spawn
+** ~MonadCancel~
+*** Self-Cancelation
+    
+** ~Spawn~
 *** Cancelation
 *** Joining
    
-** Unique
-** Clock
-** Concurrent
+** ~Unique~
+** ~Clock~
+** ~Concurrent~
 *** Memoization
 *** Why ~Ref~ and ~Deferred~?
     
-** Temporal
-** Sync
+** ~Temporal~
+** ~Sync~
 *** Methods of suspension
 
-** Async
+** ~Async~
 *** FFI
 *** Threadpool shifting
 *** Here be dragons
@@ -142,6 +333,13 @@
     
 ** Queue
 *** Variance
+    
+** Random
+*** API
+*** Customizing the source of randomness
+*** Creating a ~Random~ instance
+*** Using ~Random~
+*** Derivation
     
 ** Ref
 *** Concurrent Counter
