@@ -1118,7 +1118,6 @@
       The example of ~parMapN~ is wrong, and it can crash in more than one
       ~raiseError~ value.
 
-
 * DONE 4. Concurrent control - 62
   CLOSED: [2021-07-23 Fri 04:58]
   - So far _we've been working with rather *opaque* /effects/:_
@@ -1730,7 +1729,6 @@
       _constructed_ using *races*.
    
 
-
 * TODO 5. Shifting contexts - 77 - =Start reading=
   - Parallelism makes use of a set of resources to *execute* /effects/.
     * On the /JVM/, this is a /thread pool/:
@@ -1746,7 +1744,7 @@
       _DIFFERENT /execution strategies/._ =IMPORTANT=
 
 ** DONE 5.1. How much parallelism can we get? - 77
-   CLOSED: [2021-07-24 Sat 02:38]
+   CLOSED: [2021-08-19 Thu 12:45]
    So far our /parallel/ and /concurrent/ code has used whatever /threads/ our
    ~IOApp~ gives us.
    - Q :: *How much* work can we really do with it?
@@ -1796,12 +1794,21 @@
        // [ioapp-compute-1] 10
        // [ioapp-compute-1] List(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
      #+end_src
+     * =from Jian=
+       In my laptop, replace ~numCpus * 2~ with ~numCpus * 3~, and the result can
+       be more informative.
+         When using ~numCpus * 2~, because this number, compared with the ~numCpus~,
+       is so small, most probably size of /threads/ are NOT all used.
+       + The ~numCpus * 3~ is also good in my laptop, because it only has 4 cores,
+         and ~numCpus * 3~ is not too big to view.
+
      * From our debug information we are using *EIGHT* /threads/, which is the
        *SAME* as our ~numCpus~.
          We had _more than_ ~numCpus~ tasks, so that must mean that our _UNDERLYING
        /thread pool/ has AT MOST ~numCpus~ /threads/._
 
-     * At the same time, we ran ~parTraverse~ with twice as many effects as CPUs.
+     * At the same time, we ran ~parTraverse~ with ~numCpus * 2~ as many /effects/
+       as CPUs.
        + Q :: How does the system ensure _ALL_ the /effects/ are run?
 
        + A :: When we *compose* /effects/ _in parallel_, during execution
@@ -1824,64 +1831,217 @@
            /thread pool/.
      
 ** DONE 5.2. The need for multiple contexts - 78
-   CLOSED: [2021-07-24 Sat 03:31]
-   - Q :: Our computers regularly do more than ~numCpus~ things at the same time.
-          How can we reconcile these disparate ideas?
+   CLOSED: [2021-08-21 Sat 00:07]
+   - Q :: Our computers regularly do *more than* ~numCpus~ things at the same time.
+          _How can we reconcile these disparate ideas?_
 
-   - A :: We can have many /threads/ running, and their execution _is *multiplexed*
+   - A :: The solution on the JVM is /threads/.
+          We can have many /threads/ running, and their execution _is *multiplexed*
           across_ the available cores from the operating system.
             And we _can *pool* those /threads/ *into* logical groups_ with data
           types like ~ExecutionContext~, where /threads/ in one /pool/ are
           *isolated* from those in another.
      * =FIXME= available cores available
 
-   - Everything can work fine in this kind of world if we are computing with pure
-     values. /Threads/ will compete to be run and whatever priorities and fairness
-     algorithms will be applied to ensure we make progress.
-       _BUT_ if we start *interacting with* the _external environment_, like
-     _reading from a file_ or _writing to the network_, our /threads/ can *become
-     /blocked/.*
-       Data may not be available yet, the network hasn't acknowledged receiving
-     anything yet, and so on.
+   - Two kinds of computations:
+     * *CPU-bound*:
+       Compute with /pure values/.
+       /Threads/ will compete to be run and whatever priorities and fairness
+       algorithms will be applied to ensure we make progress.
 
-     * The former kind is of “CPU-bound” and
-       the latter is the blocking kind -- "I/O-bound". _(I/O refers to input/output,
-       not the ~cats.effect.IO~ effect type.)_
+     * *I/O-bound* (Here I/O refers to input/output, not the ~cats.effect.IO~
+       /effect type/):
+       *Interact with* the _external environment_, like
+       _reading from a file_ or _writing to the network_, our /threads/ can *become
+       /blocked/:*
+       + Data may not be available yet,
+       + the network hasn't acknowledged receiving anything yet,
+       + and so on.
 
-   - When a /thread/ is *blocked*,
-     the JVM *suspends* its execution so another /thread/ can be executed by the
-     operating system.
+   - When a /thread/ is *blocked*, the JVM *suspends* its execution.
+     Then another /thread/ can be executed by the operating system.
      * Q :: However, since there can be _limits to the number_ of possible
             /threads/, what if ALL these /threads/ are *blocked*?
        + If that happens, we can't use any available cores to do /CPU-bound/ work.
 
-     * To ensure our programs make progress -- ensuring work proceeds when I/O-bound
-       work is blocked -- we'll *isolate* the /CPU-bound work/ from any
-       _I/O-bound tasks_ by _having *separate* /pools/._
-         The Cats Effect library supports this pattern by encouraging *separate*
-       /contexts/:
-       + /CPU-bound work/ will be scheduled on /a *fixed-size* thread pool/,
-         where the number of threads is the number of cores available to the
-         JVM.
-           All things being equal, you *can't* compute more than _<number of
-         CPUs>_ things at a time, so don't try to do more.
+     * A :: To ensure our programs make progress -- ensuring work proceeds when
+            I/O-bound work is blocked --
+            we'll *isolate* the /CPU-bound work/ *from* any _I/O-bound tasks_ by
+            _having *separate* /pools/._
 
-       + _I/O-bound work_ will be scheduled on /an *unbounded* thread pool/ so
-         that /blocked threads/ merely take up memory instead of stopping the
-         progress of other tasks.
+       + The _Cats Effect library_ supports this pattern by
+         ENCOURAGING *separate* /contexts/:
+         + /CPU-bound work/ will be scheduled on /a *fixed-size* thread pool/,
+           where _the number of /threads/ is the number of /cores/ available to the
+           JVM._
+             All things being equal, you *can't* compute _more than <number of
+           CPUs>_ things at a time, so don't try to do more.
+
+         + _I/O-bound work_ will be scheduled on /an *unbounded* thread pool/
+           so that
+           /blocked threads/ MERELY take up /memory/
+           _INSTEAD OF_ stopping the progress of other tasks.
 
      * In an ~IOApp~ on the JVM the *DEFAULT ~ExecutionContext~ is configured
        for /CPU-bound/ work.*
-       =TODO= The next section will answer the question:
-              what context do we use for _I/O bound_ work?
+       + footnote 17:
+         The default ~ExecutionContext~ in an ~IOApp~ uses /daemon threads/
+         SO THAT
+         if the /top-level effect/ (specified by the ~run~ method of ~IOApp~) completes,
+         _ANY_ /concurrently executing effects/ do *NOT prevent* the application *from* exiting
+         
+       + =TODO= The next section will answer the question:
+              what /context/ do we use for _I/O bound_ work?
 
-** TODO 5.3. Contexts for I/O-bound actions - 80
-*** 5.3.1. Declaring blocking effects in Cats Effect 3 - 82
-   
-** TODO 5.4. How do you know something is blocking? - 82
-   - *Exercise 3: Collect some blocking APIs*
+** DONE 5.3. Contexts for I/O-bound actions - 80
+   CLOSED: [2021-08-21 Sat 02:47]
+   - The reason we define ~Blocker~:
+     We could instantiate our own ~ExecutionContext~ to use for _blocking I/O effects_,
+     configuring it to use an /unbounded thread pool/.
+     *BUT*
+     it would be _somewhat DIFFICULT to properly use_
+     SINCE it has the *same type* as any other ~ExecutionContext~ value, like the
+     /default context/ provided for /CPU-bound/ work by ~IOApp~.
+     * We could easily *pass the WRONG* /context/ *to* a /method/.
+
+     * If instead we had a /context/ with a *DIFFERENT* /type/ we couldn't make
+       that mistake. Luckily _Cats Effect 2_ provides the exact solution: ~Blocker~
+       
+     * =NOTE=:
+       Managing /blocking effects/ with _Cats Effect 3_ is discussed below.
+
+   - ~Blocker~ is a _small wrapper_ around an ~ExecutionContext~.
+     Let's demonstrate
+     1. *creating* a ~Blocker~ and
+     2. using it to *execute* /effects/ in the /blocking context/.
+
+   - Example:
+     #+begin_src scala
+       package com.innerproduct.ee.contexts
+       
+       import cats.effect._
+       import com.innerproduct.ee.debug._
+       
+       object Blocking extends IOApp {
+       
+         def run(args: List[String]): IO[ExitCode] =
+           Blocker[IO].use { blocker =>  // 1
+             withBlocker(blocker).as(ExitCode.Success)
+           }
+       
+         def withBlocker(blocker: Blocker): IO[Unit] =
+           for {
+             _ <- IO("on default").debug
+             _ <- blocker.blockOn(IO("on blocker").debug)  // 2
+             _ <- IO("where am I?").debug  // 3
+           } yield ()
+       
+       }
+     #+end_src
+     1. We *can't directly instantiate* a ~Blocker~,
+        BUT we can use ~Blocker.apply[IO]~ to create a ~Resource[IO, Blocker]~
+        that manages the UNDERLYING /thread pool/ used for /blocking computations/.
+          To access the ~Blocker~ itself, we use the ~Resource~, passing it a
+        function consumes the ~Blocker~ and produces an /effect/. We'll discuss
+        ~Resource~ in more depth in _Chapter 7, Managing resources_.
+
+     2. To execute our /effect/ on the /blocking context/, we provide it to the
+        ~blockOn~ /method/ of the ~Blocker~.
+        * We attach the ~debug~ call on ~IO("on blocker")~, and we can see it is
+          running in a /blocking context/.
+
+        * =from Jian=
+          First add one more ~debug~ method:
+          #+begin_src scala
+            def debug(prefix: String): IO[A] =
+              for {
+                a <- ioa
+                tn = Thread.currentThread.getName
+                _ = println(s"[${Colorize.reversed(tn)}] ($prefix) $a") // <1>
+              } yield a
+          #+end_src
+          
+          Let's modify this line, and print more debug info:
+          #+begin_src scala
+            _ <- blocker.blockOn(IO("on blocker").debug("inside blockOn")).debug("from blockOn")
+          #+end_src
+          
+          Then we can see logs like:
+          #+begin_src text
+            [ioapp-compute-0] on default
+            [cats-effect-blocker-0] (inside blockOn) on blocker
+            [ioapp-compute-1] (from blockOn) on blocker
+            [ioapp-compute-1] where am I?            
+          #+end_src
+          This is why we must call ~debug~ from ~IO("on blocker")~, and only call
+          ~debug~ from ~blocker.blockOn(...)~ can't show us the /context/ _CHANGE_
+          =[cats-effect-blocker-0]=.
+
+     3. Subsequent /effects/ execute on _the ORIGINAL /context/,_ *not* the
+        /blocking/ one.
      
-** TODO 5.5. Finer-grained control of contexts - 83
+   - We used the ~blockOn~ method of ~Blocker~ to declare an existent /effect/
+     should run on the /blocking context/.
+       However, if we wanted to *CREATE a /blocking effect/ directly*, in one
+     step, we could use the ~delay~ method of ~Blocker~, analogous to the
+     ~IO.delay~
+     method: =FIXME= "f we wanted" should be "if we wanted".
+     #+begin_src scala
+       import scala.util.chaining._
+       import scala.language.implicitConversions
+       
+       def blockingDebug[A](blocker: Blocker, a: => A): IO[A] =
+         blocker.delay {
+           a.tap {
+             v => println(s"[${Thread.currentThread.getName}] $v")
+           }
+         }
+     #+end_src
+     
+*** DONE 5.3.1. Declaring blocking effects in Cats Effect 3 - 82
+    CLOSED: [2021-08-21 Sat 02:47]
+    Instead of using a ~Blocker~ _backed by a special ~ExecutionContext~,_
+    _Cats Effect 3_ gives us a dedicated /effect constructor/ to declare an
+    /effect/ as /blocking/ as early as possible:
+    #+begin_src scala
+      val withBlocker: IO[Unit] =
+        for {
+          _ <- IO("on default").debug
+          _ <- IO.blocking("on blocker").debug  // 1
+        } yield ()
+    #+end_src
+    1. We *DIRECTLY declare* a /blocking effect/ with ~IO.blocking~.
+       _But be careful_,
+       the ~debug~ call here will run on the /default context/,
+       *not* the /blocking/ one,
+       _BECAUSE_ /blocking effects/ *ALWAYS shift BACK to the PREVIOUS /context/.*
+   
+** DONE 5.4. How do you know something is blocking? - 82
+   CLOSED: [2021-08-21 Sat 02:55]
+   - We now have a separate strategy for executing /blocking effects/ using ~Blocker~.
+     But how do we know what we're doing is blocking or not? Daniel Spiewak,
+     long-time Scala contributor and a maintainer of Cats Effect, offers us a
+     heuristic:
+     #+begin_quote
+       if something does _NOT_ have a /callback API/, then you know it's /blocking/
+                            -- Daniel Spiewak, Cats Effect gitter.im chatroom
+     #+end_quote
+
+   - The idea being:
+     a /callback API/ allows the API to return immediately
+     so _the caller is *NOT* /blocked/_ while the API is computing the result;
+
+     THEREFORE if there isn't such a /callback API/, then the method is _PROBABLY_
+     /blocking/.
+
+     * /Methods/ that return values that themselves have a /callback API/,
+       such as ~scala.concurrent.Future~ or ~IO~, would imply those /methods/ are
+       *not blocking*.
+
+   - *Exercise 3: Collect some blocking APIs*
+     =TODO=
+     
+** TODO 5.5. Finer-grained control of contexts - 83 - =START READING HERE=
 *** 5.5.1. Shifting with multiple contexts - 85
    
 ** TODO 5.6. Example: contexts for database access in Doobie - 87
