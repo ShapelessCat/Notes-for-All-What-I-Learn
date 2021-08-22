@@ -2344,8 +2344,27 @@
       
 * DONE 7. Managing resources - 97 - =TODO= =NOTE=
   CLOSED: [2021-07-25 Sun 00:57]
-  In Cats Effect, the ~Resource~ /data type/ represents this *acquire-use-release
-  pattern* to manage /state/.
+  - Problem:
+    Some state needs to be managed.
+    For example,
+    * a /thread pool/
+      needs to be _allocated_ and _configured_ BEFORE it can be used,
+      and
+      once we're done with it the /threads/ need to be shut down.
+
+    * A _network connection_ maintains a connection to a remote system over some
+      socket networking abstraction.
+        _Allocating sockets_ may be expensive, in addition to the time needed to
+      actually establish a (remote) connection. And those /sockets/ need to be
+      reclaimed when they aren't needed anymore.
+
+    * A _database connection_, like a _network connection_, also needs to talk to
+      a remote system, and will have similar costs like the previous example.
+        It may also manage its own, _ADDITIONAL resources_, such as /threads/,
+      involved in the connection protocol.
+    
+  - In _Cats Effect_, the ~Resource~ /data type/ represents this *acquire-use-release
+    pattern* to manage /state/.
 
   - We'll explore
     * how to *create* our own ~Resource~ values,
@@ -2357,10 +2376,12 @@
      #+begin_src scala
        def make[A](aquire: IO[A])(relase: A => IO[Unit]): Resource[IO, A]
      #+end_src
+     Two parameters
      1. produce (aquire) the /state/
      2. release the /state/
 
-   - Example 27. Making and using a basic Resource. Code available at =resources/BasicResource.scala=.
+   - Example 27. Making and using a basic ~Resource~.
+                 Code available at =resources/BasicResource.scala=.
      #+begin_src scala
        package com.innerproduct.ee.resources
        
@@ -2380,9 +2401,47 @@
            )(_ => IO("< releasing stringResource").debug.void)
        }
        
+       // [ioapp-compute-0] > acquiring stringResource
+       // [ioapp-compute-0] String is so cool!
+       // [ioapp-compute-0] < releasing stringResource
      #+end_src
+
+   - It’s important to note that ~Resource~ does *NOT* perform any /effects/ itself.
+     When we use it, it produces a NEW /effect/.
+     * You can think of ~Resource~ as a tiny DSL (domain-specific language) to
+       + describe /resource management/ in terms of INDIVIDUAL ~IO~ /effects/ and
+       + the use method then “compiles” those instructions into a single ~IO~ value.
+
+   - Additionally the *release* /effect/ will
+     _not only_ be executed if the use /effect/ completes successfully,
+     _but also_ if it raises an error:
+     * Example 28.
+       A resource is properly released even when the use effect fails.
+       Code available at =resources/BasicResourceFailure.scala=
+       #+begin_src scala
+         package com.innerproduct.ee.resources
+         import cats.effect._
+         import com.innerproduct.ee.debug._
+         
+         object BasicResourceFailure extends IOApp {
+           def run(args: List[String]): IO[ExitCode] =
+             stringResource
+               .use(_ => IO.raiseError(new RuntimeException("oh noes!")))  // 1
+               .attempt
+               .debug
+               .as(ExitCode.Success)
+           val stringResource: Resource[IO, String] =
+             Resource.make(
+               IO("> acquiring stringResource").debug *> IO("String")
+             )(_ => IO("< releasing stringResource").debug.void)
+         }
+         
+         // [ioapp-compute-0] > acquiring stringResource
+         // [ioapp-compute-0] < releasing stringResource
+         // [ioapp-compute-0] Left(java.lang.RuntimeException: oh noes!)
+       #+end_src
      
-*** 7.1.1. Example: Ensuring a file handle is closed - 99
+*** 7.1.1. Example: Ensuring a file handle is closed - 99 - =START READING=
 *** 7.1.2. Example: Canceling a background task - 101
    
 ** 7.2. Composing managed state - 104
