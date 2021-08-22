@@ -1728,8 +1728,8 @@
       /Higher-order effects/ like timeouts (~timeout~, ~timeoutTo~, etc.) can be
       _constructed_ using *races*.
    
-
-* TODO 5. Shifting contexts - 77 - =Start reading=
+* DONE 5. Shifting contexts - 77
+  CLOSED: [2021-08-21 Sat 17:05]
   - Parallelism makes use of a set of resources to *execute* /effects/.
     * On the /JVM/, this is a /thread pool/:
       /effects/ *execute* on the AVAILABLE /threads/ SIMULTANEOUSLY.
@@ -2041,13 +2041,181 @@
    - *Exercise 3: Collect some blocking APIs*
      =TODO=
      
-** TODO 5.5. Finer-grained control of contexts - 83 - =START READING HERE=
-*** 5.5.1. Shifting with multiple contexts - 85
+** DONE 5.5. Finer-grained control of contexts - 83
+   CLOSED: [2021-08-21 Sat 16:59]
+   - _Cats Effect_ encourages a *coarse* (but useful!) distinction for executing
+     /effects/:
+     they are either *CPU-bound* or *I/O bound*, and are assigned by the programmer
+     to either the _default or blocking ~ExecutionContext~,_ respectively.
+
+     * *BUT*
+       there are TWO other scenarios that may occur that involve the relationship
+       between an /effect/ and its /execution context/:
+       *long-running /effects/,* and /effects/ that need to be executed in
+       *neither* the /default/ *nor* /blocking context/.
+
+   - Re-examine a /long-running effect/, the _ticking clock_:
+     #+begin_src scala
+       val tickingClock: IO[Unit] =
+         for {
+           _ <- IO(System.currentTimeMillis()).debug
+           _ <- IO.sleep(1.second)
+           _ <- tickingClock
+         } yield ()
+     #+end_src
+     * Q :: Does this /effect/ execute on one /thread/, forever?
+     * A :: (The answer is NO. Explain soon.)
+            If it did, that would be *BAD*,
+            BECAUSE ~tickingClock~ isn't really doing anything other than sleeping,
+            and so to *hoard* the current /thread/ for such an /effect/ would *make
+            _one LESS_ /thread/ available* for other /effects/ to execute on, reducing
+            the amount of work our applications can perform.
+
+   - TO ENSURE
+     a /recursive loop/ does *NOT* steal a /thread/ and never give it back,
+     
+     * we'd like to be able to declare, as an /effect/ itself, *“reschedule the
+       remainder of the computation”*.
+       + Not only
+         would this resume the computation on (potentially) *ANOTHER* /thread/
+         when the resumption is executed by the context,
+
+       + but
+         it then allows other scheduled /effects/ to re-use the *PREVIOUS* /thread/.
+
+     * In other words,
+       the /CURRENT effect/ is
+       1. “suspended” and
+       2. sent “to the back of the line”,
+       which _PREVENTS_ other /effects/ from being *“starved”* of a /thread/.
+
+   - In _Cats Effect_,
+     this notion of *“reschedule the remainder of the computation”* is an instance
+     of a larger concept, an /asynchronous boundary/. =IMPORTANT= =IMPORTANT=
+
+   - From the point of view of the *composed* /effect/,
+     the /boundary/ *marks* WHERE the runtime could *reschedule* the computation
+     to resume on ANOTHER /thread/.
+
+   - We can produce an /asynchronous boundary/ with the ~IO.shift~ method:
+     #+begin_src scala
+       package com.innerproduct.ee.contexts
+       
+       import cats.effect._
+       import com.innerproduct.ee.debug._
+       
+       object Shifting extends IOApp {
+       
+         def run(args: List[String]): IO[ExitCode] =
+           for {
+             _ <- IO("one").debug
+             _ <- IO.shift
+             _ <- IO("two").debug
+             _ <- IO.shift
+             _ <- IO("three").debug
+           } yield ExitCode.Success
+       }
+       
+       // [ioapp-compute-0] one
+       // [ioapp-compute-1] two
+       // [ioapp-compute-2] three
+     #+end_src
+     
+   - It's time to return the _ticking clock_ example:
+     Recall its output
+     #+begin_src text
+       [ioapp-compute-0] 1607561985119
+       [ioapp-compute-1] 1607561986128
+       [ioapp-compute-2] 1607561987130
+     #+end_src
+     We see /context shift/ even though we did _not explicitly add_ an
+     /asynchronous boundary/ with ~IO.shift~.
+
+     * Even though we can't see it,
+       there are /asynchronous boundaries/ composed with our _ticking clock_.
+         They are introduced by the ~IO.sleep~ /effect/, and
+       _if you think about it, this MAKES SENSE,_
+       SINCE if we actually *blocked* the CURRENT /thread/ for the duration of
+       the ~sleep~, we'd be preventing that /thread/ from being used by other
+       /effects/.
+
+*** DONE 5.5.1. Shifting with multiple contexts - 85
+    CLOSED: [2021-08-21 Sat 16:58]
+    We've made /long-running effects/ more fair with respect to other concurrently
+    executing effects.
+      What about /effects/ we want to run
+    *neither* on the /default context/, *nor* on a /blocking one/?
+
+    - (You might need this, for example, when integrating with a library that
+      MANAGES *its own /thread pools/.*)
+        Luckily, we can expand the notion of an /asynchronous boundary/ so that
+      we can *specify* a PARTICULAR /context/ to resume our computation on, rather
+      than the “current” one.
+      * Concretely, ~IO.shift~ can take an optional ~ExecutionContext~:
+        #+begin_src scala
+          package com.innerproduct.ee.contexts
+          import cats.effect._
+          import com.innerproduct.ee.debug._
+          import java.util.concurrent.Executors
+          import scala.concurrent.ExecutionContext
+          
+          object ShiftingMultiple extends IOApp {
+          
+            def run(args: List[String]): IO[ExitCode] =
+              (ec("1"), ec("2")) match {
+                case (ec1, ec2) =>
+                  for {
+                    _ <- IO("one").debug
+                    _ <- IO.shift(ec1)
+                    _ <- IO("two").debug
+                    _ <- IO.shift(ec2)
+                    _ <- IO("three").debug
+                  } yield ExitCode.Success
+              }
+          
+            // create a new single-threaded ExecutionContext
+            def ec(name: String): ExecutionContext =  // 5
+              ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor { r =>
+                val t = new Thread(r, s"pool-$name-thread-1")
+                t.setDaemon(true)  // Need daemon threads so the JVM shuts down correctly.
+                t
+              })
+          
+          }
+        #+end_src
+        + The set /daemon threads/ to shuts down the JVM correctly will be
+          explained in _Chapter 7, Managing resources_
    
-** TODO 5.6. Example: contexts for database access in Doobie - 87
-** TODO 5.7. Summary - 88
+** DONE 5.6. Example: contexts for database access in Doobie - 87 - =TODO= =NOTE=
+   CLOSED: [2021-08-21 Sat 16:59]
+   Try to learn Doodie
    
-* DONE 6. Integrating asynchrony - 90 - =TODO= - =RE-READ= - =!!!=
+** DONE 5.7. Summary - 88
+   CLOSED: [2021-08-21 Sat 17:05]
+   1. /Threads/ abstract over what is concurrently executing atop the available set
+      of /processors/, so we can have _many more /threads/ than CPUs._
+      * A ~scala.concurrent.ExecutionContext~ represents a /scheduling queue/
+        along with a set of /threads/ used for computation.
+
+   2. /Asynchronous boundaries/ help to ensure applications make progress in the
+      presence of /long-running effects/ by *rescheduling* the remainder of the
+      /effect/.
+        At the same time we can specify a computation to *resume on a DIFFERENT
+      context* in order to isolate various workloads from one another.
+
+   3. ~IOApp~ provides a *DEFAULT* ~ExecutionContext~ with a fixed number --
+      the number of CPUs on the machine -- of /threads/.
+        This is meant for /CPU-bound (non-blocking) work/.
+
+   4. _I/O-bound work_, which is USUALLY SLOWER than _CPU-bound work_
+      BECAUSE it will *block* the /thread/ it uses, should run in a pool _SEPARATE
+      from_ _CPU-bound work_.
+        _Blocking I/O-bound work_ should be run in an /UNBOUNDED thread pool/.
+
+      * _Cats Effect 2_ provides the ~Blocker~ interface to declare /effects that block/.
+   
+
+* DONE 6. Integrating asynchrony - 90 - =TODO - NOTE=
   CLOSED: [2021-07-26 Mon 02:20]
   It is not possible to migrate to ~IO~ overnight.
     We need to work with the already used /built-in types/ like
@@ -2173,6 +2341,7 @@
    3. ~scala.concurrent.Future~ is a common source of /asychronous computation/.
       ~IO.fromFuture~ transforms a ~Future~ into a /referentially-transparent effect/.
    
+      
 * DONE 7. Managing resources - 97 - =TODO= =NOTE=
   CLOSED: [2021-07-25 Sun 00:57]
   In Cats Effect, the ~Resource~ /data type/ represents this *acquire-use-release
