@@ -2214,7 +2214,6 @@
 
       * _Cats Effect 2_ provides the ~Blocker~ interface to declare /effects that block/.
    
-
 * DONE 6. Integrating asynchrony - 90 - =TODO - NOTE=
   CLOSED: [2021-07-26 Mon 02:20]
   It is not possible to migrate to ~IO~ overnight.
@@ -2341,9 +2340,8 @@
    3. ~scala.concurrent.Future~ is a common source of /asychronous computation/.
       ~IO.fromFuture~ transforms a ~Future~ into a /referentially-transparent effect/.
    
-      
-* DONE 7. Managing resources - 97 - =TODO= =NOTE=
-  CLOSED: [2021-07-25 Sun 00:57]
+* DONE 7. Managing resources - 97
+  CLOSED: [2021-08-23 Mon 00:57]
   - Problem:
     Some state needs to be managed.
     For example,
@@ -2371,7 +2369,8 @@
     * how to *compose* them, and
       then learn how to use them in our applications for _dependency management_.
 
-** 7.1. Creating a ~Resource~ to manage state - 97
+** DONE 7.1. Creating a ~Resource~ to manage state - 97
+   CLOSED: [2021-08-22 Sun 23:44]
    - ~Resource.make~ takes _TWO_ /effectful arguments/:
      #+begin_src scala
        def make[A](aquire: IO[A])(relase: A => IO[Unit]): Resource[IO, A]
@@ -2406,7 +2405,7 @@
        // [ioapp-compute-0] < releasing stringResource
      #+end_src
 
-   - It’s important to note that ~Resource~ does *NOT* perform any /effects/ itself.
+   - It's important to note that ~Resource~ does *NOT* perform any /effects/ itself.
      When we use it, it produces a NEW /effect/.
      * You can think of ~Resource~ as a tiny DSL (domain-specific language) to
        + describe /resource management/ in terms of INDIVIDUAL ~IO~ /effects/ and
@@ -2441,22 +2440,315 @@
          // [ioapp-compute-0] Left(java.lang.RuntimeException: oh noes!)
        #+end_src
      
-*** 7.1.1. Example: Ensuring a file handle is closed - 99 - =START READING=
-*** 7.1.2. Example: Canceling a background task - 101
+*** DONE 7.1.1. Example: Ensuring a file handle is closed - 99
+    CLOSED: [2021-08-22 Sun 22:28]
+    Example 29.
+    Using a ~Resource~ to hide and manage the state of a file to be read.
+    Code available at =resources/FileBufferReader.scala=.
+    #+begin_src scala
+      package com.innerproduct.ee.resources
+      
+      import cats.effect._
+      import java.io.RandomAccessFile
+      
+      class FileBufferReader private (in: RandomAccessFile) {  // 1
+        def readBuffer(offset: Long): IO[(Array[Byte], Int)] =  // 2
+          IO {
+            in.seek(offset)
+            val buf = new Array[Byte](FileBufferReader.bufferSize)
+            val len = in.read(buf)
+            (buf, len)
+          }
+      
+        private def close: IO[Unit] = IO(in.close())  // 3
+      }
+      
+      object FileBufferReader {
+        val bufferSize = 4096
+      
+        def makeResource(fileName: String): Resource[IO, FileBufferReader] =  // 4
+          Resource.make {
+            IO(new FileBufferReader(new RandomAccessFile(fileName, "r")))
+          }(_.close)
+      }
+    #+end_src
+    
+*** DONE 7.1.2. Example: Canceling a background task - 101
+    CLOSED: [2021-08-22 Sun 23:44]
+    Use a ~Resource~ is to manage the lifecycle of a /background task/.
+
+    - For example,
+      we may want to
+      1. *fork* some /(often non-terminating) effect/, and
+      2. later *cancel* it when it isn't required to run anymore.
+
+    - This suggests we can combine use of a ~Fiber~ with a ~Resource~,
+      where the ~Resource~ effects are defined as:
+      * *acauire* - _start_ the task, producing a ~Fiber~
+      * *release* - _cancel_ the ~Fiber~
+
+    - Then the lifetime of the background task would directly correspond to the
+      execution of the ~use~ /effect/ of the ~Resource~:
+      * Example 30.
+        Scoping the lifetime of a background task with Resource.
+        Source at =resources/ResourceBackgroundTask.scala=.
+        #+begin_src scala
+          package com.innerproduct.ee.resources
+          
+          import cats.effect._
+          import cats.implicits._
+          import com.innerproduct.ee.debug._
+          import scala.concurrent.duration._
+          
+          object ResourceBackgroundTask extends IOApp {
+            def run(args: List[String]): IO[ExitCode] =
+              for {
+                _ <- backgroundTask.use { _ =>
+                  IO("other work while background task is running").debug *>
+                    IO.sleep(200.millis) *>
+                    IO("other work done").debug  // 1
+                }
+                _ <- io("all done").debug
+              } yield ExitCode.Success
+          
+            val backgroundTask: Resource[IO, Unit] = {
+              val loop =
+                (IO("looping...").debug *> IO.sleep(100.millis))
+                  .foreverM  // 2
+          
+              Resource
+                .make(IO("> forking backgroundTask").debug *> loop.start)(  // 3
+                  IO("< canceling backgroundTask").debug.void *> _.cancel  // 4
+                ).void  // 5
+            }
+          }
+          
+          //  [ioapp-compute-0] > forking backgroundTask
+          //  [ioapp-compute-1] looping...
+          //  [ioapp-compute-0] other work while background task is running
+          //  [ioapp-compute-2] looping...
+          //  [ioapp-compute-3] looping...
+          //  [ioapp-compute-4] other work done
+          //  [ioapp-compute-4] < canceling backgroundTask
+          //  [ioapp-compute-4] all done
+        #+end_src
+        * About ~foreverM~
+          #+begin_src scala
+            val loop: IO[Noting] = step.flatMap(_ => loop)
+            
+            // is equivalent to
+            
+            val loop: IO[Noting] = step.foreverM
+          #+end_src
    
-** 7.2. Composing managed state - 104
-*** 7.2.1. Parallel resource composition - 106
+    - The "background task" pattern is common,
+      _Cats Effect_ defines the ~background~ method on an ~IO~:
+      #+begin_src scala
+        def background: Resource[IO, IO[A]]
+      #+end_src
+      The we can replace ~Resource.make(loop.start)(_.cancel)~ with
+      ~loop.background~.
+
+    - =IMPORTANT=
+      The ~background~ method *corrects*
+      a latent problem with _manually managing Fibers_ --
+      they may “leak” if they aren't properly canceled.
+      * For example:
+        #+begin_src scala
+          def leaky[A, B](ia: IO[A], ib: IO[B]): IO[(A, B)] =
+            for {
+              fiberA <- ia.start
+              fiberB <- ib.start
+              a <- fiberA.join  // 1
+              b <- fiberB.join
+            } yield (a, b)
+        #+end_src
+        If ~ia~ raises an _error_, ~fiberA.join~ will fail and ~fiberB~ will still
+        be allocated and running.
+      
+** DONE 7.2. Composing managed state - 104
+   CLOSED: [2021-08-23 Mon 00:33]
+   - Q :: Can we build a ~Resource~ from other ~Resource~(s)?
+   - A :: We can compose in multiple ways: 
+     * ~Resource~ is a /functor/:
+       #+begin_src scala
+         val resA: Resource[IO, A] = ???
+         val resB: Resource[IO, B] = resA.map(makeB)
+         
+         def makeB(a: A): B = ???
+       #+end_src
+   
+     * ~Resource~ is a /applicative/:
+       #+begin_src scala
+         val resD: Resource[IO, D] =
+           (resB, resC).mapN(makeD)
+         
+         def makeD(b: B, c: C): D = ???
+       #+end_src
+
+     * ~Resource~ is a /monad/:
+       #+begin_src scala
+         val resC: Resource[IO, C] =
+           for {
+             a <- resA
+             c <- makeC(a)
+           } yield c
+         
+         def makeC(a: A): Resource[IO, C] = ???
+       #+end_src
+       
+   - Example 31.
+     Composing multiple resources.
+     Code available at =resources/BasicResourceComposed.scala=.
+     #+begin_src scala
+       package com.innerproduct.ee.resources
+       
+       import cats.effect._
+       import cats.implicits._
+       import com.innerproduct.ee.debug._
+       
+       object BasicResourceComposed extends IOApp {
+         def run(args: List[String]): IO[ExitCode] =
+           (stringResource, intResource).tupled  // 2
+             .use {
+               case (s, i) =>  // 2
+                 IO(s"$s is so cool!").debug *>
+                   IO(s"$i is also cool!").debug
+             }.
+             as(ExitCode.Success)
+       
+         val stringResource: Resource[IO, String] =
+           Resource.make(
+             IO("> acquiring stringResource").debug *> IO("String")
+           )(_ => IO("< releasing stringResource").debug.void)
+       
+         val intResource: Resource[IO, Int] =  // 1
+           Resource.make(
+             IO("> acquiring intResource").debug *> IO(99)
+           )(_ => IO("< releasing intResource").debug.void)
+       }
+       
+       // [ioapp-compute-0] > acquiring stringResource
+       // [ioapp-compute-0] > acquiring intResource
+       // [ioapp-compute-0] String is so cool!
+       // [ioapp-compute-0] 99 is also cool!
+       // [ioapp-compute-0] < releasing intResource  // 1
+       // [ioapp-compute-0] < releasing stringResource  // 1
+     #+end_src
+     *Note*:
+     The resources are released in the opposite order in which they are acquired.
+     =from Jian=
+     This is because of the sequantial nature of /monad/, even if we use ~tupled~
+     (~mapN((a, b) => (a, b))~), because this ~mapN~ is implemented with ~flatMap~,
+     it is sequential.
+     #+begin_src text
+       acquire a
+               acquire b
+               release b
+       release a
+     #+end_src
+     
+*** DONE 7.2.1. Parallel resource composition - 106
+    CLOSED: [2021-08-23 Mon 00:33]
+    - Use ~parTupled~ or other ~par~ prefixed methods.
+    
     - *Exercise 7: Early-release of Resources*
+      * Solution: Use that resource as soon as possible, and don't use ~flatMap~.
    
-** 7.3. Resources for dependency management - 109
-** 7.4. Summary - 110
+** DONE 7.3. Resources for dependency management - 109
+   CLOSED: [2021-08-23 Mon 00:54]
+   - We have _NOT_ discussed
+     * how to build *larger* applications with ~IOApp~,
+       or
+     * what issues may arise as we try to _compose_ sets of /effects/ _into_ a
+       *larger* program.
+
+   - Since a ~Resource~ perfectly encapsulates the /effectful allocation and
+     clean-up/ of a value,
+     _we can use it to *manage our application's dependencies* for us._
+     
+     * Our ~IOApp~-based application will then be structured into
+       _THREE distinct concerns_:
+       1. /Dependency lifecycles/ managed by a single, possibly composed, ~Resource~.
+
+       2. /Application logic/ that uses the _dependencies_ -- *without* any concern
+          over their lifecycle.
+
+       3. The _top-level of the application_ *initiates the allocation* of the
+          _dependencies_,
+          a. they are used by the logic, and
+          b. then cleans them up.
+
+   - We've already been using this structure in the previous examples, but let's
+     explicitly call out the concerns in another example ~IOApp~-based application:
+     * Example 32.
+       Structuring an ~IOApp~ into /dependencies/ and /logic/.
+       Code available at =resources/ResourceApp.scala=.
+       #+begin_src scala
+         package com.innerproduct.ee.resources
+         
+         import cats.effect._
+         import cats.implicits._
+         
+         object ResourceApp extends IOApp {
+           def run(args: List[String]): IO[ExitCode] =
+             resources  // 1
+               .use {  // 3
+                 case (a, b, c) =>
+                   applicationLogic(a, b, c)  // 2
+               }.as(ExitCode.Success)
+         
+           val resources: Resource[IO, (DependencyA, DependencyB, DependencyC)] =  // 1
+             (resourceA, resourceB, resourceC).tupled
+           
+           val resourceA: Resource[IO, DependencyA] = ???
+           val resourceB: Resource[IO, DependencyB] = ???
+           val resourceC: Resource[IO, DependencyC] = ???
+         
+           def applicationLogic(  // 2
+             a: DependencyA,
+             b: DependencyB,
+             c: DependencyC
+           ): IO[ExitCode] =
+             ???
+         }
+         
+         trait DependencyA
+         trait DependencyB
+         trait DependencyC
+       #+end_src
+       1. We
+          *compose* a set of /managed dependencies/
+          *into* a single ~Resource~ value.
+
+       2. The _application logic_ uses the /dependencies/ --
+          BUT does *NOT manage* them.
+
+       3. _At the BEGINNING of our application_
+          we use our /managed dependencies/,
+          providing them to the _application logic_.
+          The /dependencies/ *only exist within* the /scope/ of the ~use~ block.
+
+** DONE 7.4. Summary - 110
+   CLOSED: [2021-08-23 Mon 00:57]
+   1. The ~Resource~ data type
+      captures the pattern
+      where the code for /state/ *acquisition* and *release* is separated from code
+      that uses the /state/.
+      * A ~Resource~ can *be composed into* OTHER ~Resource~ values,
+        both /serially/ and in /parallel/.
+
+   2. We can use ~Resource~ to represent the _lifecycle of our application
+      /dependencies/._
+        We then use them in our ~IOApp~ to *acquire* them during the execution of
+      the dependent code, and to ENSURE they are *released*.
    
-* DONE 8. Testing effects - 112 - =TODO= =NOTE=
-  CLOSED: [2021-07-25 Sun 01:32]
+* DONE 8. Testing effects - 112
+  CLOSED: [2021-08-23 Mon 02:07]
   - /Testing/ is a tremendously complicated and nuanced subject.
-    * And since we've been discussing effects like ~IO~, which can encapsulate
-      /side effects/ that _by definition can't be observed_, testing anything
-      involving ~IO~ is a very open-ended proposition.
+    * Since we've been discussing effects like ~IO~,
+      which can encapsulate /side effects/ that _by definition can't be observed_,
+      testing anything involving ~IO~ is a very *open-ended proposition*.
 
   - Instead we're going to focus on _TWO_ areas:
     * one fairly simple:
@@ -2464,11 +2756,11 @@
 
     * the other rather complicated:
       controlling how ~IO~ effects interact with their /runtime dependencies/ like
-      ~ExecutionContext~ so we can make assertions about “when” their execution
+      ~ExecutionContext~ so we can make assertions about *“when”* their execution
       occurs.
 
 ** DONE 8.1. Assertions on effectful values - 112
-   CLOSED: [2021-07-25 Sun 01:27]
+   CLOSED: [2021-08-23 Mon 01:22]
    - To test the values from /effects/, you have to run them by calling their
      _unsafe-prefixed methods_.
      * Example:
@@ -2492,17 +2784,21 @@
      ~unsafeRunSync~ will *throw an exception*
      if the /effect/ *fails* or is *cancelled*.
 
-     * If your testing framework doesn't treat thrown exceptions as failures, or
-       you want to assert that a failure or cancellation has happened, you can
-       use ~attempt~ to _lift_ the success value or failure/cancelation
-       exception into a successful ~Either~ value:
+     * If
+       your testing framework doesn't treat _thrown exceptions_ as failures,
+       or
+       you want to assert that a _failure_ or _cancellation_ has happened,
+       
+       you can use ~attempt~ to
+       *lift* the _success value_ or _failure/cancelation exception_
+       *into* a successful ~Either~ value:
        #+begin_src scala
          def assertUnsuccessful[A](ia: IO[A]) =
            assert(ia.attempt.unsafeRunSync().isLeft)
        #+end_src
 
 *** DONE 8.1.1. Faking effects with interfaces - 112
-    CLOSED: [2021-07-25 Sun 01:26]
+    CLOSED: [2021-08-23 Mon 01:21]
     - Q :: By executing the ~IO~ you cause it to perform its /effects/,
            _BUT_ what if during testing you *don't want the actual /effect/ to
            happen*?
@@ -2516,7 +2812,7 @@
                def send(to: EmailAddress, email: Email): IO[Unit]
              }
            #+end_src
-      * Create fake ones for testing:
+      * Create _FAKE_ ones for testing:
         #+begin_src scala
           class FailingEmailDelivery extends EmailDelivery {
             def send(to: EmailAddress, email: Email): IO[Unit] =
@@ -2526,7 +2822,7 @@
 
       * For example,
         we may be testing the behavior of a *user registration service*
-        which uses our ~EmailDelivery~ for additional effects:
+        which uses our ~EmailDelivery~ for additional /effects/:
         #+begin_src scala
           class UserRegistration(emailDelivery: EmailDelivery) {
             def register(email: EmailAddress): IO[Unit] =
@@ -2541,8 +2837,8 @@
         + Pass the /interface/ as a /dependency/
           so we can choose a *real* or *fake* implementation.
 
-        + A very basic test might assert that "registration should fail if the
-          registration email could not be sent":
+        + A very basic test might assert that
+          "registration should fail if the registration email could not be sent":
           #+begin_src scala
             def registrationFailsIfEmailDeliveryFails(email: EmailAddress) =
               new UserRegistration(new FailingEmailDelivery)
@@ -2552,10 +2848,64 @@
                 .unsafeRunSync()
           #+end_src
       
-** TODO 8.2. Testing effect scheduling by controlling its dependencies - 114
-** TODO 8.3. Summary - 115
+** DONE 8.2. Testing effect scheduling by controlling its dependencies - 114
+   CLOSED: [2021-08-23 Mon 02:02]
+   *Faking* /effects/ with /interfaces/ works well to
+   increase the /modularity/ and /testability/ of our own code,
    
-* TODO 9. Concurrent coordination - 116
+   _BUT_
+   - Q :: what about testing _aspects of Cats Effect_ itself?
+   - A :: _Cats Effect_ itself uses the same technique:
+          the ~TestContext~ /helper class/ lets us use *faked* ~ExecutionContext~
+          and ~Timer~ instances in the _effectful code_ we want to test, and then
+          _EXPLICITLY control_ the /effect scheduling/ in our tests.
+     * We can then make assertions about the *relative execution order* of
+       /effects/.
+   
+   - Here we
+     *instantiate* a ~TestContext~ and
+     *bring* its members *into* /scope/ so our /effects/ can reference them:
+     #+begin_src scala
+       import cats.effect.laws.util.TestContext
+       
+       val ctx = TestContext()  // 1
+       
+       implicit val cs: ContextShift[IO] = ctx.ioContextShift  // 2
+       implicit val timer: Timer[IO] = ctx.timer  // 2
+     #+end_src
+     * In our tests we then can *advance* the /effect scheduling clock/ *MANUALLY*:
+       #+begin_src scala
+         val timeoutError = new TimeoutException
+         val timeout = IO.sleep(10.seconds) *> IO.raiseError[Int](timeoutError)  // 1
+         val f = timeout.unsafeToFuture()  // 2
+         
+         // Not yet
+         ctx.tick(5.seconds)          // 3
+         assertEquals(f.value, None)  // 3
+         
+         // Good to go:
+         ctx.tick(6.seconds)                                 // 4
+         assertEquals(f.value, Some(Failure(timeoutError)))  // 4
+       #+end_src
+
+** DONE 8.3. Summary - 115
+   CLOSED: [2021-08-23 Mon 02:07]
+   1. Asserting conditions on /effects/
+      *REQUIRES* them to _be executed_.
+
+   2. To test computations that use /effects/,
+      we can *“fake”* those /effects/
+      BY abstracting an /interface/ over their creation.
+
+   3. To make assertions about /effect execution order/
+      we can use ~TestContext~ from ~cats.effect.laws.util~ (_Cats Effect Laws_
+      ~util~ package).
+      * We then *schedule* the /effects/ for _execution_ --
+        BY
+        1) *transforming* them *to* ~Future~ -- and
+        2) subsequently *advance* our “clock” to assert *“WHEN” /effects/ happen*.
+   
+* TODO 9. Concurrent coordination - 116 - =Reading=
 ** 9.1. Atomic updates with ~Ref~ - 116
 *** 9.1.1. Using ~Ref~:  - 116
    
