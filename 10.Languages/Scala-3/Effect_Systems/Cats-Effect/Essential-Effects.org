@@ -2905,20 +2905,548 @@
         1) *transforming* them *to* ~Future~ -- and
         2) subsequently *advance* our “clock” to assert *“WHEN” /effects/ happen*.
    
-* TODO 9. Concurrent coordination - 116 - =Reading=
-** 9.1. Atomic updates with ~Ref~ - 116
-*** 9.1.1. Using ~Ref~:  - 116
-   
-** 9.2. Write-once synchronization with ~Deferred~ - 124
-   - *Synchronization*
+* DONE 9. Concurrent coordination - 116
+  CLOSED: [2021-08-24 Tue 03:43]
+  - SO FAR
+    we've _composed_ MULTIPLE /effects/
+    so they run /concurrently/ and /in parallel/.
+    * We noted that,
+      + at first, /effects/ only allow us to
+        - talk about the _values_ they produce, and
+        - create NEW /effects/ by composing the outputs of other /effects/.
+
+      + We then added the notion of a ~Fiber~ to _REPRESENT_ an /ALREADY-EXECUTING
+        effect/, and with it we can start to _control_ /concurrent effects/
+        by *joining* or *canceling* them.
+
+    * Q :: BUT we haven't yet discussed *coordination* between /concurrent effects/.
+           How to do it???
+
+  - Coordination :: the behavior of one /effect/ should *depend on* another.
+    * For example,
+      + HOW can we *share* /state/ *between* /effects/
+        WHEN that /state/ might be /concurrently updated/?
+        Or
+      + HOW can we *ensure* one /effect/ ONLY proceeds
+        ONCE work is COMPLETE in another?
+
+  - In this chapter, we'll
+    1. Discuss the first issue by using the ~Ref~ /data type/ for *sharing*
+       /mutable state/.
+
+    2. Show how the ~Deferred~ /data type/ can provide /concurrent effect
+       serialization/ *WITHOUT blocking* ANY actual /threads/.
+
+    3. Model even more complex behavior
+       by
+       *composing* two /concurrency primitives/ mentioned in 1 and 2 together
+       *to form* a /concurrent state machine/.
+
+** DONE 9.1. Atomic updates with ~Ref~ - 116
+   CLOSED: [2021-08-23 Mon 17:48]
+*** DONE 9.1.1. Using ~Ref~:  - 116
+    CLOSED: [2021-08-23 Mon 17:48]
+    - ~Ref~ usage:
+      * *Get* the CURRENT /state/:
+        #+begin_src scala
+          def get: IO[A]
+        #+end_src
+
+      * *Set* the /state/:
+        #+begin_src scala
+          def set(value: A): IO[Unit]
+
+          def getAndSet(value: A): IO[A]  // 1
+        #+end_src
+        1. ~getAndSet~
+          *sets* the value to ~A~ and
+          *returns* the _previous_ value of the ~Ref~.
+
+      * *Update* the /state/:
+        #+begin_src scala
+          def update(f: A => A): IO[Unit]
+
+          def getAndUpdate(f: A => A): IO[A]  // 1
+          def updateAndGet(f: A => A): IO[A]  // 2
+        #+end_src
+        1. *Updates* the value with the function ~f~ and
+           *returns* the _PREVIOUS_ value.
+
+        2. *Updates* the value with the function ~f~ and
+           *returns* the _NEW_ value.
+
+      * You can also
+        *update* the /state/
+        BUT *return* a value of a _DIFFERENT_ /type/ using ~modify~:
+        #+begin_src scala
+          def modify[B](f: A => (A, B)): IO[B]
+        #+end_src
+
+    - It's important to note that _the ~update~-style methods_ are given
+      _a *pure* (side effect-free) function_,
+      BECAUSE it's possible that the function you provide may be run _more than
+      once_. WAT?
+      * Q :: We previously said that updates were atomic, so wouldn’t the update
+             function be run only once?
+      * A :: It could be that the implementation of the /atomic update/ only runs
+             the function once: we could _pessimistically_ assume
+             1. there are multiple updates happening, and
+             2. use some /lower-level mutual exclusion mechanism/ to ensure only
+                one operation is allowed to proceed.
+             
+             Instead, *the actual implementation* of ~Ref~ uses an _optimistic_
+             strategy where it assumes
+             1. only one update is happening concurrently.
+             2. However if another concurrent update succeeds,
+                our update operation will be *retried*.
+        
+      * Therefore
+        we do *NOT* want to perform ANY /side effects/ with our function.
+
+    - _To show_
+      the function passed to ~modify~ runs more than once
+      WHEN multiple writers are racing to “win” the /atomic update/,
+      let's performing a /side effect/ within a ~modify~:
+      * Example 35.
+        Update functions passed to a ~Ref~ may get invoked multiple times.
+        Code available at =coordination/RefUpdateImpure.scala=.
+        #+begin_src scala
+          package com.innerproduct.ee.coordination
+
+          import cats.effect._
+          import cats.effect.concurrent.Ref
+          import cats.implicits._
+
+          object RefUpdateImpure extends IOApp {
+            def run(args: List[String]): IO[ExitCode] =
+              for {
+                ref <- Ref[IO].of(0)
+                _   <- List(1, 2, 3).parTraverse(task(_, ref))  // 1
+              } yield ExitCode.Success
+
+            def task(id: Int, ref: Ref[IO, Int]): IO[Unit] =
+              ref
+                .modify(previous => id -> println(s"previous->$id"))  // 2
+                .replicateA(3)  // 3
+                .void
+          }
+
+          // 0->1
+          // 0->3
+          // 1->3
+          // 0->2
+          // 3->2
+          // 2->3
+          // 2->2
+          // 3->1
+          // 3->3
+          // 1->1
+          // 3->2
+          // 1->3
+          // 1->2
+          // 3->2
+          // 2->2
+        #+end_src
+        + We *EXPECT NINE* /atomic updates/ (three elements with three ~modify~
+          /effects/ each),
+          BUT see *more than nine calls* to the function we supply to ~modify~!
+          This can be understood if we check the source code:
+          #+begin_src scala
+            // The exact return type is actually `F[B]`
+            def modify(f: A => (A, B)): IO[B] = {
+              @tailrec
+              def spin: B = {
+                val current = ar.get  // 1
+                val (updated, b) = f(current)  // 2
+                if (!ar.compareAndSet(current, updated)) spin  // 3
+                else                                     b
+              }
+              IO.deplay(spin)
+            }
+          #+end_src
+
+        + To ensure we execute an /effect/ only once for a given update,
+          - =from Jian= - start
+            elimiate /side effects/ from the function passed to ~modify~
+            =from Jian= - end
+            
+          - =from Jian=
+            We can wrap the ~println~ /side effect/ inside an ~IO~.
+            
+          - =Book=
+            We can replace the ~println~ /side effect/ with an ~IO~ value (and
+            call ~debug~ from it to check the updates).
+            #+begin_src scala
+              // ref.modify(previous => id -> println(s"$previous->$id"))
+
+              ref
+                .modify(previous => id -> IO(s"$previous->$id").debug)
+                .flatten
+
+              // [ioapp-compute-1] 2->1
+              // [ioapp-compute-2] 0->2
+              // [ioapp-compute-3] 1->3
+              // [ioapp-compute-1] 2->1
+              // [ioapp-compute-3] 3->3
+              // [ioapp-compute-1] 1->1
+              // [ioapp-compute-2] 3->2
+              // [ioapp-compute-3] 1->3
+              // [ioapp-compute-2] 3->2
+            #+end_src
+            =from Jian=
+            Check the right hand side of ->, we can see the expected number of
+            values -- three 1, three 2, and three 3.
+        
+** DONE 9.2. Write-once synchronization with ~Deferred~ - 124
+   CLOSED: [2021-08-24 Tue 01:37]
+   - Q :: Here's a different issue:
+          HOW can we know *when* our _concurrently updated counter_ is *in a particular
+          state?*
+
+   - Let's pretend it's extremely important to print "BEEP!" when the counter
+     from the previous example reaches 13, so we poll the counter every second:
+     #+begin_src scala
+       def beepWhen13(ticks: Ref[IO, Long]): IO[Unit] =  // 1
+         for {
+           t <- ticks.get  // 2
+           _ <- if (t >= 13) IO("BEEP!").debug  // 3
+                else         IO.sleep(1.second) *> beepWhen13(ticks)  // 4
+         } yield ()
+     #+end_src
+     * It's a good exercise to think through
+       + Q :: How long we should wait to check the condition we are interested in --
+               it certainly depends on the true _update frequency_ of the /state/.
+         - On one hand if we _poll too often_ we're being *inefficient*, and
+         - on the other hand if we _poll too infrequently_ then our reaction to the
+           /state/ change is *delayed*.
+
+       + A :: _INSTEAD OF_ having to guess a polling interval,
+               we can push this responsibility behind an abstraction that will,
+               from the outside,
+               *block* subsequent execution *until* the condition is fulfilled.
+         - In _Cats Effect_ this abstraction is the ~Deferred~ data type.
+           * Let's replace the previous /synchronization/ that used polling with
+             the blocking ~Deferred~:
+             + Example 36.
+               Using ~Deferred~ for /blocking synchronization/.
+               Code available at =coordination/IsThirteen.scala=.
+               #+begin_src scala
+                 package com.innerproduct.ee.coordination
+
+                 import cats.effect._
+                 import cats.effect.concurrent._
+                 import cats.implicits._
+                 import com.innerproduct.ee.debug._
+                 import scala.concurrent.duration._
+
+                 object IsThirteen extends IOApp {
+                   def run(args: List[String]): IO[ExitCode] =
+                     for {
+                       ticks <- Ref[IO].of(0L)
+                       is13  <- Deferred[IO, Unit]  // 1
+                       _     <- (beepWhen13(is13), tickingClock(ticks, is13)).parTupled  // 2
+                     } yield ExitCode.Success
+
+                   private def beepWhen13(is13: Deferred[IO, Unit]): IO[Unit] =
+                     for {
+                       _ <- is13.get  // 3
+                       _ <- IO("BEEP!").debug
+                     } yield ()
+
+                   private def tickingClock(ticks: Ref[IO, Long], is13: Deferred[IO, Unit]): IO[Unit] =
+                     for {
+                       _     <- IO.sleep(1.second)
+                       _     <- IO(System.currentTimeMillis()).debug
+                       count <- ticks.updateAndGet(_ + 1)
+                       _     <- if (count >= 13) is13.complete(()) else tickingClock(ticks, is13)
+                     } yield ()
+                 }
+               #+end_src
+               =FIXME= the last line!!!
+
+   - Such a useful data type ~Deferred~ with ONLY *two* /methods/: ~get~ and ~complete~!
      
-** 9.3. Concurrent state machines - 128
-*** 9.3.1. Example: countdown latch - 128
+   - Q :: One final issue, however --
+          WHEN _execution is /blocked/ from invoking ~Deferred.get~,_
+          does that mean that the underlying /thread/ is *blocked*?
+
+   - A :: Fortunately for us, the answer is *“NO”*.
+          _Instead of_ *blocking* execution _at the /thread/ level_,
+          
+          _Cats Effect_ uses so-called /semantic blocking/:
+          the /effect/ is _SUSPENDED_ *at a logical level*,
+          but the underlying /thread/ *can be reused* for executing other
+          /concurrent effects/.
+
+   - *Synchronization*
+     * In Computer Science
+       the term /synchronization/ is used to talk about _enforcing a relationship
+       between /effects/._
+       + Here are some /synchronization constraint/ examples: 
+         - serialization :: /effect/ B should happen after /effect/ A.
+         - mutual-exclusion :: /effect/ A should _never_ happen at the same time as
+                              /effect/ B.
+     
+     * In _Cats Effect_,
+       + /synchronization/ is expressed with the ~flatMap~ of ~IO~.
+
+       + In contrast,
+         using ~parMapN~ expresses *NO* a /priori relationship/ between /effects/
+         other than transforming each /effect's/ “output”.
+         - NO /synchronization/ is required.
+       
+     * The notions of /synchronization/ that are presented by /fibers/:
+       1. When we ~start~ a /fiber/, we're expressing an /INDEPENDENT, concurrent effect/.
+       2. When we ~join~, _ANY SUBSEQUENT_ /effect/ *must happen AFTER* the _fiber COMPLETES_.
+       
+     * Let's now consider more /complex effects/
+       that *are NOT necessarily easily expressed with* ~flatMap~, ~parMapN~, or
+       by using ~Fiber~'s.
+       + Q :: What kinds of /synchronization/ do they require?
+       + A :: They are:
+         - *updating shared state*:
+           Updates must be /atomic/,
+           i.e., /mutually exclusive/ with respect to other updates, otherwise
+           updates may be “lost”.
+
+         - *reading shared state*:
+           Concurrent reads do *NOT require any /synchronization/.*
+           We read whatever the “current” value is, independent of anything
+           else.
+
+         - *blocking*:
+           _SUBSEQUENT_ /effects/ *must happen after* the /“blocking” effect/
+           “unblocks” (serialization).
+       
+** DONE 9.3. Concurrent state machines - 128
+   CLOSED: [2021-08-24 Tue 03:28]
+   - ~Ref~ and ~Deferred~ are the _building blocks_ of /concurrency/.
+     * With ~Ref~ we can ensure /atomic updates/ of /shared state/, and
+
+     * ~Deferred~ gives us the ability to *serialize* _the execution of an /effect/_
+       with respect to some _newly-produced_ /state/.
+
+   - Together we can *build* LARGER and MORE COMPLEX _concurrent behaviors_.
+     * One technique to do this is to create a /concurrent state machine/:
+       + To *build* one we:
+         1. *Define* an /interface/
+            whose /methods/ return /effects/.
+
+         2. *Implement* the /interface/ *by building* a /state machine/ where:
+            a. /state/ (with type ~S~) is ATOMICALLY managed via a ~Ref[IO, S]~
+               value;
+               
+            b. EACH /interface method/ is implemented by a /state transition
+               function/ affecting the ~Ref~; and
+            
+            c. ANY /state-dependent blocking behavior/ is controlled
+               via ~Deferred~ values.
+
+   - As an illustration example,
+     we'll follow this recipe to *build* a structure called a _countdown latch_.
+     
+*** TODO 9.3.1. Example: countdown latch - 128
+    - The behavior we'd like to model is to
+      *block* SUBSEQUENT /effects/
+      *until* a certain number of (possibly concurrent) /effects/ have occurred.
+
+    - The metaphor of a *latch* is used
+      BECAUSE a _latch_ is used to keep a door closed until the _latch_ is opened.
+
+    - The term *countdown* refers to the algorithm for how the _latch_ is opened:
+      a counter is decremented, and when the counter reaches zero, the _latch_
+      opens.
+
+    - There are _TWO_ *logical roles* that
+      _concurrently coordinate_ through the /SHARED latch/
+      1. /readers/ *wait for* the _latch_ to OPEN; and
+      2. /writers/ *decrement* the _latch counter_.
+
+    - Let's fulfill step one of our recipe (“define an /interface/ whose /methods/
+      return /effects/”)
+      by _encapsulating_ the actions of the TWO roles _as_ methods
+      on a SHARED ~CountdownLatch~ /interface/:
+      #+begin_src scala
+        trait CountdownLatch {
+          def await: IO[Unit]  // 1
+          def decrement: IO[Unit]  // 2
+        }
+      #+end_src
+      1. /Readers/ will *await* the opening of the _latch_.
+         The /caller/ will be *blocked*
+         and
+         no value will be produced until the _latch_ *opens*.
+
+      2. /Writers/ will *decrement* the _latch counter_,
+         which may *open* the _latch_.
+
+    - A "reader" will be waiting for the _latch_ to *open*, perhaps denoting a
+      set of prerequisite actions have occurred:
+      #+begin_src scala
+        def actionWithPrerequisites(latch: CountdownLatch) =
+          for {
+            _      <- IO("waiting for prerequisities").debug
+            _      <- latch.await  // 1
+            result <- IO("action").debug  // 2
+          } yield result
+      #+end_src
+      1. We *block until* the ~latch~ *opens*.
+      2. Once the ~latch~ *opens*, we can run the action.
+
+    - At the same time, a “writer” is fulfilling one or more of those prerequisites:
+      #+begin_src scala
+        def runPrerequisite(latch: CountdownLatch) =
+          for {
+            result <- IO("prerequisite").debug
+            _      <- latch.decrement  // 1
+          } yield result
+      #+end_src
+      1. *Once* the prerequisite action is *completed*,
+         we *decrement* the _latch counter_.
+         
+    - Other code would _run_ each of these roles _CONCURRENTLY_:
+      #+begin_src scala
+        val prepareAndRun =
+          for {
+            latch <- CountdownLatch(1)
+            _     <- (actionWithPrerequisites(latch), runPrerequisite(latch)).parTupled
+          } yield ()
+      #+end_src
+      =from Jian=
+      See the below Example 37 to see the ~apply~ method of ~CountdownLatch~, and
+      the subtypes of ~CountdownLatch~.
+
+    - =TODO=
+      DISCUSSION
+
+    - Example 37. =coordination/CountdownLatch.scala=
+      #+begin_src scala
+        object CountdownLatch {
+          def apply(n: Long)(implicit cs: ContextShift[IO]): IO[CountdownLatch] =
+            for {
+              whenDone <- Deferred[IO, Unit]
+              state    <- Ref[IO].of[State](Outstanding(n, whenDone))
+            } yield new CountdownLatch {
+              def await: IO[Unit] =
+                state.get.flatMap {
+                  case Outstanding(_, whenDone) => whenDone.get
+                  case Done                     => IO.unit
+                }
+
+              def decrement: IO[Unit] =
+                state.modify {
+                  case Outstanding(1, whenDone) => Done -> whenDone.complete(())
+                  case Outstanding(n, whenDone) => Outstanding(n - 1, whenDone) -> IO.unit
+                  case Done                     => Done -> IO.unit
+                }.flatten
+            }
+
+          sealed trait State
+          final case class Outstanding(n: Long, whenDone: Deferred[IO, Unit]) extends State
+          case object Done extends State
+        }
+      #+end_src
+
     - *Exercise 8: Fixing a bug in* ~ConcurrentLatch~
+      =TODO= =TODO= =TODO= =!!!=
     
-*** 9.3.2. Using a latch for synchronization - 133
+*** DONE 9.3.2. Using a latch for synchronization - 133 - =TODO= - ~IsThirteenLatch~ behavior is inconsistent with ~IsThirteen~
+    CLOSED: [2021-08-24 Tue 03:26]
+    Our use of ~Deferred~ for the /synchronization/ of
+    _the “has there been 13 ticks” /state/_ has a small *drawback*:
+    it
+    *pushes* the logic of the _condition_ (the ~if (count >= 13)~ expression)
+    *into* the ~tickingClock~ /effect/.
+
+    - Q :: Can we make the _clock_ *unaware of* this _condition_,
+           *BUT STILL* provide a /blocking method/ of /synchronization/ like
+           ~Deferred~ gave us?
+
+    - A :: We can do exactly that with our ~CountdownLatch~.
+           There are THREE interacting concerns:
+      1. A /SHARED latch/ is initialized with the desired number of ticks,
+         in this case ~13~.
+
+      2. The ~beeper~ is given the _latch_ and invokes ~await~ to be *blocked
+         until* the _latch_ *opens*.
+
+      3. The _ticking clock_ is also given the _latch_ and will ~decrement~ it
+         on every tick.
+
+    - Example 38.
+      Using ~CountdownLatch~ for /blocking synchronization/.
+      Code available at =coordination/IsThirteenLatch.scala=.
+      #+begin_src scala
+        package com.innerproduct.ee.coordination
+
+        import cats.effect._
+        import cats.implicits._
+        import com.innerproduct.ee.debug._
+        import scala.concurrent.duration._
+
+        object IsThirteenLatch extends IOApp {
+          def run(args: List[String]): IO[ExitCode] =
+            for {
+              latch <- CountdownLatch(13)
+              _     <- (beeper(latch), tickingClock(latch)).parTupled
+            } yield ExitCode.Success
+
+          private def beeper(latch: CountdownLatch): IO[Unit] =
+            for {
+              _ <- latch.await
+              _ <- IO("BEEP!").debug
+            } yield ()
+
+          private def tickingClock(latch: CountdownLatch): IO[Unit] =
+            for {
+              _ <- IO.sleep(1.second)
+              _ <- IO(System.currentTimeMillis).debug
+              _ <- latch.decrement
+              _ <- tickingClock(latch)
+            } yield ()
+        }
+      #+end_src
     
-** 9.4. Summary - 134
+** DONE 9.4. Summary - 134
+   CLOSED: [2021-08-24 Tue 03:43]
+   1. We may want to
+      *coordinate* /concurrently executing effects/
+      SO the behavior of one /effect/ should depend on another.
+      - The _constraints_ of that *coordination* can be described by
+        /synchronization/:
+        ensuring a relationship between /concurrent events (effects)/.
+
+   2. _UNLESS_ we can *synchronize* the _updates_ of /shared mutable state/ to be
+      /atomic (mutually-exclusive)/,
+      _modifications_ of that state can be *lost* during concurrent actions.
+
+      - In _Cats Effect_, ~Ref~ provides /atomic updates/ of a /shared value/.
+
+   3. We may also want to ENSURE that
+      an /effect/ is evaluated
+      *only after*
+      _some deferred value has been produced (serialization)._
+
+      - In _Cats Effect_,
+        * ~Deferred~ provides
+          + write-once,
+          + blocking
+          /synchronization/ of a /shared value/:
+          *before* the value is available, all _readers_ are /blocked/.
+          Only *when a value has been written* are _readers_ /unblocked/.
+
+   4. /Blocking/ means the current execution *stops (=from Jian= "pause" is better???)*
+      _UNTIL_ some /(unblocking) condition/ is triggered.
+      - Semantic blocking :: (a term used by _Cats Effect_) where the “logical”
+                             execution of the current /effect/ is *blocked* from
+                             further execution,
+                             =IMPORTANT=
+                             BUT *NOT via the blocking mechanism* of the
+                             _underlying concurrency mechanism_, i.e., /thread blocking/.
+
+   5. We can *model* _more complex concurrent behavior_
+      *by constructing* /concurrent state machines/.
+      - They *combine* /atomic updates/ with /blocking synchronization/.
    
 * TODO 10. Case study: job scheduler - 136
 ** 10.1. Jobs - 136
