@@ -317,20 +317,20 @@
        simutaneously.
 
    - In cooperative /multitasking/,
-     + OLD solution (easy to be out of control):
-       * *programs were able to decide*
+     * OLD solution (easy to be out of control):
+       + *programs were able to decide*
          1. when to stop using the processor
             AND
          2. yield control to other programs.
 
-       * _HOWEVER_,
-         + this required a lot of discipline on the programmer's part
-         + programs could easily give the impression of being *unresponsive*.
+       + _HOWEVER_,
+         - this required a lot of discipline on the programmer's part
+         - programs could easily give the impression of being *unresponsive*.
 
          *Blocking* the execution _UNTIL_ a non-short-term job complete often
          *ruin* the /user experience/.
 
-     + Modern solution:
+     * Modern solution:
        _MOST_ OS's today _rely on_ /pre-emptive multitasking/, in which each
        program is *repetitively assigned* _slices of execution time (/time
        slices/)_ at a specific processor.
@@ -380,106 +380,97 @@
 
    - threads :: independent computations occurring in the *SAME* /process/.
 
-   - In a typical operating system, there are many *more* /threads/ _than_
-     /processors/.
+   - In a typical OS,
+     there are *MANY MORE* /threads/ *than* /processors/.
 
    - Every /thread/ describes
-     + the _current state_ of the /program stack/
+     * the _current state_ of the /program stack/
+       + program stack :: a sequence of /method invocations/ that are currently
+                          being executed, along with the /local variables/ and
+                          /method parameters of each method/.
 
-       * program stack :: a sequence of /method invocations/ that are
-            currently being executed, along with the local variables and method
-            parameters of each method.
+     * the /program counter/ _DURING_ program execution
+       + program counter :: describes the *position* of the CURRENT /instruction/
+                             in the current /method/.
 
-            =From Jian= Sounds like a /frame/, which in JVM means things
-            mentioned here.
-
-     + the /program counter/ _DURING_ program execution
-
-       * program counter :: describes the *position* of the current instruction
-            in the current /method/.
-
-   - A /processor/ can _advance_ the computation in some /thread/ by manipulating
-     + the /STATE/ of its /stack/
+   - A /processor/ can _advance_ the computation in some /thread/
+     by MANIPULATING
+     * the /STATE/ of its /stack/
        or
-     + the /STATE/ of the program objects
+     * the /STATE/ of the program objects
 
      and
-     *executing* the instruction at the /current program counter/.
+     *executing* the /instruction/ at the /current program counter/.
 
-   - When we say that a thread performs an action such as writing to a memory
-     location, we mean that the processor executing that thread performs that
-     action.
+   - When we say that
+     _a /thread/ performs an action such as writing to a memory location_,
+     we mean that
+     _the /processor/ executing that /thread/ performs that action._
 
    - In /pre-emptive multitasking/, /thread/ execution is *scheduled by* the OS.
+     * A programmer *must assume* that the /processor/ _time assigned_ to their
+       /thread/ is *UNBIASED* towards other /threads/ in the system.
 
-     A programmer *must assume* that the /processor/ _time assigned_ to their
-     /thread/ is *UNBIASED* towards other /threads/ in the system.
-
-   - /OS threads/ are a programming facility provided by the OS, usually exposed through an
-     OS-specific programming interface.
-
-     Unlike separate /processes/, separate /OS threads/ within the same /process/
-     *share* a region of /memory/, and *communicate* by _writing_ to and
-     _reading_ parts of that /memory/.
+   - /OS threads/ are a programming facility _provided by_ the OS,
+     usually exposed THROUGH an /OS-specific programming interface/.
+     * *UNLIKE* separate /processes/,
+       SEPARATE /OS threads/ _within_ the same /process/ *share*
+       + a region of /memory/, and
+       + *communicate* by _writing_ to and _reading_ parts of that /memory/.
 
    - /process/ :: (alternative definition)
                   a set of OS /threads/ along with the /memory/ and /resources/
                   *shared* by these /threads/.
 
-   - Having shown the relationship between the /OS threads/ and /processes/,
+   - We _turn our attention to_ see
+     * HOW these concepts relate to the JVM,
+       the runtime on top of which Scala programs execute.
 
-     _we turn our attention to see how these concepts relate to the JVM , the
-     runtime on top of which Scala programs execute._
+   - _Starting_ a _NEW_ /JVM instance/
+     ALWAYS CREATES *only one* /process/.
+     * _WITHIN_ the JVM /process/, MULTIPLE /threads/ can run simultaneously.
+       The JVM represents its /threads/ with the ~java.lang.Thread~ /class/.
 
-   - _Starting a new JVM instance_ ALWAYS creates *only one* /process/.
+   - *UNLIKE* /runtimes/ for languages such as Python,
+     the JVM _does *NOT* implement its custom /threads/._
+     INSTEAD, each /Java thread/ is _directly mapped to_ an /OS thread/.
 
-     Within the JVM /process/, MULTIPLE /threads/ can run simultaneously.
-
-     The JVM represents its /threads/ with the ~java.lang.Thread~ /class/.
-
-   - Unlike runtimes for languages such as Python, the JVM _does NOT implement
-     its custom_ /threads/. Instead, each /Java thread/ is directly mapped to an
-     /OS thread/.
-
-     This means that Java /threads/
-     + behave in a _very similar_ way to the /OS threads/
-
-     + the JVM depends on the OS and its restrictions.
+     * This means that Java /threads/
+       + behave in a _very similar_ way to the /OS threads/
+       + the JVM _depends on_ the OS and its RESTRICTIONS.
 
    - Scala is a programming language that is by default compiled to the JVM
      bytecode, and the Scala compiler output is largely equivalent to that of
      Java from the JVM's perspective. This allows Scala programs to
      transparently call Java libraries, and in some cases, even vice versa.
-     =Re-write=
 
-   - Scala *reuses* the /threading API/ from Java for several reasons.
-     + Scala can _transparently_ *interact with* the existing /Java thread model/,
+   - Scala *reuses* the /threading API/ from Java for _several REASONS_:
+     * Scala can _transparently_ *interact with* the existing /Java thread model/,
        which is already sufficiently comprehensive.
 
-     + it is useful to *retain* the same /threading API/ *for compatibility
+     * it is useful to *retain* the same /threading API/ *for compatibility
        reasons*, and _there is *NOTHING* fundamentally new_ that Scala can
        introduce with respect to the /Java thread API/.
 
    - =TODO=
      The rest of this chapter shows
-     + how to create /JVM threads/ using Scala
-     + how they can be executed
-     + how they can communicate.
+     * HOW to *create* /JVM threads/ using Scala
+     * HOW they can be *executed*
+     * HOW they can *communicate*.
 
-   - =TODO=
-     We will show and discuss several concrete examples.
-     Java aficionados, already well-versed in this subject, might choose to skip
+   - We will show and discuss several concrete examples.
+     Java aficionados, already well-versed in this subject, might choose to *SKIP*
      the rest of this chapter.
 
 *** TODO Creating and starting threads - 33
-    - Every time a new /JVM process/ starts, *t creates several /threads/ _by
-      default_.*
+    - Every time a new /JVM process/ starts,
+      *it creates several /threads/ _by default_.*
 
-    - The most important /thread/ among them is the /main thread/, which executes
-      the ~main~ /method/ of the Scala program.
+    - The most important /thread/ among them is *the /main thread/,*
+      which executes the ~main~ /method/ of the Scala program.
 
-    - We will show this in the following program, which gets the name of the
-      current thread and prints it to the standard output:
+    - We will show this in the following program, which _gets the NAME of the
+      CURRENT /thread/_ and prints it to the standard output:
       #+BEGIN_SRC scala
         object ThreadsMain extends App {
           val t: Thread = Thread.currentThread
@@ -487,77 +478,87 @@
           println(s"I am the thread $name")
         }
       #+END_SRC
-      + If you run this program directly, you can see
+      * If you run this program directly, you can see
         =[info] I am the thread main=
 
-      + If you run this program in SBT, you see something like
+      * If you run this program *in SBT*, BY DEFAULT, you can see
         =[info] I am the thread run-main-0=
-        This is because SBT started our program on a separate /thread/ *inside*
-        the SBT /process/.
+        + By default (~fork := false~),
+          SBT started this program *INSIDE its /process/, on a SEPARATE /thread/.*
 
-        * To ensure that the program runs *inside* _a separate JVM process_, type
-          ~set fork := true~ in SBT console, and then you can see:
+        + To ensure that the program runs *INSIDE a SEPARATE JVM /process/,*
+          type ~set fork := true~ in SBT console or add ~fork := true~ to the
+          project =build.sbt=, and then you can see:
           =[info] I am the thread main=
 
-    - EVERY /thread/ goes through several /thread states/ during its existence.
-      When a ~Thread~ object is created, it is initially in the NEW /state/.
-      + After the newly created /thread/ object *starts* executing, it goes into
-        the /runnable state/.
+    - EVERY /thread/ *goes through* several /thread states/ during its existence.
+      1. When a ~Thread~ object is *created*, it is initially in _the *NEW* state_.
+      2. After the newly created /thread/ object *starts executing*, it goes into
+         _the *runnable* state_.
+      3. After the /thread/ is *done* executing, the /thread/ object goes into
+         _the *terminated* state_, and _CANNOT execute anymore_.
 
-      + After the /thread/ is *done* executing, the /thread/ object goes into the
-        /terminated state/, and _CANNOT execute anymore_.
+    - Starting an independent /thread/ of computation consists of
+      *TWO steps*:
+      1. *Create* a ~Thread~ /object/
+         to *allocate* the /memory/ for the /stack/ and /thread state/.
 
-    - Starting an independent /thread/ of computation consists of *two* steps.
-      1. we need to create a ~Thread~ object to allocate the /memory/ for the
-         /stack/ and /thread/ /state/.
+      2. Call the ~start~ /method/ to _start the computation_.
 
-      2. To _start the computation_, we need to call the ~start~ /method/ on this
-         object. We show how to do this in the following example application
-         called ~ThreadsCreation~:
-         #+BEGIN_SRC scala
-           object ThreadsCreation extends App {
-             class MyThread extends Thread {
-               override def run(): Unit = {
-                 println("New thread running.")
-               }
-             }
+    - ~ThreadsCreation~:
+      #+BEGIN_SRC scala
+        object ThreadsCreation extends App {
+          class MyThread extends Thread {
+            override def run(): Unit = {
+              println("New thread running.")
+            }
+          }
 
-             val t = new MyThread
-             t.start()
-             t.join()
-             println("New thread joined.")
-           }
-         #+END_SRC
+          val t = new MyThread
+          t.start()
+          t.join()
+          println("New thread joined.")
+        }
+      #+END_SRC
+      A JVM application starts and creates the /main thread/ to execute the
+      /method/ call ~main~ from a specified /class/, in this case, the
+      ~ThreadsCreation~ /object/.
+      
+      In this example, the /main thread/
+      1. Creates another /thread/ of the ~MyThread~ type
+         AND
+         assigns it to ~t~.
 
-      3. A JVM application starts and creates the /main thread/ to execute the
-         /method/ call ~main~ (here ~main~ is a /method/ of the
-         ~ThreadsCreattion~, and is is synthesized, not write out explicitly)
+      2. Starts ~t~ by calling the ~start~ /method/.
+         1) Calling the ~start~ /method/ eventually
+            *results in* executing the ~run~ /method/ from _the NEW /thread/._
 
-         In this example, the /main thread/ first creates another /thread/ of
-         the ~MyThread~ type and assigns it to ~t~.
+         2) The OS is notified that ~t~ *MUST start executing*.
+            * *NOT* start executing IMMEDIATELY!
 
-      4. Next, the /main thread/ starts ~t~ by calling the ~start~ /method/.
-         Calling the ~start~ /method/ eventually results in executing the run
-         /method/ from the new /thread/.
+         3) When the OS decides to assign _the NEW /thread/_ to some /processor/
+            is largely *out of the programmer's control*,
+            BUT the OS must *ensure* that this _eventually happens._
 
-         1. The OS is notified that ~t~ must start executing.
+         4) After the /main thread/ *starts* the _NEW /thread/ ~t~,_
+            it calls the ~join~ /method/ of ~t~. This /method/
+            *halts* the execution of the /main thread/
+            *until* ~t~ _completes_ its execution.
 
-         2. When the OS decides to assign the NEW /thread/ to some processor,
-            this is largely out of the programmer's control, but the OS must
-            ensure that this eventually happens.
+            * The ~join~ operation
+              *puts* the /main thread/ into the waiting state
+              *until* ~t~ terminates.
 
-         3. After the /main thread/ starts the _NEW /thread/ ~t~,_ it calls its
-            ~join~ /method/.
+              + Importantly,
+                _the WAITING /thread/_ *relinquishes* its control over the /processor/, and
+                the OS can *assign* that /processor/ *to* _some OTHER /thread/._
+                - /Waiting threads/
+                  * *notify* the OS that they
+                    are *waiting* for some _CONDITION_
+                    AND
+                    *cease spending* /CPU cycles/,
 
-         4. This /method/ halts the execution of the /main thread/ until ~t~
-            completes its execution.
-
-            We say that the ~join~ operation puts the /main thread/ into the
-            waiting state until ~t~ terminates.
-
-            Importantly, the waiting /thread/ relinquishes its control over the
-            processor, and the OS can assign that processor to some other
-            /thread/.
+                  * INSTEAD of *repetitively checking* that _CONDITION_.
 
 *** TODO Atomic execution - 38
 *** TODO Reordering - 42
