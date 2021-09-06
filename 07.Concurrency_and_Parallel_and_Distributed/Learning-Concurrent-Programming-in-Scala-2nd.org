@@ -462,7 +462,8 @@
      Java aficionados, already well-versed in this subject, might choose to *SKIP*
      the rest of this chapter.
 
-*** TODO Creating and starting threads - 33
+*** DONE Creating and starting threads - 33
+    CLOSED: [2021-09-06 Mon 00:43]
     - Every time a new /JVM process/ starts,
       *it creates several /threads/ _by default_.*
 
@@ -587,22 +588,64 @@
     - When running the program, it is executed so fast that the two ~println~
       statements occur almost simultaneously.
 
-      Could it be that the ordering of the ~println~ statements is just an
-      artifact in how the OS chooses to execute these threads?
+      * Q :: Could it be that the ordering of the ~println~ statements is just
+             an artifact in how the OS chooses to execute these threads?
 
-      To verify the hypothesis that the main thread really waits for t and that
-      the output is not just because the OS is biased to execute t first in this
-      particular example, we can experiment by tweaking the execution schedule.
+      * A :: To verify the hypothesis that
+             the /main thread/ really waits for ~t~ and that the output is not
+             just because the OS is biased to execute ~t~ first in this particular
+             example, we can experiment by tweaking the execution schedule.
+             =TODO=
 
-      Before we do that, we will introduce a shorthand to create and start a new thread;
+    - Before we do that,
+      we will introduce a _shorthand_ to *create* and *start* a _NEW_ /thread/;
       the current syntax is too verbose!
-
-      The new thread method simply runs a block of code in a newly started thread.
+      * The new /thread/ method simply
+        runs a block of code in a newly started /thread/.
+          This time, we will create the new /thread/ using an /anonymous thread
+        class/ declared inline at the instantiation site:
+        #+begin_src scala
+          def thread(body: => Unit): Thread = {
+            val t = new Thread {
+              override def run() = body
+            }
+            t.start()
+            t
+          }
+        #+end_src
+        Think twice before using this ~thread~ statement in production projects.
+        + It is prudent to correlate the syntactic burden with the computational cost;
+        + lightweight syntax can be mistaken for a cheap operation and
+          creating a new thread is *relatively expensive*.
       
-      This time, we will create the new thread using an anonymous thread class
-      declared inline at the instantiation site:
+    - /deterministic/
+    - /nondeterministic/
       
 *** TODO Atomic execution - 38
+    - /Race condition/ example:
+      #+begin_src scala
+        object ThreadsUnprotectedUid extends App {
+          var uidCount = 0L
+        
+          def getUniqueId(): Long = {
+            val freshUid = uidCount + 1
+            uidCount = freshUid
+            freshUid
+          }
+        
+          def printUniqueIds(n: Int): Unit = {
+            val uids = for (i<- 0 until n) yield getUniqueId()
+            log(s"Generated uids: $uids")
+          }
+        
+          val t = thread { printUniqueIds(5) }
+          printUniqueIds(5)
+          t.join()
+        }
+      #+end_src
+
+    - A race condition is not necessarily an incorrect program behavior.
+      
 *** TODO Reordering - 42
 
 ** TODO Monitors and synchronization - 45
