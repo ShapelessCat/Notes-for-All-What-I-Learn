@@ -291,7 +291,8 @@
   - In the following section, we will study how to use /threads/ -- the BASIC WAY
     to *express* /concurrent computations/.
 
-** TODO Processes and threads - 30
+** DONE Processes and threads - 30 - =TODO: NOTE=
+   CLOSED: [2021-09-07 Tue 04:44]
    - In OS's of _MODERN_, /pre-emptive/, /multitasking/,
      the programmer has _LITTLE or NO control_ over the choice of processor on
      which the program will be executed --
@@ -621,7 +622,8 @@
     - /deterministic/
     - /nondeterministic/
       
-*** TODO Atomic execution - 38
+*** DONE Atomic execution - 38
+    CLOSED: [2021-09-07 Tue 03:52]
     - /Race condition/ example:
       #+begin_src scala
         object ThreadsUnprotectedUid extends App {
@@ -634,7 +636,7 @@
           }
         
           def printUniqueIds(n: Int): Unit = {
-            val uids = for (i<- 0 until n) yield getUniqueId()
+            val uids = for (i <- 0 until n) yield getUniqueId()
             log(s"Generated uids: $uids")
           }
         
@@ -645,10 +647,110 @@
       #+end_src
 
     - A race condition is not necessarily an incorrect program behavior.
+      * However,
+        if SOME /execution schedule/ CAUSES an *UNDESIRED program output*,
+        the /race condition/ is considered to be a _program error_.
+
+    - The ~synchronized~ can be called on ANY /object/.
+      * To make ~getUniqueId()~ atomic, we can
+        #+begin_src scala
+          def getUniqueId(): Long = this.synchronized {
+            val freshUid = uidCount + 1
+            uidCount = freshUid
+            freshUid
+          }
+        #+end_src
+
+      * The ~synchronized~ call _ENSURES_ that
+        the subsequent block of code can ONLY execute
+        _IF_ there is no
+          other /thread/ simultaneously executing this /synchronized block/ of code,
+          _OR_
+          any other /synchronized block/ of code called on the same this /object/.
+
+      * *DISCOURAGED*:
+        Omit the ~this~, from which /object/ the ~synchronized~ comes, in this
+        kind of example.
+        + It's better to always write down where a specific ~synchronized~ come from,
+          BECAUSE _synchronizing on incorrect objects_ results in concurrency
+          errors that are *NOT easily identified*.
+          
+    - The JVM _ENSURES_ that
+        the /thread/ executing
+        a /synchronized block/ invoked on some ~x~ /object/
+        is the *only* /thread/ executing any /synchronized block/ on that
+        PARTICULAR ~x~ /object/.
+
+      * Example:
+        A /thread/ _T_ will be put into the *blocked* state
+        IF, when it calls ~x.synchronized {...}~, another /thread/ _S_ has
+            already been running this /synchronized block/, 
+        THEN
+           the _T_ /thread/ is put into *the /blocked/ state*.
+           
+        + Once the _S_ /thread/ completes its /synchronized block/, the JVM can
+          choose the _T_ /thread/ to execute its own /synchronized block/.
       
+    - *EVERY* /object/ created inside the /JVM/ has a special entity called an
+      /intrinsic lock/ or a /monitor/, which is used to ensure that *ONLY one*
+      /thread/ is executing some /synchronized block/ on that /object/.
+      1. When a /thread/ *starts executing* a /synchronized block/,
+         it /ACQUIRE/ the /intrinsic lock/ (or called /monitor/) of this
+         /synchronized block/.
+
+      2. When a /thread/ *completes* the /synchronized block/,
+         it /RELEASES/ the /intrinsic lock/.
+        
+    - The ~synchronized~ statement is one of the *fundamental mechanisms* for
+      /inter-thread communication/ in Scala and on the JVM.
+
 *** TODO Reordering - 42
+    =TODO=
+    - JMM
+    
+    - example
 
 ** TODO Monitors and synchronization - 45
+   In this section, we will study /inter-thread communication/ using the /synchronized
+   statement/ in more detail.
+
+   - As we saw in the previous sections,
+     the /synchronized statement/ serves both
+     * to *ensure the visibility* of writes performed _by DIFFERENT /threads/,_ and
+     * to *limit concurrent access* to a _shared region of memory_.
+
+   - Lock ::
+     * Generally speaking, it is a /synchronization mechanism/ that *enforces
+       access limits on a shared resource*.
+
+   - /Locks/ are also used to ensure that *NO* two /threads/ execute the same code
+     simultaneously; that is, they implement /mutual exclusion/.
+     
+   - As mentioned previously,
+     1. *EACH* /object/ on the JVM has a special /built-in monitor lock/,
+        also called the /intrinsic lock/.
+     2. When a /thread/ calls the /synchronized statement/ on an ~x~ /object/,
+        1) it gains ownership of the monitor lock of the x object,
+           given that no other thread owns the monitor.
+
+        2) Otherwise, the thread is blocked until the monitor is released.
+
+     3. Upon gaining ownership of the monitor, the thread can witness the memory
+        writes of all the threads that previously released that monitor.
+     
+     * A natural consequence is that synchronized statements can be nested. A /thread/
+       can own monitors belonging to several different objects simultaneously.
+       This is useful when composing larger systems from simpler components. We do
+       not know which sets of monitors independent software components use in
+       advance. Let's assume that we are designing an online banking system in
+       which we want to log money transfers. We can maintain the transfers list of
+       all the money transfers in a mutable ArrayBuffer growable array
+       implementation. The banking application does not manipulate transfers
+       directly, but instead appends new messages with a logTransfer method that
+       calls synchronized on transfers. The ArrayBuffer implementation is a
+       collection designed for single-threaded use, so we need to protect it from
+       concurrent writes. We will start by defining the logTransfer method:
+
 *** TODO Deadlocks - 47
 *** TODO Guarded blocks - 50
 *** TODO Interrupting threads and the graceful shutdown - 55
