@@ -710,7 +710,8 @@
     
     - example
 
-** TODO Monitors and synchronization - 45
+** DONE Monitors and synchronization - 45
+   CLOSED: [2021-09-11 Sat 20:54]
    In this section, we will study /inter-thread communication/ using the /synchronized
    statement/ in more detail.
 
@@ -729,30 +730,224 @@
    - As mentioned previously,
      1. *EACH* /object/ on the JVM has a special /built-in monitor lock/,
         also called the /intrinsic lock/.
-     2. When a /thread/ calls the /synchronized statement/ on an ~x~ /object/,
-        1) it gains ownership of the monitor lock of the x object,
-           given that no other thread owns the monitor.
+        1) WHEN a /thread/ calls the /synchronized statement/ on an ~x~ /object/,
+           it *gains* _ownership of the monitor lock_ of the ~x~ object,
+           GIVEN that no other /thread/ owns the monitor.
 
-        2) Otherwise, the thread is blocked until the monitor is released.
+        2) OTHERWISE, the /thread/ is *blocked* until the monitor is released.
 
-     3. Upon gaining ownership of the monitor, the thread can witness the memory
-        writes of all the threads that previously released that monitor.
+     2. UPON gaining _ownership of the monitor_,
+        the /thread/ can _WITNESS_
+        the *memory writes* of ALL the /threads/ that *PREVIOUSLY released* that
+        monitor.
      
-     * A natural consequence is that synchronized statements can be nested. A /thread/
-       can own monitors belonging to several different objects simultaneously.
-       This is useful when composing larger systems from simpler components. We do
-       not know which sets of monitors independent software components use in
-       advance. Let's assume that we are designing an online banking system in
-       which we want to log money transfers. We can maintain the transfers list of
-       all the money transfers in a mutable ArrayBuffer growable array
-       implementation. The banking application does not manipulate transfers
-       directly, but instead appends new messages with a logTransfer method that
-       calls synchronized on transfers. The ArrayBuffer implementation is a
-       collection designed for single-threaded use, so we need to protect it from
-       concurrent writes. We will start by defining the logTransfer method:
+     3. A natural consequence is that /synchronized statements/ _can be *NESTED*._
+        A /thread/ can own monitors belonging to several different objects
+        SIMULTANEOUSLY.
+          This is useful when composing larger systems from simpler components.
+        We do not know which sets of monitors independent software components
+        use in advance.
+        * Example:
+          Design *an online banking system* in which we want to *log* money
+          transfers. Additional requirement: if a money transfer is bigger than
+          10 currency units, we need to log it.
+          #+begin_src scala
+            object SynchronizedNesting extends App {
+              import scala.collection.mutable
+            
+              private val transfers = mutable.ArrayBuffer.empty[String]
+            
+              def logTransfer(name: String, n: Int) = transfers.synchronized {
+                transfers += s"transfer to account '$name' = $n"
+              }
+            
+              class Account(val name: String, var money: Int)
+            
+              def add(account: Account, n: Int) = account.synchronized {
+                account.money += n
+                if (n > 10) logTransfer(account.name, n)
+              }
+            
+              // Continuation of the bank account example.
+              val jane = new Account("Jane", 100)
+              val john = new Account("John", 200)
+              val t1 = thread { add(jane, 5) }
+              val t2 = thread { add(john, 50) }
+              val t3 = thread { add(jane, 70) }
+              t1.join(); t2.join(); j3.join()
+              log(s"--- transfers ---\n$transfers")
+            }
+          #+end_src
+          + We can maintain the transfers list of all the money transfers in a
+            ~mutable.ArrayBuffer~, the ~val transfers~.
+            - The banking application does *NOT manipulate transfers DIRECTLY,* 
+              BUT instead appends new messages with a ~logTransfer~ method that
+              calls ~synchronized~ on ~transfers~.
+              * The ~ArrayBuffer~ implementation is a collection designed *for
+                single-threaded use* (=from Jian= not thread-safe), so we need to
+                protect it from concurrent writes.
 
-*** TODO Deadlocks - 47
+*** DONE Deadlocks - 47
+    CLOSED: [2021-09-12 Sun 00:34]
+    - A factor that worked to our advantage in the banking system example is that
+      the ~logTransfer~ method never attempts to acquire any /monitors/ other
+      than /the ~transfers~ monitor/.
+        Once the /monitor/ is obtained, a /thread/ will eventually modify the
+      ~transfers~ buffer and release the /monitor/; in a stack of _NESTED_ /monitor/
+      acquisitions, transfers always comes last.
+        Given that ~logTransfer~ is the only method synchronizing on
+      ~transfers~, it cannot indefinitely delay other /threads/ that synchronize
+      on ~transfers~.
+      
+    - /Deadlock :: two or more executions wait for each other to complete an action
+                   BEFORE proceeding with their own action.
+      
+    - _The ~logTransfer~ method *can never cause* a /deadlock/,_
+      because it only attempts to acquire a single /monitor/ that is released
+      eventually.
+
+    - Let's now extend our banking example to
+      allow money transfers _BETWEEN specific accounts,_ as follows:
+      #+begin_src scala
+        object SynchronizedDeadlock extends App {
+          import SynchronizedNesting.Account
+        
+          def send(a: Account, b: Account, n: Int) = a.synchronized {
+            b.synchronized {
+              a.money -= n
+              b.money += n
+            }
+          }
+        
+          val a = new Account("Jack", 1000)
+          val b = new Account("Jill", 2000)
+          val t1 = thread { for (_ <- 0 until 100) send(a, b, 1) }
+          val t2 = thread { for (_ <- 0 until 100) send(b, a, 1) }
+          t1.join(); t2.join()
+          log(s"a = ${a.money}, b = ${b.money}")
+        }
+      #+end_src
+      * A /deadlock/ occurs when a set of two or more /threads/ acquire resources
+        and then *CYCLICALLY try* to acquire other /thread/'s resources *WITHOUT
+        releasing* their own.
+      
+      * If you are running this example, you'll want to close the terminal session
+        at this point and restart SBT.
+        
+    - Whenever resources are acquired in the same order, there is no danger of a
+      /deadlock/.
+      * *The _ORDERING_ breaks the cycle,* which is one of the necessary
+        preconditions for a /deadlock/.
+
+      * _TIP_:
+        *Establish a /total order/ between resources when acquiring them;*
+        this ensures that no set of /threads/ _cyclically wait_ on the resources
+        they previously acquired.
+        
+    - In our example, we need to establish an order between different accounts.
+      One way of doing so is to use the ~getUniqueId~ method introduced in an
+      earlier section:
+      #+begin_src scala
+        import SynchronizedProtectedUid.getUniqueId
+        
+        class Account(val name: String, var money: Int) {
+          val uid = getUniqueId()
+        }
+      #+end_src
+      This new ~Account~ class *ensures* that
+      no two accounts share the SAME ~uid~ value, regardless of the /thread/
+      they were created on.
+
+    - The /deadlock-free/ ~send~ method then needs to
+      ACQUIRE the accounts *in the order of their ~uid~ values*, as follows:
+      #+begin_src scala
+        def send(a1: Account, a2: Account, n: Int) {
+          def adjust(): Unit = {
+            a1.money -= n
+            a2.money += n
+          }
+        
+          if (a1.uid < a2.uid)
+            a1.synchronized {
+              a2.synchronized {
+                adjust()
+              }
+            }
+          else
+            a1.synchronized {
+              a2.synchronized {
+                adjust()
+              }
+            }
+        
+        }
+      #+end_src
+      
+    - /Deadlocks/ are *inherent* to any concurrent system in which the /threads/
+      wait indefinitely for a resource without releasing the resources they
+      previously acquired.
+      * However, while they should be avoided, /deadlocks/ are often not as deadly
+        as they sound:
+        =IMPORTANT=
+        A nice thing about /deadlocks/ is that by their definition, a /deadlocked/
+        system *does not progress*.
+
+        + The developer that resolved Jack and Jill's issue was able to act
+          quickly by doing a /heap dump/ of the _running JVM instance_ and
+          analyzing the /thread stacks/; /deadlocks/ can at least be easily
+          identified, even when they occur in a production system.
+          =TODO= =TODO= =TODO=
+          Learn how to do /heap dump/ and /thread stacks/ analysis!!!
+
+        + This is unlike the errors due to /race conditions/, which only become
+          apparent long after the system transitions into an invalid state.
+      
 *** TODO Guarded blocks - 50
+    - _Creating a new /thread/_ is *much more expensive than* _creating a new
+      lightweight object such as ~Account~._
+
+    - A high-performance banking system should be _QUICK_ and _RESPONSIVE_, and
+      creating a new /thread/ on each request can be *TOO SLOW* when there are
+      thousands of requests per second.
+      * *CONCLUSION*:
+        The same /thread/ should be *reused* for many requests;
+        
+      * thread pool :: a set of such /reusable threads/.
+
+    - xx
+      #+begin_src scala
+        object SynchronizedBadPool extends App {
+          import scala.collection.mutable
+        
+          private val tasks = mutable.Queue.empty[() => Unit]
+        
+          val worker: Thread = new Thread {
+            def poll(): Option[() => Unit] = tasks.synchronized {
+              Option.when(tasks.nonEmpty)(tasks.dequeue())
+            }
+        
+            override def run(): Unit =
+              while (true)
+                poll() match {
+                  case Some(task) => task()
+                  case None =>
+                }
+          }
+        
+          worker.setDaemon(true)
+          worker.start()
+        
+          def asynchronous(body: =>Unit): Unit = tasks.synchronized {
+            tasks.enqueue(() => body)
+            ()
+          }
+        
+          asynchronous { log("Hello") }
+          asynchronous { log(" world!")}
+          Thread.sleep(5000)
+        }
+      #+end_src
+
 *** TODO Interrupting threads and the graceful shutdown - 55
 
 ** TODO Volatile variables - 56
