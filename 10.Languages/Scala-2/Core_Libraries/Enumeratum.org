@@ -18,6 +18,7 @@
       + richer enum values WITHOUT having to maintain your own collection of values.
 
   - *Enumeratum* has the following niceties:
+    =TODO= Review after finishing this document =TODO=
     * Zero dependencies
 
     * Performant: Faster than ~Enumeration~ in the standard library (see _benchmarks_)
@@ -52,7 +53,8 @@
 
   - Integrations are available for:
     * _Play_: JVM only
-    * _Play JSON_: JVM (included in Play integration but also available separately) and ScalaJS
+    * _Play JSON_: JVM (included in Play integration but also available
+                   separately) and ScalaJS
     * _Circe_: JVM and ScalaJS
     * _ReactiveMongo BSON_: JVM only
     * _Argonaut_: JVM and ScalaJS
@@ -62,30 +64,224 @@
     * _Quill_: JVM and ScalaJS
     * _sttp tapir_: JVM and ScalaJS
 
-  
-* Quick start
-** SBT
-** Usage
+* DONE 1. Quick start
+  CLOSED: [2021-09-21 Tue 16:19]
+** DONE SBT
+   CLOSED: [2021-09-21 Tue 16:09]
+   In =build.sbt=, set the *Enumeratum* version in a variable (for the latest
+   version, set ~val enumeratumVersion =~ the version you see in the Maven badge
+   above).
+   #+begin_src scala
+     libraryDependencies ++= Seq(
+       "com.beachape" %% "enumeratum" % enumeratumVersion
+     )
+   #+end_src
+
+   - *Enumeratum* has DIFFERENT _INTEGRATIONS_ that can be added to your build
+     à la carte. For more info, see the respective sections in the _Table of
+     Contents_.
    
-* More examples
-** Enum
-*** Manual override of name
-*** Mixins to override the name
+** DONE Usage
+   CLOSED: [2021-09-21 Tue 16:19]
+   - Using *Enumeratum* is simple. Just
+     * declare your own /sealed trait or class/ ~A~ that _extends_ ~EnumEntry~
+       and
+     * implement it as /case objects/ _inside_
+       an object that _extends_ from ~Enum[A]~ as shown below.
+   
+   - Example:
+     #+begin_src scala
+       import enumeratum._
+       
+       sealed trait Greeting extends EnumEntry
+       object Greeting extends Enum[Greeting] {
+         // `findValues` is a protected method that invokes a macro to find all
+         // `Greeting` object declarations inside an `Enum`
+         //
+         // You use it to implement the `val values` member
+         //
+         val values = findValues
+       
+         case object Hello   extends Greeting
+         case object GoodBye extends Greeting
+         case object Hi      extends Greeting
+         case object Bye     extends Greeting
+       }
+       
+       /** `withName` */
+       Greeting.withName("Hello")
+       // => res0: Greeting = Hello
+       
+       Greeting.withName("Haro")
+       // => java.lang.NoSuchElementException: Haro is not a member of Enum (Hello, GoodBye, Hi, Bye)
+       
+       /** `withNameOption` */
+       Greeting.withNameOption("Hello")
+       // => res1: Option[Greeting] = Some(Hello)
+       Greeting.withNameOption("Haro")
+       // => res2: Option[Greeting] = None
+       
+       // It is also possible to use strings case insensitively
+       Greeting.withNameInsensitive("HeLLo")
+       // => res3: Greeting = Hello
+       
+       Greeting.withNameInsensitiveOption("HeLLo")
+       // => res4: Option[Greeting] = Some(Hello)
+       
+       // Uppercase-only strings may also be used
+       Greeting.withNameUppercaseOnly("HELLO")
+       // => res5: Greeting = Hello
+       
+       Greeting.withNameUppercaseOnlyOption("HeLLo")
+       // => res6: Option[Greeting] = None
+       
+       // Similarly, lowercase-only strings may also be used
+       Greeting.withNameLowercaseOnly("hello")
+       // => res7: Greeting = Hello
+       
+       Greeting.withNameLowercaseOnlyOption("hello")
+       // => res8: Option[Greeting] = Some(Hello)
+     #+end_src
+
+   - *NOTE*:
+     _BY DEFAULT,_ ~findValues~ will return a ~Seq~ with the enum members listed
+     *in written-order* (_RELEVANT_ if you want to use the ~indexOf~ method).
+     
+* DONE 2. More examples
+  CLOSED: [2021-09-21 Tue 23:28]
+** DONE ~Enum~
+   CLOSED: [2021-09-21 Tue 23:27]
+   - Exhaustive check.
+
+   The behavior of name can be changed in two ways:
+   
+*** DONE Manual override of name
+    CLOSED: [2021-09-21 Tue 23:27]
+    The first way to
+    _change the *name* behaviour_ is to manually *override* the
+    ~def entryName: String~ method.
+    #+begin_src scala
+      import enumeratum._
+      
+      sealed abstract class State(override val entryName: String) extends EnumEntry
+      
+      object State extends Enum[State] {
+        val values = findValues
+      
+        case object Alabama extends State("AL")
+        case object Alask   extends State("AK")
+        // and so on and so forth.
+      }
+      
+      import State._
+      State.withName("AL")
+    #+end_src
     
-** ValueEnum
+*** DONE Mixins to override the name
+    CLOSED: [2021-09-21 Tue 23:27]
+    The second way to
+    _override the *name* behaviour_ is to *mixin* the /stackable traits/ provided
+    for *common string conversions*,
+    ~Snakecase~,
+    ~UpperSnakecase~,
+    ~CapitalSnakecase~,
+    ~Hyphencase~,
+    ~UpperHyphencase~,
+    ~CapitalHyphencase~,
+    ~Dotcase~,
+    ~UpperDotcase~,
+    ~CapitalDotcase~,
+    ~Words~,
+    ~UpperWords~,
+    ~CapitalWords~,
+    ~Camelcase~,
+    ~LowerCamelcase~,
+    ~Uppercase~,
+    ~Lowercase~,
+    ~Uncapitalised~.
+    #+begin_src scala
+      import enumeratum._
+      import enumeratum.EnumEntry._
+      
+      sealed trait Greeting extends EnumEntry with Snakecase
+      object Greeting extends Enum[Greeting] {
+        val values = findValues
+      
+        case object Hello        extends Greeting
+        case object GoodBye      extends Greeting
+        case object ShoutGoodBye extends Greeting with Uppercase
+      }
+      
+      // Workable code
+      Greeting.withName("hello")
+      Greeting.withName("good_bye")
+      Greeting.withName("SHOUT_GOOD_BYE")
+    #+end_src
+    
+** DONE ~ValueEnum~
+   CLOSED: [2021-09-21 Tue 23:28]
+   - Asides from enumerations that resolve members from ~String~ names,
+     *Enumeratum also supports ~ValueEnum~'s,* enums that resolve members from
+     simple values like ~Int~, ~Long~, ~Short~, ~Char~, ~Byte~, and ~String~
+     (without support for runtime transformations).
+
+   - These enums are *NOT* modelled after ~Enumeration~ from standard lib, and
+     therefore have the added ability to make sure, at compile-time, that
+     multiple members do not share the same value.
+     #+begin_src scala
+       import enumeratum.values._
+       
+       sealed abstract class LibraryItem(val value: Int, val name: String) extends IntEnumEntry
+       object LibraryItem extends IntEnum[LibraryItem] {
+         case object Book     extends LibraryItem(value = 1, name = "book")
+         case object Movie    extends LibraryItem(name = "movie", value = 2)
+         case object Magazine extends LibraryItem(3, "magazine")
+         case object CD       extends LibraryItem(4, name = "cd")
+         // case object Newspaper extends LibraryItem(4, name = "newspaper") <-- will
+         // fail to compile because the value 4 is shared
+       
+         // val five = 5
+         // case object Article extends LibraryItem(five, name = "article") <-- will
+         // fail to compile because the value is not a literal
+         val values = findValues
+       }
+       
+       assert(LibraryItem.withValue(1) == LibraryItem.Book)
+       LibraryItem.withValue(10)  // java.util.NoSuchElementException: ...
+     #+end_src
+
+   - If you want to allow aliases in your enumeration, i.e. multiple entries that
+     share the same value, you can *extend* the ~enumeratum.values.AllowAlias~
+     /trait/:
+     #+begin_src scala
+       import enumeratum.values._
+       
+       sealed abstract class Judgement(val value: Int) extends IntEnumEntry with AllowAlias
+       object Judgement extends IntEnum[Judgement] {
+         case object Good extends Judgement(1)
+         case object OK extends Judgement(2)
+         case object Meh extends Judgement(2)
+         case object Bad extends Judgement(3)
+       
+         val values = findValues
+       }
+     #+end_src
+     
+*** Restrictions
+    ~ValueEnum~'s *MUST* have their /value members/ implemented as /literal values/.
    
-* ScalaJS
-** Play integration
-** Play JSON integration
-** Circe integration
-** ReactiveMongo BSON integration
-** Argonaut integration
-** Json4s integration
-** Slick integration
-** ScalaCheck
-** Quill integration
-** Cats integration
-** Doobie integration
-** Anorm integration
-** Benchmarking
-** Publishing
+* TODO 3. ScalaJS
+* 4. Play integration
+* 5. Play JSON integration
+* 6. Circe integration
+* 7. ReactiveMongo BSON integration
+* 8. Argonaut integration
+* 9. Json4s integration
+* 10. Slick integration
+* 11. ScalaCheck
+* 12. Quill integration
+* 13. Cats integration
+* 14. Doobie integration
+* 15. Anorm integration
+* 16. Benchmarking
+* 17. Publishing

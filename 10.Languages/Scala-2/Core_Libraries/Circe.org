@@ -4,8 +4,76 @@
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
-* Quick start
-* Why?
+_circe_'s working title was _jfc_, which stood for “JSON for cats”.
+The name was changed for [[https://github.com/circe/circe/issues/11][a number of reasons]].
+
+- The reason of using the new name *Circe*:
+  *Circe* is a goddess who PURIFIED the _Argonauts_ -- which is the library name
+  from which _circe_ forked.
+
+* DONE Quick start
+  CLOSED: [2021-09-23 Thu 12:18]
+  #+begin_src scala
+    val circeVersion = "0.14.1"
+    
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core",
+      "io.circe" %% "circe-generic",
+      "io.circe" %% "circe-parser"
+    ).map(_ % circeVersion)
+  #+end_src
+  
+  - Know issue:
+    In case of *large* or *deep-nested* /case classes/, there is a chance to get
+    /stack overflow/ during compilation.
+    * Solution:
+      please refer to [[https://circe.github.io/circe/codecs/known-issues.html][known-issues]] for WORKAROUND.
+
+  - If you're using circe-generic-extra's ~@JsonCodec~ /macro annotations/,
+    you'll need
+    * to add ~-Ymacro-annotations~ to your _compiler options_ on Scala 2.13,
+      OR
+    * to include the /Macro Paradise compiler plugin/ in your build on earlier
+      Scala versions:
+      #+begin_src scala
+        addCompilerPlugin(
+          "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
+        )
+      #+end_src
+  
+  - Example (paste this in REPL):
+    #+begin_src scala
+      import io.circe._
+      import io.circe.generic.auto._
+      import io.circe.parser._
+      import io.circe.syntax._
+      
+      sealed trait Foo
+      final case class Bar(xs: Vector[String])        extends Foo
+      final case class Qux(i: Int, d: Option[Double]) extends Foo
+      
+      val foo: Foo = Qux(13, Some(14.0))
+      
+      val json = foo.asJson.noSpaces
+      println(json)
+      
+      val decodedFoo = decode[Foo](json)
+      println(decodedFoo)
+    #+end_src
+    No boilerplate, no /runtime reflection/.
+    
+* TODO Why?
+  - _Argonaut_ is a great library.
+    1. It's _by far_
+      * the *best* JSON library for *Scala*, and
+      * the *best* JSON library on the *JVM*.
+
+    2. If you're doing anything with JSON in Scala, you should be using
+      _Argonaut_.
+
+  - _circe_ is a fork of _Argonaut_
+    with _a few important differences_. =???= =???= =???=
+    
 ** Dependencies and modularity
 ** Parsing
 ** Lenses
