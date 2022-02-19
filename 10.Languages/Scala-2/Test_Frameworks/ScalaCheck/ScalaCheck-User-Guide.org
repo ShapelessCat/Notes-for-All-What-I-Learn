@@ -1,0 +1,335 @@
+#+TITLE: ScalaCheck User Guide
+#+LAST MODIFIED: 2021-03-27
+#+STARTUP: overview
+#+STARTUP: indent
+#+STARTUP: entitiespretty
+
+* DONE What is ScalaCheck?
+CLOSED: [2022-02-19 Sat 22:58]
+- ScalaCheck :: a tool for testing Scala and Java programs, based on
+  * property specifications
+  * automatic test data generation
+
+- The basic idea:
+  1. you define a property that specifies the behaviour of a method or some unit of code,
+  2. ScalaCheck checks that the property holds.
+     * All test data are generated automatically in a random fashion.
+
+* DONE A quick example
+CLOSED: [2022-02-19 Sat 22:58]
+1. Add _scalacheck.jar_ to the /classpath/:
+   #+begin_src bash
+     scala -cp scalacheck.jar
+   #+end_src
+
+2. Examples:
+   #+begin_src scala
+     import org.scalacheck.Prop.forAll
+
+     // Example 1:
+     val propConcatLists = forAll { (l1: List[Int], l2: List[Int]) =>
+       l1.size + l2.size == (l1 :: l2).size
+     }
+     
+     propConcatLists.check
+     // + OK, passed 100 tests
+
+     // Example 2:
+     val propSqrt = forAll { (n: Int) => scala.math.sqrt(n*n) == n }
+
+     propSqrt.check
+     // ! Falsified after 2 passed test.
+     // > ARG_0: -1
+     // > ARG_0_ORIGINAL: -488187735
+   #+end_src
+
+* TODO Concepts
+** DONE Properties
+CLOSED: [2022-02-20 Sun 01:45]
+- Property :: the *testable unit* in ScalaCheck, and is represented by the
+              ~org.scalacheck.Prop~ /class/.
+
+- There are SEVERAL WAYS to _CREATE_ /properties/ in ScalaCheck,
+  1. use the ~org.scalacheck.Prop.forAll~ method like in the
+     example above. 
+     * That method creates /universally quantified properties/ directly, =???=
+     * but it is also possible to create _NEW_ /properties/ by *combining* other
+       /properties/,
+
+  2. use any of the specialised methods in the ~org.scalacheck.Prop~ object.
+     =TODO= =???=
+
+*** DONE Universally Quantified Properties
+CLOSED: [2022-02-19 Sat 23:14]
+ ~org.scalacheck.Prop.forAll~ creates /universally quantified properties/.
+
+- ~forAll(function)~
+  1. TAKES a /function/ as parameter, and
+  2. CREATES a /property/ out of it that can be tested with the ~check~ method.
+
+- The /function/ passed to ~forAll~
+  1. should return
+     * ~Boolean~ OR
+     * another /property/
+
+  2. can take parameters of any types,
+     _AS LONG AS_ there exist /implicit ~Arbitrary~ instances/ for the types.
+     * By default,
+       ScalaCheck has instances for common types like ~Int~, ~String~, ~List~, etc,
+
+     * It is also possible to define your own ~Arbitrary~ instances.
+       This will be described in a later section.
+
+- Here are some examples of /properties/ defined with help of the
+  ~org.scalacheck.Prop.forAll~ method.
+  #+begin_src scala
+    import org.scalacheck.Prop.forAll
+
+    val propReverseList = forAll { l: List[String] => l.reverse.reverse == l }
+
+    val propConcatString = forAll { (s1: String, s2: String) =>
+      (s1 + s2).endsWith(s2)
+    }
+  #+end_src
+
+- ~forAll(dataGenerator)(function)~
+  You can also give ~forAll~ a SPECIFIC /data generator/.
+  See the following example:
+  #+begin_src scala
+    import org.scalacheck._
+
+    val smallInteger = Gen.choose(0, 100)
+
+    val propSmallInteger = Prop.forAll(smallInteger) { n =>
+      n >= 0 && n <= 100
+    }
+  #+end_src
+
+*** DONE Conditional Properties
+CLOSED: [2022-02-19 Sat 23:43]
+Sometimes, a /specification/ takes the form of an /implication/.
+In ScalaCheck, you can use the implication operator ~==>~:
+
+- Example: 
+  #+begin_src scala
+    import org.scalacheck.Prop.{forAll, propBoolean}
+
+    val propMakeList = forAll { n: Int =>
+      (n >= 0 && n < 10000) ==> (List.fill(n)("").length == n)
+    }
+  #+end_src
+  * Now ScalaCheck will only care for the cases when ~n~ is not negative.
+  * We also filter out larger than 1000 numbers, since we don't want to generate huge lists.
+
+- If the /implication operator/ is given a condition that is _hard or impossible_ to fulfill,
+  ScalaCheck *might not find enough passing test cases* to state that the property holds.
+  * In the following trivial example, all cases where ~n~ is non-zero will be thrown away:
+    #+begin_src scala
+      import org.scalacheck.Prop.{forAll, propBoolean}
+
+      val propTrivial = forAll { n: Int =>
+        (n == 0) ==> (n == 0)
+      }
+
+      propTrivial.check
+      // ! Gave up after only 4 passed tests. 500 tests were discarded.
+    #+end_src
+    + It is possible to TELL ScalaCheck to *try harder* when it generates test cases,
+      BUT generally you *should* _try to REFACTOR_ your /property specification/
+      instead of generating more test cases, if you get this scenario.
+      =from Jian=
+      The above case is an example -- it is actually a unit test for a single
+      data point, and you shouldn't use a /property test/ to represent it.
+
+- *SUMMARY*:
+  Using /implications/, we realise that _a /property/ might *NOT* just PASS or FAIL_,
+  it could also be undecided if the implication condition doesn't get fulfilled.
+  
+- =TODO= =NEXT=
+  In the section about test execution, the different results of property
+  evaluations will be described in more detail.
+  
+*** DONE Combining Properties
+CLOSED: [2022-02-19 Sat 23:51]
+A third way of *creating* /properties/, is to *combine* EXISTING /properties/ into new ones.
+#+begin_src scala
+  val p1 = forAll(...)
+
+  val p2 = forAll(...)
+
+  val p3 = p1 && p2
+
+  val p4 = p1 || p2
+
+  val p5 = p1 == p2
+
+  val p6 = all(p1, p2) // same as p1 && p2
+
+  val p7 = atLeastOne(p1, p2) // same as p1 || p2
+#+end_src
+Here,
+~p3~ will hold if and only if both ~p1~ and ~p2~ hold,
+~p4~ will hold if either ~p1~ or ~p2~ holds, and
+~p5~ will hold if ~p1~ holds exactly when ~p2~ holds and _vice versa_.
+
+*** DONE Grouping Properties
+CLOSED: [2022-02-20 Sun 00:05]
+- *Requirement*:
+  Often you want to specify several RELATED /properties/, perhaps for ALL
+  /methods/ in a /class/.
+
+- *Solution*:
+  ScalaCheck provides a simple way of doing this, through the ~Properties~ /trait/.
+
+- Look at the following /specifications/ of some of the methods in the
+  ~java.lang.String~ /class/:
+  #+begin_src scala
+    import org.scalacheck._
+
+    object StringSpecification extends Properties("String") {
+      import Prop.forAll
+
+      property("startsWith") = forAll { (a: String, b: String) =>
+        (a + b).startsWith(a)
+      }
+
+      property("endsWith") = forAll { (a: String, b: String) =>
+        (a + b).endsWith(a)
+      }
+
+      property("substring") = forAll { (a: String, b: String) =>
+        (a + b).substring(a.length) == b
+      }
+
+      property("substring") = forAll { (a: String, b: String, c: String) =>
+        (a + b + c).substring(a.length, a.length + b.length) == b
+      }
+    }
+  #+end_src
+
+- The ~Properties~ class contains a ~main~ method that can be used for simple
+  execution of the /property tests/.
+  Compile and run the tests in the following way:
+  #+begin_src bash
+    #$
+    scalac -cp scalacheck.jar StringSpecification.scala
+
+    #$
+    scala -cp scalacheck.jar:. StringSpecification
+    # + String.startsWith: OK, passed 100 tests.
+    # + String.endsWith: OK, passed 100 tests.
+    # + String.substring: OK, passed 100 tests.
+    # + String.substring: OK, passed 100 tests.
+  #+end_src
+
+- You can also use the ~check~ /method/ of the ~Properties~ /class/ to check all
+  specified /properties/, JUST LIKE for _simple ~Prop~ instances_.
+  * In fact, ~Properties~ is a /subtype/ of ~Prop~, so you can use it just as if
+    it was _a SINGLE /property/._
+
+    + That SINGLE /property/ holds
+       _IFF_ *all* of the contained /properties/ hold.
+
+- Use the ~Properties.include~ /method/
+  if you want to *group* several different /property collections/ into a single one.
+
+  * You could, for example,
+    create one /property collection/ for your application that consists of all
+    the /property collections/ of your individual classes:
+    #+begin_src scala
+      object MyAppSpecification extends Properties("MyApp") {
+        include(StringSpecification)
+        include(...)
+        include(...)
+      }
+    #+end_src
+
+*** DONE Labeling Properties =IMPORT= =USE THIS TECH=
+CLOSED: [2022-02-20 Sun 01:45]
+- *Issue that need to be addressed*:
+  Sometimes it can be difficult to decide exactly what is wrong when a
+  /property/ fails, especially if the /property/ is complex, with many conditions.
+
+- In such cases, _you can *label* the DIFFERENT parts of the /property/,_
+  so ScalaCheck can tell you exactly what part is failing.
+
+- Example:
+  #+begin_src scala
+    import org.scalacheck.Prop.{forall, propBoolean}
+
+    val complexProp = forAll { (m: Int, n: Int) =>
+      val res = myMagicFunction(n, m)
+      (res >= m)    :| "result > #1" &&
+      (res >= n)    :| "result > #2" &&
+      (res < m + n) :| "result not sum"
+    }
+  #+end_src
+
+- We can see the /label/ if we define ~myMagicFunction~ incorrectly and
+  then check the /property/:
+  #+begin_src scala
+    def myMagicFunction(n: Int, m: Int) = n + m
+
+    complexProp.check
+    //  ! Falsified after 0 passed tests.
+    //  > Label of failing property: "result not sum"
+    //  > ARG_0: "0"
+    //  > ARG_1: "0"
+  #+end_src
+
+- It is also possible to write the /label/ before the conditions like this:
+  #+begin_src scala
+    import org.scalacheck.Prop.{forAll, propBoolean}
+
+    val complexProp = forAll { (m: Int, n: Int) =>
+      val res = myMagicFunction(n, m)
+        ("result > #1"    |: res >= m) &&
+        ("result > #2"    |: res >= n) &&
+        ("result not sum" |: res < m + n)
+    }
+  #+end_src
+
+- The /labeling operator/ can also be used to *inspect*
+  _INTERMEDIATE VALUES_ used in the /properties/, which can be very useful when
+  trying to understand why a property fails.
+
+- ScalaCheck _ALWAYS presents_ the generated /property arguments/ (~ARG_0~, ~ARG_1~, etc),
+  but sometimes you need to quickly see the value of an _INTERMEDIATE CALCULATION_.
+
+  * The following example tries to specify multiplication in a somewhat naive way:
+    #+begin_src scala
+      import org.scalacheck.Prop.{forAll, propBoolean, all}
+
+      val propMul = forAll { (n: Int, m: Int) =>
+        val res = n * m
+          ("evidence = " + res) |: all(
+            "div1" |: m != 0 ==> (res / m == n),
+            "div2" |: n != 0 ==> (res / n == m),
+            "lt1"  |: res > m,
+            "lt2"  |: res > n
+          )
+      }
+
+      propMul.check
+      // ! Falsified after 0 passed tests.
+      // > Labels of failing property:
+      // "lt1"
+      // "evidence = 0"
+      // > ARG_0: "0"
+      // > ARG_1: "0"
+    #+end_src
+
+- As you can see, you _can add *as many /labels/ as you want* to your /property/,_
+  ScalaCheck will present them all if the /property/ fails.
+
+** TODO Generators
+*** TODO Generating Case Classes
+*** TODO Sized Generators
+*** TODO Conditional Generators
+*** TODO Generating Containers
+*** TODO The ~arbitrary~ Generator
+*** TODO Collecting Generated Test Data
+
+** TODO Test Execution
+** TODO Test Case Minimisation
+** TODO Stateful Testing
