@@ -1,17 +1,19 @@
-<TeXmacs|1.99.11>
+<TeXmacs|2.1.1>
 
-<style|book>
+<style|<tuple|book|old-dots|old-lengths>>
 
 <\body>
   <doc-data|<doc-title|Note to<next-line>Programming Language and Lambda
-  Calculi>|<doc-author|<\author-data|<author-name|Jian Lan>>
-    \;
-  </author-data>>>
+  Calculi (Utah_CS7520_Version)>|<doc-author|<author-data|<author-name|Jian
+  Lan>>>>
 
   <chapter*|Book Info>
 
   <\itemize-dot>
     <item>Authors: Matthias Felleisen, Matthew Flatt
+
+    <item>Version: Draft 2006-03 - Utah CS7520 Version (Even the latest 2013
+    CS7520 used this document)
 
     <item>Version: Draft 2006-07-12 - Summer 2006 Revised Version
   </itemize-dot>
@@ -36,6 +38,18 @@
 
   <section|Notation Summary>
 
+  <chapter|Structural Induction>
+
+  <section|Detecting the Need for Structural Induction>
+
+  <section|Definitions with Ellipses>
+
+  <section|Introduction on Proof Trees>
+
+  <section|Multiple Structures>
+
+  <section|More Definitions and More Proofs>
+
   <chapter|Consistency of Evluation>
 
   <chapter|The \<lambda\>-Calculus>
@@ -58,7 +72,7 @@
 
   <subsection|Fixed Points and the Y Combinator>
 
-  <section|Reduction Strategy and Normal Form>
+  <section|Facts About the \<lambda\>-Calculus>
 
   <section|History>
 
@@ -262,127 +276,133 @@
 
 <\references>
   <\collection>
-    <associate|auto-1|<tuple|?|3|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-10|<tuple|1.7|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-100|<tuple|17.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-101|<tuple|17.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-102|<tuple|17.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-103|<tuple|17.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-104|<tuple|18|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-105|<tuple|18.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-106|<tuple|18.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-107|<tuple|18.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-108|<tuple|18.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-109|<tuple|19|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-11|<tuple|2|9|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-110|<tuple|19.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-111|<tuple|19.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-112|<tuple|19.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-113|<tuple|19.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-114|<tuple|19.5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-115|<tuple|IV|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-116|<tuple|A|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-117|<tuple|A.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-118|<tuple|A.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-119|<tuple|A.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-12|<tuple|3|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-120|<tuple|A.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-121|<tuple|A.5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-13|<tuple|3.1|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-14|<tuple|3.2|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-15|<tuple|3.3|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-16|<tuple|3.4|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-17|<tuple|3.5|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-18|<tuple|3.6|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-19|<tuple|3.6.1|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-2|<tuple|I|5|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-20|<tuple|3.6.2|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-21|<tuple|3.6.3|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-22|<tuple|3.7|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-23|<tuple|3.8|11|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-24|<tuple|II|13|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-25|<tuple|4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-26|<tuple|4.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-27|<tuple|4.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-28|<tuple|4.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-29|<tuple|4.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-3|<tuple|1|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-30|<tuple|4.5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-31|<tuple|4.6|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-32|<tuple|4.7|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-33|<tuple|5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-34|<tuple|5.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-35|<tuple|5.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-36|<tuple|5.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-37|<tuple|5.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-38|<tuple|6|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-39|<tuple|6.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-4|<tuple|1.1|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-40|<tuple|6.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-41|<tuple|6.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-42|<tuple|6.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-43|<tuple|6.5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-44|<tuple|7|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-45|<tuple|7.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-46|<tuple|7.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-47|<tuple|7.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-48|<tuple|7.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-49|<tuple|8|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-5|<tuple|1.2|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-50|<tuple|8.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-51|<tuple|8.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-52|<tuple|8.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-53|<tuple|9|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-54|<tuple|9.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-55|<tuple|9.1.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-56|<tuple|9.1.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-57|<tuple|9.1.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-58|<tuple|9.1.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-59|<tuple|9.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-6|<tuple|1.3|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-60|<tuple|9.2.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-61|<tuple|9.2.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-62|<tuple|9.2.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-63|<tuple|9.2.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-64|<tuple|9.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-65|<tuple|9.3.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-66|<tuple|9.3.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-67|<tuple|10|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-68|<tuple|10.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-69|<tuple|10.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-7|<tuple|1.4|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-70|<tuple|10.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-71|<tuple|10.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-72|<tuple|10.5|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-73|<tuple|III|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-74|<tuple|11|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-75|<tuple|11.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-76|<tuple|11.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-77|<tuple|12|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-78|<tuple|12.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-79|<tuple|12.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-8|<tuple|1.5|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-80|<tuple|12.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-81|<tuple|12.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-82|<tuple|13|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-83|<tuple|13.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-84|<tuple|13.1.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-85|<tuple|13.1.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-86|<tuple|13.1.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-87|<tuple|14|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-88|<tuple|14.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-89|<tuple|15|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-9|<tuple|1.6|7|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-90|<tuple|15.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-91|<tuple|15.1.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-92|<tuple|15.1.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-93|<tuple|15.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-94|<tuple|16|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-95|<tuple|16.1|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-96|<tuple|16.2|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-97|<tuple|16.3|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-98|<tuple|16.4|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
-    <associate|auto-99|<tuple|17|?|../../../.TeXmacs/texts/scratch/no_name_2.tm>>
+    <associate|auto-1|<tuple|?|3>>
+    <associate|auto-10|<tuple|1.7|7>>
+    <associate|auto-100|<tuple|17|?>>
+    <associate|auto-101|<tuple|17.1|?>>
+    <associate|auto-102|<tuple|17.2|?>>
+    <associate|auto-103|<tuple|17.3|?>>
+    <associate|auto-104|<tuple|17.4|?>>
+    <associate|auto-105|<tuple|18|?>>
+    <associate|auto-106|<tuple|18.1|?>>
+    <associate|auto-107|<tuple|18.2|?>>
+    <associate|auto-108|<tuple|18.3|?>>
+    <associate|auto-109|<tuple|18.4|?>>
+    <associate|auto-11|<tuple|2|9>>
+    <associate|auto-110|<tuple|19|?>>
+    <associate|auto-111|<tuple|19.1|?>>
+    <associate|auto-112|<tuple|19.2|?>>
+    <associate|auto-113|<tuple|19.3|?>>
+    <associate|auto-114|<tuple|19.4|?>>
+    <associate|auto-115|<tuple|20|?>>
+    <associate|auto-116|<tuple|20.1|?>>
+    <associate|auto-117|<tuple|20.2|?>>
+    <associate|auto-118|<tuple|20.3|?>>
+    <associate|auto-119|<tuple|20.4|?>>
+    <associate|auto-12|<tuple|2.1|11>>
+    <associate|auto-120|<tuple|20.5|?>>
+    <associate|auto-121|<tuple|IV|?>>
+    <associate|auto-122|<tuple|A|?>>
+    <associate|auto-123|<tuple|A.1|?>>
+    <associate|auto-124|<tuple|A.2|?>>
+    <associate|auto-125|<tuple|A.3|?>>
+    <associate|auto-126|<tuple|A.4|?>>
+    <associate|auto-127|<tuple|A.5|?>>
+    <associate|auto-13|<tuple|2.2|11>>
+    <associate|auto-14|<tuple|2.3|11>>
+    <associate|auto-15|<tuple|2.4|11>>
+    <associate|auto-16|<tuple|2.5|11>>
+    <associate|auto-17|<tuple|3|11>>
+    <associate|auto-18|<tuple|4|11>>
+    <associate|auto-19|<tuple|4.1|11>>
+    <associate|auto-2|<tuple|I|5>>
+    <associate|auto-20|<tuple|4.2|11>>
+    <associate|auto-21|<tuple|4.3|11>>
+    <associate|auto-22|<tuple|4.4|11>>
+    <associate|auto-23|<tuple|4.5|11>>
+    <associate|auto-24|<tuple|4.6|13>>
+    <associate|auto-25|<tuple|4.6.1|?>>
+    <associate|auto-26|<tuple|4.6.2|?>>
+    <associate|auto-27|<tuple|4.6.3|?>>
+    <associate|auto-28|<tuple|4.7|?>>
+    <associate|auto-29|<tuple|4.8|?>>
+    <associate|auto-3|<tuple|1|7>>
+    <associate|auto-30|<tuple|II|?>>
+    <associate|auto-31|<tuple|5|?>>
+    <associate|auto-32|<tuple|5.1|?>>
+    <associate|auto-33|<tuple|5.2|?>>
+    <associate|auto-34|<tuple|5.3|?>>
+    <associate|auto-35|<tuple|5.4|?>>
+    <associate|auto-36|<tuple|5.5|?>>
+    <associate|auto-37|<tuple|5.6|?>>
+    <associate|auto-38|<tuple|5.7|?>>
+    <associate|auto-39|<tuple|6|?>>
+    <associate|auto-4|<tuple|1.1|7>>
+    <associate|auto-40|<tuple|6.1|?>>
+    <associate|auto-41|<tuple|6.2|?>>
+    <associate|auto-42|<tuple|6.3|?>>
+    <associate|auto-43|<tuple|6.4|?>>
+    <associate|auto-44|<tuple|7|?>>
+    <associate|auto-45|<tuple|7.1|?>>
+    <associate|auto-46|<tuple|7.2|?>>
+    <associate|auto-47|<tuple|7.3|?>>
+    <associate|auto-48|<tuple|7.4|?>>
+    <associate|auto-49|<tuple|7.5|?>>
+    <associate|auto-5|<tuple|1.2|7>>
+    <associate|auto-50|<tuple|8|?>>
+    <associate|auto-51|<tuple|8.1|?>>
+    <associate|auto-52|<tuple|8.2|?>>
+    <associate|auto-53|<tuple|8.3|?>>
+    <associate|auto-54|<tuple|8.4|?>>
+    <associate|auto-55|<tuple|9|?>>
+    <associate|auto-56|<tuple|9.1|?>>
+    <associate|auto-57|<tuple|9.2|?>>
+    <associate|auto-58|<tuple|9.3|?>>
+    <associate|auto-59|<tuple|10|?>>
+    <associate|auto-6|<tuple|1.3|7>>
+    <associate|auto-60|<tuple|10.1|?>>
+    <associate|auto-61|<tuple|10.1.1|?>>
+    <associate|auto-62|<tuple|10.1.2|?>>
+    <associate|auto-63|<tuple|10.1.3|?>>
+    <associate|auto-64|<tuple|10.1.4|?>>
+    <associate|auto-65|<tuple|10.2|?>>
+    <associate|auto-66|<tuple|10.2.1|?>>
+    <associate|auto-67|<tuple|10.2.2|?>>
+    <associate|auto-68|<tuple|10.2.3|?>>
+    <associate|auto-69|<tuple|10.2.4|?>>
+    <associate|auto-7|<tuple|1.4|7>>
+    <associate|auto-70|<tuple|10.3|?>>
+    <associate|auto-71|<tuple|10.3.1|?>>
+    <associate|auto-72|<tuple|10.3.2|?>>
+    <associate|auto-73|<tuple|11|?>>
+    <associate|auto-74|<tuple|11.1|?>>
+    <associate|auto-75|<tuple|11.2|?>>
+    <associate|auto-76|<tuple|11.3|?>>
+    <associate|auto-77|<tuple|11.4|?>>
+    <associate|auto-78|<tuple|11.5|?>>
+    <associate|auto-79|<tuple|III|?>>
+    <associate|auto-8|<tuple|1.5|7>>
+    <associate|auto-80|<tuple|12|?>>
+    <associate|auto-81|<tuple|12.1|?>>
+    <associate|auto-82|<tuple|12.2|?>>
+    <associate|auto-83|<tuple|13|?>>
+    <associate|auto-84|<tuple|13.1|?>>
+    <associate|auto-85|<tuple|13.2|?>>
+    <associate|auto-86|<tuple|13.3|?>>
+    <associate|auto-87|<tuple|13.4|?>>
+    <associate|auto-88|<tuple|14|?>>
+    <associate|auto-89|<tuple|14.1|?>>
+    <associate|auto-9|<tuple|1.6|7>>
+    <associate|auto-90|<tuple|14.1.1|?>>
+    <associate|auto-91|<tuple|14.1.2|?>>
+    <associate|auto-92|<tuple|14.1.3|?>>
+    <associate|auto-93|<tuple|15|?>>
+    <associate|auto-94|<tuple|15.1|?>>
+    <associate|auto-95|<tuple|16|?>>
+    <associate|auto-96|<tuple|16.1|?>>
+    <associate|auto-97|<tuple|16.1.1|?>>
+    <associate|auto-98|<tuple|16.1.2|?>>
+    <associate|auto-99|<tuple|16.2|?>>
   </collection>
 </references>
 
@@ -424,169 +444,434 @@
       1.7<space|2spc>Notation Summary <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-10>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Consistency
-      of Evluation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Structural
+      Induction> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-11><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|3<space|2spc>The
-      \<lambda\>-Calculus> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-12><vspace|0.5fn>
+      2.1<space|2spc>Detecting the Need for Structural Induction
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-12>
 
-      3.1<space|2spc>Functions in the \<lambda\>-Calculus
+      2.2<space|2spc>Definitions with Ellipses
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-13>
 
-      3.2<space|2spc>\<lambda\>-Calculus Grammar and Reductions
+      2.3<space|2spc>Introduction on Proof Trees
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-14>
 
-      3.3<space|2spc>Encoding Booleans <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      2.4<space|2spc>Multiple Structures <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-15>
 
-      3.4<space|2spc>Encoding Pairs <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      2.5<space|2spc>More Definitions and More Proofs
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-16>
 
-      3.5<space|2spc>Encoding Numbers <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-17>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|3<space|2spc>Consistency
+      of Evluation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-17><vspace|0.5fn>
 
-      3.6<space|2spc>Recursion <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-18>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|4<space|2spc>The
+      \<lambda\>-Calculus> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-18><vspace|0.5fn>
 
-      <with|par-left|<quote|1tab>|3.6.1<space|2spc>Recursion via
-      Self-Application <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-19>>
-
-      <with|par-left|<quote|1tab>|3.6.2<space|2spc>Lifting Out
-      Self-Application <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-20>>
-
-      <with|par-left|<quote|1tab>|3.6.3<space|2spc>Fixed Points and the Y
-      Combinator <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-21>>
-
-      3.7<space|2spc>Reduction Strategy and Normal Form
+      4.1<space|2spc>Functions in the \<lambda\>-Calculus
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-19>
+
+      4.2<space|2spc>\<lambda\>-Calculus Grammar and Reductions
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-20>
+
+      4.3<space|2spc>Encoding Booleans <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-21>
+
+      4.4<space|2spc>Encoding Pairs <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-22>
 
-      3.8<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      4.5<space|2spc>Encoding Numbers <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-23>
+
+      4.6<space|2spc>Recursion <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-24>
+
+      <with|par-left|<quote|1tab>|4.6.1<space|2spc>Recursion via
+      Self-Application <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-25>>
+
+      <with|par-left|<quote|1tab>|4.6.2<space|2spc>Lifting Out
+      Self-Application <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-26>>
+
+      <with|par-left|<quote|1tab>|4.6.3<space|2spc>Fixed Points and the Y
+      Combinator <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-27>>
+
+      4.7<space|2spc>Facts About the \<lambda\>-Calculus
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-28>
+
+      4.8<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-29>
 
       <vspace*|2fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|font-size|<quote|1.19>|II<space|2spc>Models
       of Realistic Languages> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-24><vspace|1fn>
+      <no-break><pageref|auto-30><vspace|1fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|4<space|2spc>ISWIM>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|5<space|2spc>ISWIM>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-25><vspace|0.5fn>
+      <no-break><pageref|auto-31><vspace|0.5fn>
 
-      4.1<space|2spc>ISWIM Expressions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-26>
-
-      4.2<space|2spc>ISWIM Reductions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-27>
-
-      4.3<space|2spc>The <with|font-family|<quote|tt>|<with|mode|<quote|math>|Y<rsub|v>>>
-      Combinator <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-28>
-
-      4.4<space|2spc>Evaluation <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-29>
-
-      4.5<space|2spc>Consistency <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-30>
-
-      4.6<space|2spc>Observational Equivalence
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-31>
-
-      4.7<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      5.1<space|2spc>ISWIM Expressions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-32>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|5<space|2spc>Standard
-      Reduction> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-33><vspace|0.5fn>
+      5.2<space|2spc>ISWIM Reductions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-33>
 
-      5.1<space|2spc>Standard Reductions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      5.3<space|2spc>The <with|font-family|<quote|tt>|<with|mode|<quote|math>|Y<rsub|v>>>
+      Combinator <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-34>
 
-      5.2<space|2spc>Proving the Standard Reduction Theorem
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      5.4<space|2spc>Evaluation <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-35>
 
-      5.3<space|2spc>Observational Equivalence
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      5.5<space|2spc>Consistency <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-36>
 
-      5.4<space|2spc>Uniform Evaluation <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      5.6<space|2spc>Observational Equivalence
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-37>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|6<space|2spc>Machines>
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-38><vspace|0.5fn>
+      5.7<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-38>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|7<space|2spc>SECD,
-      Tail Calls, and Safe for Space> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|6<space|2spc>Standard
+      Reduction> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-39><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|8<space|2spc>Continuations>
+      6.1<space|2spc>Standard Reductions <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-40>
+
+      6.2<space|2spc>Proving the Standard Reduction Theorem
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-40><vspace|0.5fn>
+      <no-break><pageref|auto-41>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|9<space|2spc>Errors
-      and Exceptions> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-41><vspace|0.5fn>
+      6.3<space|2spc>Observational Equivalence
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-42>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|10<space|2spc>Imperative
-      Assignment> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-42><vspace|0.5fn>
+      6.4<space|2spc>Uniform Evaluation <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-43>
 
-      <vspace*|2fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|font-size|<quote|1.19>|III<space|2spc>Models
-      of Typed Languages> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-43><vspace|1fn>
-
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|11<space|2spc>Types>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|7<space|2spc>Machines>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-44><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|12<space|2spc>Simply
-      Typed ISWIM> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-45><vspace|0.5fn>
+      7.1<space|2spc>CC Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-45>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|13<space|2spc>Variations
-      on Simply Typed ISWIM> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-46><vspace|0.5fn>
+      7.2<space|2spc>SCC Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-46>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|14<space|2spc>Polymorphism>
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-47><vspace|0.5fn>
+      7.3<space|2spc>CK Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-47>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|15<space|2spc>Type
-      Inference> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-48><vspace|0.5fn>
+      7.4<space|2spc>CEK Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-48>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|16<space|2spc>Recursive
-      Types> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-49><vspace|0.5fn>
+      7.5<space|2spc>Machine Summary <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-49>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|17<space|2spc>Data
-      Abstraction and Existential Types> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|8<space|2spc>SECD,
+      Tail Calls, and Safe for Space> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-50><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|18<space|2spc>Subtyping>
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-51><vspace|0.5fn>
+      8.1<space|2spc>SECD Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-51>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|19<space|2spc>Objects
+      8.2<space|2spc>Context Space <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-52>
+
+      8.3<space|2spc>Environment Space <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-53>
+
+      8.4<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-54>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|9<space|2spc>Continuations>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-55><vspace|0.5fn>
+
+      9.1<space|2spc>Saving Contexts <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-56>
+
+      9.2<space|2spc>Revised Texual Macine
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-57>
+
+      9.3<space|2spc>Revised CEK Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-58>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|10<space|2spc>Errors
+      and Exceptions> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-59><vspace|0.5fn>
+
+      10.1<space|2spc>Errors <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-60>
+
+      <with|par-left|<quote|1tab>|10.1.1<space|2spc>Calculating with Error
+      ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-61>>
+
+      <with|par-left|<quote|1tab>|10.1.2<space|2spc>Consistency for Error
+      ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-62>>
+
+      <with|par-left|<quote|1tab>|10.1.3<space|2spc>Standard Reduction for
+      Error ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-63>>
+
+      <with|par-left|<quote|1tab>|10.1.4<space|2spc>Relating ISWIM and Error
+      ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-64>>
+
+      10.2<space|2spc>Exceptions and Handlers
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-65>
+
+      <with|par-left|<quote|1tab>|10.2.1<space|2spc>Calculating with Handler
+      ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-66>>
+
+      <with|par-left|<quote|1tab>|10.2.2<space|2spc>Consistency for Handler
+      ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-67>>
+
+      <with|par-left|<quote|1tab>|10.2.3<space|2spc>Standard Reduction for
+      Handler ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-68>>
+
+      <with|par-left|<quote|1tab>|10.2.4<space|2spc>Observational Equivalance
+      of Handler ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-69>>
+
+      10.3<space|2spc>Machines for Exceptions
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-70>
+
+      <with|par-left|<quote|1tab>|10.3.1<space|2spc>The Handler-Extended CC
+      Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-71>>
+
+      <with|par-left|<quote|1tab>|10.3.2<space|2spc>The CCH Machine
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-72>>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|11<space|2spc>Imperative
+      Assignment> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-73><vspace|0.5fn>
+
+      11.1<space|2spc>Evaluation with State
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-74>
+
+      11.2<space|2spc>Garbage Collection <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-75>
+
+      11.3<space|2spc>CEKS Machine <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-76>
+
+      11.4<space|2spc>Implementing Garbage Collection
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-77>
+
+      11.5<space|2spc>History <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-78>
+
+      <vspace*|2fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|font-size|<quote|1.19>|III<space|2spc>Models
+      of Typed Languages> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-79><vspace|1fn>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|12<space|2spc>Types>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-80><vspace|0.5fn>
+
+      12.1<space|2spc>Numbers and Booleans
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-81>
+
+      12.2<space|2spc>Soundness <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-82>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|13<space|2spc>Simply
+      Typed ISWIM> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-83><vspace|0.5fn>
+
+      13.1<space|2spc>Function Types <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-84>
+
+      13.2<space|2spc>Type Rules for Simply typed ISWIM
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-85>
+
+      13.3<space|2spc>Soundness <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-86>
+
+      13.4<space|2spc>Normalization <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-87>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|14<space|2spc>Variations
+      on Simply Typed ISWIM> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-88><vspace|0.5fn>
+
+      14.1<space|2spc>condtionals <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-89>
+
+      <with|par-left|<quote|1tab>|14.1.1<space|2spc>Pairs
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-90>>
+
+      <with|par-left|<quote|1tab>|14.1.2<space|2spc>Variants
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-91>>
+
+      <with|par-left|<quote|1tab>|14.1.3<space|2spc>Recursion
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-92>>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|15<space|2spc>Polymorphism>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-93><vspace|0.5fn>
+
+      15.1<space|2spc>Polymorphic ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-94>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|16<space|2spc>Type
+      Inference> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-95><vspace|0.5fn>
+
+      16.1<space|2spc>Type-Inferred ISWIM
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-96>
+
+      <with|par-left|<quote|1tab>|16.1.1<space|2spc>Constraint Generation
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-97>>
+
+      <with|par-left|<quote|1tab>|16.1.2<space|2spc>Unification
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-98>>
+
+      16.2<space|2spc>Inferring Polymorphism
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-99>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|17<space|2spc>Recursive
+      Types> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-100><vspace|0.5fn>
+
+      17.1<space|2spc>Fixed-points of Type Abstractions
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-101>
+
+      17.2<space|2spc>Equality Between Recursive Types
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-102>
+
+      17.3<space|2spc>Isomorphisms Between Recursive Types
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-103>
+
+      17.4<space|2spc>Using Iso-Recursive Types
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-104>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|18<space|2spc>Data
+      Abstraction and Existential Types> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-105><vspace|0.5fn>
+
+      18.1<space|2spc>Data Abstraction in Clients
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-106>
+
+      18.2<space|2spc>Libraries that Enforce Abstraction
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-107>
+
+      18.3<space|2spc>Existential ISWIM <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-108>
+
+      18.4<space|2spc>Modules and Existential Types
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-109>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|19<space|2spc>Subtyping>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-110><vspace|0.5fn>
+
+      19.1<space|2spc>Records and Subtypes
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-111>
+
+      19.2<space|2spc>Subtypes and Functions
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-112>
+
+      19.3<space|2spc>Subtypes and Fields
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-113>
+
+      19.4<space|2spc>From Records to Objects
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-114>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|20<space|2spc>Objects
       and Classes> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-52><vspace|0.5fn>
+      <no-break><pageref|auto-115><vspace|0.5fn>
+
+      20.1<space|2spc>MiniJava Syntax <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-116>
+
+      20.2<space|2spc>MiniJava Evaluation
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-117>
+
+      20.3<space|2spc>MiniJava Type Checking
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-118>
+
+      20.4<space|2spc>MiniJava Soundness <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-119>
+
+      20.5<space|2spc>MiniJava Summary <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-120>
 
       <vspace*|2fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|font-size|<quote|1.19>|IV<space|2spc>Appendices>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-53><vspace|1fn>
+      <no-break><pageref|auto-121><vspace|1fn>
 
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|Appendix
-      A<space|2spc>> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-54><vspace|0.5fn>
+      A<space|2spc>Structural Induction> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-122><vspace|0.5fn>
+
+      A.1<space|2spc>Detecting the Need for Structural Induction
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-123>
+
+      A.2<space|2spc>Definitions with Ellipses
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-124>
+
+      A.3<space|2spc>Induction on Proof Trees
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-125>
+
+      A.4<space|2spc>Multiple Structures <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-126>
+
+      A.5<space|2spc>More Definitions and More Proofs
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-127>
     </associate>
   </collection>
 </auxiliary>
