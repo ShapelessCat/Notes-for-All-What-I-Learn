@@ -322,14 +322,522 @@ CLOSED: [2022-02-20 Sun 01:45]
 - As you can see, you _can add *as many /labels/ as you want* to your /property/,_
   ScalaCheck will present them all if the /property/ fails.
 
-** TODO Generators
-*** TODO Generating Case Classes
-*** TODO Sized Generators
-*** TODO Conditional Generators
-*** TODO Generating Containers
-*** TODO The ~arbitrary~ Generator
-*** TODO Collecting Generated Test Data
+** DONE Generators
+CLOSED: [2022-02-20 Sun 20:42]
+- Generators :: responsible for generating test data in ScalaCheck, and are
+                represented by the ~org.scalacheck.Gen~ /class/.
+  * You need to know how to use this class
+    + if you want ScalaCheck to generate data of types that are *NOT supported by
+      default*, OR
 
-** TODO Test Execution
-** TODO Test Case Minimisation
+    + if you want to use the ~forAll~ method mentioned above, to state properties
+      about a specific *subset of a type*.
+
+- In the ~Gen~ object, there are several methods for
+  *creating new* and *modifying existing* /generators/.
+
+  * =TODO= =NEXT=
+    We will show how to use some of them in this section.
+    + For a more complete reference of what is available, please see the API scaladoc.
+
+- *CONCEPTUALLY*,
+  * you should think of /generators/ simply AS _functions_, which
+    + takes some generation parameters, and
+    + (_MAYBE_) returns a generated value
+      
+    That is, the type ~Gen[T]~ may be thought of as a function of type ~Gen.Params => Option[T]~.
+    
+  * the /combinators/ in the ~Gen~ object can be used to
+    *create* or *modify* the behaviour of such /generator functions/.
+
+- Example 1:
+  #+begin_src scala
+    val myGen = for {
+      n <- Gen.choose(10, 20)
+      m <- Gen.choose(2 * n, 500)
+    } yield (n, m)
+  #+end_src
+      
+- Example 2:
+  You can create /generators/ that _picks one value out of a selection of values_.
+  The following /generator/ generates a vowel:
+  ~val vowel = Gen.oneOf('A', 'E', 'I', 'O', 'U', 'Y')~
+  * The ~oneOf~ method creates a /generator/ that randomly picks one of its
+    parameters each time it /generates/ a value.
+    =IMPORTANT=
+    Notice that _plain values_ are *implicitly converted to* /generators/ (which
+    always generates that value) if needed.
+
+  * If you don't want to get a uniform distribution, you can use the ~frequency~ /combinator/:
+    #+begin_src scala
+      val vowel = Gen.frequency(
+        (3, 'A'),
+        (4, 'E'),
+        (2, 'I'),
+        (3, 'O'),
+        (1, 'U'),
+        (1, 'Y')
+      )
+    #+end_src
+
+*** DONE Generating Case Classes
+CLOSED: [2022-02-20 Sun 17:00]
+An example where a binary integer tree is generated:
+#+begin_src scala
+  sealed trait Tree
+  object {
+    final case class Node(left: Tree, right: Tree, v: Int) extends Tree
+    case object Leaf                                       extends Tree
+  }
+
+  import org.scalacheck._
+  import Arbitrary.arbitrary
+  import Tree._
+
+  val genLeaf = Gen.const(Leaf)
+
+  val genNode = for {
+    v     <- Gen.arbitrary[Int]
+    left  <- genTree
+    right <- genTree
+  } yield Node(left, right, v)
+
+  def genTree: Gen[Tree] = Gen.oneOf(genLeaf, Gen.lzy(genNode))
+
+  genTree.sample
+  // res0: Option[Tree] = Some(Node(Leaf,Node(Node(Node(Node(Node(Node(Leaf,Leaf,-71),Node(Leaf,Leaf,-49),17),Leaf,-20),Leaf,-7),Node(Node(Leaf,Leaf,26),Leaf,-3),49),Leaf,84),-29))
+#+end_src
+- =TODO= =NEXT?= ~Gen.lzy~ 
+
+*** DONE Sized Generators - =TODO= =Don't understand= =Need examples=
+CLOSED: [2022-02-20 Sun 17:08]
+When ScalaCheck uses a /generator/ to generate a value, it feeds it with some
+parameters. One of the parameters the /generator/ is given, is a *size* value,
+which some /generators/ use to generate their values. If you want to use the
+*size* parameter in your own /generator/, you can use the ~Gen.sized~ /method/:
+#+begin_src scala
+  def matrix[T](g: Gen[T]): Gen[Seq[Seq[T]]] = Gen.sized { size =>
+    val side = scala.math.sqrt(size).asInstanceOf[Int]
+    Gen.listOfN(side, Gen.listOfN(side, g))
+  }
+#+end_src
+
+The ~matrix~ /generator/ will use a given /generator/ ~g~ and create a matrix
+which side is based on the /generator size parameter/. It uses the ~Gen.listOfN~
+which creates a sequence of given length filled with values obtained from the
+given /generator/.
+
+=TODO= =TODO= =TODO=
+=???= =???= =???=
+
+*** DONE Conditional Generators - =TODO= =Learn more about shrink=
+CLOSED: [2022-02-20 Sun 17:18]
+- Example:
+  ~val smallEvenInteger = Gen.choose(0, 200) suchThat (_ % 2 == 0)~
+
+- /Conditional generators/ work just like /conditional properties/:
+  in the sense that if the condition is too hard, ScalaCheck might not be able
+  to generate enough values, and it might report a property test as undecided.
+  
+
+- *NOTE*:
+  if a /property/ fails on a value generated through ~suchThat~, and is later
+  =TODO= *shrunk (see test case minimisation below)* =TODO= -- the value
+  ultimately reported as failing _might *NOT* satisfy the condition given to
+  ~suchThat~._
+    Although, it doesn't change the fact that there exists a failing case that
+  does.
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =???= =Is there anything wrong in English in the following sentence???= =???=
+  *To avoid confusion*, the corresponding /shrink/ for the type can use
+  ~suchThat~ method too.
+  
+*** DONE Generating Containers - =TODO= =Methods mentioned in this section=
+CLOSED: [2022-02-20 Sun 17:34]
+There is a _SPECIAL_ /generator/, ~Gen.containerOf~, that generates /containers/
+such as /lists/ and /arrays/ -- they take another /generator/ as argument, that
+is responsible for generating the individual items.
+
+- Examples:
+  #+begin_src scala
+    val genIntList        = Gen.containerOf[List, Int](Gen.oneOf(1, 3, 5))
+
+    val genStringLazyList = Gen.containerOf[LazyList, String](Gen.alphaStr)
+
+    val genBoolArray      = Gen.containerOf[Array, Boolean](true)
+  #+end_src
+
+- By default,
+  ScalaCheck supports generation of
+  * ~List~,
+  * ~Stream~ (Scala 2.10 - 2.12, deprecated in 2.13),
+  * ~LazyList~ (Scala 2.13),
+  * ~Set~,
+  * ~Array~, and
+  * ~java.util.ArrayList~.
+
+- You can add support for additional containers by adding ~implicit Buildable~
+  /instances/.
+  * See ~Buildable.scala~ for examples. =TODO= =TODO= =TODO=
+
+- There is also
+  * ~Gen.nonEmptyContainerOf~ for generating _NON-EMPTY containers_, and
+  * ~Gen.containerOfN~ for generating _containers of a GIVEN SIZE_.
+
+- To generate a container
+  * by picking an _ARBITRARY number of elements_ use ~Gen.someOf~, or
+  * by picking _ONE or MORE elements_ with ~Gen.atLeastOne~.
+  #+begin_src scala
+    val zeroOrMoreDigits = Gen.someOf(1 to 9)
+
+    val oneOrMoreDigits = Gen.atLeastOne(1 to 9)
+  #+end_src
+
+- Here are /generators/ that randomly pick ~n~ elements from a container with ~Gen.pick~:
+  #+begin_src scala
+    val fiveDice: Gen[Seq[Int]] = Gen.pick(5, 1 to 6)
+
+    val threeLetters: Gen[Seq[Char]] = Gen.pick(3, 'A' to 'Z')
+  #+end_src
+
+- *Note*:
+  ~Gen.someOf~, ~Gen.atLeastOne~, and ~Gen.pick~ only randomly select elements.
+  The original order is kept.
+  
+  * To make your /generator/ artificially permute the order of elements,
+    you can run ~scala.util.Random.shuffle~ on EACH of the generated containers
+    with the ~map~ method.
+    #+begin_src scala
+      import scala.util.Random
+
+      val threeLettersPermuted = threeLetters.map(Random.shuffle(_))
+    #+end_src
+
+*** DONE The ~arbitrary~ Generator - =TODO= =RE-READ=
+CLOSED: [2022-02-20 Sun 20:00]
+~org.scalacheck.Arbitrary.arbitrary~ generates arbitrary values of any supported type.
+
+- Example:
+  #+begin_src scala
+    val evenInteger = Arbitrary.arbitrary[Int] suchThat (_ % 2 == 0)
+
+    val squares = for {
+      xs <- Arbitrary.arbitrary[List[Int]]
+    } yield xs.map(x => x * x)
+  #+end_src
+
+- /The ~arbitrary~ generator/ is the /generator/ used by ScalaCheck when it
+  generates values for /property parameters/.
+  * Most of the times, you have to supply the /type/ of the value to ~arbitrary~,
+    like above, since Scala often can't infer that type automatically.
+
+  * You can use ~arbitrary~ for ANY /type/ that has an /implicit ~Arbitrary~ instance/.
+    As mentioned earlier,
+    + ScalaCheck has default support for COMMON /types/,
+    + but it is also possible to define your own /implicit ~Arbitrary~ instances/
+      for not by default supported /types/.
+      
+- See the following /implicit ~Arbitrary~ definition/ for booleans, that comes from
+  the ScalaCheck implementation.
+  #+begin_src scala
+    implicit lazy val arbBool: Arbitrary[Boolean] = Arbitrary(oneOf(true, false))
+  #+end_src
+
+- To get support for your own type ~T~
+  1. you need to define an /implicit/ ~def~ or ~val~ of type ~Arbitrary[T]~.
+
+  2. Use the factory method ~Arbitrary(...)~ to create the ~Arbitrary~ instance.
+     This method takes *ONE* parameter of type ~Gen[T]~ and returns an instance
+     of ~Arbitrary[T]~.
+
+- Now, let's say you have a custom type ~Tree[T]~ that you want to use as a
+  parameter in your properties:
+  #+begin_src scala
+    abstract sealed class Tree[T] {
+      def merge(t: Tree[T]) = Internal(List(this, t))
+
+      def size: Int = this match {
+        case Leaf(_) => 1
+        case Internal(children) => (children :\ 0) (_.size + _)
+      }
+    }
+
+    object Tree {
+      final case class Internal[T](children: Seq[Tree[T]]) extends Tree[T]
+      final case class Leaf[T](elem: T)                    extends Tree[T]
+    }
+  #+end_src
+  - When you specify an /implicit generator/ for your type ~Tree[T]~,
+    you also _have to *assume* that_ there exists an /implicit generator/ for
+    the type ~T~.
+
+    * You do this by specifying an /implicit parameter/ of type ~Arbitrary[T]~, so
+      you can use the /generator/ ~arbitrary[T]~.
+
+  - Define an /implicit/ that can return an ~Arbitrary[Tree[T]]~:
+    #+begin_src scala
+      implicit def arbTree[T](implicit a: Arbitrary[T]): Arbitrary[Tree[T]] =
+        Arbitrary {
+          val genLeaf = for { e <- Arbitrary.arbitrary[T] } yield Leaf(e)
+
+          def genInternal(sz: Int): Gen[Tree[T]] = for {
+            n <- Gen.choose(sz/3, sz/2)
+            c <- Gen.listOfN(n, sizedTree(sz/2))
+          } yield Internal(c)
+
+          def sizedTree(sz: Int) =
+            if (sz <= 0) genLeaf
+            else         Gen.frequency((1, genLeaf), (3, genInternal(sz)))
+
+          Gen.sized(sizedTree)
+        }
+    #+end_src
+    As long as the ~implicit arbTree~ function is in scope, you can now write properties like this:
+    #+begin_src scala
+      val propMergeTree = forAll { (t1: Tree[Int], t2: Tree[Int]) =>
+        t1.size + t2.size == t1.merge(t2).size
+      }
+    #+end_src
+  
+*** DONE Collecting Generated Test Data - =TODO=
+CLOSED: [2022-02-20 Sun 20:42]
+It is possible to _collect statistics about what kind of test data that has been
+generated during property evaluation._
+
+- =IMPORTANT=
+  This is useful if you want to inspect the test case distribution, and
+  make sure your property tests all different kinds of cases, not just trivial ones.
+
+- Example:
+  #+begin_src scala
+    def ordered(l: List[Int]) =
+      l == l.sorted
+
+    import org.scalacheck.Prop._
+
+    val myProp = forAll { l: List[Int] =>
+      classify(ordered(l), "ordered") {
+        classify(l.length > 5, "large", "small") {
+          l.reverse.reverse == l
+        }
+      }
+    }
+
+    myProp.check
+    // + OK, passed 100 tests.
+    // > Collected test data:
+    // 78% large
+    // 16% small, ordered
+    // 6% small
+  #+end_src
+  * From the output we know no ordered large list was generated, which is
+    reasonable, because all data here were generated by the built-in ~Gen[List[Int]]~,
+    and the generated lists are randomised.
+    
+  * For this particular property ~l.reverse.reverse == l~, it doesn't matter if a
+    being tested list is _large or small_, _ordered or not_. However, it does matter
+    in many other tests!
+
+- We can also *collect data directly*, using the ~Prop.collect~ method.
+
+  In this DUMMY /property/, we just want to see if ScalaCheck distributes the
+  generated data evenly:
+  #+begin_src scala
+    val dummyProp = forAll(Gen.choose(1, 10)) { n =>
+      collect(n) {
+        n == n
+      }
+    }
+
+    dummyProp.check
+    // + OK, passed 100 tests.
+    // > Collected test data:
+    // 13% 7
+    // 13% 5
+    // 12% 1
+    // 12% 6
+    // 11% 2
+    // 9% 9
+    // 9% 3
+    // 8% 10
+    // 7% 8
+    // 6% 4
+  #+end_src
+  Here the frequency for each number is around 10%, which seems reasonable.
+  =TODO= =TODO= =TODO=
+  =???= =???= =???=
+  Need more details about the function passed to ~collect(n)~, ~n == n~ is the
+  one in this specific case.
+
+** DONE Test Execution
+CLOSED: [2022-02-20 Sun 21:22]
+As we've seen, we can test /properties/ or /property collections/ by using the
+~check~ method.
+  In fact, the ~check~ method is just a convenient way of running
+~org.scalacheck.Test.check~ (or ~Test.checkProperties~, for /property
+collections/).
+
+- The ~Test~ module is responsible for all test execution in ScalaCheck.
+- It will
+  1. generate the arguments and evaluate the properties,
+  2. repeatedly with larger and larger test data (by increasing the size parameter
+     used by the generators).
+  3. If it doesn't manage to find a failing test case after a certain number of
+     tests, it reports a /property/ as passed.
+
+- The ~check~ method looks like this:
+  #+begin_src scala
+    def check(params: Test.Parameters, p: Prop): Test.Result
+  #+end_src
+  * ~Test.Parameters~ is a /trait/ that encapsulates /testing parameters/ such as
+    + the number of times a /property/ should be tested,
+    + the _size bounds_ of the test data, and
+    + how many times ScalaCheck should try if it fails to generate arguments.
+    + There are also field for callbacks in the ~Parameters~ record, if you need
+      to get feedback from the test runner programmatically. =TODO= =???= =TODO=
+
+  * The ~check~ method returns an instance of ~Test.Result~ which _encapsulates_ the
+    RESULT and SOME STATISTICS of the /property test/.
+    + ~Test.Result.status~ is of the type ~Test.Status~ and can have the following values:
+      #+begin_src scala
+        /** ScalaCheck found enough cases for which the property holds, so the
+         ,*  property is considered correct. (It is not proved correct, though). */
+        case object Passed extends Status
+
+        /** ScalaCheck managed to prove the property correct */
+        sealed case class Proved(args: List[Arg]) extends Status
+
+        /** The property was proved wrong with the given concrete arguments.  */
+        sealed case class Failed(args: List[Arg], label: String) extends Status
+
+        /** The property test was exhausted, it wasn't possible to generate enough
+         ,*  concrete arguments satisfying the preconditions to get enough passing
+         ,*  property evaluations. */
+        case object Exhausted extends Status
+
+        /** An exception was raised when trying to evaluate the property with the
+         ,*  given concrete arguments. */
+        sealed case class PropException(args: List[Arg], e: Throwable, label: String) extends Status
+
+        /** An exception was raised when trying to generate concrete arguments
+         ,*  for evaluating the property. */
+        sealed case class GenException(e: Throwable) extends Status
+      #+end_src
+
+- The ~checkProperties~ returns _test statistics_ *for each* /property/ in the
+  /tested property collection/, as a list.
+  =TODO= =TODO= =TODO= See the API documentation for more details.
+
+- It is also possible to test your /properties/ from the command line.
+  * EACH /property/ and /property collection/ actually has a ~main~ method that can
+    parse the test parameters given to it.
+
+  * If you provide the argument ~-h~ (an inexist option), you will get a list of
+    possible arguments:
+    #+begin_src bash
+      scala -cp scalacheck.jar MyProp -h
+      // Incorrect options:
+      //     [1.1] failure: option name expected
+      //
+      // -h
+      // ^
+      //
+      // Available options:
+      //   -workers, -w: Number of threads to execute in parallel for testing
+      //   -minSize, -n: Minimum data generation size
+      //   -verbosity, -v: Verbosity level
+      //   -minSuccessfulTests, -s: Number of tests that must succeed in order to pass a property
+      //   -maxDiscardRatio, -r: The maximum ratio between discarded and succeeded tests allowed before ScalaCheck stops testing a property. At least minSuccessfulTests will always be tested, though.
+      //   -maxSize, -x: Maximum data generation size
+      //   -propFilter, -f: Regular expression to filter properties on
+    #+end_src
+    + These command line arguments can also be used *in SBT* to tweak ScalaCheck's
+      testing parameters
+      when you run ScalaCheck tests through SBT.
+      =TODO= =TODO= =TODO=
+      See SBT's documentation for info on how to provide the arguments.
+
+** DONE Test Case Minimisation - =IMPORTANT= =Traps for new comers= =ScalaTest has forAll, but no forAllNoShrink=
+CLOSED: [2022-02-21 Mon 00:16]
+One interesting feature of ScalaCheck is that if it finds an argument that
+falsifies a property, it tries to *minimise* that argument _BEFORE_ it is reported.
+
+- This is done automatically when you use the ~Prop.property~ and ~Prop.forAll~
+  methods to create /properties/, but not if you use ~Prop.forAllNoShrink~.
+
+  * Let's look at the difference between these methods, by specifying a /property/
+    that says that no list has duplicate elements in it -- this is of course not
+    true, but we want to see the test case minimisation in action!
+    #+begin_src scala
+      import org.scalacheck.Arbitrary.arbitrary
+      import org.scalacheck.Prop.{forAll, forAllNoShrink}
+
+      val p1 = forAllNoShrink(arbitrary[List[Int]])(l => l == l.distinct)
+      val p2 = forAll(arbitrary[List[Int]])(l => l == l.distinct)
+      val p3 = forAll { (l: List[Int]) => l == l.distinct }
+
+      p1.check
+      // ! Falsified after 11 passed tests:
+      // > ARG_0 = "List(8, 0, -1, -3, -8, 8, 2, -10, 9, 1, -8)"
+
+      p2.check
+      // ! Falsified after 4 passed tests:
+      // > ARG_0 = "List(-1, -1)" (2 shrinks)
+
+      p3.check
+      // ! Falsified after 7 passed tests:
+      // > ARG_0 = "List(-5, -5)" (3 shrinks)
+    #+end_src
+    Clearly, it's much easier to find a bug if you are given a simple test case
+    (~p2~ and ~p3~) that causes the failure.
+
+- Just as you can *define* /implicit ~Arbitrary~ generators/ for your own types,
+  you can also *define* /DEFAULT shrinking methods/.
+    This is done by defining an /implicit method/ that returns a ~Shrink[T]~
+  /instance/ -- this is done by using the ~Shrink(...)~ /factory method/.
+  * This /factor method/
+    1. takes only one paramter, a function.
+       + This function should
+         1) take a value of the given type ~T~, and
+         2) return a ~Stream~ of /shrank variants/ of the given value
+    2. returns an instance of ~Shrink[T]~.
+  
+  * ScalaCheck has /implicit shrinking methods/ for _common types_ such as /integers/ and /lists/.
+
+  * An example (defined in the ScalaCheck source code),
+    the /implicit ~Shrink~ instance/ for a /tuple/:
+    #+begin_src scala
+      /** Shrink instance of 2-tuple */
+      implicit def shrinkTuple2[T1,T2](implicit s1: Shrink[T1], s2: Shrink[T2]): Shrink[(T1,T2)] =
+        Shrink { case (t1,t2) =>
+          (for(x1 <- shrink(t1)) yield (x1, t2)) append
+          (for(x2 <- shrink(t2)) yield (t1, x2))
+        }
+    #+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  When implementing a shrinking method, one has to be *careful* to only return
+  smaller variants of the value, since the shrinking algorithm *otherwise could
+  loop*.
+
+- If the /generator/ for a type is restricting the range of valid values by
+  construction or using ~Gen.suchThat~, the values that fail tests can still
+  _be shrunk *WITHOUT* checking the condition_, and then ultimately be reported
+  as failing even though they do *not satisfy* it.
+    _To avoid that, use ~Shrink.suchThat~ with the condition to be maintained_:
+  #+begin_src scala
+    /** Generate lists of an even length */
+    val genEvenList: Gen[List[Int]] = Gen.sized { size =>
+      Gen.listOfN(size * 2, Arbitrary.arbitrary[Int])
+    }
+
+    /** Shrink a list, maintaining even length */
+    implicit val shrinkEvenList: Shrink[List[Int]] =
+      Shrink.shrinkContainer[List, Int].suchThat(_.length % 2 == 0)
+  #+end_src
+
 ** TODO Stateful Testing
