@@ -1,5 +1,5 @@
 #+TITLE: Scala Puzzlers from Me
-#+VERSION: 2019
+#+VERSION: 2019 ~ 2022-03-15
 #+AUTHOR: Jian Lan
 #+STARTUP: overview
 #+STARTUP: entitiespretty
@@ -27,3 +27,136 @@
     sane programmer won't read compiler build-in parser when they only need to
     write application code.
 
+* The Meaning of ~( ... )~ in Different _Kinds_ of Types
+** Question
+   - Q :: I have a long type signature that contnains type parameter(s), and
+          I want to save the segments of it separately in different type aliases.
+     * For instance,
+       #+begin_src scala
+         type Target[A]: (Int, Map[Int, String], Set[String]) => (String, Int) => A
+       #+end_src
+       
+** Solution
+*** A Bad Solution that Includes A Common Mistake
+    1. How about
+       #+begin_src scala
+         type Param0 = (Int, Map[Int, String], Set[String])
+         type Param1 = (String, Int)
+
+         type UnexpectedTarget[A] = Param0 => Param1 => A
+       #+end_src
+       1) Let's compare the ~Target[A]~ with the ~UnexpectedTarget[A]~:
+          - ~Target[A]~ is equivalent to
+            #+begin_src scala
+              Function3[Int, Map[Int, String], Set[String], Function2[String, Int, A]]
+            #+end_src
+            _namely ~Function3~ of ~Funnction2~ of ~A~._
+
+          - ~UnexpectedTarget[A]~ is equivalent to
+            #+begin_src scala
+              Function1[(Int, Map[Int, String], Set[String]), Function1[(String, Int), A]]
+            #+end_src
+            _namely ~Function1~ of ~Funnction1~ of ~A~._
+   
+       2) _CONCLUSION_: The result is *WRONG*
+
+    2. The reason why we made this mistake (and this kind of mistakes):
+       We ignored different semantics of ~( ... )~ in different kinds of types.
+       - The meanig of ~( ... )~ in a /* kind type/ is
+         *DIFFERENT FROM*
+         the meaning of it in a /higher kind types/, if it is in the left hand side of ~=>~.
+
+       - The meaning of ~( ... )~ can be:
+         1) Tuple
+
+         2) Parameter list
+       
+    3. =TODO= Further Discussion required!!!
+       - Consider /kind/.
+         It is *GENERAL and ESSENTIALLY IMPORTANT* in all languages that support
+         /higher kinds/.
+         * Count the kinds of each /type aliases/, and try to find out the laws about combining them.
+           + Q :: What can't happen after combination?
+           + Q :: How does the /kinds/ of each segment affect the final result?
+
+       - Consider different semantics of ~(...)~ in Scala.
+         It is _NOT_ *ESSENTIALLY IMPORTANT*, but it is useful for writing Scala and syntax design.
+       
+*** Solution:
+    #+begin_src scala
+      type Param0[A] = (Int, Map[Int, String], Set[String]) => A
+      type Param1[A] = (String, Int) => A
+
+      type UnexpectedTarget[A] = Param0[Param1[A]]
+    #+end_src
+
+** When and why do we need to understand this?
+   - Q :: Is there any scenario that we really need to do this?
+
+   - A :: Yes, doing this is good for *maintenance* and *combination*.
+     * *maintenance*:
+       This is easy to understand:
+       Save each segment separately can improve the readability.
+       Later when we want to change a long signature saved in this way (mostly
+       we want to change one or a few specific segments, not change the whole
+       structure of this signature), we can touch one or a few segments, and
+       keep the other segments still.
+       
+     * *combination*:
+       1. Root trait:
+          #+begin_src scala
+            // ===========================
+            // |  Root trait -- level 0  |
+            // ===========================
+
+            // - Shared module
+            trait RuntimeCompiler {
+
+              protected type ParameterList0[A]
+              protected type ParameterList1[A]
+              protected final type Calculate[A] = ParameterList0[ParameterList1[A]]
+
+            }
+
+            // =============
+            // |  level 1  |
+            // =============
+
+            // - JVM module
+            trait JVMRuntimeCompiler extends RuntimeCompiler {
+              protected type ParameterList0[A] = (Map[String, String], Seq[(String, String)], Set[String]) => A
+            }
+
+            // - JS module
+            trait JSRuntimeCompiler extends RuntimeCompiler {
+              protected type ParameterList0[A] = (js.Map[String, String], js.Array[js.Array[String]], js.Set[String]) => A
+            }
+
+            // =============
+            // |  level 2  |
+            // =============
+
+            // - JVM module
+            class MetadataExtractor(ruleJSON: String) extends JSONReader with JVMRuntimeCompiler {
+              private type NameDict[A] = Map[Seq[String], A]
+
+              protected type ParameterList1[A] = (
+                NameDict[Double],
+                NameDict[Seq[Double]],
+
+                NameDict[Boolean],
+                NameDict[Seq[Boolean]],
+
+                NameDict[String],
+                NameDict[Seq[String]]
+              ) => A
+            }
+
+            // - JS module
+            final class MetadataExtractor(ruleJSON: String) extends JSONReader with JSRuntimeCompiler {
+              private type Variables = Map[String, Any]
+              protected type ParameterList1[A] = Variables => A
+            }
+          #+end_src
+
+* TODO NEW SECTION
