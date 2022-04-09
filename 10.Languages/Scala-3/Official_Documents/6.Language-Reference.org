@@ -1,5 +1,5 @@
 #+TITLE: Scala 3 Reference
-#+VERSION: 3.0.2-RC1-bin-20210626-f33bc8d-NIGHTLY
+#+VERSION: 3.1.3-RC1-bin-20220408-f3cca47-NIGHTLY
 #+AUTHORS: Dotty Contributors
 #+STARTUP: overview
 #+STARTUP: entitiespretty
@@ -753,7 +753,7 @@
       * This is necessary to _make the recursive invocation ~x *: Concat[xs, Ys]~
         type check_, since ~*:~ demands a ~Tuple~ as its right operand.
 
-**** TODO Dependent Typeing - =TODO= =RE-READ=
+**** TODO Dependent Typing - =TODO= =RE-READ=
      /Match types/ can be used to *define* /dependently typed methods/.
 
      - For instance,
@@ -2666,27 +2666,6 @@
                 else n
            #+end_src
 
-**** DONE More Details - =TODO= =deleted= =???=
-     CLOSED: [2020-07-19 Sun 03:30]
-     1. To avoid confusion,
-        NAMES of /normal methods/ are *NOT ALLOWED to start with* ~extension_~.
-
-     2. A /named import/ such as ~import a.m~ of an /extension method/ in ~a~
-        will make ~m~ *only* available as an /extension method/.
-        + To access it under ~extension_m~ that name as to be imported separately.
-          Example:
-          #+begin_src scala
-            object DoubleOps:
-              extension (x: Double) def ** (exponent: Int): Double =
-                require(exponent >= 0)
-                if exponent == 0
-                then 1
-                else x * (x ** (exponent - 1))
-
-            import DoubleOps.{**, extension_**}
-            assert(2.0 ** 3 == extension_**(2.0)(3))
-          #+end_src
-
 **** DONE Syntax
      CLOSED: [2020-07-19 Sun 03:31]
      - ~extension~ is a /soft keyword/.
@@ -4368,16 +4347,16 @@
 
       - OTHER uses of /implicit classes/ can be _SIMULATED_ by a pair of
         =from Jian= Examples for "OTHER uses"???
-        + a REGULAR /class/
+        * a REGULAR /class/
           and
-        + a /given ~Conversion~ instance/.
+        * a /given ~Conversion~ instance/.
 
 ***** DONE Implicit Values
       CLOSED: [2020-07-14 Tue 03:45]
       - /Implicit ~val~ definitions/ in Scala 2 can be expressed in Dotty using a
-        + regular ~val~ definition
+        * regular ~val~ definition
           AND
-        + an /alias given/.
+        * an /alias given/.
 
       - E.g.,
         Scala 2's ~lazy implicit val pos: Position = tree.sourcePos~ can be
@@ -4391,9 +4370,9 @@
       CLOSED: [2020-07-14 Tue 03:48]
       - An _ABSTRACT IMPLICIT ~val~ or ~def~ in Scala 2_ can be expressed in Dotty
         using
-        + a REGULAR /abstract definition/
+        * a REGULAR /abstract definition/
           AND
-        + an /alias given/.
+        * an /alias given/.
 
       - E.g.,
         Scala 2's ~implicit def symDecorator: SymDecorator~ can be expressed in
@@ -4406,8 +4385,8 @@
 **** DONE Implementation Status and Timeline
      CLOSED: [2020-07-14 Tue 03:43]
      - The Dotty implementation implements BOTH
-       + Scala-2's /implicits/
-       + the new abstractions.
+       * Scala-2's /implicits/
+       * the new abstractions.
 
      - In fact, support for Scala-2's implicits is an _essential part_ of the common
        language subset between 2.13/2.14 and Dotty.
@@ -4526,17 +4505,40 @@
              else op
          end Logger
        #+end_src
+
+       =from Jian=
+       #+begin_src scala
+         import scala.util.chaining.given
+         
+         object Config:
+           inline val logging = false
+
+         object Logger:
+           private var indent = 0
+
+           inline def log[T](msg: String, indentMargin: => Int)(op: => T): T =
+             if !Config.logging
+             then op
+             else
+               op.tap { _ =>
+                 println(s"${"  " * indent}start $msg")
+                 indent += indentMargin
+                 indent -= indentMargin
+                 println(s"${"  " * indent}$msg = $result")
+               }
+         end Logger
+       #+end_src
        * The ~Config~ object contains a definition of the /inline value/ ~logging~.
          This means that ~logging~ is treated as a _constant value_, equivalent to
          its RHS ~false~. The RHS of such an ~inline val~ *must itself be a /constant
          expression/.*
-         + Used in this way, ~inline~ is *equivalent to* Java and Scala 2's ~final~.
-           =IMPORTANT=
-           =IMPORTANT=
-           =IMPORTANT=
-           Note that ~final~, meaning /inlined constant/,
-           - is still supported in Dotty,
-           - but *will be Phased Out*.
+         + _Used in this way_, ~inline~ is *equivalent to* Java and Scala 2's ~final~.
+           =IMPORTANT= (=from Jian= Only when being used in this way, the equivalence exists)
+           
+         + Note:
+           ~final~, meaning /inlined constant/,
+           1. is still supported in Scala 3,
+           2. BUT *will be Phased Out*.
 
        * The ~Logger~ object contains a definition of the /inline method/ ~log~.
          This method will *ALWAYS be inlined* _at the point of call._
@@ -4552,7 +4554,8 @@
                else n * factorial(n - 1)
              }
          #+end_src
-         + IF ~inline val logging = false~, the usage code will be re-written as
+         + IF ~inline val logging = false~, as being given above,
+           the usage code will be re-written as
            #+begin_src scala
              def factorial(n: BigInt): BigInt =
                if n == 0
@@ -4583,169 +4586,194 @@
                println(s"${"  " * indent}$msg = $result")
                result
            #+end_src
-           - The /by-value parameter/ ~msg~ is _evaluated only once_,
+
+           =from Jian=
+           #+begin_src scala
+             import scala.util.chaining.given
+         
+             def factorial(n: BigInt): BigInt =
+               {
+                 if n == 0
+                 then 1
+                 else n * factorial(n - 1)
+               }.tap { _ =>
+                val msg = s"factorial($n)"
+                println(s"${"  " * indent}start $msg")
+                Logger.inline$indent_=(indent.+(indentSetting))
+                Logger.inline$indent_=(indent.-(indentSetting))
+                println(s"${"  " * indent}$msg = $result")
+               }
+           #+end_src
+           
+           - The /by-value parameter/ ~msg~ is _evaluated ONLY ONCE_,
              per the usual Scala semantics, by binding the value and reusing the
              ~msg~ through the body of ~factorial~.
 
            - The special handling of the assignment to the ~private var indent~:
              It is achieved by *generating* a /setter method/ ~def inline$indent_=~
              and calling it instead.
-             =from Jian= =TODO= =TODO= =TODO=
-             WHY MUST WE DO THIS???
 
-**** DONE Recursive Inline Methods
-     CLOSED: [2020-11-25 Wed 15:57]
-     /Inline methods/ can be *recursive*.
-     - For instance,
-       when called with a *constant* exponent ~n~, the following /method/ for
-       ~power~ will be implemented by straight _inline code_ *WITHOUT ANY /loop/
-       or /recursion/.*
-       #+begin_src scala
-         inline def power(x: Double, n: Int): Double =
-           if n == 0 then s.0
-           else if n == 1 then x
-           else
-             val y = power(x, n / 2)
-             if n % 2 == 0 then y * y else y * y * x
+***** DONE Recursive Inline Methods
+      CLOSED: [2020-11-25 Wed 15:57]
+      /Inline methods/ can be *recursive*.
 
-         power(expr, 10)
-         // translates to
-         //
-         //    val x = expr
-         //    val y1 = x * x   // ^2
-         //    val y2 = y1 * y1 // ^4
-         //    val y3 = y2 * x  // ^5
-         //    y3 * y3          // ^10
-       #+end_src
-
-     - *Parameters of inline methods* can have an ~inline~ modifier as well.
-       * Atual arguments to these /inline parameters/ will be *inlined* in the
-         body of the ~inline def~.
-
-       * /inline parameters/ have _call semantics_ *EQUIVALENT TO* /by-name
-         parameters/
-         BUT ALLOW for DUPLICATION of the code in the argument.
-
-       * It is usually useful when /constant values/ need to be propagated to
-         allow further optimizations/reductions.
-         =TODO= =TODO= =???= =TODO= =TODO=
-
-     - The difference in translation between /by-value/, /by-name/, and ~inline~
-       parameters:
-       #+begin_src scala
-         inline def funkyAssertEquals(actual: Double,
-                                      expected: =>Double,
-                                      inline delta: Double): Unit =
-           if (actual - expected).abs > delta then
-             throw new AssertionError(s"difference between ${expected} and ${actual} was larger than ${delta}")
-
-         funkyAssertEquals(computeActual(), computeExpected(), computeDelta())
-         // translates to
-         //
-         //    val actual = computeActual()
-         //    def expected = computeExpected()
-         //    if (actual - expected).abs > computeDelta() then
-         //      throw new AssertionError(s"difference between ${expected} and ${actual} was larger than ${computeDelta()}")
-       #+end_src
-
-**** DONE Rules for Overriding
-     CLOSED: [2020-11-24 Tue 01:41]
-     /Inline methods/ can *override* other /non-inline methods/.
-     
-     The rules are as follows:
-     1. If an /inline method/ ~f~ *implements* or *overrides* another, /non-inline
-        method/, the /inline method/ *CAN ALSO be invoked at /runtime/.*
-        For instance, consider the scenario:
+      - For instance,
+        when called with a *constant* exponent ~n~, the following /method/ for
+        ~power~ will be implemented by straight _inline code_ *WITHOUT ANY /loop/
+        or /recursion/.*
         #+begin_src scala
-          abstract class A:
-            def f: Int
-            def g: Int = f
+          inline def power(x: Double, n: Int): Double =
+            if n == 0 then s.0
+            else if n == 1 then x
+            else
+              val y = power(x, n / 2)
+              if n % 2 == 0 then y * y else y * y * x
 
-          class B extends A:
-            inline def f = 22
-            override inline def g = f + 11
-
-          val b = B
-          val a: A = b
-
-          // inlined invocations
-          assert(b.f == 22)
-          assert(b.g == 33)
-
-          // dynamic invocations
-          assert(a.f == 22)
-          assert(a.g == 33)
-        #+end_src
-        The /inlined invocations/ and the /dynamically dispatched invocations/
-        give the _SAME_ results.
-
-     2. /Inline methods/ are effectively ~final~.
-
-     3. /Inline methods/ can also be ~abstract~.
-          An /abstract inline method/ can be _implemented_ ONLY by other /inline
-        methods/. *It cannot be invoked directly*:
-        #+begin_src scala
-          abstract class A:
-            inline def f: Int
-
-          object B extends A:
-            inline def f: Int = 22
-
-          B.f  // OK
-          val a: A = B
-          a.f  // error: cannot inline `f` in `A`.
-        #+end_src
-
-**** DONE Relationship to ~@inline~
-     CLOSED: [2021-03-17 Wed 01:42]
-     - Scala 2 also defines a ~@inline~ annotation which is used as _a *hint* for
-       the BACKEND to inline code._
-
-     - The ~inline~ modifier is a _MORE POWERFUL_ than the ~@inline~ annotation.
-       Here is a comparison:
-       * ~@inline~ annotation ::
-         + A _hint_
-           - _Hint_ here means _try with *BEST EFFORT*, *but NOTHING guaranteed*!_
-
-         + The _hint_ is for the *backend*
-
-
-       * ~inline~ /modifier/ ::
-         + A _command_
-           - _Command_ here means _GUARANTEED!_
-
-         + The _command_ is for the *frontend*
-
-         + it also applies to /recursive methods/.
-
-***** The definition of constant expression
-      Scala Language Specification 2.13 - _6.24 Constant Expressions_, including
-      _platform-specific extensions_ such as /constant folding/ of pure numeric
-      computations.
-
-      - An /inline value/ *must* have a /literal type/ such as ~1~ or ~true~.
-        #+begin_src scala
-          inline val four = 4
-
-          // Equivalent to
-
-          inline val four: 4 = 4
-        #+end_src
-
-      - It is also possible to have _inline vals_ of /types/ that do not have a
-        specific syntax, such as ~Short(4)~.
-        #+begin_src scala
-          trait InlineConstant:
-            inline val myShort: Short
-
-          object Constants extends InlineConstants:
-            inline val myShort/*: Short(4)*/ = 4
+          power(expr, 10)
+          // translates to
+          //
+          //    val x = expr
+          //    val y1 = x * x   // ^2
+          //    val y2 = y1 * y1 // ^4
+          //    val y3 = y2 * x  // ^5
+          //    y3 * y3          // ^10
         #+end_src
         =from Jian=
-        * ~inline val myShort: Short = 4~ is illegal
+        If the second parameter is not a constant, the inlinement will fail!
+        =???= Is there way to mark this in code???
 
-        * ~inline val myShort: Short(4) = 4~ is legal, but the /term-dependent types/
-          must be enabled with a ~experimental.dependent~ language ~import~ or setting.
+      - *Parameters of inline methods* can have an ~inline~ modifier as well.
+        * Atual arguments to these /inline parameters/ will be *inlined* in the
+          body of the ~inline def~.
+
+        * /inline parameters/ have _call semantics_ *EQUIVALENT TO* /by-name
+          parameters/
+          BUT ALLOW for DUPLICATION of the code in the argument.
+
+        * It is usually useful when /constant values/ need to be propagated to
+          allow further optimizations/reductions.
+          =TODO= =TODO= =???= =TODO= =TODO=
+
+      - The difference in translation between /by-value/, /by-name/, and ~inline~
+        parameters:
+        #+begin_src scala
+          inline def funkyAssertEquals(actual: Double,
+                                       expected: =>Double,
+                                       inline delta: Double): Unit =
+            if (actual - expected).abs > delta then
+              throw new AssertionError(s"difference between ${expected} and ${actual} was larger than ${delta}")
+
+          funkyAssertEquals(computeActual(), computeExpected(), computeDelta())
+          // translates to
+          //
+          //    val actual = computeActual()
+          //    def expected = computeExpected()
+          //    if (actual - expected).abs > computeDelta() then
+          //      throw new AssertionError(s"difference between ${expected} and ${actual} was larger than ${computeDelta()}")
+        #+end_src
+
+***** DONE Rules for Overriding
+      CLOSED: [2020-11-24 Tue 01:41]
+      /Inline methods/ can *override* other /non-inline methods/.
+     
+      The rules are as follows:
+      1. If an /inline method/ ~f~ *implements* or *overrides* another, /non-inline
+         method/, the /inline method/ *CAN ALSO be invoked at /runtime/.*
+         For instance, consider the scenario:
+         #+begin_src scala
+           abstract class A:
+             def f: Int
+             def g: Int = f
+
+           class B extends A:
+             inline def f = 22
+             override inline def g = f + 11
+
+           val b = B
+           val a: A = b
+
+           // inlined invocations
+           assert(b.f == 22)
+           assert(b.g == 33)
+
+           // dynamic invocations
+           assert(a.f == 22)
+           assert(a.g == 33)
+         #+end_src
+         The /inlined invocations/ and the /dynamically dispatched invocations/
+         give the _SAME_ results.
+
+      2. /Inline methods/ are _effectively_ ~final~.
+         =TODO= =???= =FROM JIAN=
+
+      3. /Inline methods/ can also be ~abstract~.
+           An /abstract inline method/ can be _implemented_ ONLY by other /inline
+         methods/. *It cannot be invoked directly*:
+         #+begin_src scala
+           abstract class A:
+             inline def f: Int
+
+           object B extends A:
+             inline def f: Int = 22
+
+           B.f  // OK
+           val a: A = B
+           a.f  // error: cannot inline `f` in `A`.
+         #+end_src
+
+***** DONE Relationship to ~@inline~
+      CLOSED: [2021-03-17 Wed 01:42]
+      - Scala 2 also defines a ~@inline~ annotation which is used as _a *hint* for
+        the BACKEND to inline code._
+
+      - The ~inline~ modifier is a _MORE POWERFUL_ than the ~@inline~ annotation.
+        Here is a comparison:
+        * ~@inline~ annotation ::
+          + A _hint_
+            - _Hint_ here means _try with *BEST EFFORT*, *but NOTHING guaranteed*!_
+
+          + The _hint_ is for the *backend*
+
+
+        * ~inline~ /modifier/ ::
+          + A _command_
+            - _Command_ here means _GUARANTEED!_
+
+          + The _command_ is for the *frontend*
+
+          + it also applies to /recursive methods/.
+            =from Jian= =TODO= =???=
+            Does this mean ~@inline~ can't inline /recursive methods/???
+            Annotate a /recursive method/ with ~@inline~ is legal, which I tried.
+
+****** The definition of constant expression
+       Scala Language Specification 2.13 - _6.24 Constant Expressions_, including
+       _platform-specific extensions_ such as /constant folding/ of pure numeric
+       computations.
+
+       - An /inline value/ *must* have a /literal type/ such as ~1~ or ~true~.
+         #+begin_src scala
+           inline val four = 4
+
+           // Equivalent to
+
+           inline val four: 4 = 4
+         #+end_src
+
+       - It is also possible to have _inline vals_ of /types/ that do not have a
+         specific syntax, such as ~Short(4)~.
+         #+begin_src scala
+           trait InlineConstant:
+             inline val myShort: Short
+
+           object Constants extends InlineConstants:
+             inline val myShort/*: Short(4)*/ = 4
+         #+end_src
+         =from Jian=
+         * ~inline val myShort: Short = 4~ is illegal
+
+         * ~inline val myShort: Short(4) = 4~ is legal, but the /term-dependent types/
+           must be enabled with a ~experimental.dependent~ language ~import~ or setting.
   
 **** DONE Transparent Inline Methods
      CLOSED: [2020-11-24 Tue 02:13]
@@ -4768,10 +4796,15 @@
 
          // obj1.m // compile-time error: `m` is not defined on `A`
          obj2.m    // OK
-       #+end_src
+       #+end_src      
 
      - A *non-transparent* /inline method/ is a *"blackbox"* in the sense that
        details of its implementation do *not leak out.*
+
+     - =from Jian= =IMPORTANT=
+       When a non-constant expression is passed to ~choose~,
+       it likes the ~transparent~ in the definition is dropped!
+       * This means the ~transparent inline~ means this ~inline~ *CAN BE ~transparent~ (or NOT)*.
 
      - /Transparent inline methods/ are *"whitebox"* in the sense that the type
        of an application of such a method can be _more specialized than its
@@ -4786,41 +4819,52 @@
          val one: 1 = zero + 1
        #+end_src
 
-**** DONE Transparent vs. non-transparent inline
-     CLOSED: [2021-02-15 Mon 17:55]
-    - As we already discussed, /transparent inline methods/ may *influence* /type
-      checking/ at call site. Technically this implies that
-      * /transparent inline methods/ must be *expanded DURING* /type checking/ of
-        the program.
+***** DONE Transparent vs. non-transparent inline
+      CLOSED: [2021-02-15 Mon 17:55]
+     - As we already discussed, /transparent inline methods/ may *influence* /type
+       checking/ at call site. Technically this implies that
+       1. /transparent inline methods/ must be *expanded DURING* /type checking/
+          of the program.
 
-      * Other /inline methods/ are inlined later *after* the program is *fully typed*.
+       2. Other /inline methods/ are inlined later *after* the program is *fully typed*.
     
-    - For example,
-      the following two functions
-      will be _typed the SAME way_
-      _BUT_ will *be inlined at DIFFERENT times*.
-      #+begin_src scala
-        inline def f1: T = ...
-        transparent inline def f2: T = (...): T
-      #+end_src
+     - For example,
+       the following two functions
+       will be _typed the SAME way_
+       _BUT_ will *be inlined at DIFFERENT times*.
+       #+begin_src scala
+         inline def f1: T = ...
+         transparent inline def f2: T = (...): T
+       #+end_src
     
-    - A noteworthy difference is the behavior of ~transparent inline given~.
-      - If there is an error reported when inlining that definition,
-        1. it will be considered as an *implicit search mismatch* and
-        2. the search will *continue*.
+     - A noteworthy difference is the behavior of ~transparent inline given~.
+       * If there is an error reported when inlining that definition,
+         1. it will be considered as an *implicit search mismatch* and
+         2. the search will *continue*.
 
-      - A ~transparent inline given~ can add a type ascription in its RHS (as in
-        ~f2~ from the previous example) to
-        * *AVOID* the _precise type_
-        * BUT *KEEP* the _search behavior_
+       * A ~transparent inline given~ can add a /type ascription/ in its RHS (as
+         in ~f2~ from the previous example) to
+         + *AVOID* the _precise type_
+         + BUT *KEEP* the _search behavior_
 
-    - On the other hand, an ~inline given~ is
-      1. taken as an implicit and
-      2. then inlined after typing.
-      Any error will be emitted as usual.
+     - On the other hand, an ~inline given~ is
+       1. taken as an implicit and
+       2. then inlined after typing.
+       Any error will be emitted as usual.
      
 **** DONE Inline Conditionals
      CLOSED: [2021-02-15 Mon 17:59]
+     =FIXME= =ADD THIS TO DOCS= =START=
+     A /if-then-else expression/ _in the body_ of an /inline method definition/
+     _may be_ prefixed by the ~inline~ modifier.
+
+     (*THIS SHOULD BE EMPHASIZED*:
+      Even if /inline if-then-else expression/ is stupid outside of an /inline
+      method definition/, it may still exist. This document should clearly tell
+      its readers that "you can't use /inline if-then-else expression/ outside
+      of an /inline method definition/")
+     =FIXME= =ADD THIS TO DOCS= =END=
+     
      #+begin_src scala
        inline def update(delta: Int) =
          inline if delta >= 0
@@ -4852,8 +4896,8 @@
        #+end_src
 
      - In a ~transparent inline~,
-       an ~inline if~ will *force* the inlining of ANY inline definition in its
-       condition *during* /type checking/.
+       an ~inline if~ will *force* the inlining of ANY inline definition *in its
+       condition* _during_ /type checking/.
        
 **** DONE Inline Matches
      CLOSED: [2020-11-24 Tue 02:23]
@@ -4901,11 +4945,12 @@
        #+end_src
        ~natTwo~ can be inferred to have the /singleton type/ ~2~ because of ~transparent~.
        =IMPORTANT= =GOOD EXAMPLE=
-       =IMPORTANT= =GOOD EXAMPLE=
-       =IMPORTANT= =GOOD EXAMPLE=     
        
 **** DONE Reference - =READ=
      CLOSED: [2021-04-28 Wed 03:29]
+     =FIXME= Fix the heading level of this section both in docs and in the content.
+             https://docs.scala-lang.org/scala3/reference/metaprogramming/compiletime-ops.html
+            
      For more information about the semantics of ~inline~, see the
      [[https://dl.acm.org/doi/10.1145/3426426.3428486][Scala 2020: Semantics-preserving inlining for metaprogramming]] paper.
 
@@ -5217,17 +5262,17 @@
          }
        #+end_src
 
-***** DONE ~summonInline~
-      CLOSED: [2020-05-26 Tue 03:21]
-      The shorthand ~summonInline~ provides a _simple way_ to write a ~summon~ that is
-      *delayed* _until the call is inlined_.
-      #+begin_src scala
-        transparent inline def summonInline[T]: T = summonFrom {
-          case t: T => t
-        }
-      #+end_src
-      - =from Jian=
-        Need example and use case.
+**** DONE ~summonInline~
+     CLOSED: [2020-05-26 Tue 03:21]
+     The shorthand ~summonInline~ provides a _simple way_ to write a ~summon~ that is
+     *delayed* _until the call is inlined_.
+     #+begin_src scala
+       transparent inline def summonInline[T]: T = summonFrom {
+         case t: T => t
+       }
+     #+end_src
+     - =from Jian=
+       Need example and use case.
 
 **** DONE Reference - =READ=
      CLOSED: [2020-11-24 Tue 03:47]
@@ -6599,40 +6644,40 @@
           class E extends Greeting("Bob"), FormalGreeting
         #+end_src
 
-**** DONE Traits With Context Parameters
-     CLOSED: [2021-03-24 Wed 00:37]
-     This "explicit extension required" rule is *relaxed* if the missing /trait/
-     contains *ONLY* /context parameters/.
-       In that case
-     the /trait reference/ *is implicitly inserted* as an additional parent with
-     inferred arguments.
+***** DONE Traits With Context Parameters
+      CLOSED: [2021-03-24 Wed 00:37]
+      This "explicit extension required" rule is *relaxed* if the missing /trait/
+      contains *ONLY* /context parameters/.
+        In that case
+      the /trait reference/ *is implicitly inserted* as an additional parent with
+      inferred arguments.
 
-     - For instance,
-       here's a variant of greetings where the addressee is a /context parameter/
-       of type ~ImpliedName~:
-       #+begin_src scala
-         case class ImpliedName(name: String):
-            override def toString = name
+      - For instance,
+        here's a variant of greetings where the addressee is a /context parameter/
+        of type ~ImpliedName~:
+        #+begin_src scala
+          case class ImpliedName(name: String):
+             override def toString = name
 
-         trait ImpliedGreeting(using val iname: ImpliedName):
-            def msg = s"How are you, $iname"
+          trait ImpliedGreeting(using val iname: ImpliedName):
+             def msg = s"How are you, $iname"
 
-         trait ImpliedFormalGreeting extends ImpliedformalGreeting
+          trait ImpliedFormalGreeting extends ImpliedformalGreeting
 
-         class F(using iname: ImpliedName) extends ImpliedFormalGreeting
-       #+end_src
+          class F(using iname: ImpliedName) extends ImpliedFormalGreeting
+        #+end_src
        
-       The definition of ~F~ in the last line is implicitly expanded to
+        The definition of ~F~ in the last line is implicitly expanded to
        
-       #+begin_src scala
-         class F(using iname: ImpliedName) extends
-            Object,
-            ImpliedGreeting(using iname),
-            ImpliedFormalGreeting(using iname)
-       #+end_src
-       * Note:
-         The inserted reference to the /super trait/ ~ImpliedGreeting~, which was
-         *NOT* mentioned explicitly.
+        #+begin_src scala
+          class F(using iname: ImpliedName) extends
+             Object,
+             ImpliedGreeting(using iname),
+             ImpliedFormalGreeting(using iname)
+        #+end_src
+        * Note:
+          The inserted reference to the /super trait/ ~ImpliedGreeting~, which was
+          *NOT* mentioned explicitly.
      
 **** TODO Reference
      For more info, see _Scala SIP 25_.
@@ -7288,7 +7333,6 @@
          We should avoid explaining a Scala 3 new feature with
          a deprecated Scala 2 feature.
          
-       
 **** TODO More details
 ***** Syntax
 ***** Type Checking
@@ -7624,6 +7668,8 @@
 
        2. Over time we might migrate /methods/ ~getClass~ and ~isInstanceOf~ to
           it, since these are closely related to pattern-matching.
+
+**** TODO Matchable and Universal Equality - =NEW=
        
 *** DONE _HIDDEN_ - Tupled Function - =TODO= =RE-READ=
     CLOSED: [2020-07-14 Tue 15:15]
@@ -9541,16 +9587,16 @@
          f[Int]     // false
        #+end_src
        
-***** ~TypeTest~ and ~ClassTag~
-      ~TypeTest~ is a replacement for functionality provided previously by
-      ~ClassTag.unapply~.
-      * Using ~ClassTag~ /instances/ was /unsound/ since /classtags/ can check
-        *only* the /class component/ of a /type/.
+**** ~TypeTest~ and ~ClassTag~
+     ~TypeTest~ is a replacement for functionality provided previously by
+     ~ClassTag.unapply~.
+     * Using ~ClassTag~ /instances/ was /unsound/ since /classtags/ can check
+       *only* the /class component/ of a /type/.
 
-      * ~TypeTest~ fixes that /unsoundness/.
+     * ~TypeTest~ fixes that /unsoundness/.
 
-      * ~ClassTag~ _type tests_ are _still supported_
-        BUT a /warning/ will be emitted after 3.0.
+     * ~ClassTag~ _type tests_ are _still supported_
+       BUT a /warning/ will be emitted after 3.0.
       
 **** Example
      Given the following abstract definition of ~Peano~ numbers that provides two
@@ -9906,33 +9952,34 @@
          #+end_src
 
 *** TODO Programmatic Structural Types
-    - Some usecases are more awkward in statically typed languages than in
-      dynamically typed languages
+**** TODO Motivation - =NEW=
+     - Some usecases are more awkward in statically typed languages than in
+       dynamically typed languages
 
-    - Example: modelling database access
-      1. With dynamically typed languages, it's quite natural to _model a /row/ as
-         a /record/ or /object/_, and to select entries with simple dot notation
-         (e.g. ~row.columnName~).
+     - Example: modelling database access
+       1. With dynamically typed languages, it's quite natural to _model a /row/ as
+          a /record/ or /object/_, and to select entries with simple dot notation
+          (e.g. ~row.columnName~).
 
-      2. Achieving the same experience in /statically typed language/ requires
-         * defining a class for every possible row arising from database manipulation
-           (including rows arising from joins and projections)
-         * setting up a scheme to map between a row and the class representing it.
+       2. Achieving the same experience in /statically typed language/ requires
+          * defining a class for every possible row arising from database manipulation
+            (including rows arising from joins and projections)
+          * setting up a scheme to map between a row and the class representing it.
 
-      3. This requires a large amount of boilerplate, which leads developers
-         to trade the advantages of static typing for simpler schemes where
-         colum names are represented as strings and passed to other operators
-         (e.g. ~row.select("columnName")~). _This approach is unatural in both
-         sides_
-         * forgoes the advantages of static typing,
-         * is still not as natural as the dynamically typed version.
+       3. This requires a large amount of boilerplate, which leads developers
+          to trade the advantages of static typing for simpler schemes where
+          colum names are represented as strings and passed to other operators
+          (e.g. ~row.select("columnName")~). _This approach is unatural in both
+          sides_
+          * forgoes the advantages of static typing,
+          * is still not as natural as the dynamically typed version.
 
-    - Structural types help in situations where we would like to support simple
-      dot notation in dynamic contexts without losing the advantages of static
-      typing.
-        They allow developers to use dot notation and configure how fields and
-      methods should be resolved.
-
+     - Structural types help in situations where we would like to support simple
+       dot notation in dynamic contexts without losing the advantages of static
+       typing.
+         They allow developers to use dot notation and configure how fields and
+       methods should be resolved.
+      
 **** Example
      #+begin_src scala
        class Record(elems: (String, Any)*) extends Selectable:
@@ -9951,6 +9998,7 @@
        }
      #+end_src
 
+**** Using Java Reflection - =NEW=
 **** Extensibility
      New instances of ~Selectable~ can be defined to *support means of access*
      _othr than_ /Java reflection/, which would enable usages such as the
@@ -9960,7 +10008,7 @@
 **** TODO Relation with ~scala.Dynamic~
      TODO =from Jian= I need to learn more about ~scala.Dynamic~
 
-*** DONE Rules of Operators
+*** DONE Rules for Operators
     CLOSED: [2020-11-30 Mon 02:18]
     - The rules for /infix operators/ have changed in some parts:
       1. a _method with alphanumeric named_ can be used as an /infix operator/
@@ -10289,17 +10337,17 @@
          import java as j
        #+end_src
      
-**** DONE Migration
-     CLOSED: [2021-02-15 Mon 18:30]
-     - To support cross-building,
-       Scala 3.0 supports the old import syntax that uses ~_~ and ~=>~ as well.
+***** DONE Migration
+      CLOSED: [2021-02-15 Mon 18:30]
+      - To support cross-building,
+        Scala 3.0 supports the old import syntax that uses ~_~ and ~=>~ as well.
        
-     - The old syntax will be dropped in a future versions.
+      - The old syntax will be dropped in a future versions.
        
-     - Automatic rewritings from old to new syntax are offered under
-       ~-source 3.1-migration -rewrite~.
+      - Automatic rewritings from old to new syntax are offered under
+        ~-source 3.1-migration -rewrite~.
        
-**** TODO Syntax
+***** TODO Syntax
     
 *** TODO Changes in Type Checking - =No Doc till now=
     - [//]:# todo: fill in
@@ -11707,7 +11755,7 @@
     - [[https://dotty.epfl.ch/docs/reference/dropped-features/weak-conformance-spec.html][More details]]
       * Detailed rules are listed in this linked page.
       
-*** DONE Deprecated: Nonlocal Returns - =FIXME: SHOULD BE Deprecated --> Dropped=
+*** DONE Deprecated: Nonlocal Returns - =hidden= =FIXME: SHOULD BE Deprecated --> Dropped=
     CLOSED: [2020-12-09 Wed 01:31]
     Returning from /nested anonymous functions/ has been deprecated.
 
@@ -11836,6 +11884,10 @@ modifiers/ are *deprecated*
 **** Type and Value Parameters
 **** Bindings and Imports
 **** Declarations and Definitions
+    
+** TODO Language Versions
+*** Source Compatibility
+*** Binary Compatibility
     
 ** Soft Keywords
    

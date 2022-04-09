@@ -5,41 +5,168 @@
 
 * Trees
 ** Guide
-   A core functionality of Scalameta is syntax trees, which enable you to read,
-   analyze, transform and generate Scala programs at a level of abstraction. In
-   this guide, you will learn how to
-   - parse source code into syntax trees
-   - construct new syntax trees
-   - pattern match syntax trees
-   - traverse syntax trees
-   - transform syntax trees
+   A core functionality of Scalameta is /syntax trees/,
+   which ENABLE you to
+   _read_, _analyze_, _transform_ and _generate_ Scala programs at a level of
+   abstraction.
 
-*** Installation
-**** sbt
-**** Ammonite REPL
-**** ScalaFiddle
+   - In this guide, you will learn how to
+     * *parse* /source code/ *into* /syntax trees/
+     * *construct* NEW /syntax trees/
+     * *pattern match* /syntax trees/
+     * *traverse* /syntax trees/
+     * *transform* /syntax trees/
 
-*** What is a syntax tree?
-*** Parse trees
-**** From strings
-**** From files
-**** From expressions
-**** From programs with multiple top-level statements
+*** DONE Installation
+    CLOSED: [2022-03-20 Sun 23:05]
+    - Scalameta _supports_
+      * Scala 2.11
+      * Scala 2.12
+      * Scala 2.13
+      * Scala.js
+      * Scala Native
+      
+**** DONE sbt
+     CLOSED: [2022-03-20 Sun 23:02]
+     #+begin_src scala
+       // build.sbt
+       libraryDependencies += "org.scalameta" %% "scalameta" % "4.5.0"
 
-*** Construct trees
+       // For Scala.js, Scala Native
+       libraryDependencies += "org.scalameta" %%% "scalameta" % "4.5.0"
+     #+end_src
+
+     - All code examples in this document assume you have
+       #+begin_src scala
+         import scala.meta._
+       #+end_src
+     
+**** DONE Ammonite REPL
+     CLOSED: [2022-03-20 Sun 23:05]
+     1. To make it work with scalameta it needs to be run with ~--thin~ option.
+        #+begin_src bash
+          amm --thin
+
+        #+end_src
+     
+     2. Then in Ammonite:
+        #+begin_src scala
+          import $ivy.`org.scalameta::scalameta:4.5.0`, scala.meta._
+        #+end_src
+     
+**** TODO ScalaFiddle
+     =Timeout=
+
+*** DONE What is a syntax tree?
+    CLOSED: [2022-03-20 Sun 23:35]
+    - Syntax trees :: a representation of _source code_ that makes it easier to
+                      *programmatically analyze* programs.
+
+      * Scalameta has /syntax trees/ that *represent* _Scala programs_.
+
+    - =from Jian=
+      /Syntax Tree/ is the short form of /Abstract Syntax Tree/.
+
+    - =IMPORTANT=
+      FIGURE - scalameta syntax tree ~Tree~ and its subtypes.
+
+    - /Scalameta trees/ are *lossless*, meaning that they represent Scala programs in
+      _SUFFICIENT DETAIL to go *from text to trees* and *vice-versa*._
+
+      * *Lossless* /syntax trees/ are great for *fine-grained analysis* of source
+        code, which is useful for a range of applications including
+        + formatting,
+        + refactoring,
+        + linting and
+        + documentation tools
+      
+*** TODO Parse trees
+    Scalameta comes with a /parser/ to *produce* /syntax trees/ *from* _Scala
+    source code_.
+
+    - You can
+      *PARSE /trees/
+      _FROM_ a variety of sources _INTO_ DIFFERENT kinds of /tree nodes/.*
+    
+**** DONE From strings
+     CLOSED: [2022-03-20 Sun 23:56]
+     The SIMPLEST way to *parse* _source code_ is *from* a _string_.
+
+     - As long as you have ~import scala.meta._~ in your scope,
+       you can use the ~parse[Source]~ as an extension method of strings.
+       #+begin_src scala
+         val program = """object Main extends App { print("Hello!") }"""
+         val tree = program.parse[Source].get
+       #+end_src
+
+     - Once parsed, you can print the tree back into its original source code
+       #+begin_src scala
+         println(tree.syntax)
+         // object Main extends App { print("Hello!") }
+       #+end_src
+
+     - If an error happened when you parse from strings,
+       the _error messages_ do *NOT INCLUDE* a _filename_:
+       #+begin_src scala
+         println(
+           "object Main {".parse[Source]
+         )
+         // <input>:1: error: } expected but end of file found
+         // object Main {
+         //              ^
+       #+end_src
+       * To make _error messages_ more helpful
+         =IMPORTANT=
+         it's *RECOMMENDED* to *ALWAYS* use /virtual files/ when possible,
+         as explained below. =NEXT=
+
+**** DONE From files
+     CLOSED: [2022-03-20 Sun 23:55]
+     - To parse a _file_ into a _tree_
+       it's *RECOMMENDED* to
+       1. FIRST read the _file contents_ into a _string_
+       2. AND THEN construct a /virtual file/
+
+     - Example:
+       #+begin_src scala
+         val path = java.nio.file.Paths.get("docs", "example.scala")
+         val bytes = java.nio.file.Files.readAllBytes(path)
+         val text = new String(bytes, "UTF-8")
+         val input = Input.VirtualFile(path.toString, text)
+         val exampleTree = input.parse[Source].get
+
+         print(exampleTree.syntax)
+         // Object Example extends App { println("Hello from a file!") }
+       #+end_src
+     
+     - The *DIFFERENCE* between ~text.parse[Source]~ and ~input.parse[Source]~:
+       the _filename_ appears in error messages for ~Input.VirtualFile~.
+       #+begin_src scala
+         println(
+           Input.VirtualFile("example.scala", "object Main {").parse[Source]
+         )
+         // example.scala:1: error: } expected but end of file found
+         // object Main {
+         //              ^
+       #+end_src
+       
+**** TODO From expressions
+**** TODO From programs with multiple top-level statements
+
+*** TODO Construct trees
 **** With normal constructors
 **** With quasiquotes
 
-*** Pattern match trees
+*** TODO Pattern match trees
 **** With normal constructors
 **** With quasiquotes
 
-*** Compare trees for equality
-*** Traverse trees
+*** TODO Compare trees for equality
+*** TODO Traverse trees
 **** Simple traversals
 **** Custom traversals
 
-*** Transform trees
+*** TODO Transform trees
 **** Simple transformations
 **** Custom transformations
 
