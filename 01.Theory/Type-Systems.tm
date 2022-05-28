@@ -56,6 +56,15 @@
   As a consequence, the classification, description, and study of type
   systems has emerged as a formal discipline.
 
+  <\definition>
+    Type Unsound
+
+    A program may crash even though it is judged acceptable by a typechecker,
+    which is implemented by following this language definitions strictly.
+  </definition>
+
+  \;
+
   <subsection*|Execution errors>
 
   <subsection*|Typed and untyped languages>
