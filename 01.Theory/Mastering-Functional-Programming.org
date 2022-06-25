@@ -834,6 +834,11 @@
 ** Questions - 92
   
 * TODO Chapter 8: Basic Type Classes and Their Usage - 93 - _START_
+  The following are the topics that we will be covering in this chapter:
+  - A motivation for organizing /type classes/ into systems and libraries
+  - The _Cats_ library for purely functional programming and its structure
+  - /Type classes/ _Cats_ defines
+
 ** A motivation for organizing type classes into systems and libraries - 93
 ** The Cats library for purely functional programming - 95
 *** The structure of the library - 96
@@ -914,8 +919,16 @@
 
 ** Summary - 207
 ** Questions - 208
-* Chapter 10: Patterns of Advanced Functional Programming - 209
-** Monad Transformers - 209
+* TODO Chapter 10: Patterns of Advanced Functional Programming - 209
+  In this chapter, we will DISCUSS _solutions_ to common functional programming
+  problems.
+  
+  In this chapter, we will cover the following topics:
+  * Monad Transformers
+  * Tagless Final
+  * Type-level programming
+
+** TODO Monad Transformers - 209
 *** The specialization of effect types - 210
 *** An application with multiple side effects - 211
 **** Asynchrony - 211
@@ -944,9 +957,99 @@
 *** Computation as a value - 229
 *** TODO Free Monad - 230 - _RE-READ_
  
-** Type-level programming - 232
+** TODO Type-level programming - 232
+   - The *compiler* translates your program
+     _FROM_ one set of instructions _INTO_ another.
+
+   - In *high-level languages*, you
+     _TRANSLATE_ higher-level instructions that are easy to read and write for people
+     _TO_        lower-level instructions that are easy for machines to execute.
+
+   - Since the compiler needs to perform a conversion of one set of symbols into
+     another set of symbols, it builds some internal model of the program that
+     you are writing. In a sense, we can say that the compiler understands the
+     program, for some definition of understands.
+
+   - If the compiler builds an internal model or understands your program in some
+     other way, we can also harness the power of compiler to make the compiler
+     check for the correctness of the program.
+
+     We can make the compiler impose and enforce certain styles or guarantees
+     that your program must obey.
+
+     We have already seen an example of annotation.tailrec.
+
+     The job of the annotation was to instruct the compiler to check the
+     annotated function to have certain guarantees about it.
+
+     Concretely, the compiler checked the function to be tail-recursive.
+
+   - To ensure correctness of your program, we may well use a strongly typed
+     language, and encode the guarantees and the semantics of your program in
+     types.
+
+     The types are known to the compilers, and hence, it can perform certain
+     checks on these types.
+
+     For example, it can make sure that you supplied an argument of the correct
+     type to a function because it knows the input type of the function.
+
+     So, in a strongly-typed language, no longer can you make the mistake of
+     passing an argument of the wrong type to a function.
+
+   - The advantage of having strong compilers that check the program for mistakes
+     is that you are able to catch more errors at compile-time. In general,
+     errors that are caught at compile- time are much easier to debug and fix.
+     If an error happens at runtime, it means that it is not discovered right
+     away. You may release your application to the end user, and for
+     particularly tricky bugs, months and even years can pass before they are
+     discovered. Once they are discovered, you need to investigate the erroneous
+     behavior yourself throughout the codebase and try to reproduce it so that
+     you can fix it.
+
+   - Compile-time errors are manifested right away. When you compile the code, you
+     see exactly how and where you went wrong. So there is an obvious advantage
+     to making sure the compiler can catch as many errors as possible.
+
+   - Can we push our compiler even further? Let's have a look at an example of the
+     type-level programming in Scala. It is called type-level because we aim to
+     encode as many guarantees about our program as possible in the types. This
+     way, these guarantees are checked at compile-time.
+
 *** A naive implementation of the heterogeneous list - 233
 *** Type-level solution to the heterogeneous list problem - 236
+    The _STRATEGY_ for solving this problem is to *ENCODE the guarantees that we want to have in /types/.*
+    
+    - We will leverage the highly-developed mechanism of /implicit resolution/ to
+      enforce that guarantee on a certain type.
+      
+    - The general idea is to have _a guarantee presented by an /implicit value/:_
+      if we need a certain guarantee about our program, we make our program
+      implicitly depend on the value that represents this guarantee.
+
+    - The catch is that the application will not compile if the compiler does not
+      find any of the implicits the program depends on. So, by making the
+      program depend on the implicits that represent our guarantees, and making
+      sure these values are present in scope only if the guarantee is satisfied,
+      we can make sure is that the compiler will not compile a program that does
+      not satisfy this guarantees.
+
+    - Heterogeneous List ::
+      #+begin_src scala
+        package jvm
+
+        sealed trait HList {
+          def :::[H](h: H): H ::: this.type = jvm.:::(h, this)
+        }
+        case class :::[+H, +T <: HList](head: H, tail: T) extends HList {
+          override def toString = s"$head ::: $tail"
+        }
+
+        trait HNil extends HList
+        case object HNil extends HNil
+      #+end_src
+
+      
 *** Reclusive implicit resolution - 242
 *** Debugging type-level computations - 246
 *** Libraries for type-level programming - 247
