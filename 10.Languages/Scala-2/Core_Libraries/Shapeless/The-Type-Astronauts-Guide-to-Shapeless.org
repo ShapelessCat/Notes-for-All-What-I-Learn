@@ -1829,19 +1829,19 @@
   - In Part II
     we'll look at the ~shapeless.ops~ package, which *provides* a set of helpful
     tools that we can use as _building blocks_. Each _op_ comes in *two* parts:
-    + a /type class/ that we can use _DURING implicit resolution_,
-    + /extension methods/ that we can call on ~HList~ and ~Coproduct~.
+    * a /type class/ that we can use _DURING implicit resolution_,
+    * /extension methods/ that we can call on ~HList~ and ~Coproduct~.
 
   - There are three general sets of ops, available from three packages:
-    + ~shapeless.ops.hlist~ defines /type classes/ for ~HList~'s.
+    * ~shapeless.ops.hlist~ defines /type classes/ for ~HList~'s.
         These can be used directly via /extension methods/ on ~HList~, defined in
       ~shapeless.syntax.hlist~.
 
-    + ~shapeless.ops.coproduct~ defines /type classes/ for ~Coproduct~'s.
+    * ~shapeless.ops.coproduct~ defines /type classes/ for ~Coproduct~'s.
         These can be used directly via /extension methods/ on ~Coproduct~, defined
       in ~shapeless.syntax.coproduct~.
 
-    + ~shapeless.ops.record~ defines /type classes/ for /shapeless records/
+    * ~shapeless.ops.record~ defines /type classes/ for /shapeless records/
       (~HList~'s containing _tagged_ elements—Section 5.2).
         These can be used via /extension methods/ on ~HList~, imported from
       ~shapeless.record~, and defined in ~shapeless.syntax.record~.
@@ -1877,10 +1877,122 @@
 ** TODO 6.5 Summary - 83
 
 * TODO 7 Functional operations on ~HList~'s - 85
+  We can perform collection-like operations on ~HList~'s
+
+  There are a suite of ops /type classes/.
+
+  - _BEFORE_ delving into those ops /type classes/,
+    let's discuss
+    HOW shapeless REPRESENTS _polymorphic functions_ suitable for
+    mapping over heterogeneous data structures.
+  
 ** 7.1 Motivation: mapping over an ~HList~ - 85
+   We'll motivate the discussion of _polymorphic functions_ by looking at the
+   ~map~ method.
+
+   - *EXPECTATION*:
+     Create a ~map~ operation for ~HList~'s, and the transformation can inspect
+     the type of each input and use it to determine the type of each output --
+     give us a closed, composable transformation that *retains the heterogeneous
+     nature of the ~HList~'s.*
+     1. We can't use Scala functions to implement this kind of operation.
+     2. We need some new infrastructure. =TODO= =NEXT=
+   
 ** 7.2 Polymorphic functions - 86
+   Shapeless provides a /type/ called ~Poly~ for representing /polymorphic
+   functions/,
+   
+   - The /result type/ of a /polymorphic functions/ depends on the /parameter types/.
+     * This section includes a simplified explanation of how it works.
+       + *NOTE*:
+         the next section does *NOT* contain real shapeless code --
+         we're
+         _ELIDING_ much of the flexibility and ease of use that comes with
+         real shapeless ~Poly~'s
+         _TO CREATE_ a simplified API for illustrative purposes.
+
 *** 7.2.1 How ~Poly~ works - 86
+    # Illustration to Poly -- NOT real shapele code!!!
+
+    At its core, a ~Poly~ is an object with a _generic_ ~apply~ method.
+    An /implicit parameter/ of type ~Case[A]~ is also required.
+
+    #+begin_src scala
+      // This is not real shapeless code.
+      // It's just for demonstration.
+
+      trait Case[P, A] {
+        type Result
+
+        def apply(a: A): Result
+      }
+
+      trait Poly {
+        def apply[A](arg: A)(implicit cse: Case[this.type, A]): cse.Result =
+          cse.apply(arg)
+      }
+    #+end_src
+
+    #+begin_src scala
+      // This is not real shapeless code.
+      // It's just for demonstration.
+
+      object myPoly extends Poly {
+        implicit def intCase =
+          new Case[this.type, Int] {
+            type Result = Double
+            def apply(num: Int): Double = num / 2.0
+          }
+
+        implicit def stringCase =
+          new Case[this.type, String] {
+            type Result = Int
+            def apply(str: String): Int = str.length
+          }
+      }
+    #+end_src
+
+    #+begin_src scala
+      myPoly.apply(123)
+      // res8: Double = 61.5
+    #+end_src
+
+    - =IMPORTANT=
+      =TODO=
+      =REDO=
+      About the /scope/ for /implicit resolution/
+      (_WITHOUT_ any additional imports for the instances of ~Case~):
+      1. ~Case~ has an /extra type parameter/ ~P~ referencing the /singleton type/
+         of the ~Poly~.
+
+      2. The /implicit scope/ for ~Case[P, A]~ includes
+         the /companion objects/ for ~Case~, ~P~, and ~A~.
+
+      3. We've assigned ~P~ to be ~myPoly.type~ and the /companion object/ for
+         ~myPoly.type~ is ~myPoly~ itself.
+
+         In other words, ~Case~'s defined _in the body of the_ ~Poly~ are
+         *always in scope* no matter where the _call site_ is.
+    
 *** 7.2.2 ~Poly~ syntax - 88
+    #+begin_src scala
+      import shapeless._
+
+      object myPoly extends Poly1 {
+        implicit val intCase: Case.Aux[Int, Double] =
+          at(num => num / 2.0)
+
+        implicit val stringCase: Case.Aux[String, Int] =
+          at(str => str.length)
+      }
+    #+end_src
+
+    - =TODO= =NOTE=
+    - =TODO= =NOTE=
+    - =TODO= =NOTE=
+
+    - *Idiosyncrasies of type inference*
+      =TODO= =NOTE=
 
 ** 7.3 Mapping and flatMapping using ~Poly~ - 91
 ** 7.4 Folding using ~Poly~ - 93

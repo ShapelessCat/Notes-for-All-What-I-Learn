@@ -1,0 +1,298 @@
+#+TITLE: Practical FP in Scala
+#+SUBTITLE: A hands-on approach
+#+VERSION: September 13, 2021, 2nd
+#+AUTHORS: Gabriel Volpe
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Preface - 1
+* Acknowledgments - 3
+** People - 4
+** Software - 5
+** Fonts - 6
+   
+* Dependency versions - 7
+* Prerequisites - 9
+* How to read this book - 10
+** Conventions used in this book - 11
+   
+* Chapter 1: Best practices - 12
+** Strongly-typed functions - 13
+*** Value classes - 13
+*** Newtypes - 15
+    - My recommendation:
+      1. avoid value classes and sealed abstract classes completely
+      2. use the _Newtype library_, which gives us *zero-cost wrappers* with
+         _NO runtime overhead_.
+
+*** Refinement types - 16
+*** Runtime validation - 17
+    
+** Encapsulating state - 22
+*** In-memory counter - 22
+    
+** Sequential vs concurrent state - 25
+*** State Monad - 25
+*** Atomic Ref - 25
+    
+** Shared state - 27
+*** Regions of sharing - 27
+*** Leaky state - 28
+    
+** Anti-patterns - 30
+*** Seq: a base trait for sequences - 30
+*** About monad transformers - 31
+*** Boolean blindness - 32
+    
+** Error handling - 37
+*** MonadError & ApplicativeError - 37
+*** Either Monad - 38
+*** Classy prisms - 40
+    
+** Summary - 41 
+
+* Chapter 2: Tagless final encoding - 42
+  - The /tagless final encoding/ (also called /finally tagless/) ::
+    a method of *embedding* domain-specific languages (DSLs) *in* a typed
+    functional host language such as Haskell, OCaml, Scala, or Coq.
+
+    * It is an _ALTERNATIVE_ to the /initial encoding/ promoted by /Free Monads/.
+      =TODO=
+      =TODO=
+      =TODO=
+    
+    * This technique is well described in [[http://okmij.org/ftp/tagless-final/index.html][Oleg Kiselyov's papers]], and it is also
+      considered one of the solutions to the /expression problem/.
+      + However, in Scala, it has diverged into a more ergonomic encoding that
+        suits the language's features better.
+    
+  - In this chapter, we will dive deep into the practical meaning of this technique
+    and also explore best practices, required for the application we will
+    develop together.
+
+** Algebras - 43
+*** Naming conventions - 44
+    
+** Interpreters - 45
+*** Building interpreters - 45
+    
+** Programs - 47
+** Implicit vs explicit parameters - 50
+*** Achieving modularity - 51
+*** Implicit convenience - 53
+*** Capability traits - 53
+    
+** Why Tagless Final? - 55
+*** Parametricity - 55
+*** Comparison - 56
+    
+** Summary - 61
+
+* Chapter 3: Shopping Cart project - 62
+** TODO Business requirements - 63
+*** Third-party payments API - 63
+*** Identifying the domain - 64
+*** Identifying HTTP endpoints - 66
+    
+** DONE Technical stack - 76
+   CLOSED: [2020-11-28 Sat 02:44]
+   Below is the complete list of all the libraries we will be using in our application:
+   - cats:
+     basic functional blocks.
+     From /typeclasses/ such as ~Functor~ to syntax and instances for some
+     datatypes and /monad transformers/.
+
+   - cats-effect:
+     /concurrency/ and /functional effects/.
+     It ships the _default_ ~IO~ /monad/.
+
+   - cats-mtl:
+     /typeclasses/ for /monad transformer/ capabilities.
+
+   - cats-retry:
+     *retrying actions* that can fail _in a purely functional fashion_.
+
+   - circe:
+     standard JSON library to create /encoders/ and /decoders/.
+
+   - ciris:
+     _FLEXIBLE configuration library_ with support for DIFFERENT _environments_.
+
+   - fs2:
+     powerful streaming in _constant memory and control flow_.
+
+   - http4s:
+     _purely functional HTTP server and client_,
+     built on top of fs2.
+
+   - http4s-jwt-auth:
+     opinionated _JWT authentication_
+     built on top of _jwt-scala_.
+
+   - log4cats:
+     standard _logging framework_ for Cats.
+
+   - meow-mtl:
+     /classy optics/ for /cats-mtl typeclasses/.
+
+   - newtype:
+     /zero-cost wrappers/ for strongly typed functions.
+
+   - redis4cats:
+     client for Redis compatible with cats-effect.
+
+   - refined:
+     _refinement types_ for /type-level validation/.
+
+   - skunk:
+     _purely functional, non-blocking PostgreSQL client._
+
+   - squants:
+     _strongly-typed units_ of *measure* such as “money”.
+
+*** DONE A note on Cats Effect - 76
+    CLOSED: [2020-11-28 Sat 02:44]
+    =WATCHING=
+    Currently, this book use cats-effect 2.x.
+    Next major version may change -- some typeclasses or datatypes may change.
+   
+** TODO Summary - 78
+   
+* Chapter 4: Business logic - 79
+** Identifying algebras - 80
+** Data access and storage - 86
+*** Health check - 86
+    
+** Defining programs - 88
+*** Checkout - 88
+*** Retrying effects - 91
+    
+** Architecture - 96
+** Summary - 97
+   
+* Chapter 5: HTTP layer - 98
+** A server is a function - 99
+** HTTP Routes #1 - 101
+** Authentication - 106
+*** JWT Auth - 107
+    
+** HTTP Routes #2 - 109
+** Composing routes - 120
+** Middlewares - 121
+*** Compositionality - 121
+    
+** HTTP server - 123
+** Entity codecs - 124
+** HTTP client - 125
+*** Payment client - 125
+*** Creating a client - 127
+    
+** Summary - 128
+   
+* Chapter 6: Typeclass derivation - 129
+** Standard derivations - 130
+** JSON codecs - 133
+*** Map codecs - 133
+    
+** Orphan instances - 135
+** Identifiers - 137
+*** GenUUID & IsUUID - 137
+*** Custom derivation - 139
+    
+** Validation - 141
+** Http4s derivations - 143
+** Higher-kinded derivations - 144
+** Summary - 146
+   
+* Chapter 7: Persistent layer - 147
+** Skunk & Doobie - 148
+*** Session Pool - 148
+*** Queries - 148
+*** Commands - 151
+*** Interpreters - 152
+*** Streaming & Pagination - 159
+    
+** Redis for Cats - 166
+*** Connection - 166
+*** Interpreters - 167
+    
+** Health check - 174
+** Blocking operations - 176
+** Transactions - 177
+*** Compositionality - 177
+    
+** Summary - 179
+   
+* Chapter 8: Testing - 180
+** Functional test suite - 181
+** Generators - 183
+*** About forall - 184
+*** Application data - 185
+    
+** Business logic - 189
+*** Happy path - 190
+*** Expectations - 192
+*** Empty cart - 195
+*** Unreachable payment client - 196
+*** Recovering payment client - 198
+*** Failing orders - 200
+*** Failing cart deletion - 202
+    
+** Http - 203
+*** Routes - 203
+*** Clients - 207
+   
+** Law testing - 210
+** Integration tests - 214
+*** Shared resource - 214
+*** Postgres - 217
+*** Redis - 221
+    
+** Summary - 228
+    
+* Chapter 9: Assembly - 229
+** Logging - 230
+** Tracing - 232
+*** Ecosystem - 232
+   
+** Configuration - 234
+** Modules - 239
+** Resources - 247
+** Main - 251
+** Summary - 254
+    
+* Chapter 10: Ship it! - 255
+** Docker image - 256
+*** Optimizing image - 257
+*** Run it locally - 258
+    
+** Continuous Integration - 259
+*** Dependencies - 259
+*** CI build - 260
+*** Nix Shelll - 261
+*** Furthermore - 262
+    
+** Summary - 264
+    
+* Bonus Chapter - 265
+** MTL (Monad Transformers Library) - 266
+*** Managing state - 266
+*** Accessing context - 268
+    
+** Optics - 270
+*** Lenses - 270
+*** Prisms - 271
+    
+** Aspect Oriented Programming - 274
+*** Tofu's Mid - 274
+   
+** Concurrency - 278
+*** Producer-Consumer - 278
+*** Effectful streams - 279
+*** Interruption - 281
+*** Multiple subscriptions - 284
+*** (Un)Cancelable regions - 285
+*** Resource safety - 286
+*** Finite State Machine - 289
+    
+** Summary - 292
