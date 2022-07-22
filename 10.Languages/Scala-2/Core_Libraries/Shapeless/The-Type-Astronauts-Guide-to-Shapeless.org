@@ -556,19 +556,20 @@
   /automatic derivation/ of /type class/ instances.
 
 ** DONE 3.1 Recap: type classes - 21
-   CLOSED: [2020-07-26 Sun 03:09]
+   CLOSED: [2022-06-19 Sun 23:56]
    Quickly recap on /type classes/ before get into the depths of /instance
    derivation/.
 
-   - In Haskell, /type class/ is a built-in syntax and feature.
+   - In Haskell, /type class/ is a _BUILT-IN_ syntax and feature.
 
-   - Scala encodes /type classes/ with
-     + /parameterised trait/
-     + /implicits/
+   - Scala *encodes* /type classes/ with
+     * /parameterised trait/
+     * /implicits/
 
-   - =from Jian=
-     Scala /type class/ is more verbose than that in Haskell, but more flexible.
-     You can use import to control the usage of a specific /type class/.
+   - /type class/ (in Scala) ::
+     a /parameterised trait/
+     representing some sort of general funtionality
+     that we would like to apply to a wide range of types.
 
    - For example,
      #+BEGIN_SRC scala
@@ -580,11 +581,11 @@
 
    - Implement a /type class/ with /instances/ for _EACH_ /type/ we care about.
 
-     You usually have two ways to place these /type class instances/:
-     + In the /type class/'s /companion object/:
+   - You usually have two ways to place /type class instances/:
+     * In the /type class/'s /companion object/:
        Then the /instances/ are _automatically_ be in scope.
 
-     + In a separate library /object/ for the user to *import manually*:
+     * In a separate library /object/ for the user to *import manually*:
        #+BEGIN_SRC scala
          // Custom data type:
          case class Employee(name: String, number: Int, manager: Boolean)
@@ -611,21 +612,6 @@
      ~writeCsv~ can be applied to any type ~A~, if ~A~ has a _implicit_
      /type class instance/ of ~CsvEncoder~.
 
-   - Test the code above:
-     #+begin_src scala
-       val employees: List[Employee] = List(
-         Employee("Bill", 1, true),
-         Employee("Peter", 2, false),
-         Employee("Milton", 3, false),
-       )
-
-       writeCsv(employees)
-       // res4: String =
-       // Bill,1,yes
-       // Peter,2,no
-       // Milton,3,no
-     #+end_src
-
    - Similarly, we can do
      #+begin_src scala
        case class IceCream(name: String, numCherries: Int, inCone: Boolean)
@@ -636,21 +622,9 @@
              List(
                i.name,
                i.numCherries.toString,
-               if(i.inCone) "yes" else "no"
+               if (i.inCone) "yes" else "no"
              )
          }
-
-       val iceCreams: List[IceCream] = List(
-         IceCream("Sundae", 1, false),
-         IceCream("Cornetto", 0, true),
-         IceCream("Banana Split", 0, false)
-       )
-
-       writeCsv(iceCreams)
-       // res7: String =
-       // Sundae,1,no
-       // Cornetto,0,yes
-       // Banana Split,0,no
      #+end_src
 
 *** DONE 3.1.1 Resolving instances - 23
@@ -658,13 +632,13 @@
     /Type classes/ are very flexible
     BUT they REQUIRE us to define /instances/ for *EVERY* /type/ we care about.
 
-      _FORTUNATELY_, the Scala compiler has a few tricks to *resolve* /instances/
+    _FORTUNATELY_, the Scala compiler has a few tricks to *resolve* /instances/
     for us given sets of _user-defined rules_, which means *the _implicit_ building
     blocks* -- for example, if we know the ~CsvEncoder~'s for type ~A~ and ~B~,
     it is easy to create ~CsvEncoder[(A, B)]~. The ~implicit CsvEncoder[A]~ and
-    ~implicit CsvEncoder[B]~ are the *user-defined rules* above. Then the
-    compiler can do the *implicit resolution*, which is the behaviour that makes
-    the /type class pattern/ so powerful in Scala.
+    ~implicit CsvEncoder[B]~ are the *user-defined rules* above.
+      _Then the compiler can do the *implicit resolution*, which is the behaviour
+    that makes the /type class pattern/ so powerful in Scala._
 
     #+BEGIN_SRC scala
       implicit def pairEncoder[A, B](
@@ -688,18 +662,14 @@
 
     - Until here, there is nothing about our /Shapeless/.
 
-      + Q :: Still we feel some inconvenience. How can we resolve this:
+      * Q :: Still we feel some inconvenience. How can we resolve this:
              when using this /type class pattern/, we find we repeatedly
              manually pull apart our /case classes/ and /sealed traits/.
              We are required to define /instances for ADTs/ *by hand*.
 
-      + A :: =TODO=
+      * A :: =TODO=
              _Shapeless' generic representations change all of this, allowing us
              to *derive instances for any ADT FOR FREE*._
-
-      + =from Jian=
-        This is one of the most important point of /Shapeless/ -- /type class
-        derivation/.
 
 *** DONE 3.1.2 Idiomatic type class definitions - 24
     CLOSED: [2020-07-26 Sun 03:07]
@@ -726,26 +696,24 @@
     #+END_SRC
 
     - ~apply~, known as a /summoner/ or /materializer/, allows us to *summon*
-      a /type class instance/ given a /target type/. For example,
-      ~CsvEncoder[IceCream]~
+      a /type class instance/ given a /target type/.
+      * For example,
+        ~CsvEncoder[IceCream]~
 
-      + Q :: WHY NOT use the standard libary ~implicitly~ /method/???
+      * Q :: WHY NOT use the standard libary ~implicitly~ /method/???
 
-      + A :: In simple cases, you can use it.
+      * A :: In simple cases, you can use it.
              However,
                When working with /shapeless/ we encounter situations where
              ~implicitly~ *DOES NOT infer types correctly* (_However, see
              Section 4.2_) (this is even bad than telling the user it CANNOT
              infer).
-               This means we can't always use ~implicitly~ (=from Jian= for
-             current version Scala -- Hope it will be much better in the future
-             =from Jian=), *we can always define a /summoner/ method to do the
-             right thing*. _This is one of the most important reason why we
-             think it's worth writing one for *EVERY* /type class/ we create_
+               This means we can't always use ~implicitly~ (=from Jian= Hope this
+             has already been resolved by Scala 3 ~summon~), *we can always define
+             a /summoner/ method to do the right thing*.
 
-    - =from Jian=:
-      Dotty design a new method ~summon~, combine with design of its new ~enum~,
-      I think we no longer need to define the /summoner/ manually.
+             _This is one of the most important reason why we think it's worth
+             writing one for *EVERY* /type class/ we create_
 
     - ~the~:
       We can also use a special method from /shapeless/ called ~the~ (more on
@@ -757,10 +725,10 @@
         // res0: CsvEncoder[IceCream] = $anon$1@4c7483e6
       #+END_SRC
 
-    - ~instance~, sometimes named ~pure~, provides a _terse_ syntax for *creating*
+    - ~instance~, sometimes named ~pure~, provides a TERSE syntax for *creating*
       new /type class instances/, *reducing the boilerplate* of /anonymous class/
       syntax:
-      + Without it:
+      * Without it:
         #+BEGIN_SRC scala
           implicit val booleanEncoder: CsvEncoder[Boolean] =
             new CsvEncoder[Boolean] {
@@ -769,7 +737,7 @@
             }
         #+END_SRC
 
-      + With it:
+      * With it:
         #+BEGIN_SRC scala
           implicit val booleanEncoder: CsvEncoder[Boolean] =
             instance(b => List(if (b) "yes" else "no"))
@@ -791,38 +759,38 @@
    - We'll use _two_ *intuitions*:
      1. If we have /type class instances/ for the *head* and *tail* of an ~HList~,
         we can derive an instance for the whole ~HList~.
-        + =from Jian=
+        * =from Jian=
           ~A => HList~
 
-     2. If we have a _case class A_, a ~Generic[A]~, and a /type class instance/
+     2. If we have a _case class ~A~,_ a ~Generic[A]~, and a /type class instance/
         for the generic's ~Repr~,
         _we can combine them to create an /instance/ for ~A~._
-        + =from Jian=
+        * =from Jian=
           ~HList => A~
 
    - Take ~CsvEncoder~ and ~IceCream~ as examples:
-     + ~IceCream~ has a generic ~Repr~ of /type/
+     * ~IceCream~ has a generic ~Repr~ of /type/
        ~String :: Int :: Boolean :: HNil~.
 
-     + The ~Repr~ is made up of
-       * a ~String~,
-       * and then an ~Int~,
-       * and then a ~Boolean~,
-       * and then an ~HNil~.
+     * The ~Repr~ is made up of
+       + a ~String~,
+       + and then an ~Int~,
+       + and then a ~Boolean~,
+       + and then an ~HNil~.
 
        If we have ~CsvEncoder~'s for these /types/,
        we can create an _encoder_ for the whole thing.
 
-     + If we can derive a ~CsvEncoder~ for the ~Repr~, we can create one for ~IceCream~.
+     * If we can derive a ~CsvEncoder~ for the ~Repr~, we can create one for ~IceCream~.
 
    - =from Jian=
      Summary,
-     + Derive a /type class instance/ from a /case class/ directly and manually looks
+     * Derive a /type class instance/ from a /case class/ directly and manually looks
        trivial but full of boilerplate.
 
-     + Use the idea of _generic programming_, and if we have a way to convert a
-       /case class/ ~A~ to ~HList~, we can convert a /case class/ to a ~HList~ first,
-       and then find a way to encode it and then the ~CsvEncoder[A]~ can be synthesized.
+     * Use the idea of _generic programming_, and if we have a way to convert a
+       /case class/ ~A~ to ~HList~, then we have a way to encode it and then the
+       ~CsvEncoder[A]~ can be synthesized.
 
 *** DONE 3.2.1 Instances for ~HList~'s - 27
     CLOSED: [2020-07-26 Sun 17:41]
@@ -1861,19 +1829,19 @@
   - In Part II
     we'll look at the ~shapeless.ops~ package, which *provides* a set of helpful
     tools that we can use as _building blocks_. Each _op_ comes in *two* parts:
-    + a /type class/ that we can use _DURING implicit resolution_,
-    + /extension methods/ that we can call on ~HList~ and ~Coproduct~.
+    * a /type class/ that we can use _DURING implicit resolution_,
+    * /extension methods/ that we can call on ~HList~ and ~Coproduct~.
 
   - There are three general sets of ops, available from three packages:
-    + ~shapeless.ops.hlist~ defines /type classes/ for ~HList~'s.
+    * ~shapeless.ops.hlist~ defines /type classes/ for ~HList~'s.
         These can be used directly via /extension methods/ on ~HList~, defined in
       ~shapeless.syntax.hlist~.
 
-    + ~shapeless.ops.coproduct~ defines /type classes/ for ~Coproduct~'s.
+    * ~shapeless.ops.coproduct~ defines /type classes/ for ~Coproduct~'s.
         These can be used directly via /extension methods/ on ~Coproduct~, defined
       in ~shapeless.syntax.coproduct~.
 
-    + ~shapeless.ops.record~ defines /type classes/ for /shapeless records/
+    * ~shapeless.ops.record~ defines /type classes/ for /shapeless records/
       (~HList~'s containing _tagged_ elements—Section 5.2).
         These can be used via /extension methods/ on ~HList~, imported from
       ~shapeless.record~, and defined in ~shapeless.syntax.record~.
@@ -1909,10 +1877,122 @@
 ** TODO 6.5 Summary - 83
 
 * TODO 7 Functional operations on ~HList~'s - 85
+  We can perform collection-like operations on ~HList~'s
+
+  There are a suite of ops /type classes/.
+
+  - _BEFORE_ delving into those ops /type classes/,
+    let's discuss
+    HOW shapeless REPRESENTS _polymorphic functions_ suitable for
+    mapping over heterogeneous data structures.
+  
 ** 7.1 Motivation: mapping over an ~HList~ - 85
+   We'll motivate the discussion of _polymorphic functions_ by looking at the
+   ~map~ method.
+
+   - *EXPECTATION*:
+     Create a ~map~ operation for ~HList~'s, and the transformation can inspect
+     the type of each input and use it to determine the type of each output --
+     give us a closed, composable transformation that *retains the heterogeneous
+     nature of the ~HList~'s.*
+     1. We can't use Scala functions to implement this kind of operation.
+     2. We need some new infrastructure. =TODO= =NEXT=
+   
 ** 7.2 Polymorphic functions - 86
+   Shapeless provides a /type/ called ~Poly~ for representing /polymorphic
+   functions/,
+   
+   - The /result type/ of a /polymorphic functions/ depends on the /parameter types/.
+     * This section includes a simplified explanation of how it works.
+       + *NOTE*:
+         the next section does *NOT* contain real shapeless code --
+         we're
+         _ELIDING_ much of the flexibility and ease of use that comes with
+         real shapeless ~Poly~'s
+         _TO CREATE_ a simplified API for illustrative purposes.
+
 *** 7.2.1 How ~Poly~ works - 86
+    # Illustration to Poly -- NOT real shapele code!!!
+
+    At its core, a ~Poly~ is an object with a _generic_ ~apply~ method.
+    An /implicit parameter/ of type ~Case[A]~ is also required.
+
+    #+begin_src scala
+      // This is not real shapeless code.
+      // It's just for demonstration.
+
+      trait Case[P, A] {
+        type Result
+
+        def apply(a: A): Result
+      }
+
+      trait Poly {
+        def apply[A](arg: A)(implicit cse: Case[this.type, A]): cse.Result =
+          cse.apply(arg)
+      }
+    #+end_src
+
+    #+begin_src scala
+      // This is not real shapeless code.
+      // It's just for demonstration.
+
+      object myPoly extends Poly {
+        implicit def intCase =
+          new Case[this.type, Int] {
+            type Result = Double
+            def apply(num: Int): Double = num / 2.0
+          }
+
+        implicit def stringCase =
+          new Case[this.type, String] {
+            type Result = Int
+            def apply(str: String): Int = str.length
+          }
+      }
+    #+end_src
+
+    #+begin_src scala
+      myPoly.apply(123)
+      // res8: Double = 61.5
+    #+end_src
+
+    - =IMPORTANT=
+      =TODO=
+      =REDO=
+      About the /scope/ for /implicit resolution/
+      (_WITHOUT_ any additional imports for the instances of ~Case~):
+      1. ~Case~ has an /extra type parameter/ ~P~ referencing the /singleton type/
+         of the ~Poly~.
+
+      2. The /implicit scope/ for ~Case[P, A]~ includes
+         the /companion objects/ for ~Case~, ~P~, and ~A~.
+
+      3. We've assigned ~P~ to be ~myPoly.type~ and the /companion object/ for
+         ~myPoly.type~ is ~myPoly~ itself.
+
+         In other words, ~Case~'s defined _in the body of the_ ~Poly~ are
+         *always in scope* no matter where the _call site_ is.
+    
 *** 7.2.2 ~Poly~ syntax - 88
+    #+begin_src scala
+      import shapeless._
+
+      object myPoly extends Poly1 {
+        implicit val intCase: Case.Aux[Int, Double] =
+          at(num => num / 2.0)
+
+        implicit val stringCase: Case.Aux[String, Int] =
+          at(str => str.length)
+      }
+    #+end_src
+
+    - =TODO= =NOTE=
+    - =TODO= =NOTE=
+    - =TODO= =NOTE=
+
+    - *Idiosyncrasies of type inference*
+      =TODO= =NOTE=
 
 ** 7.3 Mapping and flatMapping using ~Poly~ - 91
 ** 7.4 Folding using ~Poly~ - 93
