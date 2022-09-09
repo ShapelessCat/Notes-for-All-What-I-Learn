@@ -1503,13 +1503,149 @@
      ~cleanFiles += file("coverage-report-" + name.value + ".txt")~
 
 ** TODO k. Scope delegation (~.value~ lookup)
-   - *Scope delegation rules*
-   - *Rule 1: Scope axis precedence*
-   - *Rule 2: The task axis delegation*
-   - *Rule 3: The configuration axis search path*
-   - *Rule 4: The subproject axis search path*
-   - *Inspect command lists the delegates*
-   - ~.value~ *lookup vs dynamic dispatch*
+   - Summary so far:
+     * A /scope/ is a /tuple/ of components in *three* axes:
+       + the _subproject_ axis
+       + the _configuration_ axis
+       + the _task_ axis
+
+     * A SPECIAL /scope/ component ~Zero~ for ANY of the /scope axes/.
+
+     * ~ThisBuild~ is a special scope component for the /subprojects axis/.
+
+     * ~Test~ extends ~Runtime~
+       ~Runtime~ extends ~Compile~
+
+     * The *default* /scope/ for keys in =built.sbt= is
+       ~${current subproject} / Zero / Zero~.
+
+     * A key can be scoped using ~/~ operator.
+
+   - Example:
+     #+begin_src scala
+       lazy val foo = settingKey[Int]("")
+       lazy val bar = settingKey[Int]("")
+
+       lazy val projX = (project in file("x")) .settings(
+         foo := {
+           (Test / bar).value + 1
+         },
+         Compile / bar := 1
+       )
+     #+end_src
+     Check Rule 3 for detailed explanation.
+
+   - Scope Delegation :: a well-defined fallback search path for sbt.
+     * This feature allows you to set a value once in a *more general* /scope/,
+       allowing multiple *more specific* /scopes/ to *inherit* the value.
+
+*** Scope delegation rules
+    Here are the rules for /scope delegation/:
+    - Rule 1:
+      /Scope axes/ have the following *precedence*:
+      * the /subproject axis/,
+      * the /configuration axis/,
+      * and then the /task axis/.
+
+    - Rule 2:
+      Given a /scope/, /delegate scopes/ are searched by
+      _SUBSTITUTING_ the /task axis/ in the following order:
+      1. the given /task scoping/,
+      2. and then ~Zero~, which is non-task scoped version of the /scope/.
+
+    - Rule 3:
+      Given a /scope/, /delegate scopes/ are searched by
+      _SUBSTITUTING_ the /configuration axis/ in the following order:
+      1. the given configuration,
+      2. its parents,
+      3. their parents and so on,
+      4. and then ~Zero~ (same as /unscoped configuration axis/).
+
+    - Rule 4:
+      Given a /scope/, /delegate scopes/ are searched by
+      _SUBSTITUTING_ the /subproject axis/ in the following order:
+      1. the given subproject,
+      2. ~ThisBuild~,
+      3. and then ~Zero~.
+
+    - Rule 5: =IMPORTANT=
+      A /delegated scoped key/ and its _dependent settings/tasks_ are
+      _evaluated *without* carrying the original context._
+
+*** DONE Rule 1: Scope axis precedence
+    CLOSED: [2022-09-09 Fri 21:36]
+    =from Jian=
+    This means when comparing two scopes, the order of them can be decided
+    like comparing two triples by default (metaphor: the relation between
+    ~Ordering[A]~, ~Ordering[B]~, ~Ordering[C]~, and ~Ordering[(A, B, C)]~),
+    from left to right.
+
+*** DONE Rule 2: The task axis delegation
+    CLOSED: [2022-09-09 Fri 21:53]
+    Example A: Given the following build definition:
+    #+begin_src scala
+      lazy val projA = (project in file("a"))
+        .settings(
+          name :=  {
+            "foo-" + (packageBin / scalaVersion).value
+          },
+          scalaVersion := "2.11.11"
+        )
+    #+end_src
+    The value of ~projA / name~ is ~"foo-2.11.11"~.
+
+    - The key in the ~settings(...)~ of ~projA~ is automatically scoped to
+      ~projA / Zero / Zero~ if no other scope info given. Therefore,
+      1. The complete form of ~packageBin / scalaVersion~ is
+         ~projA  / Zero / packageBin / scalaVersion~.
+
+      2. Since this particular scoped key ~projA  / Zero / packageBin / scalaVersion~
+         is undefined, by using Rule 2, sbt will substitute the /task axis/ to
+         ~Zero~ as ~projA / Zero / Zero~, and the key ~projA / Zero / Zero /
+         scalaVersion~, whoes value is ~"2.11.11"~, is selected.
+
+*** DONE Rule 3: The configuration axis search path
+    CLOSED: [2022-09-09 Fri 22:08]
+    #+begin_src scala
+      lazy val foo = settingKey[Int]("")
+      lazy val bar = settingKey[Int]("")
+
+      lazy val projX = (project in file("x")).settings(
+        foo := {
+          (Test / bar).value + 1
+        },
+        Compile / bar := 1
+      )
+    #+end_src
+    - The full scope of ~bar~ in ~settings~ is ~projX / Test / Zero~.
+
+    - Since ~Test~ extends ~Runtime~, and ~Runtime~ extends ~Compile~,
+      due to Rule 3 sbt will look for ~bar~ scoped (in order) in
+      1. ~projX / Test / Zero~
+      2. ~projX / Runtime / Zero~
+      3. ~projX / Compile / Zero~
+      Here only the last one is defined, and it is found.
+
+*** TODO Rule 4: The subproject axis search path
+    #+begin_src scala
+      ThisBuild / organization := "com.example"
+
+      lazy val projB = (project in file("b")) .settings(
+        name := "abc-" + organization.value,
+        organization := "org.tempuri"
+      )
+
+    #+end_src
+    The value of ~projB / name~ is ~"abc-org.tempuri"~
+
+**** TODO Scope axis precedennce, again
+     - Exercise C: Given the following build definition:
+     - Exercise D: Given the following build definition:
+
+*** TODO Inspect command lists the delegates
+*** TODO ~.value~ lookup vs dynamic dispatch
+    - Exercise E: Given the following build definition:
+    - Exercise F: Given the following build definition:
 
 ** DONE l. Library dependencies
    CLOSED: [2017-12-20 Wed 14:44]
@@ -1889,67 +2025,101 @@
      more length here/.
 
 ** DONE o. Organizing the build
-   CLOSED: [2017-12-21 Thu 05:20]
-   - *sbt is recursive*
-     + =TODO= =TODO= =TODO=
+   CLOSED: [2022-09-07 Wed 01:59]
+*** sbt is recursive
+    - The build files conceals how sbt really works.
+      The content of build files are Scala code, which, itself, has to be built.
+      * Q :: How to build them?
+      * A :: We need a another build (/meta-build/) for the project build.
 
-     + Any time files ending in =.scala= or =.sbt= are used, naming them
-       =build.sbt= and =Dependencies.scala= are _conventions_ ONLY.
-       This also means that multiple files are allowed.
+    - proper build :: your build for your project
 
-   - *Tracking dependencies in one place*
-     + =project/Dependencies.scala=
-       #+BEGIN_SRC scala
-         import sbt._
+    - meta-build :: the build in =project= that is for building your project build
 
-         object Dependencies {
-           // Versions
-           lazy val akkaVersion = "2.3.8"
+    - The =project= directory is the /meta-build/.
 
-           // Libraries
-           val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
-           val akkaCluster = "com.typesafe.akka" %% "akka-cluster" % akkaVersion
-           val specs2core = "org.specs2" %% "specs2-core" % "2.4.17"
+    - The =project='s inside the /meta-build/ can do anything any other =project= can do.
 
-           // Projects
-           val backendDeps =
-             Seq(akkaActor, specs2core % Test)
-         }
-       #+END_SRC
+    - Your /build definition/ is an /sbt project/.
 
-     + =build.sbt=
-       #+BEGIN_SRC scala
-         import Dependencies._
+    - If you like, you can tweak the /build definition/ of the /build definition/ project,
+      by creating a =project/project/= directory.
+      * Of course, most of the time you are not going to need this.
 
-         lazy val commonSettings = Seq(
-           version := "0.1.0",
-           scalaVersion := "2.12.4"
-         )
+    - A illustration:
+      =from Jian= Check the original document
+      =from Jian= The comment in it is weird!!! Any improvement???
 
-         lazy val backend = (project in file("backend"))
-           .settings(
-             commonSettings,
-             libraryDependencies ++= backendDeps
-           )
-       #+END_SRC
+    - Any time files ending in =.scala= or =.sbt= are used, naming them
+      =build.sbt= and =Dependencies.scala= are _conventions ONLY_.
+      * This also means that _multiple files_ are *allowed*.
 
-   - *When to use =.scala= files*
-     The recommended approach:
-     + define _MOST settings_ in a multi-project =build.sbt= file
+*** Tracking dependencies in one place
+    One way of using the fact that =.scala= files under =project= becomes part
+    of the /build definition/ is to
+    create =project/Dependencies.scala= to track /dependencies/ in one place.
 
-     + using =project/*.scala= files for
-       * _task implementations_
-       * share values, such as keys.
+    - Example:
+      #+NAME: project/Dependencies.scala
+      #+begin_src scala
+        import sbt._
 
-     + The use of =.scala= files also depends on how comfortable you or your team
-       are with Scala.
+        object Dependencies {
+          // Versions
+          lazy val akkaVersion = "2.6.19"
 
-   - *Defining auto plugins* =TODO=
-     For more advanced users,
-     another way of organizing your build is to define one-off /auto plugins/ in
-     =project/*.scala=. By defining /triggered plugins/ =TODO= =???=,
-     /auto plugins/ can be used as a convenient way to inject custom tasks and
-     commands across all /subprojects/.
+          // Libraries
+          val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
+          val akkaCluster = "com.typesafe.akka" %% "akka-cluster" % akkaVersion
+          val specs2core = "org.specs2" %% "specs2-core" % "4.16.0"
+
+          // Projects
+          val backendDeps =
+            Seq(akkaActor, specs2core % Test)
+        }
+      #+end_src
+
+      * Then use it in =build.sbt=
+        #+NAME: build.sbt
+        #+begin_src scala
+          import Dependencies._
+
+          ThisBuild / organization := "com.example"
+          ThisBuild / version      := "0.1.0-SNAPSHOT"
+          ThisBuild / scalaVersion := "2.12.16"
+
+          lazy val backend = (project in file("backend"))
+            .settings(
+              name := "backend",
+              libraryDependencies ++= backendDeps
+            )
+        #+end_src
+
+    - This technique is useful when you have a multi-project build that's getting
+      large, and you want to ensure that _subprojects have *consistent* dependencies_.
+
+*** When to use =.scala= files
+    - No limitation. The =.scala= files for build can contain any legal Scala code.
+
+    - The recommended approach:
+      * Define _MOST settings_ in a multi-project =build.sbt= file
+
+      * Use =project/*.scala= files for
+        + _/task/ implementations_
+        + share values, such as /keys/.
+
+      * The use of =.scala= files also
+        *depends on*
+        how comfortable you or your team are with Scala.
+
+*** Defining auto plugins - =TODO=
+    For more advanced users,
+    another way of organizing your build is to define one-off /auto plugins/ in
+    =project/*.scala=.
+
+    - =TODO= =Learn More=
+      By defining /triggered plugins/, /auto plugins/ can be used as a convenient
+      way to inject custom tasks and commands across all /subprojects/.
 
 ** TODO p. Getting Started summary =Important=
    - *sbt: The Core Concepts*
