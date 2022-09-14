@@ -1,8 +1,8 @@
 #+TITLE: Circe
 #+SUBTITLE: A JSON library for Scsala powered by Cats
+#+VERSION: 0.15.0-M1
 #+STARTUP: entitiespretty
 #+STARTUP: overview
-#+STARTUP: entitiespretty
 
 _circe_'s working title was _jfc_, which stood for “JSON for cats”.
 The name was changed for [[https://github.com/circe/circe/issues/11][a number of reasons]].
@@ -15,14 +15,14 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
   CLOSED: [2021-10-04 Mon 01:58]
   #+begin_src scala
     val circeVersion = "0.14.1"
-    
+
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core",
       "io.circe" %% "circe-generic",
       "io.circe" %% "circe-parser"
     ).map(_ % circeVersion)
   #+end_src
-  
+
   - *Know Issue*:
     In case of *large* or *deep-nested* /case classes/, there is a chance to get
     /stack overflow/ during compilation.
@@ -40,30 +40,30 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
           "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
         )
       #+end_src
-  
+
   - Example (paste this in REPL):
     #+begin_src scala
       import io.circe._
       import io.circe.generic.auto._
       import io.circe.parser._
       import io.circe.syntax._
-      
+
       sealed trait Foo
       final case class Bar(xs: Vector[String])        extends Foo
       final case class Qux(i: Int, d: Option[Double]) extends Foo
-      
+
       val foo: Foo = Qux(13, Some(14.0))
-      
+
       val json = foo.asJson.noSpaces
       println(json)
-      
+
       val decodedFoo = decode[Foo](json)
       println(decodedFoo)
     #+end_src
     - No boilerplate, no /runtime reflection/.
 
     - ~.noSpaces~: Pretty-print this JSON value to a string with no spaces.
-    
+
 * TODO Why?
   - _Argonaut_ is a great library.
     1. It's _by far_
@@ -75,7 +75,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
 
   - _circe_ is a fork of _Argonaut_
     with _a few important differences_. =???= =???= =???=
-    
+
 ** DONE Dependencies and modularity
    CLOSED: [2021-10-04 Mon 02:38]
    - *circe* depends on *cats* _INSTEAD of Scalaz_,
@@ -111,7 +111,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
     * Example:
       #+begin_src scala
         import io.circe._, io.circe.parser._
-        
+
         val rawJson: String = """
         {
           "foo": "bar",
@@ -119,7 +119,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
           "list of stuff": [ 4, 5, 6 ]
         }
         """
-        
+
         val parseResult = parse(rawJson)
         // parseResult: Either[ParsingFailure, Json] = Right(
         //   value = JObject(
@@ -136,7 +136,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
     ~io.circe.Error~ on the ~Left~ side:
     #+begin_src scala
       val badJson: String = "yolo"
-      
+
       parse(badJson)
       // res0: Either[ParsingFailure, Json] = Left(
       //   value = ParsingFailure(
@@ -155,15 +155,15 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
     * pattern matching
       OR
     * ~.getOrElse(Json.Null)~
-  
-** DONE Warnings and known issues  
+
+** DONE Warnings and known issues
    CLOSED: [2021-10-04 Mon 02:53]
    When using the _Scala.js_ version of *circe*, numerical values like ~Long~
    may *lose precision* when decoded.
 
    - For example,
      ~decode[Long]("767946224062369796")~ will return ~Right(767946224062369792L)~.
-     
+
      This is not a limitation of how Scala.js represents ~scala.Long~'s
      nor /circe's decoders/ for _numerical values_
      _BUT_ due to ~JSON.parse~ converting _numerical values_ to /JavaScript
@@ -172,7 +172,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
        consider
        1. representing _numerical values_ as _strings_ and
        2. convert them to their final value via the /JSON AST/.
-   
+
 * DONE Traversing and modifying JSON
   CLOSED: [2021-10-04 Mon 03:39]
   Working with JSON in *circe* usually involves using a /cursor/.
@@ -184,7 +184,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
   #+begin_src scala
     import cats.syntax.either._
     import io.circe._, io.circe.parser._
-    
+
     val json: String = """
       {
         "id": "c730433b-082c-4984-9d66-855c243266f0",
@@ -197,10 +197,10 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
         }
       }
     """
-    
+
     val doc: Json = parse(json).getOrElse(Json.Null)
   #+end_src
-  
+
 ** DONE Extracting data
    CLOSED: [2021-10-04 Mon 03:14]
    In order to *traverse* the document
@@ -208,7 +208,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
    #+begin_src scala
      val cursor: HCursor = doc.hcursor
    #+end_src
-   
+
    - We can then use various operations to
      *move* the focus of the /cursor/ around the document and
      *extract* data from it:
@@ -216,17 +216,17 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
        val baz: Decoder.Result[Double] =
          cursor.downField("values").downField("baz").as[Double]
        // baz: Decoder.Result[Double] = Right(value = 100.001)
-       
+
        // You can also use `get[A](key)` as shorthand for `downField(key).as[A]`
        val baz2: Decoder.Result[Double] =
          cursor.downField("values").get[Double]("baz")
        // baz2: Decoder.Result[Double] = Right(value = 100.001)
-       
+
        val secondQux: Decoder.Result[String] =
          cursor.downField("values").downField("qux").downArray.as[String]
        // secondQux: Decoder.Result[String] = Right(value = "a")
      #+end_src
-   
+
 ** DONE Transforming data
    CLOSED: [2021-10-04 Mon 03:32]
    We can also use a cursor to modify JSON.
@@ -258,7 +258,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
      #+end_src
      * Note that ~Json~ is *immutable*, so the original document is left
        *UNCHANGED*.
-   
+
 ** DONE Cursors
    CLOSED: [2021-10-04 Mon 03:38]
    *circe* has _THREE_ slightly different /cursor implementations/:
@@ -283,7 +283,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
    CLOSED: [2021-10-04 Mon 03:39]
    /Optics/ are an *ALTERNATIVE way* to _traverse_ JSON documents.
    See the _Optics_ page (later section) for more details.
-   
+
 * TODO Encoding and decoding
   *circe* uses ~Encoder~ and ~Decoder~ /type classes/ for *encoding* and
   *decoding*.
@@ -303,7 +303,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
   - *Encoding* data to ~Json~ can be done using the ~.asJson~ syntax:
     #+begin_src scala
       import io.circe.syntax._
-      
+
       val intsJson = List(1, 2, 3).asJson
       // intsJson: io.circe.Json = JArray(
       //   value = Vector(
@@ -324,11 +324,11 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
     directly *decode* a JSON ~String~:
     #+begin_src scala
       import io.circe.parser.decode
-      
+
       decode[List[Int]]("[1, 2, 3]")
       // res1: Either[io.circe.Error, List[Int]] = Right(value = List(1, 2, 3))
     #+end_src
-    
+
 ** TODO Semi-automatic Derivation
 *** TODO ~@JsonCodec~
 *** TODO ~forProductN~ helper methods
@@ -341,10 +341,10 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
    instances/:
    #+begin_src scala
      import io.circe.generic.auto._, io.circe.syntax._
-     
+
      final case class Person(name: String)
      final case class Greeting(salutation: String, person: Person, exclamationMarks: Int)
-     
+
      Greeting("Hey", Person("Chris"), 3).asJson
      // res0: io.circe.Json = JObject(
      //   value = object[
@@ -354,12 +354,12 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
      //   ]
      // )
    #+end_src
-   
+
 ** DONE Custom encoders/decoders
    CLOSED: [2021-10-04 Mon 11:45]
    If you want to write your own codec instead of using automatic or
    semi-automatic derivation, you can do so in a couple of ways.
-   
+
 **** DONE Older scala versions
      CLOSED: [2021-10-04 Mon 11:17]
      If you are using /custom codecs/ and _an *OLDER versions* of scala (below
@@ -373,7 +373,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
      #+end_src
      then you need to use the following import: ~import cats.syntax.either._~ to
      fix this.
-     
+
 *** DONE Custom key types
     CLOSED: [2021-10-04 Mon 11:45]
     If you need to *encode/decode* ~Map[K, V]~ where ~K~ is _NOT_ ~String~ (or
@@ -384,9 +384,9 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       #+begin_src scala
         import io.circe._
         import io.circe.syntax._
-        
+
         case class Foo(value: String)
-        
+
         implicit val fooKeyEncoder: KeyEncoder[Foo] = new KeyEncoder[Foo] {
           override def apply(foo: Foo): String = foo.value
         }
@@ -399,21 +399,21 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
           //   Foo(value = "hello") -> 123,
           //   Foo(value = "world") -> 456
           // )
-        
+
         val json = map.asJson
           // json: Json = JObject(value = object[hello -> 123,world -> 456])
-        
+
         implicit val fooKeyDecoder: KeyDecoder[Foo] = new KeyDecoder[Foo] {
           override def apply(key: String): Option[Foo] = Some(Foo(key))
         }
           // fooKeyDecoder: KeyDecoder[Foo] = repl.MdocSession$App$$anon$4@79a3d20b
-        
+
         json.as[Map[Foo, Int]]
           // res0: Decoder.Result[Map[Foo, Int]] = Right(
           //   value = Map(Foo(value = "hello") -> 123, Foo(value = "world") -> 456)
           // )
       #+end_src
-    
+
 *** DONE Custom key mappings via annotations
     CLOSED: [2021-10-04 Mon 11:45]
     It's often necessary to work with keys in your /JSON objects/ that are
@@ -429,7 +429,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       #+begin_src scala
         import io.circe.generic.extras._
         import io.circe.syntax._
-        
+
         implicit val config: Configuration = Configuration.default.withSnakeCaseMemberNames
         // config: Configuration = Configuration(
         //   transformMemberNames = io.circe.generic.extras.Configuration$$$Lambda$9550/488838311@6f34928a,
@@ -438,9 +438,9 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
         //   discriminator = None,
         //   strictDecoding = false
         // )
-        
+
         @ConfiguredJsonCodec case class User(firstName: String, lastName: String)
-        
+
         User("Foo", "McBar").asJson
         // res1: Json = JObject(
         //   value = object[first_name -> "Foo",last_name -> "McBar"]
@@ -451,7 +451,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       These can be provided as a function:
       #+begin_src scala
         import io.circe.generic.extras._, io.circe.syntax._
-        
+
         implicit val config: Configuration = Configuration.default.copy(
           transformMemberNames = {
             case "i"   => "my-int"
@@ -465,9 +465,9 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
         //   discriminator = None,
         //   strictDecoding = false
         // )
-        
+
         @ConfiguredJsonCodec case class Bar(i: Int, s: String)
-        
+
         Bar(13, "Qux").asJson
         // res3: io.circe.Json = JObject(value = object[my-int -> 13,s -> "Qux"])
       #+end_src
@@ -476,7 +476,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       via an annotation:
       #+begin_src scala
         import io.circe.generic.extras._, io.circe.syntax._
-        
+
         implicit val config: Configuration = Configuration.default
         // config: Configuration = Configuration(
         //   transformMemberNames = io.circe.generic.extras.Configuration$$$Lambda$9548/1537801843@498c48f6,
@@ -485,9 +485,9 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
         //   discriminator = None,
         //   strictDecoding = false
         // )
-        
+
         @ConfiguredJsonCodec case class Bar(@JsonKey("my-int") i: Int, s: String)
-        
+
         Bar(13, "Qux").asJson
         // res5: io.circe.Json = JObject(value = object[my-int -> 13,s -> "Qux"])
       #+end_src
@@ -497,18 +497,18 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       isn't really that much of a burden:
       #+begin_src scala
         import io.circe.Encoder, io.circe.syntax._
-        
+
         case class User(firstName: String, lastName: String)
         case class Bar(i: Int, s: String)
-        
+
         implicit val encodeUser: Encoder[User] =
           Encoder.forProduct2("first_name", "last_name")(u => (u.firstName, u.lastName))
         // encodeUser: Encoder[User] = io.circe.ProductEncoders$$anon$2@4ba7b8fd
-        
+
         implicit val encodeBar: Encoder[Bar] =
           Encoder.forProduct2("my-int", "s")(b => (b.i, b.s))
         // encodeBar: Encoder[Bar] = io.circe.ProductEncoders$$anon$2@5913c33a
-        
+
         User("Foo", "McBar").asJson
         // res7: io.circe.Json = JObject(
         //   value = object[first_name -> "Foo",last_name -> "McBar"]
@@ -519,7 +519,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
       While this version does involve a bit of boilerplate, it only requires
       ~circe-core~, and may have _slightly BETTER runtime performance_ in some
       cases.
-    
+
 ** TODO ADTs encoding and decoding
    The _MOST STRAIGHTFORWARD way_ to *encode / decode* ADTs is by using /generic
    derivation/ for the /case classes/ but *explicitly defined instances* for the
@@ -528,7 +528,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
    - Consider the following ADT:
      #+begin_src scala
        sealed trait Event
-       
+
        case class Foo(i: Int)               extends Event
        case class Bar(s: String)            extends Event
        case class Baz(c: Char)              extends Event
@@ -540,7 +540,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
        import cats.syntax.functor._
        import io.circe.{ Decoder, Encoder }, io.circe.generic.auto._
        import io.circe.syntax._
-       
+
        object GenericDerivation {
          implicit val encodeEvent: Encoder[Event] = Encoder.instance {
            case foo @ Foo(_) => foo.asJson
@@ -548,7 +548,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
            case baz @ Baz(_) => baz.asJson
            case qux @ Qux(_) => qux.asJson
          }
-       
+
          implicit val decodeEvent: Decoder[Event] =
            List[Decoder[Event]](
              Decoder[Foo].widen,
@@ -581,10 +581,10 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
      #+begin_src scala
        import GenericDerivation._
        import io.circe.parser.decode
-       
+
        decode[Event]("""{ "i": 1000 }""")
        // res0: Either[io.circe.Error, Event] = Right(value = Foo(i = 1000))
-       
+
        (Foo(100): Event).asJson.noSpaces
        // res1: String = "{\"i\":100}"
      #+end_src
@@ -595,7 +595,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
    - Having to
      ENUMERATE the /constructors/ like this is obviously *NOT ideal*, though,
      even if we get the /case class instances/ for free.
-   
+
 *** TODO A more generic solution
 *** TODO The future
 *** TODO Notes
@@ -607,7 +607,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
     we don't want an _extra field_ indicating the /constructor/, giving us the
     same behavior as our ~circe-shapes~ instances in the previous section, but
     haven't been implemented so far.
-    
+
 ** TODO Warnings and known issues
 *** TODO ~knownDirectSubclasses~ error
 
@@ -617,7 +617,7 @@ The name was changed for [[https://github.com/circe/circe/issues/11][a number of
 ** TODO Recursively modifying JSON
 ** TODO Dynamic
 *** TODO Warning
-    
+
 * TODO Performance
 * TODO Guide for contributors
 ** TODO Pick or report and issue
