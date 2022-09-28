@@ -4,6 +4,10 @@
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
+=TODO=
+Ready the document in https://www.scala-lang.org/api/current/scala/PartialFunction.html
+to learn more about ~PartialFunction~.
+
 * 1. Brief Introduction to The Scala Collection Framework
 * 2. ~Traversable~
 * 3. ~Iterable~
@@ -29,6 +33,186 @@
 
 * 5. ~Set~
 * 6. ~Map~
+** DONE Initialization
+   CLOSED: [2022-09-15 Thu 22:27]
+   - ~Predef.ArrowAssoc~, a /implicit class/
+
+   - ~Map1~, ~Map2~, ~Map3~, and ~Map4~
+     * Create a small map:
+       #+begin_src scala
+         import scala.collection.immutable.Map.Map1
+
+         val map1 = new Map1("key", "value")
+       #+end_src
+
+** DONE Key-based Value Lookup
+   CLOSED: [2022-09-15 Thu 22:27]
+   - ~get~, ~getOrElse~, and ~apply~
+     * ~apply~ is like ~getOrElse~, but the default value is provided in a different
+       way: it will call the ~default~ method to handle the missing key cases.
+       + By default, the ~default~ method throws a ~NoSuchElementException~.
+
+   - You can use ~withDefault~ or ~withDefaultValue~ to change the behavior for
+     handling missing keys.
+     * *CAUTION*:
+       Change the missing keys handling behavior *WON'T* affect the original logic
+       in ~get~, ~contains~, ~iterator~, ~keys~.
+
+   - ~mutable.Map~ has a useful method: ~getOrElseUpdate(key: A, op: => B): B~
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+
+** DONE By Key Member Check
+   CLOSED: [2022-09-15 Thu 22:27]
+   ~contains~ and ~isDefinedAt~ (from ~PartialFunction~).
+   They are equivalent.
+   =from Jian= The ~contains~ is preferred.
+
+** DONE Insert Key-Value Pairs
+   CLOSED: [2022-09-15 Thu 22:27]
+   - Methods:
+     * ~+~
+     * ~++~
+     * ~++:~  (this method is deprecated for ~Map~ and ~Set~. Also its usage is not mentioned below, though it is listed here)
+     * ~+=~
+     * ~++=~
+     * ~put~
+
+   - Example:
+     * For ~immutable.Map~:
+       #+begin_src scala
+         val m1 = Map.empty[String, Int]
+
+         // +
+         m1 + ("a" -> 1, "b" -> 2) // Map("a" -> 1, "b" -> 2)
+
+         // ++
+         m1 ++ Seq("g" -> 7, "h" -> 8) // Map("a" -> 1, "b" -> 2, "c" -> 3, "g" -> 7, "h" -> 8)
+       #+end_src
+
+     * For ~mutable.Map~:
+       #+begin_src scala
+         val m2 = mutable.Map.empty[String, Int]
+
+         // +=
+         m2 += ("a" -> 1)           // Now `m` is `mutable.Map("a" -> 1)`
+         m2 += ("b" -> 2, "c" -> 3) // Now `m` is `mutable.Map("a" -> 1, "b" -> 2, "c" -> 3)`
+
+         // ++=
+         m2 ++= Seq("d" -> 4, "e" -> 5)
+         // Now `m` is `mutable.Map("a" -> 1, "b" -> 2, "c" -> 3, "d" -> 4, "e" -> 5)`
+
+         // put
+         m2.put("f", 6)
+         // Now `m` is `mutable.Map("a" -> 1, "b" -> 2, "c" -> 3, "d" -> 4, "e" -> 5, "f" -> 6)`
+       #+end_src
+
+   - *CAUTION*: A key or key-value pair can't be ~null~:
+     #+begin_src scala
+       val m = Map.empty[String, Int]
+
+       m + null        // java.lang.NullPointerException
+       m + (null -> 7) // Compliation Error. value -> is not a member of Null
+     #+end_src
+     * However, the value can be ~null~.
+       ~m + ("z" -> null)"~ is LEGAL.
+
+** DONE Delete Keys
+   CLOSED: [2022-09-15 Thu 22:27]
+   - Methods for both ~immutable.Map~ and ~mutable.Map~:
+     * ~-~
+     * ~--~
+
+   - Methods for both ~mutable.Map~:
+     * ~-=~
+     * ~--=~
+     * ~remove~: Return a value of type ~Option[V]~
+     * ~clear~: Empty the receiver
+
+   - Use ~-~ to remove a key with value ~null~ is legal but meaningless!
+     Reminder: ~null~ is not a legal key for ~Map~, and no ~Map~ can include it.
+
+** Key-based Value Update
+** Get All Keys
+** Get All Values
+** Iterate A Map
+** How to Convert A Mutable Map to A Immutable Map
+** DONE New Transformation Methods
+   CLOSED: [2022-09-15 Thu 23:09]
+   The transformation methods inherited from ~Traversable~ and ~Iterable~
+   operate the entries in them. For ~Map~, this means operate key-value pairs.
+   ~Map~ also provide methods for operating keys or values.
+
+   - ~filterKeys~
+
+   - ~mapValues~
+
+   - =from Jian=
+     Avoid using ~filterKeys~ and ~mapValues~ until they are replaced with a
+     eager implementation.
+
+   - ~transform~
+     * =from Jian=
+       For Scala 2.13, the ~transform~ method in ~mutable.Map~ is deprecated, and
+       you should use ~mapValuesInPlace~ instead
+
+     * Before Scala 2.13,
+       there is *one significant DIFFERENCE* between
+       * the ~transform~ on a ~immutable.Map~:
+         ~transform~ can accept any funcntion that input parameter type is
+         compatible with the receiver. *NO limitation for the return type of
+         this function*.
+
+       * the ~transform~ on a ~mutable.Map~:
+         This is a in-place transformation, and the return type map be compatible
+         with the input entry type.
+
+** DONE Partial Function - =re-do=
+   CLOSED: [2022-09-15 Thu 23:41]
+   The ~Seq~ use indices as input domain, while the ~Map~ use keys.
+
+   - Methods:
+     * ~andThen~
+     * ~applyOrElse~
+     * ~lift~
+     * ~orElse~
+     * ~runWith~
+
+   - Example:
+     #+begin_src scala
+       val m = Map("a" -> 1, "b" -> 2, "c" -> 3)
+
+       m.andThen(_ * 100)("b")                // 200
+       m.applyOrElse("z", (x: String) => 100) // 100
+
+       val pf: PartialFunction[String, Int] = {
+         case x => x.charAt(0) - 'a'
+       }
+       m.orElse(pf)("z")          // 25
+       m.runWith(println(_))("z") // false
+     #+end_src
+
+** DONE Clone
+   CLOSED: [2022-09-15 Thu 22:37]
+   ~mutable.Map~ has a ~clone~ method.
+   =from Jian= As usual, this is a shallow copy.
+
+** DONE Revert The Key-Value Relation of A Map
+   CLOSED: [2022-09-15 Thu 23:43]
+** DONE Convert A ~Set~ to A ~Map~
+   CLOSED: [2022-09-15 Thu 23:48]
+   =from Jian= Useless
+
+** ~IntMap~, ~LongMap~
+** ~HashMap~
+** ~SortedMap~ and ~immutable.TreeMap~
+** ~immutable.ListMap~ and ~mutable.ListMap~
+** ~mutable.LinkedHashMap~
+** ~mutable.MultiMap~
+** ~mutable.OpenHashMap~
+** ~mutable.WeakHashMap~
+
 * 7. ~Array~
 * 8. ~String~ and ~StringBuilder~
 * 9. ~Buffer~
