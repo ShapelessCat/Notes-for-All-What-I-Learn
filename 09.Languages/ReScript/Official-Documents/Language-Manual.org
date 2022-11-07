@@ -12,36 +12,1155 @@
 
 ** Try
 
-* Language Features
-** Overview
-** Let Binding
-** Type
-** Primitive Types
-** Tuple
-** Record
-** Object
-** Variant
-** Polymorphic Variant
-** Null, Undefined and Option
-** Array & List
-** Function
-** If-Else & Loops
-** Pipe
-** Pattern Matching / Destructuring
-** Mutation
-** JSX
-** Exception
-** Lazy Value
-** Async & Promise
-** Module
-** Import & Export
-** Attribute (Decorator)
-** Unboxed
-** Reserved Keyword
-** Advanced Features Features
-*** Extensible Variant
+* Language Features - =Reading=
+** DONE Overview
+   CLOSED: [2022-11-05 Sat 19:34]
+*** Comparison to JS
+*** Common Features' JS Output
 
-* JavaScript Interop
+** DONE Let Binding
+   CLOSED: [2022-11-05 Sat 19:43]
+   - let binding :: "variable declaration" in other languages.
+
+*** Block Scope
+*** Binding Are Immutable
+*** Binding Shadowing
+*** Private let bindings =???= =Best Practices???=
+    - Example: ~%%private(let a = 3)~
+
+    - ~%%private~ also applies to /file level modules/,
+      so in some cases, users do _NOT_ need to provide a separate interface file
+      just to hide some particular values.
+      =TODO= =???=
+
+    - Note:
+      interface files are still recommended as a general best practice
+      SINCE
+      * they give you better separate compilation units and
+      * also they're better for documentation.
+      =TODO= =???=
+
+
+    - Still, ~%%private~ is useful in the following scenarios:
+      * *Code generators*.
+        Some code generators want to hide some values but it is sometimes very
+        hard or time consuming for code generators to synthesize the types for
+        public fields.
+
+      * *Quick prototyping*.
+        During prototyping, we still want to hide some values, but the interface
+        file is not stable yet, ~%%private~ provide you such convenience.
+
+** DONE Type
+   CLOSED: [2022-11-05 Sat 20:01]
+*** Inference
+*** Type Annotation
+    #+begin_src rescript
+      let myInt = 5
+      let myInt: int = 5
+      let myInt = (5: int) + (4: int)
+      let add = (x: int, y: int) : int => x + y
+      let drawCircle = (~radius as r: int): circleType => /* code here */
+    #+end_src
+
+*** Type Alias
+*** Type Parameter (Aka Generic)
+    - Types can accept parameters, akin to generics in other languages.
+      * The parameters' *names need to start with ~'~.*
+
+    - Example:
+      #+begin_src rescript
+        type coordinates<'a> = ('a, 'a, 'a)
+
+        let a: coordinates<int> = (10, 20, 20)
+        let b: coordinates<float> = (10.5, 20.5, 20.5)
+      #+end_src
+      Since the types can be inferred, this example is for illustration only.
+
+    - Example:
+      #+begin_src rescript
+        type result<'a, 'b> =
+          | Ok('a)
+          | Error('b)
+
+        type myPayload = {data: string}
+
+        type myPayloadResults<'errorType> = array<result<myPayload, 'errorType>>
+
+        let payloadResults: myPayloadResults<string> = [
+          Ok({data: "hi}),
+          Ok({data: "bye}),
+          Error("Something wrong happened!")
+        ]
+      #+end_src
+
+*** Recursive Types
+    #+begin_src rescript
+      type rec person = {
+        name: string,
+        friends: array<person>
+      }
+    #+end_src
+
+*** Mutally Recursive Types
+    #+begin_src rescript
+      type rec
+           student = {taughtBy: teacher}
+           and
+           teacher = {students: array<student>}
+    #+end_src
+
+*** Type Escape Hatch =IMPORTANT=
+    We expose a single escape hatch for you to *"lie" to the type system*:
+
+    - Example:
+      #+begin_src rescript
+        external convertToFloat : int => float = "%identity"
+        let age = 10
+        let gpa = 2.1 +. convertToFloat(age)
+      #+end_src
+
+    - =IMPORTANT= =BEST PRACTICE=
+      Do not abuse this feature.
+
+      Use it tastefully when you're _working with_ *existing, overly dynamic JS
+      code*, for example.
+
+    - Note: =TODO= =???=
+      this particular ~external~ is the only one that isn't preceded by a ~@~ attribute.
+
+** DONE Primitive Types
+   CLOSED: [2022-11-06 Sun 17:37]
+   ReScript comes with the familiar /primitive types/ like ~string~, ~int~,
+   ~float~, etc.
+
+*** DONE String
+    CLOSED: [2022-11-06 Sun 16:58]
+**** String Interpolation
+     - There's a special syntax for string that allows
+       * multiline string just like before
+       * no special character escaping
+       * Interpolation
+       * Proper unicode handling
+
+     - Example:
+       #+begin_src
+         let name = "Joe"
+
+         let greeting = `Hello
+         World
+         👋
+         ${name}
+         `
+       #+end_src
+       * Just _LIKE_ /JavaScript's backtick string interpolation/,
+         *EXCEPT* _without_ needing to escape special characters.
+
+     - If you hope a non-string interpolated value can be _converted to ~string~ *IMPLICITLY*,_
+       use prepend ~j~ to the interpolation string:
+       #+begin_src
+         let age = 10
+         let message = j`Today I am $age years old.`
+       #+end_src
+
+**** Usage
+**** Tips & Tricks
+
+*** DONE Char
+    CLOSED: [2022-11-06 Sun 17:01]
+    - *Note*:
+      Char *doesn't support* /Unicode/ or /UTF-8/ and is therefore *NOT recommended*.
+
+    - String to Char: ~String.get("a", 0)~
+
+    - Char to String: ~String.make(1, 'a')~
+
+*** DONE Regular Expression
+    CLOSED: [2022-11-06 Sun 17:15]
+    /ReScript regular expressions/ compile cleanly to their _JavaScript COUNTERPART_:
+
+    - Example:
+      #+begin_src
+        let r = %re("/b/g")
+      #+end_src
+
+    - The type is ~Js.Re.t~.
+
+    - You can find helpers you have seen in JS from the /module/ ~Js.Re~.
+
+*** DONE Boolean
+    CLOSED: [2022-11-06 Sun 17:27]
+    - Type: ~bool~; variants: ~true~ or ~false~.
+
+    - Common operations:
+      * ~&&~
+
+      * ~||~
+
+      * ~!~
+
+      * ~<=~, ~>=~, ~<~, ~>~
+
+      * ~==~:
+        _structural EQUAL_, compares data structures deeply: ~(1, 2) == (1, 2)~
+        is ~true~. *Convenient, but use with caution.*
+
+      * ~===~:
+        _referential EQUAL_, compares shalloly: ~(1, 2) == (1, 2)~ is ~false~.
+        ~let myTuple = (1, 2); myTuple === myTuple~ is ~true~.
+
+      * ~!=~:
+        _structural UNEQUAL_
+
+      * ~!==~
+      * _referential UNEQUAL_
+
+
+    - ReScript's ~true~ / ~false~ compiles into a JavaScript ~true~ / ~false~.
+
+*** DONE Integers - =IMPORTANT= =CAUTION=
+    CLOSED: [2022-11-06 Sun 17:37]
+    *32-bits, truncated when necessary.*
+
+    - See ~Js.Int~ for helper functions.
+
+    - *CAUTION*:
+      Since /ReScript integers/ have a *much SMALLER range* than /JavaScript
+      numbers/, data might get lost when dealing with large numbers.
+
+      * It's much safer to bind the numbers as ~float~.
+
+      * Be extra mindful of this
+        WHEN _binding to /JavaScript Dates/ and their /epoch time/._
+        =TODO= =???=
+
+    - Properly insert underscores in the middle of /numeric literals/ can improve
+      the readability.
+
+*** DONE Floats
+    CLOSED: [2022-11-06 Sun 17:32]
+    - =from Jian= NOT like most of other languages.
+      /Float/ requires other operators: +., -., *., /., etc.
+      * Like 0.5 +. 0.6. See Js.Float for helper functions.
+
+    - As with /integers/, you may use _underscores_ within /float literals/ to improve
+      readability.
+
+*** DONE Unit
+    CLOSED: [2022-11-06 Sun 17:28]
+    - The ~unit~ /type/ has a _SINGLE value_, ~()~.
+      It compiles to JavaScript's ~undefined~.
+
+    - It's a /dummy type/ used as a _placeholder_ in various places.
+      =TODO= =???=
+
+** DONE Tuple
+   CLOSED: [2022-11-06 Sun 17:44]
+   - JavaScript doesn't have /tuples/.
+
+   - /Tuples/ are
+     * immutable
+     * ordered
+     * fix-sized at creation time
+     * heterogeneous
+
+   - The form of tuple can also be used in type annottions:
+     #+begin_src
+       let ageAndName: (int, string) = (24, "Lil' ReScript")
+     #+end_src
+
+   - *Note*:
+     there's NO tuple of size 1. You'd just use the value itself.
+
+*** Usage
+    - Use /pattern matching/ to access a specific element in a /tuple/.
+      #+begin_src
+        let (_, y, _) = my3dCoordinates
+      #+end_src
+
+*** Tips & Tricks
+    - _Try to keep the usage of /tuple/ *LOCAL*._
+
+    - For data structures that are _long-living_ and _passed around often_,
+      prefer a /record/, which has /named fields/.
+
+** DONE Record
+   CLOSED: [2022-11-07 Mon 00:02]
+   - /Records/ are like /JavaScript objects/ BUT:
+     * are immutable by default
+     * have fixed fields (not extensible)
+
+*** Type Declaration
+    A record needs a mandatory type declaration:
+    #+begin_src
+      type person = {
+        age: int,
+        name: string,
+      }
+    #+end_src
+
+*** Creation
+    - Simple example:
+      #+begin_src
+        let me = {
+          age: 5,
+          name: "Big ReScript"
+        }
+      #+end_src
+
+    - Example:
+      if the /type/ instead resides in another _file_ or /module/,
+      #+begin_src
+        // School.res
+        type person = {age: int, name: string}
+      #+end_src
+
+      #+begin_src
+        // Example.res
+
+        let me: School.person = {age: 20, name: "Big ReScript"}
+        /* or */
+        let me2 = {School.age: 20, name: "Big ReScript"}
+      #+end_src
+      The first one, the one with _explicit type annotation_, is the preferred one.
+
+*** Access
+    Use the dot notation: ~let name = me.name~
+
+*** Immutable Update
+    Create new records from old records with the ~...~ /spread operator/:
+    #+begin_src
+      let meNextYear = {...me, age: me.age + 1}
+    #+end_src
+
+*** Mutable Update
+    /Record fields/ can optionally be *mutable*, and /mutable fields/ can be
+    efficiently updated in-place with ~=~:
+
+    #+begin_src
+      type person = {
+        name: string,
+        mutable age: int,
+      }
+
+      let baby = {name: "Baby ReScript", age: 5}
+      baby.age = baby.age + 1 // `baby.age` is now 6.
+    #+end_src
+
+*** JavaScript Output
+    /ReScript records/ compile to straightforward /JavaScript objects/.
+
+*** Optional Record Fields
+    /Optional record fields/ is introduced in v10, suffix the field name with ~?~:
+    #+begin_src
+      type person = {
+        age: int,
+        name?: string
+      }
+    #+end_src
+
+**** Creation
+     Use the ~person~ definition
+     #+begin_src
+       let me = {
+         age: 5,
+         name: "Big ReScript"
+       }
+
+       let friend = {
+         age: 7
+       }
+     #+end_src
+
+**** Immutable Update =FIXME= =level=
+     Use the ~person~ definition
+     #+begin_src
+       let me = {
+         age: 123,
+         name: "Hello"
+       }
+
+       let withoutName = {
+         ...me,
+         name: "New Name"
+       }
+     #+end_src
+
+     - If you want to _set_ the /field/ to an /optional value/,
+       you *prefix* that value with ~?~:
+       #+begin_src
+         let me = {
+           age: 123,
+           name: "Hello"
+         }
+
+         let maybeName = Some("My Name")
+
+         let withoutName = {
+           ...me,
+           name: ?maybeName
+         }
+       #+end_src
+
+     - Unset an /optional field's value/ via ~?None~.
+
+***** Pattern Matching on Optional Fields
+      - When matching on the value directly, it's an option. Example:
+        #+begin_src
+          type person = {
+            age: int,
+            name?: string,
+          }
+
+          let me = {
+            age: 123,
+            name: "Hello",
+          }
+
+          let isRescript = switch me.name {
+          | Some("ReScript") => true
+          | Some(_) | None   => false
+          }
+        #+end_src
+
+      - When matching on the field as part of the general record structure,
+        it's treated as the underlying, non-optional value:
+        #+begin_src
+          let me = {
+            age: 123,
+            name: "Hello",
+          }
+
+          let isRescript = switch me {
+          | {name: "ReScript"} => true
+          | _                  => false
+          }
+        #+end_src
+
+      - Check whether the field was set or not:
+        #+begin_src
+          let me = {
+            age: 123,
+            name: "Hello",
+          }
+
+          let nameWasSet = switch me {
+          | {name: ?None}    => false
+          | {name: ?Some(_)} => true
+          }
+        #+end_src
+
+*** Tips & Tricks
+**** Record Types Are Found By Field Name
+     =from Jian= /Scala-like structure type/ is not supported!
+
+     - A function will infer its parameter type, and the *closet* /record type/
+       will be choosed:
+       #+begin_src
+         type person = {age: int, name: string}
+         type monster = {age: int, hasTentacles: bool}
+
+         let getAge = (entity) => entity.age
+       #+end_src
+       * ~entity~ in ~getAg~ is inferred as ~monster~, and ~getAge~ can't be applied
+         on a ~person~ value -- this is a type error.
+
+     - If you need a /Scala-like structure type/ capability, use /ReScript objects/,
+       described [[https://rescript-lang.org/docs/manual/latest/object][here]].
+       =TODO= =???=
+
+**** Optional Fields in Records Can Be useful for Bindings - =REDO=
+
+*** Design Decisions
+    =RE-READ= =Find more discussion=
+    =TODO= =???=
+
+** TODO Object
+*** Type Declaration
+*** Creation
+*** Access
+*** Update
+*** Combine Types
+*** Tips & Tricks
+
+** DONE Variant
+   CLOSED: [2022-11-07 Mon 13:53]
+   - Example:
+     #+begin_src
+       type myResponse =
+         | Yes
+         | No
+         | PrettyMuch
+
+       let areYouCrushingIt = Yes  // `areYouCrushingIt` is a value of type `myResponse`.
+     #+end_src
+     * Here ~myResponse~ is a /variant type/ with the cases ~Yes~, ~No~, and ~PrettyMuch~,
+       which are called *"variant constructors"* (or *"variant tag"*).
+
+   - *Note*:
+     a /variant's constructor/ need to be capitalized.
+     =FIXME= =remove =a=
+
+*** Variant Needs an Explicit Definition
+*** Constructor Arguments
+    =FIXME=
+    A /variant constructor/ can hold extra data separated by comma.
+    #+begin_src
+      type account =
+        | None
+        | Instagram(string)
+        | Facebook(string, int)
+    #+end_src
+
+**** Labeled Variant Payloads (Inline Record)
+     If a /variant/ payload has MULTIPLE fields,
+     you can use a _record-like syntax_ to *label* them for better readability:
+     #+begin_src
+       type user =
+         | Numbr(int)
+         | Id({name: string, passowrd: string})
+
+       let me = Id({name: "Joe", password: "123"})
+     #+end_src
+
+     - This is technically called an /"inline record"/, and
+       *ONLY allowed* within a /variant constructor/.
+
+     - This form is also allowed:
+       #+begin_src
+         type u = {name: string, password: string}
+         type user =
+           | Number(int)
+           | Id(u)
+
+         let me = Id({name: "Joe", password: "123"})
+       #+end_src
+       The output is _slightly uglier_ and *less performant* than the former.
+
+**** Pattern Matching On Variant =TODO= =later=
+
+*** JavaScript Output - =RE-READ=
+    - A /variant value/ compiles to *3 possible JavaScript outputs* _depending on
+      its /type declaration/:_
+      * If the variant value is a constructor with *no payload*,
+        it compiles to a number.
+
+      * If it's a constructor *with a payload*,
+        it compiles to an /object/ with the field *TAG* and the
+        field *_0* for the first payload, *_1* for the second payload, etc.
+
+      * An *EXCEPTION* to the above is a variant whose /type declaration/ contains
+        only a single constructor with payload. In that case, the constructor
+        compiles to an /object/ *without* the *TAG* field.
+
+      * /Labeled variant payloads/ (the /inline record/ trick earlier) compile to an
+        object with the *label names* _instead of_ _0, _1, etc. The /object/
+        _might or might NOT_ have the *TAG* field as per previous rule.
+
+    - Examples: =TODO=
+
+*** Tips & Tricks
+**** Variants Must Have Constructors
+     ~type myType = int | string~ is *illegal*.
+
+     - You'd have to give each branch a /constructor/:
+       ~type myType = Int(int) | String(string)~
+
+     - The former looks nice, but causes lots of trouble down the line.
+       =TODO= =???=
+
+**** Interop with JavaScript =TODO=
+**** Variant Types Are Found By Field Name =TODO=
+     Please refer to this /record/ section. /Variants/ are the same:
+     a function can't accept an arbitrary constructor _shared by two DIFFERENT
+     /variants/._
+
+     =TODO=
+     Again, such feature exists; it's called a /polymorphic variant/.
+     We'll talk about this in the future =).
+
+*** Design Decisions
+
+** TODO Polymorphic Variant - =Reading=
+*** Creation
+*** Type Declaration
+*** Constructor Arguments
+**** Combine Types and Pattern Match
+
+*** Structural Sharing
+*** JavaScript Output
+**** Bind to Functions
+**** Bind to String Enums
+
+*** Extra Constraints on Types
+**** Closed ~[~
+**** Lower Bound ~[>~
+**** Upper Bound ~[<~
+
+*** Coercion
+*** Tips & Tricks
+**** Variant vs Polymorphic Variant
+
+** TODO Null, Undefined and Option
+*** Example
+*** Interoperate with JavaScript ~undefined~ and ~null~
+**** Caveat 1
+**** Caveat 2
+
+** DONE Array & List
+   CLOSED: [2022-11-05 Sat 20:26]
+*** Array
+    - Example:
+      #+begin_src rescript
+        let myArray = ["hello", "world", "how are you"]
+      #+end_src
+
+    - ReScript /arrays/ work the same way as JavaScript arrays:
+      they can be
+      * randomly accessed, ~myArray[0]~
+      * dynamically resized, ~let pushedValue = Js.Array2.push(myArray, "bye")~
+      * updated, ~myArray[0] = "hey"~
+      * etc.
+
+**** Usage
+     - See the [[https://rescript-lang.org/docs/manual/latest/api/js/array][Js.Array]] API
+
+*** List
+**** Usage
+***** Immutable Prepend
+      #+begin_src
+        let myList = list{1, 2, 3}
+        let anottherList = list{0, ...myList}
+      #+end_src
+
+      - *Note*:
+        Since /multiple spread/ for a list, e.g. ~list{a, ...b, ...c}~ (a
+        *imaginary* operation), could be an accidental linear operation *O(b)*,
+        *ReScript doesn't support it!*
+
+        * If you really want to concatenate lists, you can explicitly use ~List.concat~,
+          but we highly discourage it.
+
+***** Access
+      ~switch~ is usually used to access list items.
+
+** DONE Function
+   CLOSED: [2022-11-08 Tue 01:16]
+   _Cheat sheet for the full function syntax at the end._
+
+*** Labeled Arguments
+    #+begin_src
+      let addCoordinates = (~x, ~y) => {
+        // use x and y here, no prefix ~ required
+      }
+
+      // The order is not significant if we use labeled arguments
+      addCoordinates(~x = 5, ~y = 6)
+      aDdCoordinates(~y = 6, ~x = 5)
+    #+end_src
+
+    - As a matter of fact, ~(~x)~ is just a _shorthand_ for ~(~x as x)~.
+      * Of course, if you write the ~as~ syntax explicitly,
+        the label and the actual parameter name *can be different*!
+        #+begin_src
+          let drawCircle = (~radius as r, ~color as c) => {
+            setColor(c)
+            startAt(r, r)
+            // ...
+          }
+
+          drawCircle(~radius = 10, ~color = "red")
+        #+end_src
+
+*** Optional Labeled Arguments
+    /Labeled function arguments/ can be made _optional_ during DECLARATION.
+    You can then _omit_ them when CALLING the function.
+
+    - Example:
+      #+begin_src
+        // radius can be omitted
+        let drawCircle = (~color, ~radius=?, ()) => {
+          setColor(color)
+          switch radius {
+          | None     => startAt(1, 1)
+          | Some(r_) => startAt(r_, r_)
+          }
+        }
+      #+end_src
+      When given in this syntax, ~radius~ is wrapped in _the standard library's ~option~
+      type,_
+      * _DEFAULTING to ~None~._
+      * If provided, it'll be wrapped with a ~Some~.
+
+      So ~radius~'s type value is ~None | Some(int)~ here.
+
+    - More on ~option~ type here.
+      =TODO= =???= Null, Undefined and Option
+
+    - *Note*:
+      for the sake of the /type system/,
+      WHENEVER you have an /optional argument/,
+      you *need to ensure* that
+      1. there's also at least one /positional argument/ (aka /non-labeled/,
+         /non-optional/ argument) after it.
+      2. If there's *none*, provide a dummy ~unit~ (aka ~()~) argument.
+
+**** Signatures and Type Annotations
+     - Functions with /optional labeled arguments/ can be *confusing*
+       when it comes to /signature/ and /type annotations/.
+
+       * Indeed, the /type/ of an /optional labeled argument/ *looks different*
+         DEPENDING ON
+         + whether you're _calling the function_,
+           a _raw value_ is
+           - either passed in (~int~, for example), or
+           - left off entirely.
+
+         + or working _inside the /function body/._
+           the parameter is always there, but its value is an /option/ (~option<int>~).
+
+         This means that the /type signature/ is *different*,
+         _DEPENDING ON_
+         whether you're writing out the /function type/, or the /parameter type/ annotation.
+         The first being a _raw value_, and the second being an /option/.
+
+     - =IMPORTANT= =GOOD EXAMPLE for Illustration The Above Paragraph=
+       If we get back to our previous example and both add a /signature/ and /type
+       annotations/ to its argument, we get this:
+       #+begin_src
+         let drawCircle: (~color: color, ~radius: int = ?, unit) => unit =
+           (~color: color, ~radius: option<int> = ?, ()) => {
+             setColor(color)
+             switch radius {
+             | None     => startAt(1, 1)
+             | Some(r_) => startAt(r_, r_)
+             }
+           }
+       #+end_src
+       1. The _first line_ is the /function's signature/,
+          we would define it like that in an /interface file (see =TODO= _Signatures_)/.
+          * The /function's signature/ describes the /types/ that the outside world
+            interacts with, hence the type ~int~ for ~radius~ because it indeed
+            EXPECTS an ~int~ when called.
+
+       2. In the _second line_,
+          we annotate the arguments to _help us remember_ the /types/ of the arguments
+          WHEN we use them *INSIDE* the _function's body_,
+          * here indeed ~radius~ will be an ~option<int>~ *INSIDE* the function.
+
+       3. So if you happen to struggle when writing the /signature of a function/ with
+          /optional labeled arguments/, try to remember this!
+
+**** Explicitly Passed Optional
+     Sometimes, you might want to forward a value to a function without knowing
+     whether the value is ~None~ or ~Some(a)~.
+
+     - Naively, you'd do:
+       #+begin_src
+         let result =
+           switch payloadRadius {
+           | None    => drawCircle(~color, ())
+           | Some(r) => drawCircle(~color, ~radius = r, ())
+           }
+       #+end_src
+
+     - A shortcut:
+       ~let result = drawCircle(~color, ~radius = ?payloadRadius, ())~
+
+**** Optional with Default Value
+     /Optional labeled arguments/ can also be provided a *default value*.
+     In this case, they are *NOT* wrapped in an /option type/.
+     #+begin_src
+       let drawCircle = (~radius = 1, ~color, ()) => {
+         setColorr(color)
+         startAt(radius, radius)
+       }
+     #+end_src
+
+*** Recursive Functions
+    - ReScript support /tail recursion optimization/ when compiling it.
+      * Compile it into a fast JavaScript loop.
+
+**** Mutually Recursive Functions
+     Recursive functions chained with ~and~:
+     #+begin_src
+       let rec
+         callSecond = () => callFirst()
+       and
+         callFirst = () => callSecond()
+     #+end_src
+
+*** Uncurried Function
+    - ReScript's functions are curried *by default*, which is one of the few
+      _performance penalties_ *we pay in the _compiled JS output_.*
+      * =IMPORTANT= =LEARN MORE=
+        The compiler does a best-effort job at removing those currying whenever
+        possible.
+
+        + However,
+          in certain edge cases, you might want _GUARANTEED /uncurrying/._
+          In those cases, put a dot in the /function's parameter list/:
+          #+begin_src
+            let add = (. x, y) => x + y
+            add(. 1, 2)
+          #+end_src
+
+    - *Note*:
+      *BOTH* the /declaration site/ and the /call site/ need to have the
+      /uncurry annotation/.
+
+      That's part of the _guarantee/requirement_.
+
+    - This feature seems trivial,
+      but is _actually one of our *MOST important features*,_ as a primarily
+      functional language.
+
+      * =IMPORTANT=
+        We *ENCOURAGE* you to use it
+        if you'd like to REMOVE any mention of ~Curry~ runtime in the _JS
+        output_.
+
+*** Async/Await (from v10.1)
+    Just _as in JS,_
+    an /async function/ can be declared by adding ~async~ before the definition, and
+    ~await~ can be used *in the body of such functions.*
+
+    - Example:
+      #+begin_src
+        let getUserName = async (userId) => userId
+
+        let greetUser = async (userId) => {
+          let name = await getUserName(userId)
+          "Hello " ++ name ++ "!"
+        }
+      #+end_src
+
+      The output looks like idiomatic JS:
+
+      #+begin_src javascript
+        async function greetUser(userId) {
+            var name = await getUserName(userId);
+            return "Hello " + name + "!";
+        }
+      #+end_src
+
+      * The /return type/ of ~getUser~ is inferred to be ~promise<string>~.
+        Similarly, ~await getUserName(userId)~ returns a ~string~ when the
+        function returns ~promise<string>~.
+
+        + Using ~await~ _OUTSIDE_ of an /async function/ (including in a non-async
+          callback to an /async function/) is an *ERROR*.
+
+**** Ergonomic error handling
+     - /Error handling/ is done by
+       * simply using ~try~ / ~catch~, or
+       * a ~switch~ with an /exception case/,
+       just as in functions that are not ~async~.
+
+     - _BOTH_ /JS exceptions/ and /exceptions defined in ReScript/
+       *can be CAUGHT*.
+
+       * The compiler takes care of packaging /JS exceptions/ into the
+         builtin ~JsError~ /exception/:
+
+     - Example:
+       #+begin_src
+         exception SomeReScriptException
+
+         let somethingThatMightThrow = async () => raise(SomeReScriptException)
+
+         let someAsyncFn = async () => {
+           switch await somethingThatMightThrow() {
+           | data                            => Some(data)
+           | exception JsError(_)            => None
+           | exception SomeReScriptException => None
+           }
+         }
+       #+end_src
+
+*** The ~ignore()~ Function
+    Occasionally you may want to _IGNORE the /return value/ of a function._
+
+    - ReScript provides an ~ignore()~ function that discards the value of its
+      argument and returns ~()~:
+      #+begin_src
+        mySideEffect() -> Promise.catch(handleError) -> ignore
+        Js.Global.setTimeout(myFunc, 1000) -> ignore
+      #+end_src
+      =TODO= =???=
+      =from Jian= I need to learn ~Promise~
+      =TODO= =???=
+      =TODO= =???=
+      =TODO= =???=
+      =TODO= =???=
+      =TODO= =???=
+
+*** Tips & Tricks
+    Cheat sheet for the function syntaxes:
+
+**** Declaration
+***** With Type Annotation
+
+**** Application
+***** With Type Annotation
+
+**** Standalone Type Signature
+***** In Interface Files
+      To annotate a function from the /implementation file/ (=.res=) in your
+      /interface file/ (=.resi=):
+      #+begin_src
+        let add: (int, int) => int
+      #+end_src
+
+      - Don't confuse ~let add: myType~ with ~type add = myType~.
+        * When used in =.resi= /interface files/,
+          the former *exports* the binding ~add~
+          while *annotating* it as type ~myType~.
+
+        * The latter
+          exports the type ~add~, whose value is the type ~myType~.
+
+** DONE If-Else & Loops
+   CLOSED: [2022-11-07 Mon 18:32]
+*** If-Else & Ternary
+    ReScript supports:
+    - ~if~, ~else~
+    - ternary expression ~a ? b : c~ (*we encourage you to prefer _if-else_ WHEN POSSIBLE*)
+    - ~for~
+    - ~while~
+
+*** For Loops
+    #+begin_src
+      for x in 1 to 3 {
+        Js.log(x)
+      }
+
+      for x in 3 downto 1 {
+        Js.log(x)
+      }
+    #+end_src
+
+*** While Loops
+    #+begin_src
+      while testCondition {
+        // body here
+      }
+    #+end_src
+
+**** Tips & Tricks
+     - In ReScript: =IMPORTANT=
+       * *NO* loop-breaking ~break~ keyword
+       * *NO* early return from functions
+
+     - However, we can break out of a while loop easily through using a /mutable binding/:
+       #+begin_src
+         let break = ref(false)
+
+         while !break.contents {
+           if Js.Math.random() > 0.3 {
+             break := true
+           } else {
+             Js.log("Still running")
+           }
+         }
+       #+end_src
+
+** DONE Pipe - =TODO=
+   CLOSED: [2022-11-06 Sun 16:48]
+   - Example:
+     #+begin_src
+       validateAge(getAge(parseData(person)))
+     #+end_src
+
+     is equivalent to
+
+     #+begin_src
+       person
+         -> parseData
+         -> getAge
+         -> validateAge
+     #+end_src
+
+   - *CAUTION*
+     #+begin_src
+       a(one, two, three)
+     #+end_src
+
+     is equivalent to
+
+     #+begin_src
+       one -> a(two, three)
+     #+end_src
+
+   - /Pipe/ also works with /labeled arguments/.
+
+**** This works when the function takes more than one argument too.
+     - *CAUTION*
+       #+begin_src
+         a(one, two, three)
+       #+end_src
+
+       is equivalent to
+
+       #+begin_src
+         one -> a(two, three)
+       #+end_src
+
+     - /Pipe/ also works with /labeled arguments/.
+
+*** DONE Tips & Tricks
+    CLOSED: [2022-11-06 Sun 16:40]
+    =IMPORTANT=
+    *Do not abuse pipes*; they're a means to an end.
+    - Inexperienced engineers sometimes shape a library's API to take advantage of the pipe.
+      This is backwards.
+
+*** TODO JS Method Chaining - =TODO= _After reading "Bind to JS Function"_
+*** DONE Pipe Into Variants
+    CLOSED: [2022-11-06 Sun 16:40]
+    #+begin_src
+      let result = name -> preprocess -> Some
+    #+end_src
+
+    - *NOTE*:
+      using a /variant constructor/ as a /function/ would *NOT work anywhere
+      else* beside here.
+
+*** DONE Pipe Placeholders
+    CLOSED: [2022-11-06 Sun 16:48]
+    You can use an underscore to tell ReScript that you want to fill in an
+    argument of a function later. These two have *equivalent* meaning:
+    #+begin_src
+      let addTo7 = (x) => add3(3, x, 4)
+      let addTo7 = add3(3, _, 4)
+    #+end_src
+
+    - This is especially useful
+      IF you _don't_ want to pipe the value into the _first position_.
+      * Example:
+        Assume there is a function ~namePerson~, which takes a ~person~ then a
+        ~name~ argument.
+        #+begin_src
+          makePerson(~age = 47, ())
+            -> namePerson("Jane")
+
+
+          getName(input)
+            -> namePerson(personDetails, _)
+        #+end_src
+
+    - It also works for named arguments:
+      #+begin_src
+        getName(input)
+          -> namePerson(~person = personDetails, ~name = _)
+      #+end_src
+
+*** DONE Triangle Pipe (Deprecated)
+    CLOSED: [2022-11-06 Sun 16:48]
+    |> is deprecated!
+
+    - =from Jian=
+      |> is different from ->
+
+    - Unlike -> pipe, the |> pipe puts the subject as the *last (NOT first) argument* of th function.
+      * ~a |> f(b)~ turns into ~f(b, a)~
+
+    - For a more thorough discussion on the rationale and difference between the
+      two operators, please refer to the [[https://www.javierchavarri.com/data-first-and-data-last-a-comparison/][Data-first and Data-last comparison by Javier Chávarri.]]
+      =TODO= =???=
+
+** TODO Pattern Matching / Destructuring
+*** Destructuring
+*** ~switch~ Based on Shape of Data
+**** Complex Examples
+**** Fall-Through Patterns
+**** Ignore Part of a Value
+**** If Clause
+**** Match on Exceptions
+**** Match on Array
+**** Match on List
+**** Small Pitfall
+
+*** Exhaustiveness Check
+*** Conclusion & Tips & Tricks
+
+** TODO Mutation
+*** Mutate Let-binding
+*** Usage
+*** Tip & Tricks
+
+** TODO JSX
+*** Capiitalized Tag
+*** Uncapiitalized Tag
+*** Fragment
+**** Children
+***** Children Spread
+
+**** Usage
+
+*** Departures From JS JSX
+**** Punning
+
+*** Tips & Tricks
+*** Design Decisions
+
+** TODO Exception
+*** Usage
+*** Catching JS Exceptions
+*** Raise a JS Exception
+*** Catch ReScript Exceptions from JS
+*** Tips & Tricks
+**** Catch Both ReScript and JS Exceptions in the Same catch Clause
+
+** TODO Lazy Value
+*** Execute The Lazy Computation
+*** Exception Handling
+
+** TODO Async & Promise
+*** Promise (new)
+*** Promise (legacy)
+**** Usage
+
+** TODO Module
+*** Basics
+**** Creation
+**** ~open~ ing a module
+**** Use ~open!~ to ignore shadow warnings
+**** Destructuring modules
+     # Since 9.0.2
+
+**** Extending modules
+**** Every =.res= file is a module
+
+*** Signatures
+**** Creation
+**** Extending module signatures
+**** Every =.resi= file is a signature
+
+*** Module Functions (functors)
+**** Module functions types
+
+*** Exotic Module Filenames
+*** Tips & Tricks
+
+** TODO Import & Export
+*** Import a Module/File
+*** Export Stuff
+*** Work with JavaScript Import & Export
+
+** TODO Attribute (Decorator)
+*** Usage
+*** Extension Point
+
+** TODO Unboxed
+*** Usage
+** TODO Reserved Keyword
+** TODO Extensible Variant (Advanced Features Features)
+*** Definition and Usage
+*** Pattern Matching Caveats
+*** Tips & Tricks
+
+* TODO JavaScript Interop
 ** Interop Cheatsheet
 ** Embed Raw JavaScript
 ** Shared Data Types
@@ -57,7 +1176,7 @@
 ** Browser Support & Polyfills
 ** Libraries & Publishing
 
-* Build System
+* TODO Build System
 ** Overview
 ** Configuration
 ** Configuration Schema
@@ -67,10 +1186,10 @@
 ** Performance
 ** Warning Numbers
 
-* Guides
+* TODO Guides
 ** Converting from JS
 
-* Extra
+* TODO Extra
 ** Newcomer Examples
 ** Project Structure
 ** FAQ
