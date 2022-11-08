@@ -12,7 +12,7 @@
 
 ** Try
 
-* Language Features - =Reading=
+* Language Features
 ** DONE Overview
    CLOSED: [2022-11-05 Sat 19:34]
 *** Comparison to JS
@@ -475,13 +475,129 @@
     =RE-READ= =Find more discussion=
     =TODO= =???=
 
-** TODO Object
+** DONE Object
+   CLOSED: [2022-11-08 Tue 23:42]
+   - ReScript objects are like records, *BUT*:
+     * No type declaration needed.
+
+     * Structural and more polymorphic, _UNLIKE_ /records/.
+
+     * *Doesn't support* _updates_
+       *UNLESS* _the /object/ comes from the JS side._
+
+     * *Doesn't support* /pattern matching/.
+
+   - Although /ReScript records/ compile to *CLEAN* /JavaScript objects/,
+     /ReScript objects/ are a *BETTER* candidate for _emulating/binding_ to
+     /JS objects/.
+
 *** Type Declaration
+    *Optional*, unlike for /records/.
+
+    - Syntax:
+      #+begin_src
+        type person = {
+          "age": int,
+          "name": string
+        }
+      #+end_src
+      This is VISUALLY SIMILAR to /record type's syntax/, with the field names
+      *quoted*.
+
 *** Creation
+    #+begin_src
+      let me = {
+        "age": 5,
+        "name": "Big ReScript"
+      }
+    #+end_src
+
+    - *Note*: =IMPORTANT=
+      _Unlike_ for /record/, a /object value/ does *NOT* try to find a
+      *conforming* /type declaration/ with the matched field names.
+      * If you really want a value match a /type declaration/, and let the /type
+        checker /do more,
+        you can add *EXPLICIT* /type annotation/ tells the ReScript to find a
+        conforming /type declaration/.
+
 *** Access
+    #+begin_src
+      let age = me["age"]
+    #+end_src
+
 *** Update
+    *Disallowed unless* the /object/ is a binding that _comes from the JavaScript side._
+    In that case, use ~=~:
+    #+begin_src
+      type student = {
+        @set "age": int,
+        @set "name": string,
+      }
+
+      @module("MyJSFile") external student1: student = "student1"
+
+      student1["name"] = "Mary"
+    #+end_src
+
 *** Combine Types
+    The spread syntax:
+    #+begin_src
+      type point2d = {
+        "x": float,
+        "y": float,
+      }
+      type point3d = {
+        ...point2d,
+        "z": float,
+      }
+
+      let myPoint: point3d = {
+        "x": 1.0,
+        "y": 2.0,
+        "z": 3.0,
+      }
+    #+end_src
+
+    - *NOTE*:
+      This spread syntax *ONLY* works with /object types/, *NOT* /object values/!
+
 *** Tips & Tricks
+    Since /ReScript objects/ don't require /type declarations/, and since
+    ReScript infers all the types for you,
+    you get to _very *QUICKLY* and *EASILY* (and *DANGEROUSLY*) /bind/ to any
+    JavaScript API._
+
+    - Check the JS output tab:
+      #+begin_src
+        // The type of document is just some random type 'a
+        // that we won't bother to specify
+        @val external document: 'a = "document"
+
+        // call a method
+        document["addEventListener"]("mouseup", _event => {
+          Js.log("clicked!")
+        })
+
+        // get a property
+        let loc = document["location"]
+
+        // set a property
+        document["location"]["href"] = "rescript-lang.org"
+      #+end_src
+
+      #+begin_src js
+        document.addEventListener("mouseup", function(_event) {
+            console.log("clicked!");
+        });
+        var loc = document.location;
+        document.location.href = "rescript-lang.org";
+      #+end_src
+
+    - The external feature and the usage of this trick are also documented in
+      the [[https://rescript-lang.org/docs/manual/latest/external#tips--tricks][external]] section later.
+      * It's an excellent way to start writing some ReScript code _without worrying_
+        about whether /bindings/ to a particular library exists.
+        =AGAIN, this is DANGEROUS, THOUGH USEFUL and FLEXIBLE=
 
 ** DONE Variant
    CLOSED: [2022-11-07 Mon 13:53]
@@ -581,7 +697,24 @@
 
 *** Design Decisions
 
-** TODO Polymorphic Variant - =Reading=
+** TODO Polymorphic Variant - =RE-Reading=
+   /Polymorphic variants/ (or /poly variant/) are a _cousin_ of /variant/.
+   With these differences:
+
+   * They _start with_ a ~#~ and the /constructor name/ _does *NOT* need to be capitalized_.
+
+   * They *don't require* an /explicit type definition/.
+     The type is inferred from usage.
+
+   * Values of different /poly variant types/ *can share* the /constructors/ they
+     have *in common* (aka, /poly variants/ are _"structurally" typed_, as
+     opposed to _"nominally" typed_).
+
+   They're a convenient and useful alternative to regular /variants/,
+   but *should NOT be abused*.
+
+   =TODO= See the drawbacks at the end of this page.
+
 *** Creation
 *** Type Declaration
 *** Constructor Arguments
@@ -601,11 +734,92 @@
 *** Tips & Tricks
 **** Variant vs Polymorphic Variant
 
-** TODO Null, Undefined and Option
+** DONE Null, Undefined and Option - =IMPORTANT=
+   CLOSED: [2022-11-08 Tue 14:42]
+  ReScript itself does *NOT* have the notion of ~null~ or ~undefined~.
+
+  - However,
+    the *concept* of a potentially /nonexistent value/ is
+    * still useful, and
+    * safely exists
+    in our language.
+
+  - Use ~option~ to represent the _EXISTENCE and NONEXISTENCE of a value_:
+    #+begin_src
+      type option<'a> = None | Some('a)
+    #+end_src
+
+    =FIXME= ''a
+
+  - *Note* =FIXME= =???= how -> here???
+    how the ~option~ type is just a regular /variant/.
+
 *** Example
+    - *A pure ReScript program does _NOT_ have ~null~ errors.*
+
 *** Interoperate with JavaScript ~undefined~ and ~null~
+    ~let x = Some(5)~ will be compiled to JS ~var x = 5;~
+    ~let x = None~ will be compiled to JS ~var x;~ (then here ~x~ has an ~undefined~ value).
+
 **** Caveat 1
+     - Scenario and Rationale: =TODO= =NOTE=
+
+     - =FIXME= ~Caml_option.some~ -- can't see this ~Caml_option~ in any above code snippet.
+
+     - Just remember the following rule:
+       * *Never, EVER,* _pass_ a nested option value (e.g. ~Some(Some(Some(5)))~)
+         _into the JS side_.
+
+       * *Never, EVER,* _annotate_ a value _coming from JS_ AS ~option<'a>~.
+         *Always give the /concrete, non-polymorphic type/.*
+
 **** Caveat 2
+     - _UNFORTUNATELY_,
+       lots of times, your JavaScript value might be both null or undefined. In
+       that case, you unfortunately can't type such value as e.g. option<int>,
+       since our option type only checks for undefined and not null when dealing
+       with a None.
+
+     - *Solution*: More Sophisticated ~undefined~ & ~null~ interop
+       =TODO= =???= =LEARN=
+       To solve this, we provide access to more elaborate ~null~ and ~undefined~
+       helpers through the ~Js.Nullable~ /module/.
+
+       This somewhat works *like* an ~option~ /type/, *but is different from it*.
+
+***** Examples
+      - To create a /JS null/, use the value ~Js.Nullable.null~.
+
+      - To create a /JS undefined/, use ~Js.Nullable.undefined~
+        * you can naturally use ~None~ too, but that's not the point here;
+          the ~Js.Nullable.*~ helpers *wouldn't work with it*.
+
+      - From JS, in ReScript,
+        If you're *RECEIVING*,
+        for example, a /JS string/ that can be ~null~ and ~undefined~, type it
+        as:
+        #+begin_src
+          @module("MyConstant") external myId: Js.Nullable.t<string> = "myId"
+        #+end_src
+
+      - From ReScript to JS,
+        To *CREATE* such a /nullable string/ from our side
+        (presumably to *PASS* it to the JS side, for interop purpose), do:
+        #+begin_src
+          @module("MyIdValidator") external validate: Js.Nullable.t<string> => bool = "validate"
+          let personId: Js.Nullable.t<string> = Js.Nullable.return("abc123")
+
+          let result = validate(personId)
+        #+end_src
+        The ~return~ part "wraps" a string into a /nullable string/, to make the type
+        system understand and track the fact that,
+        _as you pass this value around, it's not just a string, but a string that
+        can be ~null~ or ~undefined~._
+
+***** Convert to/from ~option~
+      - ~Js.Nullable.fromOption~ converts from a ~option~ to ~Js.Nullable.t~.
+
+      - ~Js.Nullable.toOption~ does the opposite.
 
 ** DONE Array & List
    CLOSED: [2022-11-05 Sat 20:26]
@@ -1069,25 +1283,170 @@
       two operators, please refer to the [[https://www.javierchavarri.com/data-first-and-data-last-a-comparison/][Data-first and Data-last comparison by Javier Chávarri.]]
       =TODO= =???=
 
-** TODO Pattern Matching / Destructuring
+** DONE Pattern Matching / Destructuring
+   CLOSED: [2022-11-08 Tue 15:18]
+  ReScript's pattern matching:
+  - Destructuring.
+  - ~switch~ based on shape of data.
+  - Exhaustiveness check.
+
 *** Destructuring
+    - Common usage in assignment
+
+    - For /record/:
+      #+begin_src
+        type student = {name: string, age: int}
+        let student1 = {name: "John", age: 10}
+        let {name} = student1 // "John" assigned to `name`
+      #+end_src
+
+    - Anywhere you'd usually put a /binding/:
+      #+begin_src
+        type result =
+          | Success(string)
+
+        let displayMessage = (Success(m)) => {
+          // we've directly extracted the success message
+          // string by destructuring the parameter
+          Js.log(m)
+        }
+
+        displayMessage(Success("You did it!"))
+      #+end_src
+
+    - Rename:
+      ~let {name: n} = student1~
+      will bind the ~student1.name~ value to ~n~.
+
 *** ~switch~ Based on Shape of Data
 **** Complex Examples
 **** Fall-Through Patterns
+     #+begin_src
+       let myStatus = Vacations(10)
+
+       switch myStatus {
+       | Vacations(days)
+       | Sabbatical(days) => Js.log(`Come back in ${Js.Int.toString(days)} days!`)
+       | Sick
+       | Present => Js.log("Hey! How are you?")
+       }
+     #+end_src
+
 **** Ignore Part of a Value
+     - *Do not* abuse a top-level catch-all condition.
+       Instead, prefer writing out all the cases
+
 **** If Clause
 **** Match on Exceptions
+     If the function *throws an exception* (covered later), you can also match
+     on that, _in addition to_ the function's normally returned values.
+     #+begin_src
+       switch List.find(i => i === theItem, myItem) {
+       | item                => Js.log(item)
+       | exception Not_found => Js.log("No such item found!")
+       }
+     #+end_src
+
 **** Match on Array
 **** Match on List
 **** Small Pitfall
+     The pattern (or part of pattern) can be literal (i.e. concrete values),
+     *but not /let binding/ names.*
 
 *** Exhaustiveness Check
 *** Conclusion & Tips & Tricks
+    - Advice:
+      * Avoid using the wildcard ~_~ unnecessarily
+      * Use the ~if~ clause (=from Jian= guard) sparingly.
+      * Flatten your pattern-match whenever you can.
+        #+begin_src
+          let optionBoolToBool = opt => {
+            if opt == None {
+              false
+            } else if opt === Some(true) {
+              true
+            } else {
+              false
+            }
+          }
+        #+end_src
 
-** TODO Mutation
+        can be better:
+        #+begin_src
+          let optionBoolToBool = opt => {
+            switch opt {
+            | None    => false
+            | Some(a) => a ? true : false
+            }
+          }
+        #+end_src
+
+        can be improved further:
+        #+begin_src
+          let optionBoolToBool = opt => {
+            switch opt {
+            | None        => false
+            | Some(true)  => true
+            | Some(false) => false
+            }
+          }
+        #+end_src
+
+        and further:
+        #+begin_src
+          let optionBoolToBool = opt => {
+            switch opt {
+            | Some(true) => true
+            | _          => false
+            }
+          }
+        #+end_src
+
+        + The last one is much more concise,
+          *but* kills the exhaustiveness check; refrain from using that. This is the best:
+          #+begin_src
+            let optionBoolToBool = opt => {
+              switch opt {
+              | Some(trueOrFalse) => trueOrFalse
+              | None              => false
+              }
+            }
+          #+end_src
+
+    - Comparing with ~if~ / ~else~ branches,
+      /pattern matchin/g is more concise and [[https://rescript-lang.org/docs/manual/latest/variant#design-decisions][performant]] too.
+      =TODO= =???=
+
+** DONE Mutation
+   CLOSED: [2022-11-08 Tue 15:23]
+   ReScript has great traditional imperative & mutative programming capabilities.
+
+   You should use these features _sparingly_,
+   but *SOMETIMES* they allow your code to be *more performant* and written in a
+   more familiar pattern.
+
 *** Mutate Let-binding
+    #+begin_src
+      let myValue = ref(5)
+    #+end_src
+
 *** Usage
+    - Access the actual value:
+      ~let five = myValue.contents~
+
+    - Assignment:
+      ~myValue.contents = 6~
+
+      * Syntax sugar:
+        ~myValue := 6~
+
 *** Tip & Tricks
+    - *Note*:
+      you might see in the JS output tabs above that ref *allocates* an
+      /object/.
+
+      + *Worry not;*
+        /local, non-exported refs allocations/ are *optimized away*.
 
 ** TODO JSX
 *** Capiitalized Tag
@@ -1104,17 +1463,208 @@
 *** Tips & Tricks
 *** Design Decisions
 
-** TODO Exception
-*** Usage
-*** Catching JS Exceptions
-*** Raise a JS Exception
-*** Catch ReScript Exceptions from JS
-*** Tips & Tricks
-**** Catch Both ReScript and JS Exceptions in the Same catch Clause
+** DONE Exception
+   CLOSED: [2022-11-08 Tue 21:21]
+   /Exceptions/ are just a special kind of /variant/, thrown in *exceptional* cases
+   _(don't abuse them!)_.
 
-** TODO Lazy Value
+*** Usage
+    - Illustration example:
+      #+begin_src
+        let getItem = (items) =>
+          if callSomeFunctionThatThrows() {
+            // return the found item here
+            1
+          } else {
+            raise(Not_found)
+          }
+
+        let result =
+          try {
+            getItem([1, 2, 3])
+          } catch {
+          | Not_found => 0 // Default value if getItem throws
+          }
+      #+end_src
+      * This is just for illustration.
+        Use ~option<int>~ in the real world code.
+
+      * Directly match /exceptions/ also work:
+        #+begin_src
+          switch List.find(i => i === theItem, myItems) {
+          | item                => Js.log(item)
+          | exception Not_found => Js.log("No such item found!")
+          }
+        #+end_src
+
+    - Make your own /exceptions/:
+      #+begin_src
+        exception InputClosed(string)
+        // later on
+        raise(InputClosed("The stream has closed!"))
+      #+end_src
+
+*** Catching JS Exceptions
+    - To *distinguish* between /JavaScript exceptions/ and /ReScript exceptions/,
+      /ReScript namespaces JS exceptions/ under the ~Js.Exn.Error(payload)~
+      /variant/.
+
+    - To catch an exception thrown from the JS side:
+      #+begin_src
+        try {
+          someJSFunctionThatThrows()
+        } catch {
+        | Js.Exn.Error(obj) =>
+          switch Js.Exn.message(obj) {
+          | Some(m) => Js.log("Caught a JS exception! Message: " ++ m)
+          | None    => ()
+          }
+        }
+      #+end_src
+      * The ~obj~ here is of /type/ ~Js.Exn.t~, _INTENTIONALLY OPAQUE to disallow
+        illegal operations._
+        + To operate on ~Js.Exn.t~ values, do like the code above by using the
+          standard library's ~Js.Exn~ /module/'s helpers.
+
+*** Raise a JS Exception
+    - ~raise(MyException)~ raises a /ReScript exception/.
+
+    - To raise a /JavaScript exception/ (whatever your purpose is), use
+      ~Js.Exn.raiseError~:
+      #+begin_src
+        let myTest = () => {
+          Js.Exn.raiseError("Hello!")
+        }
+      #+end_src
+
+      Catch it from JS side:
+      #+begin_src js
+        try {
+          myTest()
+        } catch (e) {
+          console.log(e.message) // "Hello!"
+        }
+      #+end_src
+
+*** Catch ReScript Exceptions from JS
+    The previous section is *less useful* than you think; to let your _JS code_
+    work with your _exception-throwing ReScript code_, the latter doesn't
+    actually need to throw a /JS exception/.
+
+    - /ReScript exceptions/ can be used by _JS code_!
+      #+begin_src
+        exception BadArgument({myMessage: string})
+
+        let myTest = () => {
+          raise(BadArgument({myMessage: "Oops!"}))
+        }
+      #+end_src
+
+      Then, in your JS:
+      #+begin_src js
+        // after importing `myTest` ...
+        try {
+            myTest()
+        } catch (e) {
+            console.log(e.myMessage) // "Oops!"
+            console.log(e.Error.stack) // the stack trace
+        }
+      #+end_src
+      * *Note*:
+        ~RE_EXN_ID~ is an /INTERNAL field/ for bookkeeping purposes.
+        *Don't* use it on the _JS side_.
+
+    - The above ~BadArgument~ exception takes an /inline record type/.
+      We special-case compile the /exception/ as ~{RE_EXN_ID, myMessage, Error}~
+      for good ergonomics.
+      =TODO= =RECALL THE COMPILATION TO JS RULES=
+
+      * If the /exception/ instead took /ordinary positional arguments/,
+        I like the standard library's ~Invalid_argument("Oops!")~, which takes a
+        _SINGLE argument_, the argument is compiled to JS as the field ~_1~ instead.
+        A second /positional argument/ would compile to ~_2~, etc.
+
+*** Tips & Tricks
+    In many scenarios, You use ~option<item>~ instead of /exceptions/.
+
+**** Catch Both ReScript and JS Exceptions in the Same ~catch~ Clause
+     #+begin_src
+       try {
+         someOtherJSFunctionThatThrows()
+       } catch {
+       | Not_found           => ... // catch a ReScript exception
+       | Invalid_argument(_) => ... // catch a second ReScript exception
+       | Js.Exn.Error(obj)   => ... // catch the JS exception
+       }
+     #+end_src
+
+     This technically works,
+     BUT _hopefully you don't ever have to work with such code..._
+
+** DONE Lazy Value
+   CLOSED: [2022-11-08 Tue 21:48]
+   If you have some _expensive computations_ you'd like to *defer and cache*
+   subsequently, you can wrap it with ~lazy~:
+   #+begin_src
+     // Read the directory, only once
+     let expensiveFilesRead = lazy({
+       Js.log("Reading dir")
+       Node.Fs.raddirSync("./pages")
+     })
+   #+end_src
+
+   - *Note*:
+     a /lazy value/ is *NOT* a [[https://rescript-lang.org/docs/manual/latest/shared-data-types][shared data type]].
+     *Don't* rely on its _runtime representation_ in your JavaScript code.
+
 *** Execute The Lazy Computation
+    - [1]
+      To actually run the _lazy value's computation_, use ~Lazy.force~ from the
+      _globally available_ ~Lazy~ /module/:
+      #+begin_src
+        // First call. The computation happens
+        Js.log(Lazy.force(expensiveFilesRead)) // logs "Reading dir" and the directory content
+
+        // Second call. Will just return the already calculated result
+        Js.log(Lazy.force(expensiveFilesRead)) // logs the directory content
+      #+end_src
+      1. The first time ~Lazy.force~ is called, the _expensive computation_ happens
+         and the result is *cached*.
+
+      2. The second time, the /cached value/ is directly used.
+
+    - _You *CAN'T re-trigger* the computation after the first force call_.
+      * =IMPORTANT=
+        Make sure you _ONLY_ use a /lazy value/ with computations whose results
+        *DON'T change* (e.g. an expensive server request whose response is always
+        the same).
+
+    - [2]
+      Instead of using ~Lazy.force~, you can also use /pattern matching/ to trigger
+      the computation:
+      #+begin_src
+        switch expensiveFilesRead {
+        | lazy(result) => Js.log(result)
+        }
+      #+end_src
+
+    - [3]
+      Since /pattern matching/ also works on a ~let~ binding, you can also do:
+      #+begin_src
+        let lazy(result) = expensiveFilesRead
+        Js.log(result)
+      #+end_src
+
 *** Exception Handling
+    #+begin_src
+      let result = try {
+        Lazy.force(expensiveFilesRead)
+      } catch {
+      | Not_found => [] // empty array of files
+      }
+    #+end_src
+    Though you _should probably handle the /exception/ *inside* the lazy
+    computation itself._
 
 ** TODO Async & Promise
 *** Promise (new)
@@ -1123,6 +1673,14 @@
 
 ** TODO Module
 *** Basics
+    *Modules are like mini files!*
+
+    - /Modules/ can contain
+      * type definitions,
+      * ~let~ bindings,
+      * nested modules,
+      * etc.
+
 **** Creation
 **** ~open~ ing a module
 **** Use ~open!~ to ignore shadow warnings
@@ -1148,12 +1706,159 @@
 *** Export Stuff
 *** Work with JavaScript Import & Export
 
-** TODO Attribute (Decorator)
-*** Usage
-*** Extension Point
+** DONE Attribute (Decorator) - =TODO= =LEARN MORE=
+   CLOSED: [2022-11-08 Tue 22:26]
+   ReScript allows annotating a piece of code to express extra functionality.
 
-** TODO Unboxed
+   - Example
+     #+begin_src
+       @inline
+       let mode = "dev"
+
+       let mode2 = mode
+     #+end_src
+     * We call the annotation syntax, e.g. ~@inline~, /attribute/ (or
+       /decorator/ in JavaScript).
+
+   - An /attribute/ starts with ~@~ and goes before the item it annotates.
+
 *** Usage
+    - *Note*:
+      In *previous versions (< 8.3)* all our /interop related attributes/
+      started with a ~bs.~ prefix (~bs.module~, ~bs.val~).
+      * Our formatter will automatically drop them in newer ReScript versions.
+
+    - You can put an /attribute/ *almost anywhere*.
+      You can even add extra data to them by using them visually like a function
+      call.
+
+      * Here are a few famous attributes (explained in other sections):
+        #+begin_src
+          @@warning("-27")
+
+          @unboxed
+          type a = Name(string)
+
+          @val external message: string = "message"
+
+          type student = {
+            age: int,
+            @as("aria-label") ariaLabel: string,
+          }
+
+          @deprecated
+          let customDouble = foo => foo * 2
+
+          @deprecated("Use SomeOther.customTriple instead")
+          let customTriple = foo => foo * 3
+        #+end_src
+        1. ~@@warning("-27")~ is a /standalone attribute/ that *annotates the entire file*.
+           Those attributes start with ~@@~. Here, it carries the data "-27". You
+           can find a full list of all available warnings here.
+           =TODO= =???=
+           =TODO= =???=
+           =TODO= =???=
+
+        2. ~@unboxed~ annotates the /type definition/.
+
+        3. ~@val~ annotates the /external statement/.
+
+        4. ~@as("aria-label")~ annotates /the ~ariaLabel~ record field/.
+           =TODO= =???=
+
+        5. ~@deprecated~ annotates the ~customDouble~ expression.
+           This shows a warning while compiling telling consumers to not rely on
+           this method long-term.
+
+        6. ~@deprecated("Use SomeOther.customTriple instead")~ annotates the
+           ~customTriple~ expression with a string to describe the REASON for
+           deprecation.
+
+*** Extension Point
+    =TODO= =???=
+    =TODO= =???=
+    =TODO= =???=
+
+    - There's a *second category* of /attributes/, called "extension points"
+      (a remnant term of our early systems):
+      #+begin_src
+        %raw("var a = 1")
+      #+end_src
+
+    - /Extension points/ are /attributes/ that *DON'T* annotate an item;
+      _they are the item_.
+      * Usually they serve as placeholders for the compiler to implicitly
+        substitute them with another item.
+
+    - /Extension points/ start with ~%~.
+      A /standalone extension point/ (*akin*
+      to a /standalone regular attribute/) starts with ~%%~.
+
+** DONE Unboxed
+   CLOSED: [2022-11-08 Tue 22:57]
+   Consider
+   a /ReScript variant/ with _a *single* payload_, and
+   a /record/ with _a *single* field_:
+   #+begin_src
+     type name = Name(string)
+     let studentName = Name("Joe")
+
+     type greeting = {message: string}
+     let hi = {message: "hello!"}
+   #+end_src
+
+   - If you check the _JavaScript output_, you'll see
+     * the ~studentName~ /JS object/
+       and
+     * the ~hi~ /JS object/,
+     as expected (see the [[https://rescript-lang.org/docs/manual/latest/variant#javascript-output][variant JS output]] and [[https://rescript-lang.org/docs/manual/latest/record#javascript-output][record JS output]] sections for
+     details).
+     #+begin_src js
+       var studentName = /* Name */{
+         _0: "Joe"
+       };
+
+       var hi = {
+         message: "hello!"
+       };
+     #+end_src
+
+   - For _performance and certain JavaScript interop situations_,
+     ReScript offers a way to _unwrap_ (aka /unbox/) the /JS object/ wrappers
+     from the output for
+     * /records/ with a _single_ /field/
+       and
+     * /variants/ with a _single_ /constructor/ and /single payload/.
+
+     Annotate their /type declaration/ with the attribute ~@unboxed~:
+     #+begin_src
+       @unboxed
+       type name = Name(string)
+       let studentName = Name("Joe")
+
+       @unboxed
+       type greeting = {message: string}
+       let hi = {message: "hello!"}
+     #+end_src
+
+     Check the new output! *Clean*
+     #+begin_src js
+       var studentName = "Joe";
+
+       var hi = "hello";
+     #+end_src
+
+*** Usage
+    - Example:
+      =from Jian=
+      Like Scala 3 /opaque type/, and also like the Scala newtype library.
+
+    - As for a /record/ with a single field,
+      the use-cases are a bit more edgy. We won't mention them here.
+      =TODO= =???=
+      =TODO= =???=
+      =TODO= =???=
+
 ** TODO Reserved Keyword
 ** TODO Extensible Variant (Advanced Features Features)
 *** Definition and Usage
@@ -1162,34 +1867,148 @@
 
 * TODO JavaScript Interop
 ** Interop Cheatsheet
+*** List of Decorators
+*** Raw JS
+*** Global Value
+*** Global Module's Value
+*** Nullable
+*** JS Object
+*** Function
+*** JS Module Interop
+*** Dangerous Type Cast
+
 ** Embed Raw JavaScript
+*** Paste Raw JS Code
+*** Debugger
+*** Tips & Tricks
+
 ** Shared Data Types
 ** External (Bind to Any JS Library)
+*** Usage
+*** Tips & Tricks
+*** Performance & Output Readability
+*** Design Decisions
+
 ** Bind to JS Object
+*** Bind to Record-like JS Objects
+*** Bind to Hash Map-like JS Object
+*** Bind to a JS Object That's a Class
+
 ** Bind to JS Function
+*** Labeled Arguments
+*** Object Method
+*** Variadic Function Arguments
+*** Modeling Polymorphic Function
+*** Constrain Arguments Better
+*** Special-case: Event Listeners
+*** Fixed Arguments
+*** Ignore arguments
+*** Curry & Uncurry
+*** Modeling this-based Callbacks
+*** Function Nullable Return Value Wrapping
+
 ** Import from / Export to JS
+*** Output Format
+*** Import From JavaScript
+*** Export To JavaScript
+
 ** Bind to Global JS Values
+*** Global Modules
+*** Special Global Values
+
 ** JSON
+*** Parse
+*** Stringify
+*** Advanced
+
 ** Inlining Constants
+*** Tips & Tricks
+
 ** Use Illegal Identifier Names
 ** Generate Converters & Helpers
+*** Generate Functions & Plain Values for Variants
+*** Generate Field Accessors for Records
+*** Generate Converters for JS Integer Enums and Variants
+*** Convert Record Type to Abstract Record
+*** Convert External into JS Object Creation Function
+
 ** Browser Support & Polyfills
 ** Libraries & Publishing
+*** Tips & Tricks
 
 * TODO Build System
 ** Overview
+*** Options
+*** Build Project
+*** Clean Project
+
 ** Configuration
+*** name, namespace
+*** sources
+*** bs-dependencies, bs-dev-dependencies
+*** pinned-dependencies
+*** external-stdlib
+*** reason, refmt (old)
+*** js-post-build
+*** package-specs
+*** suffix
+*** warnings
+*** bsc-flags
+*** Environment Variables
+
 ** Configuration Schema
 ** External Stdlib
+*** Configuration
+
 ** Pinned Dependencies
+*** Package Types
+*** Build System Package Rules
+*** Examples
+
 ** Interop with JS Build Systems
+*** Popular JS Build Systems
+*** Use Loaders on ReScript Side
+*** Getting Project's Dependencies
+*** Run Script Per File Built
+
 ** Performance
+*** Profile Your Build
+*** Under the Hood
+*** The JS Wrapper
+*** Numbers
+*** Incrementality & Correctness
+*** Speed Up Incremental Build
+*** Programmatic Usage
+*** Hot Reloading
+
 ** Warning Numbers
 
 * TODO Guides
 ** Converting from JS
+*** Step 1: Install ReScript
+*** Step 2: Copy Paste the Entire JS File
+*** Step 3: Extract Parts into Idiomatic ReScript
+*** Step 4: Add externals, Fix Types
+*** (Optional) Step 5: Cleanup
+*** Tips & Tricks
+*** Conclusion
 
 * TODO Extra
 ** Newcomer Examples
+*** Use the option type
+*** Create a Parametrized Type
+*** Creating a JS Object
+*** Modeling a JS Module with Default Export
+*** Checking for JS nullable types using the option type
+
 ** Project Structure
+*** File Casing
+*** Ignore .merlin File
+*** Folders
+*** Third-party Dependencies
+*** Documentation
+*** PPX & Other Meta-tools
+*** Paradigm
+*** Publishing
+
 ** FAQ
