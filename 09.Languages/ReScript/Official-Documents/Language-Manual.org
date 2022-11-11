@@ -1671,7 +1671,8 @@
 *** Promise (legacy)
 **** Usage
 
-** TODO Module
+** DONE Module
+   CLOSED: [2022-11-12 Sat 00:27]
 *** Basics
     *Modules are like mini files!*
 
@@ -1682,29 +1683,393 @@
       * etc.
 
 **** Creation
+     - Use ~module~ keyword.
+
+     - The /module name/ MUST START WITH a *capital letter*.
+
+     - Example:
+       #+begin_src
+         module School = {
+           type profession = Teacher | Director
+
+           let person1 = Teacher
+           let getProfession = (person) =>
+             switch person {
+             | Teacher  => "A teacher"
+             | Director => "A director"
+             }
+         }
+       #+end_src
+
+     - A /module/'s contents can be accessed much like a /record's/, using ~.~.
+       * This demonstrates /modules'/ utility for /namespaceing/.
+
+     - Example:
+       #+begin_src
+         let anotherPerson: School.profession = School.Teacher
+         Js.log(School.getProfession(anotherPerson)) /* "A teacher" */
+       #+end_src
+
+     - /Nested modules/ work too.
+
 **** ~open~ ing a module
+     #+begin_src
+       let p = School.getProfession(School.person1)
+     #+end_src
+
+     Can be written as
+     #+begin_src
+       open School
+       let p = getProfession(person1)
+     #+end_src
+
+     - *Use ~open~ this _SPARINGLY_, it's convenient,
+       BUT makes it hard to know where some values come from.*
+       * You should usually use ~open~ in a /local scope/:
+         #+begin_src
+           let p = {
+             open School
+             getProfession(person1)
+           }
+         #+end_src
+
 **** Use ~open!~ to ignore shadow warnings
-**** Destructuring modules
-     # Since 9.0.2
+     *Note*:
+     Same as with ~open~, don't overuse ~open!~ statements if not necessary.
+     Use /(sub)modules/ to prevent shadowing issues.
+
+**** Destructuring modules - Since 9.0.2
+     DESTRUCTURE a /module/'s _functions_ and _values_ (*NO* /types/) into
+     separate /let bindings/:
+     #+begin_src
+       module User = {
+         let user1 = "Anna"
+         let user2 = "Franz"
+       }
+
+       // Destructure by name
+       let {user1, user2} = module(User)
+
+       // Destructure with different alias
+       let {user1: anna, user2: franz} = module(User)
+     #+end_src
 
 **** Extending modules
+     Using ~include~ in a /module/ statically
+     *"spreads" _a /module/'s content_ into a new one,*
+     thus often fulfill the role of /"inheritance"/ or /"mixin"/.
+
+     - *NOTE*:
+       This is equivalent to a compiler-level copy paste.
+
+     - ~include~ is =Heavily Discouraged=, and it is the last resort!
+       #+begin_src
+         module BaseComponent = {
+           let defaultGreeting = "Hello"
+           let getAudience = (~excited) => excited ? "world!" : "world"
+         }
+
+         module ActualComponent = {
+           /* the content is copied over */
+           include BaseComponent
+           /* overrides BaseComponent.defaultGreeting */
+           let defaultGreeting = "Hey"
+           let render = () => defaultGreeting ++ " " ++ getAudience(~excited = true)
+         }
+       #+end_src
+
+     - *NOTE*:
+       ~open~ and ~include~ are very differnt!
+       * ~open~ brings a module's content into your current scope.
+
+       * ~include~
+         1. *copied over* the definition of a module statically,
+         2. then also do an ~open~.
+
 **** Every =.res= file is a module
+     EVERY _ReScript file_ is itself *compiled to* a /module/ of the *SAME* name
+     _AS the FILE NAME, CAPITALIZED_.
+
+     - The file =React.res= implicitly forms a /module/ ~React~,
+       which can be seen by other source files.
+
+     - *NOTE*:
+       /ReScript file names/ should, BY CONVENTION, be *capitalized* so that their
+       casing matches their /module name/.
+       * _UNCAPITALIZED file names_ are *NOT invalid*,
+         BUT will be *implicitly transformed into* a _CAPITALIZED module name_.
+         I.e.
+         =file.res= will be compiled into the /module/ ~File~.
+
+       * To simplify and minimize the disconnect here,
+         the *CONVENTION* is therefore to _CAPITALIZE file names._
 
 *** Signatures
+    - Signature :: module's type
+      - It can be written explicitly.
+
+    - If a /module/ is LIKE _a =.res= (implementation) file_,
+      then a /module's signature/ is LIKE _a =.resi= (interface) file_.
+
 **** Creation
+     - To create a /signature/, use the ~module type~ _keyword_.
+       * The /signature name/ *MUST _start with_ a capital letter.*
+
+       * Whatever you could place in a =.resi= file,
+         you may place inside a /signature definition/'s ~{}~ block.
+
+     - Example:
+       #+begin_src
+         /* Picking up previous section's example */
+         module type EstablishmentType = {
+           type profession
+           let getProfession: profession => string
+         }
+       #+end_src
+       * Declare a /type/ named ~profession~.
+
+       * Must include a /function/ that takes in a value of the ~type ~profession~
+         and returns a ~string~.
+
+     - A /signature/ defines the _list of requirements that a /module/ MUST satisfy_
+       in order for that /module/ to match the /signature/.
+
+       * Those requirements are of the form:
+         + ~let x: int~ requires a /let binding/ named ~x~, of type ~int~.
+
+         + ~type t = someType~ requires a /type field/ ~t~ to be equal to ~someType~.
+
+         + ~type t~ requires a /type field/ ~t~,
+           BUT *WITHOUT* imposing any requirements on the actual, /CONCRETE type/
+           of ~t~.
+
+           - We'd use ~t~ in other entries in the /signature/ to describe relationships,
+             e.g. ~let makePair: t => (t, t)~, but we cannot make any assumption for ~t~.
+             =TODO= =IMPORTANT=
+             *This gives us great, enforced abstraction abilities.*
+
+     - *Note*:
+       /Modules/ of the /type/ ~EstablishmentType~ *can contain more* /fields/
+       than the /signature/ declares,
+       * This effectively makes the ~person1~ field an enforced _implementation detail_!
+         =IMPORTANT=
+         *Outsiders can't access it*, since it's not present in the /signature/;
+         the /signature/ *constrained* what others can access.
+
+     - The /type/ ~EstablishmentType.profession~ is *abstract*:
+       * it's saying "I don't care what the _actual type_ is,
+         BUT it's used as input to ~getProfession~".
+
+         This is useful to fit many /modules/ under the same /interface/:
+         #+begin_src
+           module Company: EstablishmentType = {
+             type profession = CEO | Designer | Engineer | ...
+
+             let getProfession = (person) => ...
+             let person1 = ...
+             let person2 = ...
+           }
+         #+end_src
+
+       * It's also useful to *hide* the _underlying type_ as an _implementation detail_
+         others can't rely on.
+         + If you ask what the /type/ of ~Company.profession~ is,
+           instead of exposing the /variant/, it'll only tell you "it's ~Company.profession~".
+
 **** Extending module signatures
+     *Heavily discouraged*
+
+     - Like extending modules, use ~inlcude~
+
+     - Example:
+       #+begin_src
+         module type BaseComponent = {
+           let defaultGreeting: string
+           let getAudience: (~excited: bool) => string
+         }
+
+         module type ActualComponent = {
+           /* the BaseComponent signature is copied over */
+           include BaseComponent
+           let render: unit => string
+         }
+       #+end_src
+
+     - If you do *NOT* have a _defined_ /module type/,
+       you can extract it from an actual module using
+       ~include (module type of ActualModuleName)~.
+       * For example,
+         we can extend the ~List~ /module/ from the standard library, which does
+         not define a /module/ type.
+         #+begin_src
+           module type MyList = {
+             include (module type of List)
+             let myListFun: list<'a> => list<'a>
+           }
+         #+end_src
+
 **** Every =.resi= file is a signature
+     - Similar to how a =React.res= file implicitly defines a /module/ ~React~,
+       a file =React.resi= implicitly defines a /signature/ for ~React~.
+
+     - If =React.resi= isn't provided,
+       the /signature/ of =React.res= defaults to _exposing ALL_ the fields of
+       the /module/.
+
+     - Because they don't contain implementation files,
+       =.resi= files are used in the ecosystem to also _DOCUMENT the public API_
+       of their corresponding /modules/.
+
+     - Example:
+       #+begin_src
+         /* file React.res (implementation. Compiles to module React */
+         type state = int
+         let render = (str) => str
+       #+end_src
+
+       #+begin_src
+         /* file React.resi (interface. Compiles to the signature of React.res */
+         type state = int
+         let render: string => string
+       #+end_src
 
 *** Module Functions (functors)
-**** Module functions types
+    /Modules/ can be passed to _"functions"_! It would be the equivalent of
+    passing a file as a first-class item.
 
-*** Exotic Module Filenames
+    - /Modules/ are at a different "layer" of the language than other common concepts,
+      so we *can't* _pass them to /regular functions/._
+        Instead, we pass them to _special functions_ called /functors/.
+
+    - The syntax for _defining and using_ /functors/ is very _MUCH LIKE_ the
+      syntax for defining and using regular functions.
+      * The primary differences are:
+        + /Functors/ use the ~module~ keyword instead of ~let~.
+        + /Functors/ *take* /modules/ as arguments and *return* a /module/.
+        + /Functors/ *require* _annotating_ arguments.
+        + /Functors/ *must start with* a _capital letter_ (just like modules/signatures).
+
+    - Here's an example ~MakeSet~ /functor/, that takes in a ~module type Comparable~
+      and returns a new set that can contain such comparable items.
+      #+begin_src
+        module type Comparable = {
+          type t
+          let equal: (t, t) => bool
+        }
+
+        module MakeSet = (Item: Comparable) => {
+          // let's use a list as our naive backing data structure
+          type backingType = list<Item.t>
+          let empty = list{}
+          let add = (currentSet: backingType, newItem: Item.t): backingType =>
+            // if item exists
+            if List.exists(x => Item.equal(x, newItem), currentSet) {
+              currentSet // return the same (immutable) set (a list really)
+            } else {
+              list{
+                newItem,
+                ...currentSet // prepend to the set and return it
+              }
+            }
+        }
+      #+end_src
+
+      * /Functor/ application:
+        #+begin_src
+          module IntPair = {
+            type t = (int, int)
+            let equal = ((x1: int, y1: int), (x2, y2)) => x1 == x2 && y1 == y2
+            let create = (x, y) => (x, y)
+          }
+
+          /* IntPair abides by the Comparable signature required by MakeSet */
+          module SetOfIntPairs = MakeSet(IntPair)
+        #+end_src
+
+**** Module functions types - =TODO= =I HAVE NO IDEA ABOUT THIS SUBSECTION= =???=
+     Like with /module types/, /functor types/ also act to *constrain and hide*
+     what we may assume about /functors/.
+
+     - The syntax for /functor types/ are consistent with those for /function types/.
+
+     - In the previous example,
+       we're exposing the _backing type_ of a set;
+       by giving ~MakeSet~ a /functor signature/, we can *hide* the _underlying
+       data structure_!
+       #+begin_src
+         module type Comparable = ...
+
+         module type MakeSetType = (Item: Comparable) => {
+           type backingType
+           let empty: backingType
+           let add: (backingType, Item.t) => backingType
+         }
+
+         module MakeSet: MakeSetType = (Item: Comparable) => {
+           ...
+         }
+       #+end_src
+
+*** Exotic Module Filenames - Since 8.3
+    It is possible to use *non-conventional characters* in your filenames (_which
+    is sometimes needed for specific JS frameworks_). Here are some examples:
+    =src/Button.ios.res=
+    =pages/[id].res=
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    Please note that /modules/ with an /exotic filename/ will *NOT be
+    accessible* from *OTHER* ReScript /modules/.
+
 *** Tips & Tricks
+    =TODO= =???=
+    =TODO= =???=
+    =TODO= =???=
 
-** TODO Import & Export
+    - /Modules/ and /functors/ are _at a different "layer" of language_
+      THAN
+      the rest (/functions/, /let bindings/, /data structures/, etc.).
+
+      * For example,
+        you *CAN'T* easily pass them into a /tuple/ or /record/.
+
+    - Use them judiciously, if ever!
+      Lots of times, just a /record/ or a /function/ is enough.
+
+** DONE Import & Export
+   CLOSED: [2022-11-11 Fri 14:52]
 *** Import a Module/File
+    - UNLIKE JavaScript,
+      =IMPORTANT= [ReScript *DOESN'T* have or need /import statements/:
+      #+begin_src
+        let studentMessage = Student.message
+      #+end_src
+
+      #+begin_src js
+        var Student = require("./Student.bs");
+        var studentMessage = Student.message
+      #+end_src
+
+    - _Every ReScript FILE is also a /module/,_
+      so accessing another file's content is the *SAME as* accessing another
+      /module/'s content!
+      * A /ReScript project's file/ names need to be *UNIQUE*.
+
 *** Export Stuff
+    *By DEFAULT*,
+    _EVERY_ file's /type declaration/, /binding/ and /module/ is exported, aka
+    publicly usable by another file -- this also means those values, once
+    compiled into JS, are immediately usable by your JS code.
+
+    - To *ONLY /export/ a few* selected things,
+      use a =.resi= /[[https://rescript-lang.org/docs/manual/latest/module#signatures][interface file]]/.
+      =TODO= =???=
+
 *** Work with JavaScript Import & Export
+    =TODO=
+    To see how to /import JS modules/ and /export stuff for JS consumption/,
+    see the _JavaScript Interop section_'s [[https://rescript-lang.org/docs/manual/latest/import-from-export-to-js][Import from/Export to JS]].
 
 ** DONE Attribute (Decorator) - =TODO= =LEARN MORE=
    CLOSED: [2022-11-08 Tue 22:26]
@@ -1916,13 +2281,83 @@
 *** Global Modules
 *** Special Global Values
 
-** JSON
+** DONE JSON
+   CLOSED: [2022-11-09 Wed 16:54]
 *** Parse
-*** Stringify
-*** Advanced
+    *Bind* to JavaScript's ~JSON.parse~ and type the return value as the type you're expecting:
+    #+begin_src
+      // declare the shape of the json you're binding to
+      type data = {names: array<string>}
 
-** Inlining Constants
+      // bind to JS's JSON.parse
+      @scope("JSON") @val
+      external parseIntoMyData: string => data = "parse"
+
+      let result = parseIntoMyData(`{"name": ["Luke", "Christine"]}`)
+      let name1 = result.names[0]
+    #+end_src
+    - =FIXME= JS' => JS's
+
+    - ~data~ here can be any type you ASSUME the JSON is.
+
+    - This is convenient, but has *NO guarantee* that e.g.
+      * the data is correctly shaped, or
+      * even syntactically valid.
+      _Slightly dangerous._
+      =TODO= =From Jian= I think wrong data will trigger a runtime error???
+
+*** Stringify
+    ~Js.Json.stringify~
+    =TODO= =TODO= =TODO=
+    ~Js.Json.stringifyWithSpace~
+    ~Js.Json.stringifyAny~
+
+*** Advanced
+    The ~Js.Json~ /module/ provides _SLIGHTLY safer, low-level building blocks_
+    *for power users* who want to _parse JSON *on a per-field basis*._
+    =TODO= =???=
+    See the examples in the API docs.
+
+** DONE Inlining Constants
+   CLOSED: [2022-11-10 Thu 09:29]
+   #+begin_src
+     @val external process: 'a = "process"
+
+     @inline
+     let mode = "development"
+
+     if (process["env"]["mode"] === mode) {
+       Js.log("Dev-only code here!")
+     }
+   #+end_src
+
+   will be compiled to
+
+   #+begin_src js
+     if (process.env.mode === "development") {
+       console.log("Dev-only code here!");
+     }
+   #+end_src
+
+   - Now your resulting JS code can pass through _Webpack_ and _Uglifyjs_ like the
+     rest of your JavaScript code, and that whole ~console.log~ can be removed.
+
+   - =IMPORTANT=
+     The /inlining/ _CURRENTLY_ *only* works for:
+     * ~string~,
+     * ~float~
+     * ~boolean~
+
 *** Tips & Tricks
+    - =IMPORTANT=
+      This is *NOT an optimization*.
+
+    - This is an *edge-case feature* for folks who absolutely need particular values
+      inlined for a JavaScript post-processing step, like /conditional compilation/.
+
+      * Beside the difference in code that the /conditional compilation/ might end
+        up outputting, there's *NO performance difference* between /inlining/ and
+        /NOT inlining/ simple values in the eyes of a JavaScript engine.
 
 ** Use Illegal Identifier Names
 ** Generate Converters & Helpers
