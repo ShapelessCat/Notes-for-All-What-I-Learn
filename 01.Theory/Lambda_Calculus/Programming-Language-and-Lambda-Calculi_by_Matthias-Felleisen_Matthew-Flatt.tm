@@ -3,8 +3,14 @@
 <style|<tuple|book|old-dots|old-lengths>>
 
 <\body>
+  <\hide-preamble>
+    \;
+
+    <assign|eq-number|<macro|<htab|5mm><next-number>>>
+  </hide-preamble>
+
   <doc-data|<doc-title|Note to<next-line>Programming Language and Lambda
-  Calculi (Utah_CS7520_Version)>|<doc-author|<author-data|<author-name|Jian
+  Calculi (Utah CS7520 Version)>|<doc-author|<author-data|<author-name|Jian
   Lan>>>>
 
   <chapter*|Book Info>
@@ -22,13 +28,271 @@
 
   <chapter|Computing with Text>
 
+  <\itemize-minus>
+    <item>In this book, we study
+
+    <\itemize-dot>
+      <item><strong|HOW> a programming language can be defined in a way that
+      is <strong|easily understood by people>
+
+      <item>also <strong|HOW> a programming language can be defined
+      <strong|amenable to formal analysis>\Vwhere the formal analysis should
+      be easily understood by people, too.
+
+      \;
+    </itemize-dot>
+
+    <item>XXX
+
+    \;
+
+    <item>xxx
+
+    <\itemize-dot>
+      <item>The <em|meta-language> used to define another language
+      <underline|need NOT execute efficiently>, since its primary purpose is
+      to explain the other language to humans.
+
+      <item>The meta-language's <em|primitive data constructs>
+      <underline|need NOT be defined in terms of bits and bytes.> Indeed, for
+      the meta-language we can directly <underline|use <strong|logic> and
+      <strong|set theory> over a universe of program text.> In the same way
+      that\ 
+
+      <\itemize-arrow>
+        <item><em|<underline|Computation on <strong|physical machines>>> can
+        be described, ultimately, in terms of shuffling bits among memory
+        locations;
+
+        <item><underline|<em|Computation in the <strong|abstract>>> can be
+        described in terms of <em|relations> on text.
+      </itemize-arrow>
+
+      \;
+    </itemize-dot>
+  </itemize-minus>
+
+  \;
+
   <section|Defining Sets>
+
+  A small language BNF grammar (for illustration):
+
+  <\framed>
+    <\eqnarray*>
+      <tformat|<table|<row|<cell|B>|<cell|=>|<cell|t>>|<row|<cell|>|<cell|\|>|<cell|f>>|<row|<cell|>|<cell|\|>|<cell|<around*|(|B\<bullet\>B|)>>>>>
+    </eqnarray*>
+  </framed>
+
+  \;
+
+  This definition can be expanded to the following constraints on <math|B>:
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|t>|<cell|\<in\>>|<cell|B>>|<row|<cell|f>|<cell|\<in\>>|<cell|B>>|<row|<cell|a\<in\>B<text|
+    and >b\<in\>B>|<cell|\<Rightarrow\>>|<cell|<around*|(|a\<bullet\>b|)>\<in\>B>>>>
+  </eqnarray*>
+
+  Technically, the set <math|B> that we mean is the <strong|smallest> set
+  that obeys the above constraints.
+
+  \;
+
+  \;
+
+  <\exercise>
+    Which of the following are in <math|B>? For each member of <math|B>,
+    provide a proof tree showing that it must be in <math|B>.
+  </exercise>
+
+  <\enumerate-numeric>
+    <item><math|t>
+
+    <\equation*>
+      t\<in\>B
+    </equation*>
+
+    \;
+
+    <item><math|\<bullet\>>
+
+    <\equation*>
+      \<bullet\>\<notin\>B
+    </equation*>
+
+    \;
+
+    <item><math|<around*|(|<around*|(|f\<bullet\>t|)>\<bullet\><around*|(|f\<bullet\>f|)>|)>>
+
+    <\equation*>
+      <frac|<tabular|<tformat|<table|<row|<cell|<frac|<tabular|<tformat|<table|<row|<cell|f\<in\>\<Beta\>>|<cell|t\<in\>B>>>>>|<around*|(|f\<bullet\>t|)>\<in\>B>>|<cell|<frac|<tabular|<tformat|<table|<row|<cell|f\<in\>\<Beta\>>|<cell|f\<in\>B>>>>>|<around*|(|f\<bullet\>f|)>\<in\>B>>>>>>|<around*|(|<around*|(|f\<bullet\>t|)>\<bullet\><around*|(|f\<bullet\>f|)>|)>\<in\>B>
+    </equation*>
+
+    \;
+
+    <item><math|<around*|(|<around*|(|f|)>\<bullet\><around*|(|t|)>|)>>
+
+    <\equation*>
+      <frac|<tabular|<tformat|<table|<row|<cell|f\<in\>\<Beta\>>|<cell|t\<in\>B>>>>>|<around*|(|<around*|(|f|)>\<bullet\><around*|(|t|)>|)>\<in\>B>
+    </equation*>
+  </enumerate-numeric>
 
   <\section>
     Relations
   </section>
 
+  <\itemize-minus>
+    <item>Definition for <strong|Relation>
+
+    <\definition*>
+      A <strong|Relation> is a set whose elements consist of ordered pairs.
+
+      <\itemize-dot>
+        <item>An <strong|ordered pair> <math|<around*|\<langle\>|x,y|\<rangle\>>>
+        can be represented as a set oof sets
+        <math|<around*|{|<around*|{|x|}>,<around*|{|x,y|}>|}>>.
+      </itemize-dot>
+    </definition*>
+
+    <item>For example, we can define the <math|\<equiv\>>
+    <with|font-shape|italic|relation> to match each element of <math|B> with
+    itself:
+
+    <\equation*>
+      a\<in\>B\<Rightarrow\><around*|\<langle\>|a,a|\<rangle\>>\<in\>\<equiv\>
+    </equation*>
+
+    For <with|font-shape|italic|binary relations> such as this
+    <math|\<equiv\>>, instead of <math|<around*|\<langle\>|a,a|\<rangle\>>\<in\>\<equiv\>>,
+    we usually write <math|a\<equiv\>a>:
+
+    <\equation*>
+      a\<in\>B\<Rightarrow\>a\<equiv\>a
+    </equation*>
+
+    or even simple
+
+    <\equation*>
+      B<rsub|1>\<equiv\>B<rsub|1>
+    </equation*>
+
+    <\itemize-dot>
+      <item>The <with|font-shape|italic|relation> \<equiv\> is
+      <with|font-shape|italic|reflexive>, <with|font-shape|italic|symmetric>,
+      and <with|font-shape|italic|transitive>.
+    </itemize-dot>
+
+    <item>The properties that a <em|relation> can have:
+
+    <tabular|<tformat|<table|<row|<cell|a <em|relation> <math|\<b-R\>> is
+    <strong|reflexive>>|<cell|iff>|<cell|<math|a\<b-R\> a> (for any
+    <math|a>)>>|<row|<cell|a <em|relation> <math|\<b-R\>> is
+    <strong|symmetric>>|<cell|iff>|<cell|<math|a\<b-R\>
+    b\<Rightarrow\>b\<b-R\> a>>>|<row|<cell|a <em|relation> <math|\<b-R\>> is
+    <strong|transitive>>|<cell|iff>|<cell|<math|a\<b-R\> b> and
+    <math|b\<b-R\> c\<Rightarrow\>a\<b-R\> c>>>>>>
+
+    \;
+
+    <item>If a <em|<strong|relation>> is <em|reflexive>, <em|symmetric>, and
+    <em|transitive>, then it is an <strong|<em|equivalence>>.
+
+    <item>Define a <em|relation> <math|\<b-r\>> that is NEITHER
+    <em|reflexive>, <em|symmetric>, NOR <em|transitive>:
+
+    <\framed>
+      <\equation*>
+        <tabular|<tformat|<cwith|1|-1|1|1|cell-halign|r>|<table|<row|<cell|<around*|(|f\<bullet\>B<rsub|1>|)>>|<cell|\<b-r\>>|<cell|B<rsub|1>>|<cell|>|<cell|<around*|[|a|]>>>|<row|<cell|<around*|(|t\<bullet\>B<rsub|1>|)>>|<cell|\<b-r\>>|<cell|t>|<cell|>|<cell|<around*|[|b|]>>>>>>
+      </equation*>
+    </framed>
+
+    <\itemize-dot>
+      <item>Define a new <em|relation> <math|\<asymp\><rsub|\<b-r\>>> by
+      adding the constraint that <math|\<asymp\><rsub|\<b-r\>>> is
+      <em|<strong|reflexive>>:
+
+      <\framed>
+        <\equation*>
+          <tabular|<tformat|<cwith|1|-1|1|1|cell-halign|r>|<table|<row|<cell|<around*|(|f\<bullet\>B<rsub|1>|)>>|<cell|\<asymp\><rsub|\<b-r\>>>|<cell|B<rsub|1>>|<cell|>|<cell|<around*|[|a|]>>>|<row|<cell|<around*|(|t\<bullet\>B<rsub|1>|)>>|<cell|\<asymp\><rsub|\<b-r\>>>|<cell|t>|<cell|>|<cell|<around*|[|b|]>>>|<row|<cell|B<rsub|1>>|<cell|\<asymp\><rsub|\<b-r\>>>|<cell|B<rsub|1>>|<cell|>|<cell|<around*|[|c|]>>>>>>
+        </equation*>
+      </framed>
+
+      The <em|relation> <math|\<asymp\><rsub|\<b-r\>>> is the
+      <em|<strong|reflexive closure>> or the <math|\<b-r\>> <em|relation>.
+
+      \;
+
+      <item>Define yet another a <em|relation> by adding <strong|symmetric>
+      and <strong|transitive> constraint:
+
+      <\framed>
+        <\equation*>
+          <tabular|<tformat|<cwith|1|-1|1|1|cell-halign|r>|<table|<row|<cell|<around*|(|f\<bullet\>B<rsub|1>|)>>|<cell|\<approx\><rsub|\<b-r\>>>|<cell|B<rsub|1>>|<cell|>|<cell|<around*|[|a|]>>>|<row|<cell|<around*|(|t\<bullet\>B<rsub|1>|)>>|<cell|\<approx\><rsub|\<b-r\>>>|<cell|t>|<cell|>|<cell|<around*|[|b|]>>>|<row|<cell|B<rsub|1>>|<cell|\<approx\><rsub|\<b-r\>>>|<cell|B<rsub|1>>|<cell|>|<cell|<around*|[|c|]>>>|<row|<cell|B<rsub|1>\<approx\><rsub|\<b-r\>>B<rsub|2>>|<cell|\<Rightarrow\>>|<cell|B<rsub|2>\<approx\><rsub|\<b-r\>>B<rsub|1>>|<cell|>|<cell|<around*|[|d|]>>>|<row|<cell|B<rsub|1>\<approx\><rsub|\<b-r\>>B<rsub|2><text|
+          and >B<rsub|2>\<approx\><rsub|\<b-r\>>B<rsub|3>>|<cell|\<Rightarrow\>>|<cell|B<rsub|1>\<approx\><rsub|\<b-r\>>B<rsub|3>>|<cell|>|<cell|<around*|[|e|]>>>>>>
+        </equation*>
+      </framed>
+
+      The <math|\<approx\><rsub|\<b-r\>>> <em|relation> is the
+      <strong|<em|symmetric-transitive closure>> of
+      <math|\<asymp\><rsub|\<b-r\>>>, and it is the
+      <em|<strong|reflexive-symmetric-transitive closure>> or
+      <strong|<em|equivalence closure>> of <math|\<b-r\>>.
+    </itemize-dot>
+  </itemize-minus>
+
   <section|Relations as Evaluation>
+
+  The example in the previous section give you an idea of how a programming
+  language can be defined through a set (<math|B>) and a <em|relation> on
+  this set (<math|\<b-r\>>).
+
+  <\itemize-minus>
+    <item>You might begin to suspect that <math|B> is a grammar for
+    <underline|boolean expressions> with <math|\<bullet\>> as \Por\Q, and
+    <math|\<approx\><rsub|\<b-r\>>> equates pairs of expressions that have
+    the same boolean value.\ 
+
+    <\itemize-dot>
+      <item>Indeed, using the constraints above, it is easy to show
+      <math|<around*|(|f\<bullet\>t|)>\<approx\><rsub|\<b-r\>><around*|(|t\<bullet\>t|)>>,
+      just as <math|false\<vee\>true=true\<vee\>true>. However, this is not
+      enough. If we want to prove this, we need to prove general claims about
+      <math|\<bullet\>>, such as the fact that
+      <math|<around*|(|B<rsub|1>\<bullet\>t|)>\<approx\><rsub|\<b-r\>>t> for
+      any expression <math|B<rsub|1>> <underline|(It turns out that we would
+      not be able to prove the claim, as we'll soon see)>.\ 
+    </itemize-dot>
+
+    <item>In other words, there is generally <underline|a <strong|GAP>
+    between an <em|<em|<strong|interpreter-defined language>>> (even if the
+    interpreter is defined with mathematics) and <strong|properties> of the
+    language that we might like to guarantee.>\ 
+
+    <\itemize-dot>
+      <item>For various purposes, the <strong|properties> of a language are
+      <underline|as important as> the <strong|values> it computes.
+
+      <\itemize-arrow>
+        <item>For example, if <math|\<bullet\>> really acted like \Por\Q,
+
+        <\itemize-minus>
+          <item>then a compiler might safely optimize
+          <math|<around*|(|B<rsub|1>\<bullet\>t|)>> as <math|t>.
+
+          <item>Similarly, if <em|syntactic rules> for a language gurantee
+          that a number can never be added to any value other than another
+          number, then the implementation of the language need not check the
+          arguments of an addition expression to ensure that they are
+          numbers.
+        </itemize-minus>
+      </itemize-arrow>
+    </itemize-dot>
+
+    <item>Before we can start to address such <strong|GAPs>, however, we must
+    eliminate a <strong|meta-gap> between <underline|the way that we
+    <strong|<em|define>> languages> and <underline|the way that normal
+    <strong|<em|evaluation>> proceeds>.
+  </itemize-minus>
 
   <section|Directed Evaluation>
 
@@ -36,7 +300,77 @@
 
   <section|Evaluation Function>
 
+  The <math|\<twoheadrightarrow\><rsub|\<b-r\>>> brings us close to a useful
+  notion of evaluation, but we are not there yet!
+
+  \;
+
+  For evaluation, we're interested in whether <math|\<b-B\>> evaluates to
+  <math|f> or to <math|t>; any other mapping by
+  <math|\<twoheadrightarrow\><rsub|\<b-r\>>> or <math|=<rsub|\<b-r\>>> is
+  irrelevant. To capture this notion of evaluation, we define the
+  <math|<text|<em|eval>><rsub|\<b-r\>>> <em|relation> as follows:
+
+  <\equation*>
+    <text|<em|eval>><rsub|\<b-r\>><around*|(|B|)>=<choice|<tformat|<table|<row|<cell|f>|<cell|>|<cell|if
+    B=<rsub|\<b-r\>>f>>|<row|<cell|t>|<cell|>|<cell|if B=<rsub|\<b-r\>>t>>>>>
+  </equation*>
+
+  <\itemize-minus>
+    <item>Here, we're using yet <underline|ANOTHER notation> to define a
+    <em|relation>.
+
+    This particular notation is suggestive of a <em|function>, i.e., a
+    <em|relation> that maps each element to AT MOST one element. We use the
+    <underline|function notation> because
+    <underline|<math|<text|<em|eval>><rsub|\<b-r\>>> <strong|must be a
+    <em|function>> if it's going to make sense as an <em|evaluator>.>
+  </itemize-minus>
+
+  \;
+
   <section|Notation Summary>
+
+  <\wide-block>
+    <tformat|<cwith|2|-1|1|1|cell-valign|b>|<table|<row|<\cell>
+      name
+    </cell>|<\cell>
+      definition
+    </cell>|<\cell>
+      intuition
+    </cell>>|<row|<\cell>
+      <math|->
+    </cell>|<\cell>
+      the base relation on members of an expression grammar
+    </cell>|<\cell>
+      a single \Preduction\Q step with no context
+    </cell>>|<row|<\cell>
+      <math|\<rightarrow\>_>
+    </cell>|<\cell>
+      the compatible closure of <math|_> with respect to the expression
+      grammar
+    </cell>|<\cell>
+      a single step within a context
+    </cell>>|<row|<\cell>
+      <math|\<twoheadrightarrow\>_>
+    </cell>|<\cell>
+      the reflexive\Utransitive closure of <math|\<rightarrow\>_>
+    </cell>|<\cell>
+      multiple evaluation steps (zero or more)
+    </cell>>|<row|<\cell>
+      <math|=_>
+    </cell>|<\cell>
+      the symmetric\Utransitive closure of <math|\<twoheadrightarrow\>_>
+    </cell>|<\cell>
+      equates expressions that produce the same result
+    </cell>>|<row|<\cell>
+      <math|<text|<em|eval>>_>
+    </cell>|<\cell>
+      <math|=_> restricted to a range of results
+    </cell>|<\cell>
+      complete evaluation
+    </cell>>>>
+  </wide-block>
 
   <chapter|Structural Induction>
 
@@ -308,6 +642,7 @@
     <associate|auto-125|<tuple|A.3|?>>
     <associate|auto-126|<tuple|A.4|?>>
     <associate|auto-127|<tuple|A.5|?>>
+    <associate|auto-128|<tuple|A.5|?>>
     <associate|auto-13|<tuple|2.2|11>>
     <associate|auto-14|<tuple|2.3|11>>
     <associate|auto-15|<tuple|2.4|11>>
@@ -403,6 +738,8 @@
     <associate|auto-97|<tuple|16.1.1|?>>
     <associate|auto-98|<tuple|16.1.2|?>>
     <associate|auto-99|<tuple|16.2|?>>
+    <associate|footnote-1.1|<tuple|1.1|?>>
+    <associate|footnr-1.1|<tuple|1.1|?>>
   </collection>
 </references>
 
