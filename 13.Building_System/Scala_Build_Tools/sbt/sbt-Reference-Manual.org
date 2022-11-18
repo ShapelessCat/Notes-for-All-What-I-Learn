@@ -1,9 +1,9 @@
 #+TITLE: sbt Reference Manual
-#+VERSION: 1.x (1.5.5 -> 1.7.1)
+#+VERSION: 1.x (1.5.5 -> 1.8.0)
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
-=from Jian= sbt can support Scala 3 without the sbt-dotty plugin since 1.5.0
+=from Jian= sbt can support Scala 3 WITHOUT the sbt-dotty plugin since 1.5.0
 
 ** Features of sbt
   - Little or no configuration required for simple projects
@@ -1209,18 +1209,19 @@
 
    - TODO See *organizing the build* for details.
 
-** TODO h. Task graph =RE-READ=
+** DONE h. Task graph - =TODO= =FIXME???= =head level issue=
+   CLOSED: [2022-11-18 Fri 15:52]
    Continuing from /build definition/, this page explains =build.sbt= definition
    in more detail.
 
    - RATHER THAN thinking of settings as _key-value pairs_,
-     a better analogy would be to think of it as a /DAG/ of /tasks/ where the
-     _edges denote /happens-before/._
-     *Let's call this the /task graph/.*
+     a *better analogy* would be to think of it as a /DAG/ of /tasks/
+     where the _edges denote /happens-before/._
+     * *Let's call this the /task graph/.*
 
 *** DONE Terminology
     CLOSED: [2019-08-13 Tue 15:59]
-     Review:
+     Review before dive in:
      - Setting/Task expression :: entry inside ~.settings(...)~.
 
      - Key :: LHS of ~:=~ in a /setting\slash{}task expression/.
@@ -1232,15 +1233,16 @@
      - Task :: Defined by a /task expression/ with ~TaskKey[A]~.
                The value is calculated _EACH TIME it is invoked_.
 
-*** TODO Declaring dependency to other tasks
+*** DONE Declaring dependency to other tasks
+    CLOSED: [2022-11-17 Thu 15:06]
     =IMPORTANT= *This is very tricky!!!!!*
 
     - _In =build.sbt= DSL_, we use ~.value~ /method/ to _express the dependency
       to another /task/ or /setting/._
 
-    - The ~value~ /method/ is special (explained later) and *may ONLY* be called
+    - =IMPORTANT=
+      The ~value~ /method/ is *SPECIAL* (explained later) and *may ONLY* be called
       in the argument to ~:=~ (or, ~+=~ or ~++=~, which we'll see later).
-      (TODO =From Jian= WHY *may ONLY*?)
 
     - Example
       *Note*: The values calculated below are nonsensical for ~scalaOptions~,
@@ -1261,8 +1263,11 @@
       * ~update.value~ and ~clean.value~ declare /task dependencies/, whereas
         ~ur.allConfigurations.take(3)~ is the body of the /task/.
 
-      * ~.value~ is *NOT a normal Scala method call*.
-        =build.sbt= DSL uses a _macro_ to _lift these outside of the task body_.
+      * =IMPORTANT=
+        =IMPORTANT=
+        =IMPORTANT=
+        ~.value~ is *NOT a normal Scala method call*.
+        =build.sbt= DSL _uses a /macro/ to *lift* these *outside* of the /task body/._
         Both ~update~ and ~clean~ /tasks/ are completed by the time task engine
         evaluates the opening ~{~ of ~scalacOptions~ _regardless of which line
         it appears in the body_.
@@ -1270,12 +1275,13 @@
         For example,
         + #1
           #+BEGIN_SRC scala
+            ThisBuild / organization := "com.example",
+            ThisBuild / scalaVersion := "2.12.16",
+            ThisBuild / version := "0.1.0-SNAPSHOT",
+
             lazy val root = (project in file(".")).
               settings(
                 name := "Hello",
-                organization := "com.example",
-                scalaVersion := "2.12.4",
-                version := "0.1.0-SNAPSHOT",
                 scalacOptions := {
                   val out = clean.value  // `clean` task happens-before `scalacOptions`
                   val log = out.log
@@ -1294,17 +1300,18 @@
             // [info] 456
             // [success] Total time: 0 s, completed Jan 2, 2017 10:38:24 PM
           #+END_SRC
-          From the out, it looks like run ~streams~ and ~update~ before the ~{~
-          of ~scalacOptions~
+          From the out, it clear:
+          run ~clean~ and ~update~ before the ~{~ of ~scalacOptions~
 
         + #2
           #+BEGIN_SRC scala
+            ThisBuild / organization := "com.example",
+            ThisBuild / scalaVersion := "2.12.16",
+            ThisBuild / version := "0.1.0-SNAPSHOT",
+
             lazy val root = (project in file("."))
               .settings(
                 name := "Hello",
-                organization := "com.example",
-                scalaVersion := "2.12.4",
-                version := "0.1.0-SNAPSHOT",
                 scalacOptions := {
                   val ur = update.value  // update task happens-before scalacOptions
                   if (false) {
@@ -1330,128 +1337,198 @@
             // [success] Total time: 0 s, completed Jan 2, 2017 10:45:23 PM
           #+END_SRC
           Now if you check for =target/scala-2.12/classes/=, it won't exist
-          because ~clean~ task has run even though it is inside the
-          ~if (false)~.
+          because ~clean~ task has run EVEN THOUGH it is inside the ~if (false)~.
 
       * =IMPORTANT=
-        NO guarantee about the ordering of ~update~ and ~clean~ /tasks/.
+        *NO guarantee* about _the ORDERING of ~update~ and ~clean~ /tasks/._
         Can be
         + ~update~ before ~clean~
         + ~clean~ before ~update~
         + in parallel
 
-*** Inlining ~.value~ calls
-    - Because of the specialty of ~.value~,
-      _until you're familiar with =build.sbt=,_ we recommend you *put all
-      ~.value~ calls at the top of the task body.*
+**** Inlining ~.value~ calls =FIXME= =Should level down??? Or level up the following 3 sections???=
+     - Because of the specialty of ~.value~,
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       _UNTIL you're familiar with =build.sbt=,_
+       we RECOMMEND you *put all ~.value~ calls at the _TOP_ of the /task body/.*
 
-    - Inlining ~.value~ to simplify code:
-      #+BEGIN_SRC scala
-        scalaOptions := {
-          val x = clean.value
-          update.value.allConfigurations.take(3)
-        }
-      #+END_SRC
-      You can use this to simplify the code of your build, and then you don't
-      need to give a name to ~update.value~ in this example.
+     - Inlining ~.value~ to simplify code:
+       #+BEGIN_SRC scala
+         scalaOptions := {
+           val x = clean.value
+           update.value.allConfigurations.take(3)  // Inline the `update.value`
+         }
+       #+END_SRC
+       You can use this to simplify the code of your build, and then you don't
+       need to give a name to ~update.value~ in this example.
 
-    - *CAUTION*:
-      =From Jian= I don't think this is a good feature. I'll never use inlining in
-      any formal projects.
-
+     - *CAUTION*: =From Jian= =IMPORTANT=
+       I don't think this is a good feature.
+       I'll try to avoid using inlining in projects.
 
 **** Inspecting the task
-     From the output of ~inspect <task name>~, you can find the dependencies
-     information.
+     From the output of ~inspect <task name>~, you can find the information
+     about this task, including dependencies info.
+
+     - Detailed inspection with a tree structure:
+       ~inspect tree <task name>~
+
+     - =IMPORTANT=
+       If you use a _key_'s ~value~ in another computation,
+       then the computation *depends on* that _key_.
 
 **** Defining a task that depends on other settings
-     - Example,
-       #+begin_src scala
-         lazy val root = (project in file("."))
-           .settings(
-             name := "Hello",
-             organization := "com.example",
-             scalaVersion := "2.12.4",
-             version := "0.1.0-SNAPSHOT",
-             scalacOptions := List("-encoding", "utf8", "-Xfatal-warnings", "-deprecation", "-unchecked"),
-             scalacOptions := {
-               val old = scalacOptions.value
-               scalaBinaryVersion.value match {
-                 case "2.12" => old
-                 case _      => old filterNot (Set("-Xfatal-warnings", "-deprecation").apply)
+     - SUMMARY (for this section and the following section):
+       * legal:
+         + A /setting key/ depends on another /setting key/
+         + A /task key/ depends on a /setting key/
+
+       * *ILLEGAL*:
+         + A /setting key/ depends on a /task key/
+           - =from Jian=
+             This is clear if you consider in sbt how keys of different types
+             _evaluate in DIFFERENT ways_.
+
+     - A /setting key/ depends on another /setting key/,
+       * Example:
+         #+begin_src scala
+           lazy val root = (project in file("."))
+             .settings(
+               name := "Hello",
+               organization := "com.example",
+               scalaVersion := "2.12.4",
+               version := "0.1.0-SNAPSHOT",
+               scalacOptions := List("-encoding", "utf8", "-Xfatal-warnings", "-deprecation", "-unchecked"),
+               scalacOptions := {
+                 val old = scalacOptions.value
+                 scalaBinaryVersion.value match {
+                   case "2.12" => old
+                   case _      => old filterNot (Set("-Xfatal-warnings", "-deprecation").apply)
+                 }
                }
-             }
-           )
+             )
 
-         // > show scalacOptions
-         // [info] * -encoding
-         // [info] * utf8
-         // [info] * -Xfatal-warnings
-         // [info] * -deprecation
-         // [info] * -unchecked
-         // [success] Total time: 0 s, completed Jan 2, 2017 11:44:44 PM
-         //
-         // > ++2.11.8!
-         // [info] Forcing Scala version to 2.11.8 on all projects.
-         // [info] Reapplying settings...
-         // [info] Set current project to Hello (in build file:/xxx/)
-         //
-         // > show scalacOptions
-         // [info] * -encoding
-         // [info] * utf8
-         // [info] * -unchecked
-         // [success] Total time: 0 s, completed Jan 2, 2017 11:44:51 PM
-       #+end_src
-       The ~++2.11.8!~ command can force the Scala version choice on all
-       projects.
+           // > show scalacOptions
+           // [info] * -encoding
+           // [info] * utf8
+           // [info] * -Xfatal-warnings
+           // [info] * -deprecation
+           // [info] * -unchecked
+           // [success] Total time: 0 s, completed Jan 2, 2017 11:44:44 PM
+           //
+           // > ++2.11.8!
+           // [info] Forcing Scala version to 2.11.8 on all projects.
+           // [info] Reapplying settings...
+           // [info] Set current project to Hello (in build file:/xxx/)
+           //
+           // > show scalacOptions
+           // [info] * -encoding
+           // [info] * utf8
+           // [info] * -unchecked
+           // [success] Total time: 0 s, completed Jan 2, 2017 11:44:51 PM
+         #+end_src
 
-        * A /task key/ can depend on /a setting key/, if two keys have the same
-          value type.
-          #+BEGIN_SRC scala
-            val scalacOptions = taskKey[Seq[String]]("Options for the Scala compiler.")
-            val checksums = settingKey[Seq[String]]("The list of checksums to generate and to verify for dependencies.")
+       * The ~++2.11.8!~ command can force the Scala version choice on all projects,
+         and then we can see the content of ~scalacOptions~ is different when the
+         ~scalaBinaryVersion~ is different, as expected.
 
-            scalacOptions := checksums.value
+     - A /task key/ can depend on /a setting key/, if two keys have the same
+       value type.
+       #+BEGIN_SRC scala
+         val scalacOptions = taskKey[Seq[String]]("Options for the Scala compiler.")
+         val checksums = settingKey[Seq[String]]("The list of checksums to generate and to verify for dependencies.")
 
-            // Illegal
-            checksums := scalacOptions.value
-          #+END_SRC
+         scalacOptions := checksums.value
 
-          There is _NO way to go the other direction_ -- a /task key/ cannot depend
-          on a /setting key/.
+         // Illegal
+         checksums := scalacOptions.value
+       #+END_SRC
+       * The code above is meaningless for a real build, and it is just a illustration.
 
-      + *Defining a setting that depends on other settings*
-        For example,
-        #+BEGIN_SRC scala
-          scalaSource in Compile := {
-            val old = (scalaSource in Compile).value
-            scalaBinaryVersion.value match {
-              case "2.11" => baseDirectory.value / "src-2.11" / "main" / "scala"
-              case _      => old
-            }
-          }
-        #+END_SRC
-        This rewires ~scalaSource~ in ~Compile~ key to a different directory only
-        when ~scalaBinaryVersion~ is "2.11".
+       * _There is *NO way* to go the other direction_:
+         a /task key/ *CANNOT* depend on a /setting key/.
 
-    - *What's the point of the =build.sbt= DSL?*
-      + *Intro to Make*
-      + *Rake*
-      + *Benefits of hybrid flow-based programming*
-        1. De-duplication
-           =???=
+**** Defining a setting that depends on other settings
+     In terms of the execution timing,
+     we can think of the /settings/ as a _special tasks_ that evaluate DURING
+     loading time.
 
-        2. Parallel
-           The task engine can schedule mutually non-dependent tasks in parallel.
+     - =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       Here's a realistic example (=from Jian= Real world project use this FREQUENTLY):
+       #+BEGIN_SRC scala
+         Compile / scalaSource := {
+           val old = (Compile / scalaSource).value
+           scalaBinaryVersion.value match {
+             case "2.11" => baseDirectory.value / "src-2.11" / "main" / "scala"
+             case _      => old
+           }
+         }
+       #+END_SRC
+       This rewires ~scalaSource~ in ~Compile~ key to a different directory only
+       when ~scalaBinaryVersion~ is "2.11".
 
-        3. The separation of concern and the flexibility.
-           * Use the task graph to wire the tasks together, while
+*** DONE What's the point of the =build.sbt= DSL?
+    CLOSED: [2022-11-18 Fri 15:51]
+    We use /the =build.sbt= domain-specific language (DSL)/ to construct a /DAG/
+    of /settings/ and /tasks/.
 
-           * /sbt/ and /plugins/ can provide various features such as
-             _compilation_ and _library dependency management_ as functions that
-             can be reused.
+    - The /setting expressions/ encode
+      * /settings/,
+      * /tasks/ and
+      * the /dependencies among them/.
 
-    - *Summary*
+    - This structure is _COMMON_ to
+      * Make (1976),
+      * Ant (2000), and
+      * Rake (2003).
+
+**** Intro to Make
+     We can think of this as /dependency-oriented programming/, or /flow-based
+     programming/.
+
+     - *Make* is actually considered a _hybrid system_
+       because
+         while the DSL describes the task dependencies, the actions are
+       *delegated to* system commands.
+
+**** Rake
+**** Benefits of hybrid flow-based programming
+     There are several _MOTIVATION_ to organizing the build this way:
+
+     1. De-duplication, not the code, but the execution.
+          With flow-based programming, a /task/ is executed *ONLY ONCE* even
+        when it is depended by MULTIPLE /tasks/.
+        * For example,
+          even when MULTIPLE /tasks/ along the /task graph/ depend on ~Compile /
+          compile~, the compilation will be executed *exactly once*.
+
+     2. Parallel
+        The task engine can schedule *mutually non-dependent* /tasks/ in PARALLEL.
+
+     3. The separation of concern and the flexibility.
+        * Use the /task graph/ to wire the /tasks/ together, while
+
+        * /sbt/ and /plugins/ can provide various features such as
+          _compilation_ and _library dependency management_ as functions that
+          can be reused.
+
+*** DONE Summary
+    CLOSED: [2022-11-18 Fri 15:51]
+    - The _CORE data structure_ of the /build definition/ is a /DAG of tasks,/
+      where the _edges_ denote *happens-before* relationships.
+
+    - =build.sbt= is a DSL designed to express /dependency-oriented
+      programming/, or /flow-based programming/, similar to _Makefile_ and
+      _Rakefile_.
+
+    - The *key MOTIVATION* for the /flow-based programming/ is
+      * de-duplication,
+      * parallel processing, and
+      * customizability.
 
 ** TODO i. Scopes
 *** The whole story about keys
@@ -1469,7 +1546,8 @@
 *** Build-level settings
 *** Scope delegation
 
-** TODO j. Appending values
+** DONE j. Appending values
+   CLOSED: [2022-11-18 Fri 16:18]
    - *Appending to previous values:* ~+=~ and ~++=~
      * When the value type, i.e. the ~T~ in ~SettingKey[T]~, is a sequence, we
        have _TWO_ more operations (besides ~:=~):
@@ -1489,20 +1567,35 @@
          sourceDirectories in Compile ++= Seq(file("sources1"), file("sources2"))
        #+END_SRC
 
+*** DONE When settings are undefined
+    CLOSED: [2022-11-18 Fri 16:14]
+    Whenever a /setting/ uses ~:=~, ~+=~, or ~++=~ to _create a dependency_ on
+    itself or another key's value
 
-     * *When settings are undefined*
-       + Whenever a setting uses ~:=~, ~+=~, or ~++=~ to create a dependency, the
-         value it depends on must exist. Or else, sbt will complain
-         "Reference to undefined setting". Pay attention to the /scope/.
+    - _Depends on *MUST* exist._
+      OR ELSE,
+      sbt will complain "Reference to undefined setting".
+      * When this happens,
+        + Be sure you're using the key in the /scope/ that defines it.
 
-     * *Tasks based on other keys' values* =TODO= =???=
-       ~Def.task~
+      * It's possible to *CREATE cycles*, which is an error;
+        _sbt will TELL you if you do this._
 
-   - *Appending with dependencies:* ~+=~ and ~++=~
-     Example,
-     ~cleanFiles += file("coverage-report-" + name.value + ".txt")~
+*** TODO Tasks based on other keys' values - =TODO= =???=
+    - ~Def.task~
+      =TODO= =???=  =TODO= =???=
 
-** TODO k. Scope delegation (~.value~ lookup)
+*** DONE Appending with dependencies: ~+=~ and ~++=~
+    CLOSED: [2022-11-18 Fri 16:18]
+    For example,
+    say you have a _coverage report_ named after the project, and
+    you want to add it to the files removed by ~clean~:
+    #+begin_src scala
+      cleanFiles += file("coverage-report-" + name.value + ".txt")
+    #+end_src
+
+** DONE k. Scope delegation (~.value~ lookup)
+   CLOSED: [2022-11-18 Fri 19:15]
    - Summary so far:
      * A /scope/ is a /tuple/ of components in *three* axes:
        + the _subproject_ axis
@@ -1535,7 +1628,7 @@
      #+end_src
      Check Rule 3 for detailed explanation.
 
-   - Scope Delegation :: a well-defined fallback search path for sbt.
+   - Scope Delegation :: a well-defined _fallback search path_ for sbt.
      * This feature allows you to set a value once in a *more general* /scope/,
        allowing multiple *more specific* /scopes/ to *inherit* the value.
 
@@ -1543,17 +1636,17 @@
     Here are the rules for /scope delegation/:
     - Rule 1:
       /Scope axes/ have the following *precedence*:
-      * the /subproject axis/,
-      * the /configuration axis/,
-      * and then the /task axis/.
+      * the /subproject axis/ (Highest),
+      * the /configuration axis/ (Middle),
+      * and then the /task axis/ (Lowest).
 
-    - Rule 2:
+    - Rule 2 (for the /task axis/):
       Given a /scope/, /delegate scopes/ are searched by
       _SUBSTITUTING_ the /task axis/ in the following order:
       1. the given /task scoping/,
       2. and then ~Zero~, which is non-task scoped version of the /scope/.
 
-    - Rule 3:
+    - Rule 3 (for the /configuration axis/):
       Given a /scope/, /delegate scopes/ are searched by
       _SUBSTITUTING_ the /configuration axis/ in the following order:
       1. the given configuration,
@@ -1561,10 +1654,10 @@
       3. their parents and so on,
       4. and then ~Zero~ (same as /unscoped configuration axis/).
 
-    - Rule 4:
+    - Rule 4 (for the /subproject axis/):
       Given a /scope/, /delegate scopes/ are searched by
       _SUBSTITUTING_ the /subproject axis/ in the following order:
-      1. the given subproject,
+      1. the given /subproject/,
       2. ~ThisBuild~,
       3. and then ~Zero~.
 
@@ -1582,7 +1675,7 @@
 
 *** DONE Rule 2: The task axis delegation
     CLOSED: [2022-09-09 Fri 21:53]
-    Example A: Given the following build definition:
+    Example A: Given the following /build definition/:
     #+begin_src scala
       lazy val projA = (project in file("a"))
         .settings(
@@ -1626,7 +1719,8 @@
       3. ~projX / Compile / Zero~
       Here only the last one is defined, and it is found.
 
-*** TODO Rule 4: The subproject axis search path
+*** DONE Rule 4: The subproject axis search path
+    CLOSED: [2022-11-18 Fri 18:47]
     #+begin_src scala
       ThisBuild / organization := "com.example"
 
@@ -1638,12 +1732,62 @@
     #+end_src
     The value of ~projB / name~ is ~"abc-org.tempuri"~
 
-**** TODO Scope axis precedennce, again
+    - So based on Rule 4,
+      the first search path is ~organization~ scoped to ~projB / Zero / Zero~, which
+      is defined in ~projB~ as ~"org.tempuri"~.
+        This has *HIGHER precedence* than the _build-level setting ~ThisBuild /
+      organization~._
+
+**** DONE Scope axis precedennce, again
+     CLOSED: [2022-11-18 Fri 18:53]
+     =from Jian=
+     Useful excises, I get right answers =2022-11-18=
+     =RE-DO= it later.
+
      - Exercise C: Given the following build definition:
      - Exercise D: Given the following build definition:
 
-*** TODO Inspect command lists the delegates
-*** TODO ~.value~ lookup vs dynamic dispatch
+*** DONE Inspect command lists the delegates
+    CLOSED: [2022-11-18 Fri 18:59]
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    The ~inspect~ can show the /delegates/
+
+    #+begin_src scala
+      sbt:projd> inspect projD / Compile / console / scalacOptions
+        [info] Task: scala.collection.Seq[java.lang.String]
+        [info] Description:
+        [info]  Options for the Scala compiler.
+        [info] Provided by:
+        [info]  ProjectRef(uri("file:/tmp/projd/"), "projD") / Compile / scalacOptions
+        [info] Defined at:
+        [info]  /tmp/projd/build.sbt:9
+        [info] Reverse dependencies:
+        [info]  projD / test
+        [info]  projD / Compile / console
+        [info] Delegates:
+        [info]  projD / Compile / console / scalacOptions
+        [info]  projD / Compile / scalacOptions
+        [info]  projD / console / scalacOptions
+        [info]  projD / scalacOptions
+        [info]  ThisBuild / Compile / console / scalacOptions
+        [info]  ThisBuild / Compile / scalacOptions
+        [info]  ThisBuild / console / scalacOptions
+        [info]  ThisBuild / scalacOptions
+        [info]  Zero / Compile / console / scalacOptions
+        [info]  Zero / Compile / scalacOptions
+        [info]  Zero / console / scalacOptions
+        [info]  Global / scalacOptions
+    #+end_src
+
+*** DONE ~.value~ lookup vs dynamic dispatch - =RE-READ= =RE-DO=
+    CLOSED: [2022-11-18 Fri 19:15]
+    =from Jian=
+    Useful excises, I get right answer for E =2022-11-18=
+    =RE-DO= it later.
+    =RE-DO= Solve F by myself without any help or hint
+
     - Exercise E: Given the following build definition:
     - Exercise F: Given the following build definition:
 
@@ -2128,6 +2272,46 @@
    - *Advanced Notes*
 
 * TODO 2. Frequently Asked Questions
+** Project Information
+*** What does the name "sbt" stand for, and why shouldn't it be written "SBT"?
+*** How do I get help?
+*** How do I report a bug?
+*** How can I help?
+
+** Usage
+*** My last command didn't work but I can't see an explanation. Why?
+*** How do I disable ansi codes in the output?
+*** How can I start a Scala interpreter (REPL) with sbt project configuration (dependencies, etc.)?
+
+** Build definitions
+*** What are the `:=`, `+=`, and `++=` methods?
+*** What is the `%` method?
+*** What does `ThisBuild / scalaVersion` mean?
+*** What is ~ModuleID~, ~Project~, ...?
+*** How do I add files to a jar package?
+*** How can I generate source code or resources?
+*** How can a task avoid redoing work if the input files are unchanged?
+
+** Extending sbt
+*** How can I add a new dependency configuration?
+*** How do I add a test configuration?
+*** How can I create a custom run task, in addition to `run`?
+*** How should I express a dependency on an outside tool such as proguard?
+*** How would I change sbt's classpath dynamically?
+*** Example of dynamic classpath augmentation
+*** How can I take action when the project is loaded or unloaded?
+*** Example of project load/unload hooks
+
+** Errors
+*** On project load, "Reference to uninitialized setting"
+
+** Dependency Management
+*** How do I resolve a checksum error?
+*** I've added a plugin, and now my cross-compilations fail!
+
+** Miscellaneous
+*** Where can I find plugins for ~$app_versions$~?
+
 * TODO 3. General Information
   This part of the documentation has project "meta-information” such as where to
   * where to get help
@@ -2162,14 +2346,9 @@
 
 ** c. Community Repository Policy
 ** d. Bintray For Plugins
-*** Create an Open Source Distribution account on Bintray
-*** Create a repository for your sbt plugins
-*** Add the sbt-bintray plugin to your build
-*** Make a release
-*** Linking your package to the sbt organization
-*** Linking your package to the sbt organization (sbt org admins)
-*** Publishing your plugin to a private repository
-*** Summary
+   *We no longer use Bintray to host plugins*
+
+   Some history
 
 ** e. Using Sonatype
 *** Sonatype setup
@@ -2188,7 +2367,7 @@
 ** f. Contributing to sbt
 *** Documentation
 
-** g. Changes
+** g. Changes - =IMPORTANT=
 *** TODO i. Migrating from sbt 0.13.x
 *** TODO ii. sbt 1.4.x releases
 *** TODO ii. sbt 1.3.x releases
@@ -2396,7 +2575,7 @@
 ** d. Compiler Interface
 *** i. Fetching the most specific sources
 
-** e. sbt Launcher
+** TODO e. sbt Launcher
 ***   i. Getting Started with the sbt launcher
 **** Overview
 ***** Applications
