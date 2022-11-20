@@ -1,11 +1,10 @@
 #+TITLE: Spark Official Documentation
 #+COMMENT: Programming Guides
-#+VERSION: 3.1.1
+#+VERSION: 3.3.1
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
 * TODO Spark Overview
-** Security
 ** Downloading
 ** Running the Examples and Shell
 ** Launching on a Cluster
@@ -15,14 +14,8 @@
 *** Deployment Guides
 *** Other Documents
 *** External Resources
-    
+
 * TODO Quick Start
-** DONE Security
-   CLOSED: [2020-11-13 Fri 09:46]
-   *Security* in Spark is *OFF* _by default_.
-   This could mean you are *vulnerable* to attack _by default_.
-   Please see "Spark Security" before running Spark.
-   
 ** TODO Interactive Analysis with the Spark Shell
 *** DONE Basics
     CLOSED: [2018-10-10 Wed 01:43]
@@ -235,19 +228,19 @@
    - To write applications in Scala,
      you will need to use a *compatible Scala version* (e.g. 2.12.X for Spark
      3.0.1).
-   
+
    - Dependencies:
      * ~libraryDependencies += "org.apache.spark" %% "spark-core" % "3.0.1"~
      * if you wish to access an /HDFS cluster/, you need to add a dependency on
        ~hadoop-client~ for your version of HDFS.
        ~libraryDependencies += "org.apache.hadoop" % "hadoop-client" % your-hdfs-version~
-       
+
    - Imports:
      #+begin_src scala
        import org.apache.spark.SparkContext
        import org.apache.spark.SparkConf
      #+end_src
-     
+
 ** DONE Initializing Spark
    CLOSED: [2021-01-19 Tue 13:33]
    The first thing a Spark program must do is to create a ~SparkContext~ object,
@@ -276,7 +269,7 @@
          receive it there.
          - However, for _local testing_ and /unit tests/, you can pass ~"local"~
            to run Spark in-process.
-     
+
 *** Using the Shell
     - In the /Spark shell/, a special interpreter-aware ~SparkContext~ is already
       created for you, in the variable called ~sc~
@@ -323,7 +316,7 @@
        + shared filesystem
        + HDFS, HBase
        + any data source offering a _Hadoop InputFormat_. =???=
-   
+
 *** DONE Parallelized Collections
     CLOSED: [2021-01-19 Tue 14:05]
     - /Parallelized collections/ are created by calling ~SparkContext~'s ~parallelize~
@@ -364,14 +357,14 @@
 
     - By default, EACH /transformed RDD/ may be *recomputed* _EACH time_ you run
       an /action/ on it.
-      
+
       * However, you may also *persist* an RDD _in memory_ using the ~persist~
         (or cache) /method/, in which case Spark will keep the elements around
         on the cluster for much faster access the next time you query it.
 
       * There is also support for *persisting* RDDs _on disk_,
         or replicated across multiple nodes.
-      
+
 **** DONE Basics
      CLOSED: [2021-01-19 Tue 17:06]
      To illustrate RDD basics, consider the simple program below:
@@ -457,7 +450,7 @@
      source of confusion. In the example below we’ll look at code that uses
      ~foreach()~ to increment a counter, but similar issues can occur for other
      operations as well.
-     
+
 ***** Example
       Consider the naive RDD element sum below, which may *behave differently*
       _DEPENDING ON whether execution is happening within the *same* JVM._
@@ -542,7 +535,7 @@
      CLOSED: [2021-01-21 Thu 02:26]
      While most Spark operations work on RDDs containing *ANY type* of objects,
      *a few special operations are only available on RDDs of key-value pairs.*
-     
+
      - The most common ones are /distributed “shuffle” operations/, such as
        *grouping* or *aggregating* the elements _by a key_.
 
@@ -559,7 +552,7 @@
          val pairs = lines.map(s => (s, 1))
          val counts = pairs.reduceByKey(_ + _)
        #+end_src
-       
+
      - We could also use ~counts.sortByKey()~, for example, to sort the pairs
        alphabetically, and finally ~counts.collect()~ to _bring them back to the
        /driver program/ as an *ARRAY* of objects._
@@ -569,12 +562,12 @@
        must be sure that a custom ~equals()~ /method/ is accompanied with a matching
        ~hashCode()~ /method/. For full details, see the contract outlined in the
        ~Object.hashCode()~ documentation.
-       
+
 **** TODO Transformations - =RE-READ=
 **** TODO Actions - =RE-READ=
 **** TODO Shuffle operations
      Certain operations within Spark trigger an _event_ known as the /shuffle/.
-     
+
      - The /shuffle/ is Spark's mechanism for *re-distributing data* so that it's
        grouped DIFFERENTLY *across partitions.*
 
@@ -729,7 +722,9 @@
 **** Configuration
 
 *** ORC Files
-*** JSON Datasets
+*** JSON Files
+*** CSV Files
+*** Text Files
 *** Hive Tables
 **** Specifying storage format for Hive tables
 **** Interacting with Different Versions of Hive Metastore
@@ -756,6 +751,7 @@
 *** Adaptive Query Execution
 **** Coalescing Post Shuffle Partitions
 **** Converting sort-merge join to broadcast join
+**** Converting sort-merge join to shuffled hash join
 **** Optimizing Skew Join
 
 ** Distributed SQL Engine
@@ -763,6 +759,7 @@
 *** Running the Spark SQL CLI
 
 ** PySpark Usage Guide for Pandas with Apache Arrow
+   =TODO= =INCOMPLETE CONTENT from Jian=
 *** Apache Arrow in PySpark
 **** Ensure PyArrow Installed
 **** Enabling for Conversion to/from Pandas
@@ -783,7 +780,8 @@
 ***** Timestamp with Time Zone Semantics
 ***** Recommended Pandas and PyArrow Versions
 ***** Compatibility Setting for PyArrow >= 0.15.0 and Spark 2.3.x, 2.4.x
-      
+***** Setting Arrow ~self_destruct~ for memory savings
+
 *** Python Package Management
 **** Using PySpark Native Features
 **** Using Conda
@@ -791,6 +789,8 @@
 **** Using PEX
 
 ** Migration Guide
+*** Upgrading from Spark SQL 3.2 to 3.3
+*** Upgrading from Spark SQL 3.1 to 3.2
 *** Upgrading from Spark SQL 3.0 to 3.1
 *** Upgrading from Spark SQL 3.0.1 to 3.0.2
 *** Upgrading from Spark SQL 3.0 to 3.0.1
@@ -836,6 +836,7 @@
 *** ANSI Compilance
 *** Data Types
 *** Datetime Pattern
+*** Number Pattern
 *** Functions
 **** Built-in Functions
 **** Scalar User-Defined Functions (UDFs)
@@ -863,10 +864,13 @@
 *** Creating streaming DataFrames and streaming Datasets
 **** Input Sources
 **** Schema inference and partition of streaming DataFrames/Datasets
+
 *** Operations on streaming DataFrames/Datasets
 **** Basic Operations - Selection, Projection, Aggregation
 **** Window Operations on Event Time
 ***** Handling Late Data and Watermarking
+***** Types of time windows
+
 **** Join Operations
 ***** Stream-static Joins
 ***** Stream-stream Joins
@@ -880,6 +884,12 @@
 **** Arbitrary Stateful Operations
 **** Unsupported Operations
 **** Limitation of global watermark
+**** State Store
+***** HDFS state store provider
+***** RocksDB state store implementation
+****** Performance-aspect considerations
+
+***** State Store and task locality
 
 *** Starting Streaming Queries
 **** Output Modes
@@ -900,8 +910,10 @@
 *** Recovery Semantics after Changes in a Streaming Query
 ** Continuous Processing
 ** Additional Information
+** Migration Guide
 
 * TODO Spark Streaming (DStreams)
+** Note
 ** Overview
 ** A Quick Example
 ** Basic Concepts
@@ -931,7 +943,7 @@
 *** Announcement: DataFrame-based API is primary API
 *** Dependencies
 *** Highlights in 3.0
-*** Migration guide
+*** Migration Guide
 **** Upgrading from MLlib 2.4 to 3.0
 **** Upgrading from MLlib 2.2 to 2.3
 **** Upgrading from MLlib 2.1 to 2.2
@@ -1119,7 +1131,8 @@
 **** Correlations
 **** Stratified sampling
 **** Hypothesis testing
-***** streaming significance testing
+***** Streaming Significance Testing
+
 **** Random data generation
 **** Kernel density estimation
 
@@ -1183,7 +1196,7 @@
 
 *** Frequent pattern mining
 **** FP-growth
-**** Association Rules
+**** Association Rules =FIXME: a -> A=
 **** PrefixSpan
 
 *** Evaluation metrics
@@ -1318,12 +1331,30 @@
 *** Manually Downloading
 *** Installing from Source
 *** Dependencies
-    
-** Quickstart
+
+** Quickstart: ~DataFrame~
 *** DataFrame Creation
 *** Viewing Data
 *** Selecting and Accessing Data
 *** Applying a Function
 *** Grouping Data
 *** Getting Data in/out
+**** CSV
+**** Parquet
+**** ORC
+
 *** Working with SQL
+
+** Quickstart: Pandas API on Spark
+*** Object Creation
+*** Missing Data
+*** Operations
+**** Stats
+**** Spark Configurations
+
+*** Grouping
+*** Plotting
+*** Getting Data in/out
+**** CSV
+**** Parquet
+**** Spark IO
