@@ -2420,8 +2420,224 @@
 ***** Other system properties
 
 ***   ii. Console Project
-***  iii. Cross-building
+**** Accessing settings
+**** Examples
+**** Evaluating tasks
+***** Examples
+
+**** State
+***** Examples
+
+*** TODO iii. Cross-building - =TODO=
+**** Introduction
+     Different versions of Scala can be *binary incompatible*, despite maintaining source compatibility.
+
+     - This page describes how to use _sbt_ to
+       * _build and pubish_ your project against multiple versions of Scala
+       * _use_ libraries that have done the same
+
+     - For *cross building sbt plugins* see also [[https://www.scala-sbt.org/1.x/docs/Cross-Build-Plugins.html][Cross building plugins]].
+
+**** Publishing conventions
+     - The _UNDERLYING mechanism_ used to
+       _INDICATE which version of Scala a library was compiled against_ is
+       to *append* ~_<scala-binary-version>~ to the _library's name_.
+       * =from Jian=
+         Here this document describes a _rather EXPLICIT way_ to let the sbt
+         know which library version should be used. This is natural, because the
+         artifacts for Scala libraries are usually published in this name
+         pattern.
+         + Q :: Then WHY does this document call it _UNDERLYING mechanism_?
+         + A :: Because we rarely use this way explicitly. See below.
+
+       * =from Jian=
+         For example, the artifact name _dispatch-core_2.12_ is used when
+         compiled against any Scala 2.12.x version.
+           _This fairly simple approach allows interoperability with users of
+         *Maven*, *Ant* and *other build tools*._
+
+     - =IMPORTANT=
+       For /pre-prelease versions/ of Scala such as 2.13.0-RC1 and for versions
+       prior o 2.10.x, *full version is used as the suffix.*
+
+     - The rest of this page describes how sbt handles this for you as part of
+       cross-building.
+
+**** Using cross-built libraries
+     Use ~%%~ instead of ~%~, and then _sbt_ knows it should append the current
+     version of Scala being used to build the library to the dependency's namee.
+
+     - Example:
+       If in the current build, ~scalaVersion~ is one of the 2.12.x versions.
+
+       #+begin_src scala
+         libraryDependencies += "net.databinder.dispatch" %% "dispatch-core" % "0.13.3"
+       #+end_src
+
+       can be interpreted as
+
+       #+begin_src scala
+         libraryDependencies += "net.databinder.dispatch" % "dispatch-core_2.12" % "0.13.3"
+       #+end_src
+
+       * "A nearly equivalent, manual alternative for a fixed version of Scala is"
+         =from Jian=
+         This is from the original document, I don't quite understand why it
+         uses the phrase "nearly equivalent".
+         =TODO=
+         =TODO=
+         =TODO=
+
+**** TODO Cross building a project using sbt-projectmatrix
+**** Cross building a project statefully
+     Define the versions of Scala to build against in the ~crossScalaVersions~ setting.
+     *Versions of Scala 2.10.2 or later are allowed.*
+
+     - For example, in a =.sbt= /build definition/:
+       #+begin_src scala
+         lazy val scala212 = "2.12.16"
+         lazy val scala211 = "2.11.12"
+         lazy val supportedScalaVersions = List(scala212, scala211)
+
+         ThisBuild / organization := "com.example"
+         ThisBuild / version      := "0.1.0-SNAPSHOT"
+         ThisBuild / scalaVersion := scala212
+
+         lazy val root = (project in file("."))
+           .aggregate(util, core)
+           .settings(
+             // crossScalaVersions must be set to Nil on the aggregating project
+             crossScalaVersions := Nil,
+             publish / skip := true
+           )
+
+         lazy val core = (project in file("core"))
+           .settings(
+             crossScalaVersions := supportedScalaVersions,
+             // other settings
+           )
+
+         lazy val util = (project in file("util"))
+           .settings(
+             crossScalaVersions := supportedScalaVersions,
+             // other settings
+           )
+       #+end_src
+       * Note: =IMPORTANT=
+         ~crossScalaVersions~ *MUST BE set to ~Nil~ on the /root project/* to
+         *avoid* /double publishing/.
+
+     - To build against *ALL versions* listed in ~crossScalaVersions~,
+       *prefix* the action to run with ~+~.
+
+**** Change settings depending on the Scala version
+     We can change some settings depending on the Scala version.
+
+     - ~CrossVersion.partialVersion(scalaVersion.value)~ returns
+       ~Option[(Int, Int)]~ containing the first two segments of the Scala
+       version.
+
+     - This can be useful
+       for instance
+       IF
+       * you include a /dependency/ that requires the /macro paradise compiler plugin/
+         for _Scala 2.12_ and
+       * the ~-Ymacro-annotations~ /compiler option/ for _Scala 2.13_.
+
+       #+begin_src scala
+         lazy val core = (project in file("core"))
+           .settings(
+             crossScalaVersions := supportedScalaVersions,
+             libraryDependencies ++= {
+               CrossVersion.partialVersion(scalaVersion.value) match {
+                 case Some((2, n)) if n <= 12 =>
+                   List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full))
+                 case _                       => Nil
+               }
+             },
+             Compile / scalacOptions ++= {
+               CrossVersion.partialVersion(scalaVersion.value) match {
+                 case Some((2, n)) if n <= 12 => Nil
+                 case _                       => List("-Ymacro-annotations")
+               }
+             },
+           )
+       #+end_src
+       =from Jian=
+       It seems we can define a function for ~libraryDependencies~ and ~Compile
+       / scalacOptions~ to eliminate the above duplicate code.
+
+**** Scala-version specific source directory
+     =from Jian= BY DEFAULT, (=from Jian= I think this document should add this phrase)
+     In addition to =src/main/scala/= directory,
+     =src/main/scala-<scala binary version>/= directory is included as a /source
+     directory/.
+
+     - For =FIXME= (,) example,
+       if the current /subproject/'s ~scalaVersion~ is _2.12.10_,
+       then =src/main/scala-2.12= is included as a /Scala-version specific source/.
+
+     - *DISABLE* THIS:
+       By setting ~crossPaths~ to ~false~,
+       you can _opt out_ of BOTH
+       * /Scala-version source directory/ and
+       * /the =_<scala-binary-version>= publishing convention/.
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       This might be useful for *NON-Scala projects*.
+
+     - Similarly, the /build products/ such as =*.class= files are written into
+       =crossTarget= directory, which by default is =target/scala-<scala binary version>=.
+
+**** TODO Cross building with a Java project
+**** Switching Scala version
+     - Use ~++ <version> [command]~ to temporarily switch the Scala version
+       currently being used to build the /subprojects/
+       _GIVEN that ~<version>~ is listed in their ~crossScalaVersions~._
+       * The ~<version>~ here can also be a path to a Scala home directory.
+
+       * When a ~[command]~ is passed in to ~++~, it will execute the command on
+         the /subprojects/ that *supports* the given ~<version>~.
+         + For example, if we use this ~++~ command in the previous section example
+           (has a Java module) and use a ~<version>~ other than the one in that
+           Java module, nothing will happen to that module:
+           #+begin_src
+             > ++ 2.11.12 -v test
+             [info] Setting Scala version to 2.11.12 on 1 projects.
+             [info] Switching Scala version on:
+             [info]     core (2.12.16, 2.11.12)
+             [info] Excluding projects:
+             [info]   * root ()
+             [info]     network (2.12.16)
+             [info] Reapplying settings...
+             [info] Set current project to core (in build file:/Users/xxx/hello/)
+           #+end_src
+
+     - Sometimes you might want to _FORCE_ the Scala version switch *REGARDLESS*
+       of the ~crossScalaVersions~ values.
+       You can use ~++ <version>!~ with *exclamation mark* for that.
+
+**** TODO Cross publishing
+***** Overriding the publishing convention
+***** Scala 3 specific cross-versions
+***** More about using cross-built libraries
+***** Note about sbt-release =TODO= =???=
+
 ***   iv. Interacting with the Configuration System
+**** Selecting commands, tasks, and settings
+***** Selecting the configuration
+***** Task-specific Settings
+
+**** Discovering Settings and Tasks
+***** Value and Provided By
+***** Related Settings
+***** Dependencies
+****** Requested Dependencies
+****** Actual Dependencies
+
+**** Delegates
+
 ***    v. Triggered Execution
 ***   vi. Scripts mode
 ***  vii. sbt Server
