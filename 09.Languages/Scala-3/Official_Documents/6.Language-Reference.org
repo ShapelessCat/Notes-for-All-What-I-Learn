@@ -1,5 +1,5 @@
 #+TITLE: Scala 3 Reference
-#+VERSION: 3.2.2-RC1-bin-20220916-afc6ce4-NIGHTLY
+#+VERSION: 3.2.2-RC1-bin-20220916-afc6ce4-NIGHTLY -> 3.3.0-RC1-bin-20221205-5cf8a58-NIGHTLY
 #+AUTHORS: Dotty Contributors
 #+STARTUP: overview
 #+STARTUP: entitiespretty
@@ -705,7 +705,71 @@
 
 *** DONE Match Types - =TODO= _mechanism_ - =Keep Reading=
     CLOSED: [2020-03-08 Sun 21:34]
-    - A /match type/ reduces to one of a number of right hand sides, depending on
+    - =from Jian=
+      =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      Inspired by RockTheJVM's lecture: [[https://rockthejvm.com/courses/1769377/lectures/39882191][Match Types]]:
+      * There is no concise way to do it in most industry OOP languages.
+        + Do it quick and dirty:
+          implement a function with type ~Any => Any~.
+          - If the implementer and the user of this function are the same person,
+            this is OK, BUT we
+            _give up the type safety for BOTH input and output_ -- *WORST*, and
+            the user need to know the implementation details of this function,
+            and manually cast the output.
+
+        + To make the users' work easier:
+          implement a function with type ~Any => ReturnType~.
+          - Create a super type ~ReturnType~ to box the actual return unrelated
+            types, and the user can stop doing the manually cast -- type safety
+            for the output can be guaranteed.
+
+          - The user may provide illegal input -- the type safety for the input
+            *CAN'T* be guaranteed. To use it properly, the user still need to know
+            the implementation details -- still *BAD*.
+
+        + To keep type safety for both input and output:
+          implement a function with type ~InputType => ReturnType~.
+          - Create
+              a super type ~InputType~ to box the actual input values of
+              unrelated types,
+
+              AND
+
+              a super type ~ReturnType~ to box the actual return values of
+              unrelated types,
+
+          - This works, and type safety can be guaranteed.
+            _HOWEVER_,
+              too much boilerplates are created!!!
+              too many "boxes" are created -- unacceptable performance penalty can be introduced!!!
+
+            Still *NOT a GOOD result*
+
+      * In Scala, with /match types/, we can *abstract one more level* than
+        /traditional generic functions/ and fulfill this requirement elegantly.
+        + For /traditional generic functions/,
+          ~def lastOf[A](list: List[A]): A = list.last~ can abstract out the element
+          type of ~List~, and define a function for all ~List~ structure instances.
+
+        + /Match types/ can also abstract out the structure info (or some other
+          info which depends on the scenarios), and
+          build _ARBITRARY but CLEAR relations (according to requirements)
+          between INPUT TYPES and OUTPUT TYPES_.
+            This can complement the functionalities of /traditional generic
+          functions/, and do something conceptually we know it can be done, but
+          the /traditional generic functions/ CAN'T do.
+          - For instance,
+            if we want to write a type safe function that can get the last
+            element of ~List[_]~ and ~String~, though conceptually we know the
+            both ~List[_]~ and ~String~ are collection types, these two
+            types usually doesn't share one common ancestor collection trait.
+              When this happens, of course, we can use the /type class way/, but
+            the /match types/ can be more concise and elegant -- it deserve a
+            specific syntax.
+
+    - A /match types/ reduces to one of a number of right hand sides, depending on
       a /scrutinee type/. Example:
       #+begin_src scala
         type Elem[X] = X match
@@ -728,8 +792,9 @@
       * ~S~, ~T1~, ..., ~Tn~ are types.
       * ~P1~, ..., ~Pn~ are patterns.
         + /Type variables/ in patterns start as usual with a lower case letter.
+          =from Jian= because we want to bind them rather than match them.
 
-    - Match types can form part of *RECURSIVE TYPE definitions*. Example:
+    - /Match types/ can form part of *RECURSIVE TYPE definitions*. Example:
       #+begin_src scala
         type LeafElem[X] = X match
           case String      => Char
@@ -851,11 +916,13 @@
 *** DONE Polymorphic Function Types
     CLOSED: [2020-12-09 Wed 00:28]
     =from Jian=
-    This feature if a step to improve the support to /functions/.
-      Scala defines itself as a language that mixes the functional programming and
-    object-oriented programming, but it was not always equally support these two.
-    After adding this feature, from the point of view of /polymorphic type/, the
-    status of /function/ is improved.
+    This feature if a step to improve the support to /functions/:
+    Scala defines itself as a language that *mixes* the /functional programming/
+    and /object-oriented programming/, _BUT_ it *was not always equally support*
+    these two.
+      After adding this feature, from the point of view of /polymorphic type/,
+    the status of /function/ is improved.
+    =from Jian= ??? Still not equal? Any further improvement can be done?
 
     - polymorphic function type :: a /function type/ which accepts /type parameters/.
 
@@ -3808,6 +3875,15 @@
 
 *** DONE Context Functions - =TODO= =START= =HERE= =RE-READ=
     CLOSED: [2020-07-14 Tue 02:39]
+    =from Jian= COPIED from the section "Polymorphic Function Types"
+    This feature if a step to improve the support to /functions/:
+    Scala defines itself as a language that *mixes* the /functional programming/
+    and /object-oriented programming/, _BUT_ it *was not always equally support*
+    these two.
+      After adding this feature, from the point of view of /abstraction from the
+    context/, the status of /function/ is improved.
+    =from Jian= ??? Still not equal? Any further improvement can be done?
+
     - Context functions :: functions with *ONLY* /context parameters/.
       + Their /types/ are /context function types/.
       + /Context functions/ are written using ~?=>~ as the "arrow" sign, which is
@@ -6641,7 +6717,8 @@ Syntax Trees (Typed-AST)/.
   in the folder where you want to clone the template.
 
 *** TODO The Meta-theory of Symmetric Metaprogramming
-    
+    =REMOVED=
+
 ** TODO Other New Features
 *** DONE Trait Parameters
 CLOSED: [2021-02-15 Mon 23:07]
@@ -6734,7 +6811,7 @@ Dotty allows /traits/ to have /parameters/, just like /classes/ have /parameters
 **** TODO Reference
   For more info, see _Scala SIP 25_.
 
-*** DONE Transparent Traits
+*** DONE Transparent Traits and Classes =TODO= the "and Classes" are new added in this title, check the notes below and update it
 CLOSED: [2020-11-27 Fri 02:42]
 - /Traits/ are used in _TWO_ roles:
   * As *mixins* for other /classes/ and /traits/
@@ -6906,218 +6983,220 @@ needing to write ~new~.
           way to use /case classes/ -- /case classes/ are HEAVY because of
           tens of generated methods. However, people keep doing this.
 
-*** DONE Export Clauses -- =TODO= _Elaboration of Export Clauses_
-CLOSED: [2021-02-15 Mon 18:12]
-*An ~export~ clause defines aliases for selected members of an object.*
-- NOTE:
-  Unless otherwise stated, _the term "class"_ in this discussion also
-  _includes_ /object/ and /trait/ definitions.
+*** TODO Export Clauses -- =TODO= _Elaboration of Export Clauses_
+    *An ~export~ clause defines aliases for selected members of an object.*
 
-- Example:
-  #+begin_src scala
-    class BitMap
-    class InkJet
+    - NOTE:
+      Unless otherwise stated, _the term "class"_ in this discussion also
+      _includes_ /object/ and /trait/ definitions.
 
-    class Printer:
-      type PrinterType
-      def print(bits: BitMap): Unit = ???
-      def status: List[String] = ???
-
-    class Scanner:
-      def scan(): BitMap = ???
-      def status: List[String] = ???
-
-    class Copier:
-      private val printUnit = new Printer { type PrinterType = InkJet }
-      private val scanUnit = new Scanner
-
-      export scanUnit.scan
-      export printUnit.{status => _, *}
-
-      def status: List[String] = printUnit.status ++ scanUnit.status
-  #+end_src
-  * Here the two ~export~ clauses define the following /export aliases/ in
-    class ~Copier~:
-    #+begin_src scala
-      final def scan(): BitMap            = scanUnit.scan()
-      final def print(bits: BitMap): Unit = printUnit.print(bits)
-      final type PrinterType              = printUnit.PrinterType
-    #+end_src
-
-  * The exported members can be accessed inside ~Copier~ as well as from
-    outside:
-    #+begin_src scala
-      val copier = new Copier
-      copier.print(copier.scan())
-    #+end_src
-
-  * Syntax (similar to ~import~):
-    #+begin_src scala
-      export path . { sel_1, ..., sel_n }
-    #+end_src
-    + ~path~ here must be a /stable identifier/.
-
-    + ~export~ is like ~import~.
-      Synthetic members generated by compiler can't be exported.
-
-    + Selectors can be of one of the following forms: =TODO= simplify this part of note
-      * A simple selector x creates aliases for all eligible members of path
-        that are named x.
-
-      * A renaming selector x => y creates aliases for all eligible members
-        of path that are named x, but the alias is named y instead of x.
-
-      * An omitting selector x => _ prevents x from being aliased by a
-        subsequent wildcard selector.
-
-      * A given selector given x has an optional type bound x. It creates
-        aliases for all eligible given instances that conform to either x,
-        or Any if x is omitted, except for members that are named by a
-        previous simple, renaming, or omitting selector.
-
-      * A wildcard selector ~*~ creates aliases for all eligible members of path
-        except for given instances, synthetic members generated by the
-        compiler and those members that are named by a previous simple,
-        renaming, or omitting selector.
-
-  * A member is *eligible for being exported* if all of the following holds:
-    + The _owner of the being exported member_ is *NOT* the /base class/ of
-      /class/ (includes /object) that conttains the /export clause/.
-
-    + The member does *NOT* /override a concrete definition/ that has as owner
-      a /base class/ of the /class/ containing the /export clause/.
-
-    + it is _accessible_ at the /export clause/ -- =from Jian= with proper
-      modifier,
-
-    + it is
-      * *NOT* a /constructor/,
-      * *NOT* the (*synthetic*) class part of an object,
-
-    + it is a /given instance/ (declared with ~given~)
-      iff the ~export~ is from a /given selector/.
-
-  * It is a /compile-time error/ if a simple or renaming selector does *not*
-    identify any _eligible members_.
-
-  * _Code generation_ triggered by ~export~'s:
-    + /Type members/ are aliased by _type definitions_;
-    + /Term members/ are aliased by _method definitions_;
-    + Export aliases _copy_ the /type and value parameters/ of the members
-      they refer to.
-    + /Export aliases/ are always ~final~.
-    + Aliases of /given instances/ are again defined as /givens/.
-    + Aliases of /inline methods/ or values are again defined ~inline~.
-    + There are *NO* OTHER /modifiers/ that can be given to an alias.
-
-  * The _Code generation_ rule above has the following *CONSEQUENCES* for
-    /overriding/:
-    + Export aliases *cannot* be overridden, since they are ~final~.
-
-    + Export aliases *cannot* override /concrete members/ in /base classes/,
-      since they are not marked ~override~.
-
-    + However, export aliases *can* _IMPLEMENT_ /deferred members/ (=from Jian=
-      I think this term is the same as /abstract members/) of /base classes/.
-
-  * TODO =RE-READ= TODO
-    /Export aliases/ for /public value/ definitions that are accessed *WITHOUT
-    referring to* /private values/ in the qualifier path are marked by the
-    compiler as "stable" and their result types are the /singleton types/ of
-    the aliased definitions.
-      This means that they can be used as parts of /stable identifier paths/,
-    even though they are _technically_ /methods/. For instance, the
-    following is OK (_technically_, the consequence of ~export O.c~ generate
-    a ~c~ /method/ -- when this is not a /export alias/, it can't be marked
-    as stable):
-    #+begin_src scala
-      class C { type T }
-      object O { val c: C = ... }
-      export O.c
-      def f: c.T = ...
-    #+end_src
-
-  * /Export clauses/ *can* appear in /classes/
-    /Export clauses/ *can* appear _at the /top-level/._
-    /Export clauses/ *CANNOT* appear _as a statement IN A BLOCK_.
-
-  * If an /export clause/ contains a /wildcard/ or /given selector/, it is
-    *forbidden* for its /qualifier path/ to *refer* to a /package/.
-    - This is because it is *not yet known*
-      how to safely track /wildcard dependencies/ to a /package/ for the
-      purposes of incremental compilation.
-      =TODO= =NEW-ADDED= =TRY-TO-UNDERSTAND=
-
-  * =from Jian=
-    A real world example:
-    Sometimes we know something should be /static/, but make it /static/ can
-    make the code looks WIERD! Before adding ~export~, we don't have a perfect
-    solution. After adding the ~export~ feature, we can get a solution, though
-    it is limited, can apply to most of the real world cases with this
-    requirement.
-
-    + In Scala 2, if we want to keep /static/ things /static/, we need to
-      write like
+    - Example:
       #+begin_src scala
-        trait Calculator {
-          val calculatorName: String
-        }
+        class BitMap
+        class InkJet
 
-        class AbcCalculator extends Calculator {
-          override val calculatorName = AbcCalculator.calculatorName
-        }
+        class Printer:
+          type PrinterType
+          def print(bits: BitMap): Unit = ???
+          def status: List[String] = ???
 
-        object AbcCalculator {
-          val calculatorName = "Abc"
-        }
+        class Scanner:
+          def scan(): BitMap = ???
+          def status: List[String] = ???
+
+        class Copier:
+          private val printUnit = new Printer { type PrinterType = InkJet }
+          private val scanUnit = new Scanner
+
+          export scanUnit.scan
+          export printUnit.{status => _, *}
+
+          def status: List[String] = printUnit.status ++ scanUnit.status
       #+end_src
+      * Here the two ~export~ clauses define the following /export aliases/ in
+        class ~Copier~:
+        #+begin_src scala
+          final def scan(): BitMap            = scanUnit.scan()
+          final def print(bits: BitMap): Unit = printUnit.print(bits)
+          final type PrinterType              = printUnit.PrinterType
+        #+end_src
 
-    + In Scala 3, we still keep /static/ things /static/, but we can write
-      #+begin_src scala
-        trait Calculator:
-          val calculatorName: String
+      * The exported members can be accessed inside ~Copier~ as well as from
+        outside (=from Jian= in the scope the ~export~ clause resides, ~export~
+        is like ~import~, while for the outside of this scope ~export~ make this
+        exported members accessible from the outside):
+        #+begin_src scala
+          val copier = new Copier
+          copier.print(copier.scan())
+        #+end_src
 
-        final class AbcCalculator extends Calculator:
-          export AbcCalculator.calculatorName
+      * Syntax (similar to ~import~):
+        #+begin_src scala
+          export path . { sel_1, ..., sel_n }
+        #+end_src
+        + ~path~ here must be a /stable identifier/.
 
-        object AbcCalculator:
-          val calculatorName = "Abc"
-      #+end_src
-      - Of course, for providing a perfect solution like this with ~export~,
-        One requirement is satisfied:
-        - The being overridden field is /abstract/.
+        + ~export~ is like ~import~.
+          Synthetic members generated by compiler can't be exported.
 
-      - Another limitation is that we can't do similar thing to the /subclasses/
-        of ~AbcCalculator~ -- the compiler will synthesize /final members/ for
-        ~export~ clauses! However, this is not a real limitation -- a good design
-        should avoid creating a long inheritance chain. Mostly, none level is
-        enough.
-        * However, if in future this limitation can be removed or not that strict,
-          it is of course better for using. The only thing I doubt is that if this
-          will be limited in theory and remove the limitation can create an unsound
-          system.
+        + Selectors can be of one of the following forms: =TODO= simplify this part of note
+          * A simple selector x creates aliases for all eligible members of path
+              that are named x.
 
-- *Restrictions*:
-  1. /Export clauses/ can appear
-      * in /classes/
-        OR
-      * at the top-level.
-      An /export clause/ *cannot* appear as a statement in a block.
+          * A renaming selector x => y creates aliases for all eligible members
+            of path that are named x, but the alias is named y instead of x.
 
-  2. If an /export clause/ contains a /wildcard/ or /given selector/,
-      it is *forbidden* for its qualifier path to refer to a /package/.
-      =TODO= =from Jian= _I don't quite understand this. Need an example._
-        This is because it is not yet known how to safely track wildcard
-      dependencies to a package for the purposes of incremental compilation.
+          * An omitting selector x => _ prevents x from being aliased by a
+              subsequent wildcard selector.
 
-  3. Simple renaming exports like =TO BE REMOVED Restriction=
-      #+begin_src scala
-        export status as stat
-      #+end_src
-      are not supported yet.
-        They would run afoul of the restriction that the exported ~a~ cannot
-      be already a member of the /object/ containing the ~export~. *This
-      restriction might be lifted in the future.*
+          * A given selector given x has an optional type bound x. It creates
+            aliases for all eligible given instances that conform to either x,
+            or Any if x is omitted, except for members that are named by a
+          previous simple, renaming, or omitting selector.
+
+            * A wildcard selector ~*~ creates aliases for all eligible members of path
+            except for given instances, synthetic members generated by the
+            compiler and those members that are named by a previous simple,
+            renaming, or omitting selector.
+
+      * A member is *eligible for being exported* if all of the following holds:
+      + The _owner of the being exported member_ is *NOT* the /base class/ of
+          /class/ (includes /object/) that conttains the /export clause/.
+
+        + The member does *NOT* /override a concrete definition/ that has as owner
+        a /base class/ of the /class/ containing the /export clause/.
+
+          + it is _accessible_ at the /export clause/ -- =from Jian= with proper
+          modifier,
+
+        + it is
+            * *NOT* a /constructor/,
+          * *NOT* the (*synthetic*) class part of an object,
+
+        + it is a /given instance/ (declared with ~given~)
+            iff the ~export~ is from a /given selector/.
+
+    * It is a /compile-time error/ if a simple or renaming selector does *not*
+        identify any _eligible members_.
+
+      * _Code generation_ triggered by ~export~'s:
+      + /Type members/ are aliased by _type definitions_;
+        + /Term members/ are aliased by _method definitions_;
+          + Export aliases _copy_ the /type and value parameters/ of the members
+          they refer to.
+      + /Export aliases/ are always ~final~.
+        + Aliases of /given instances/ are again defined as /givens/.
+          + Aliases of /inline methods/ or values are again defined ~inline~.
+        + There are *NO* OTHER /modifiers/ that can be given to an alias.
+
+      * The _Code generation_ rule above has the following *CONSEQUENCES* for
+          /overriding/:
+        + Export aliases *cannot* be overridden, since they are ~final~.
+
+        + Export aliases *cannot* override /concrete members/ in /base classes/,
+            since they are not marked ~override~.
+
+      + However, export aliases *can* _IMPLEMENT_ /deferred members/ (=from Jian=
+          I think this term is the same as /abstract members/) of /base classes/.
+
+      * TODO =RE-READ= TODO
+      /Export aliases/ for /public value/ definitions that are accessed *WITHOUT
+        referring to* /private values/ in the qualifier path are marked by the
+          compiler as "stable" and their result types are the /singleton types/ of
+        the aliased definitions.
+        This means that they can be used as parts of /stable identifier paths/,
+        even though they are _technically_ /methods/. For instance, the
+          following is OK (_technically_, the consequence of ~export O.c~ generate
+        a ~c~ /method/ -- when this is not a /export alias/, it can't be marked
+        as stable):
+        #+begin_src scala
+          class C { type T }
+          object O { val c: C = ... }
+        export O.c
+            def f: c.T = ...
+        #+end_src
+
+    * /Export clauses/ *can* appear in /classes/
+        /Export clauses/ *can* appear _at the /top-level/._
+          /Export clauses/ *CANNOT* appear _as a statement IN A BLOCK_.
+
+    * If an /export clause/ contains a /wildcard/ or /given selector/, it is
+        *forbidden* for its /qualifier path/ to *refer* to a /package/.
+          - This is because it is *not yet known*
+          how to safely track /wildcard dependencies/ to a /package/ for the
+        purposes of incremental compilation.
+          =TODO= =NEW-ADDED= =TRY-TO-UNDERSTAND=
+
+      * =from Jian=
+      A real world example:
+        Sometimes we know something should be /static/, but make it /static/ can
+          make the code looks WIERD! Before adding ~export~, we don't have a perfect
+        solution. After adding the ~export~ feature, we can get a solution, though
+        it is limited, can apply to most of the real world cases with this
+        requirement.
+
+        + In Scala 2, if we want to keep /static/ things /static/, we need to
+          write like
+          #+begin_src scala
+            trait Calculator {
+              val calculatorName: String
+          }
+
+            class AbcCalculator extends Calculator {
+              override val calculatorName = AbcCalculator.calculatorName
+          }
+
+            object AbcCalculator {
+              val calculatorName = "Abc"
+          }
+            #+end_src
+
+        + In Scala 3, we still keep /static/ things /static/, but we can write
+        #+begin_src scala
+            trait Calculator:
+                val calculatorName: String
+
+          final class AbcCalculator extends Calculator:
+              export AbcCalculator.calculatorName
+
+            object AbcCalculator:
+            val calculatorName = "Abc"
+          #+end_src
+            - Of course, for providing a perfect solution like this with ~export~,
+            One requirement is satisfied:
+          - The being overridden field is /abstract/.
+
+            - Another limitation is that we can't do similar thing to the /subclasses/
+            of ~AbcCalculator~ -- the compiler will synthesize /final members/ for
+          ~export~ clauses! However, this is not a real limitation -- a good design
+              should avoid creating a long inheritance chain. Mostly, none level is
+            enough.
+            * However, if in future this limitation can be removed or not that strict,
+            it is of course better for using. The only thing I doubt is that if this
+              will be limited in theory and remove the limitation can create an unsound
+                system.
+
+  - *Restrictions*:
+      1. /Export clauses/ can appear
+            * in /classes/
+            OR
+        * at the top-level.
+          An /export clause/ *cannot* appear as a statement in a block.
+
+      2. If an /export clause/ contains a /wildcard/ or /given selector/,
+        it is *forbidden* for its qualifier path to refer to a /package/.
+          =TODO= =from Jian= _I don't quite understand this. Need an example._
+              This is because it is not yet known how to safely track wildcard
+          dependencies to a package for the purposes of incremental compilation.
+
+      3. Simple renaming exports like =TO BE REMOVED Restriction=
+            #+begin_src scala
+            export status as stat
+        #+end_src
+          are not supported yet.
+            They would run afoul of the restriction that the exported ~a~ cannot
+          be already a member of the /object/ containing the ~export~. *This
+        restriction might be lifted in the future.*
 
 **** DONE Motivation
   CLOSED: [2020-05-18 Mon 02:35]
@@ -8222,6 +8301,48 @@ of braces {...} to be OPTIONAL_.
     reported as ~colonEol~ if the parser is at a point where a ~colonEol~ is
     valid as next token.
 
+**** DONE Optional Braces for Method Arguments
+     CLOSED: [2022-12-07 Wed 01:36]
+     *Starting with Scala 3.3*, a ~<colon>~ tokken is also recognized where a
+     function argument would be expected.
+
+     - Exmaples:
+       #+begin_src scala
+         times(10):
+           println("ah")
+           println("ha")
+
+
+         credentials `++`:
+           val file = Path.userHome / ".credentials"
+           if file.exists
+           then Seq(Credentials(file))
+           else Seq.empty
+
+
+         xs.map:
+           x =>
+             val y = x - 1
+             y * y
+       #+end_src
+
+     - _What's more_,
+       a ~:~ in these settings can ALSO be followed on the *SAME line* by
+       * the *parameter part* and
+       * the *arrow of a lambda*.
+       So the last example could be compressed to this:
+       #+begin_src scala
+         xs.map: x =>
+           val y = x - 1
+           y * y
+       #+end_src
+
+     - Another legal example:
+       #+begin_src scala
+         xs.foldLeft(0): (x, y) =>
+           x + y
+       #+end_src
+
 **** DONE Spaces vs Tabs
   CLOSED: [2019-12-29 Sun 03:29]
   - _Mix SPACES and TABS is legal._
@@ -8492,46 +8613,6 @@ of braces {...} to be OPTIONAL_.
 
 **** TODO Settings and Rewrites
   - =READ= and =NOTE=
-
-**** DONE Variant: Indentation Marker ~:~ for Arguments
-  CLOSED: [2020-12-30 Wed 01:44]
-  NOT STABLE -- =from Jian= Learn when this feature is stable!!! (if it can be)
-
-  - To turn this feature on, use language import
-    ~import language.experimental.fewerBraces~
-
-  - Exmaples:
-    #+begin_src scala
-      times(10):
-          println("ah")
-          println("ha")
-
-      xs.map:
-        x =>
-            val y = x - 1
-            y * y
-    #+end_src
-
-  - The colon is usable _NOT ONLY_ for /lambdas/ and /by-name parameters/,
-    _BUT ALSO_ even for /ordinary parameters/:
-    #+begin_src scala
-      credentials ++ :
-        val file = Path.username / ".credentials"
-        if file.exists
-        then Seq(Credentials(file))
-        else Nil
-    #+end_src
-
-  - Q :: How does this syntax variant work?
-
-  - A ::
-    _Colons at the end of lines_ are their own token,
-    *distinct from* _normal ~:~._
-      The Scala grammar is changed so that colons at end of lines are accepted
-    at *ALL* points where an opening brace enclosing an argument is legal.
-    * _Special provisions_ are taken so that /method result types/ can *STILL*
-      use a colon on the end of a line, followed by the actual /type/ on the
-      next.
 
 *** TODO Safe Initialization - =TODO= =START=
 Dotty implements *experimental* /safe initialization check/, which can be
@@ -10916,11 +10997,6 @@ package. To get an /uninitialized field/, you now write
   2. BUT it _will be dropped_ in a future 3.x version.
 
 ** TODO Experimental
-*** TODO Fewer Braces
-**** Using ~:~ At End Of Line
-**** Lambda Arguments Without Braces
-**** Syntax Changes
-
 *** TODO ~CanThrow~ Abilities
     ~import language.experimental.saferExceptions~
 **** Why Exceptions?
@@ -10947,7 +11023,7 @@ package. To get an /uninitialized field/, you now write
 
 *** TODO Named Type Arguments
 **** TODO Motivation
-     
+
 *** DONE Numeric Literals
     CLOSED: [2022-05-29 Sun 02:27]
     - *NOTE*:
@@ -11238,13 +11314,13 @@ package. To get an /uninitialized field/, you now write
       #+begin_src scala
         val x: String = null  // error: found `Null`, but required `String`
       #+end_src
-    
+
       Instead, if consider the code above is a piece of Scala 2 code which can
       typecheck, translate it into Scala 3 form:
       #+begin_src scala
         val x: String | Null = null  // ok
       #+end_src
-    
+
     - A /nullable type/ could have ~null~ value during runtime;
       hence, it is not safe to select a member without checking its nullity.
       #+begin_src scala
@@ -11847,6 +11923,12 @@ package. To get an /uninitialized field/, you now write
   leave the *types unchanged* and be compatible but *unsound*.
 
 *** TODO MainAnnotation
+*** TODO The ~into~ Type Modifier
+**** Function arguments
+**** Vararg arguments
+**** Retrofitting Scala 2 libraries
+**** Syntax changes
+
 *** TODO Capture Checking
 **** Overview
 **** Capabilities and Capturing Types
@@ -11866,25 +11948,29 @@ package. To get an /uninitialized field/, you now write
 **** Compilation Options
 **** Capture Checking Internals
      
+*** TODO Pure Function Syntax
+    =from Jian= Read the PR (https://github.com/lampepfl/dotty/pull/14134) for more details
+**** TODO Why Enable It Now?
+
 *** DONE Tupled Function - =TODO= =RE-READ=
     CLOSED: [2020-07-14 Tue 15:15]
     # Subtitle "Tupled Function" should be removed!!! =FIX-DOC=
     =from Jian= =Rephrase=
     - Requirement:
       GENERALIZE some operation on *ALL* /function types/
-    
+
     - Solutions:
       * In Scala 2:
         Since /functions/ bounded to /arities/ *up to* 22, it was possible and
         the solution is straightforward.
-    
+
       * In Scala 3:
         Since /functions/ and /tuples/ generalized to /arities/ *above* 22,
         /overloading/ is NOT an option anymore.
         + The /type class/ ~TupleFunction~ provides a way to abstract DIRECTLY
           over a /function/ of *ANY* /arity/ CONVERTING it to an EQUIVALENT
           /function/ that *receives ALL /arguments/ in a SINGLE /tuple/.*
-    
+
     - XX
       #+begin_src scala
         /** Type class relating a `FunctionN[..., R]` with an equivalent tupled function `Function1[TupleN[...], R]` ,*
@@ -11897,19 +11983,19 @@ package. To get an /uninitialized field/, you now write
           def untupled(g: G): F
         }
       #+end_src
-    
+
     - The compiler will synthesize an /instance/ of ~TupledFunction[F, G]~ if:
       * ~F~ is a /function type/ of arity ~N~
-    
+
       * ~G~ is a /function/ with a _single /tuple/ argument_ of size ~N~
         and
         its /types/ are equal to the /arguments/ of ~F~
-    
+
       * The /return type/ of ~F~ is EQUAL TO the /return type/ of ~G~
-    
+
       * ~F~ and ~G~ are the same sort of function
         (both are ~(...) => R~ or both are ~(...) ?=> R~)
-    
+
       * If only one of ~F~ or ~G~ is /instantiated/ the second one is /inferred/.
 
 **** Examples
@@ -12207,11 +12293,11 @@ package. To get an /uninitialized field/, you now write
 *** Instrument code for coverage analysis
 *** Details: how the code is instrumented
    
-* TODO Resources
+* TODO Resources - =REMOVED=
 *** Talks
 **** Talks on Dotty
 **** Deep Dive with Dotty
-     
+
 * TODO Blog
 ** TODO Scala 3.0.1-RC2 – backports of critical bugfixes
 ** TODO Scala 3.0.1-RC1 – further stabilising the compiler
