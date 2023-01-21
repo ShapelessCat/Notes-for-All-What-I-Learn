@@ -1,8 +1,28 @@
 #+TITLE: Scala Puzzlers from Me
-#+VERSION: 2019 ~ 2022-03-15
+#+VERSION: 2019 ~ 2023-01-17
 #+AUTHOR: Jian Lan
 #+STARTUP: overview
 #+STARTUP: entitiespretty
+
+* Avoid the _Traps_ in _Call by Name Evaluation_
+  #+begin_src scala
+    def time(computation: => Any): Unit =
+      val start = System.currentTimeMillis()
+    val _ = computation
+    val end = System.currentTimeMillis()
+    println(end - start)
+
+
+    def run(x: => Unit, times: Int): Unit =
+      (1 to times).foreach(_ => x)
+
+    def run_(x: => Unit, times: Int): Unit =
+      val v: Unit = x
+        (1 to times).foreach(_ => v)
+
+    time(run_(Thread.sleep(300), 10)) // 421
+    time(run(Thread.sleep(300), 10))  // 3031
+  #+end_src
 
 * The Difference Between _\colon{}\colon{}\colon{}_ and _\plus{}\plus{}_ When Applying to _List_
   - https://stackoverflow.com/a/32135472
@@ -35,9 +55,9 @@
        #+begin_src scala
          type Target[A]: (Int, Map[Int, String], Set[String]) => (String, Int) => A
        #+end_src
-       
+
 ** Solution
-*** A Bad Solution that Includes A Common Mistake
+*** A Wrong Solution that Includes A Common Mistake
     1. How about
        #+begin_src scala
          type Param0 = (Int, Map[Int, String], Set[String])
@@ -57,7 +77,7 @@
               Function1[(Int, Map[Int, String], Set[String]), Function1[(String, Int), A]]
             #+end_src
             _namely ~Function1~ of ~Funnction1~ of ~A~._
-   
+
        2) _CONCLUSION_: The result is *WRONG*
 
     2. The reason why we made this mistake (and this kind of mistakes):
@@ -70,7 +90,7 @@
          1) Tuple
 
          2) Parameter list
-       
+
     3. =TODO= Further Discussion required!!!
        - Consider /kind/.
          It is *GENERAL and ESSENTIALLY IMPORTANT* in all languages that support
@@ -81,8 +101,8 @@
 
        - Consider different semantics of ~(...)~ in Scala.
          It is _NOT_ *ESSENTIALLY IMPORTANT*, but it is useful for writing Scala and syntax design.
-       
-*** Solution:
+
+*** Right Solution:
     #+begin_src scala
       type Param0[A] = (Int, Map[Int, String], Set[String]) => A
       type Param1[A] = (String, Int) => A
@@ -101,7 +121,7 @@
        we want to change one or a few specific segments, not change the whole
        structure of this signature), we can touch one or a few segments, and
        keep the other segments still.
-       
+
      * *combination*:
        1. Root trait:
           #+begin_src scala
