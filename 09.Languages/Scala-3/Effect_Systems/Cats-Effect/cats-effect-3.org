@@ -1,6 +1,6 @@
 #+TITLE: Cats Effect 3.x
 #+SUBTITLE: The pure asynchronous runtime for Scala
-#+VERSION: 3.4.1
+#+VERSION: 3.4.5
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
@@ -238,12 +238,97 @@
      *build and scale* complex /high-performance asynchronous and parallel
      software/ on the /JVM/ and on /JavaScript/.
 
-*** Fibers
-    - Put another way: with fibers, there is no difference between a callback and a ~return~.
+*** DONE Fibers
+    CLOSED: [2023-01-24 Tue 02:25]
+    - Put another way:
+      with /fibers/, there is *NO difference* between
+      * a /callback/
+        and
+      * a ~return~
 
 **** Cancelation
+     - By default,
+       /fibers/ are CANCELABLE _at *ALL* points during their execution._
+       * This means that
+         + _unneeded calculations_ can be promptly terminated
+           and
+         + their *resources* gracefully _RELEASED as early as possible_ within an application.
 
-*** Terminology
+     - In practice, /fiber cancelation/ most often happens in response to one of
+       _TWO situations_: *timeouts* and *concurrent errors*.
+
+     - As an example of the former:
+       #+begin_src scala
+         import scala.concurrent.duration.*
+
+         lazy val loop: IO[Unit] = IO.println("Hello, World") >> loop
+         loop.timeout(5.seconds) // => IO[Unit]
+       #+end_src
+       * The above constructs an ~IO~ which starts a /fiber/ defined by ~loop~.
+       * This /fiber/ prints "Hello, World!" infinitely to standard out.
+       * Left to its own devices, the ~loop~ /fiber/ will run forever.
+       * _HOWEVER_,
+         the ~timeout~ function delays for 5 seconds, after which it calls
+         ~cancel~ on the /fiber/, _interrupting its execution_ and _freeing any
+         resources it currently holds (in this case, none)_.
+
+     - From the above example, you can see /fiber/ ~cancel~ is very similar in
+       concept to the ~Thread#interrupt~ method in the Java standard library.
+       * DESPITE the similarity, there are some important _DIFFERENCES_ which make
+         cancelation considerably *more robust, more reliable, and much safer*:
+         1. Cooperative
+            + ~Fiber~
+              When one /fiber/ calls ~cancel~ on ANOTHER /fiber/,
+              it is effectively a request to the target /fiber/.
+
+              1. If the _target_ /fiber/ is *unable to cancel at that moment* for any
+                 reason, the _canceling_ /fiber/ *asynchronously waits* for
+                 cancelation to become possible.
+
+              2. Once cancelation starts,
+                 the _target_ /fiber/ will run all of its finalizers (usually used
+                 to release resources such as file handles)
+                 *BEFORE*
+                 yielding control back to the canceler.
+
+            + ~Thread#interrupt~
+               always returns immediately,
+               EVEN IF the _target_ ~Thread~ has *NOT* actually been interrupted.
+
+         2. Can be *suppressed* _within scoped regions_
+            + If a /fiber/ is performing a series of actions which *must be*
+              _executed ATOMICALLY_, it can use the ~IO.uncancelable~ method to
+              =???= _mask the cancelation signal within the scope,_ ensuring
+              that cancelation is deferred until the /fiber/ has completed its
+              critical section.
+              - The most common scenario:
+                compound resource acquisition,
+                where a scarce resource _might *leak* IF the /fiber/ were to be
+                canceled "in the middle"._
+
+            + ~Thread#interrupt~
+              cannot be suppressed.
+
+         3. The *fiber model* OFFERS _much more control and tighter guarantees
+            around cancelation,_
+            it is *POSSIBLE* AND *SAFE* to dramatically _increase the
+            granularity_ of cancelation within the _target_ /fiber/.
+
+            In particular, every step of a /fiber/ contains a /cancelation check/.
+            This is _SIMILAR TO_ what ~interrupt~ would do if the JVM checked the
+            /interruption flag/ on every ~;~.
+            + This is exactly how the ~loop~ /fiber/ in the example above is
+              canceled DESPITE the fact that the /thread/ never blocks.
+
+            + Anyone who has ever attempted to use ~Thread#interrupt~ on a
+              while-loop understands (=TODO=) how important this distinction is:
+              in Cats Effect, canceling this kind of /fiber/ is possible and
+              indeed quite common.
+
+*** TODO Terminology
+    /Asynchronous/, /concurrent/, and /parallel/ have a very distinct definition
+    which becomes significant in frameworks likee Cats Effect.
+
 **** Asynchronous
 **** Concurrent
 ***** Structured Concurrency
