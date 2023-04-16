@@ -1,24 +1,25 @@
 #+TITLE: Value Classes and Universal Traits
 #+AUTHOR: Mark Harrah
-#+CONTRIBUTORS: aelfric, ivan-klass, komainu8, alex-t-wix, regadas, dgruntz, heathermiller
+#+CONTRIBUTORS: AlinGabriel, aelfric, ivan-klass, komainu8, alex-t-wix, regadas, dgruntz, heathermiller
 #+STARTUP: overview
 #+STARTUP: entitiespretty
 
 * DONE Introduction
   CLOSED: [2019-06-09 Sun 22:59]
-  - /Value classes/ are a new mechanism in Scala to *avoid* _allocating runtime
-    objects_.
-    + This is accomplished through the definition of new ~AnyVal~ /subclasses/.
-      They were proposed in SIP-15.
+  - First proposed in [[https://docs.scala-lang.org/sips/pending/value-classes.html][SIP-15]] and introduced in Scala 2.10.0.
 
-  - The following shows a VERY MINIMAL /value class/ definition:
+  - /Value class/ is a mechanism in Scala to *avoid* _allocating runtime
+    objects_.
+    * This is accomplished through the definition of new ~AnyVal~ /subclasses/.
+
+  - The following shows a very minimal /value class/ definition:
     #+begin_src scala
       class Wrapper(val underlying: Int) extends AnyVal
     #+end_src
-    + A /value class/ has a _single_, public _val parameter_ that is the
+    * A /value class/ has a _single_, public _val parameter_ that is the
       _underlying runtime representation._
 
-    + The /type/ at /compile time/ is ~Wrapper~,
+    * The /type/ at /compile time/ is ~Wrapper~,
       but at /runtime/, the _representation_ is an ~Int~.
 
   - A /value class/
@@ -27,17 +28,16 @@
         def foo: Wrapper = new Wrapper(underlying * 19)
       }
     #+end_src
-    + *can define* ~def~'s
-    + *no* ~val~'s, ~var~'s, or _nested_ /traits/, /classes/ or /objects/:
+    * *can define* ~def~'s
+    * *no* ~val~'s, ~var~'s, or _nested_ /traits/, /classes/ or /objects/:
 
   - A /value class/
-    + *can only extend* /universal traits/
+    * *can only extend* /universal traits/
       and
-
-    + *cannot be extended itself*.
+    * *cannot be extended itself*.
 
   - universal trait :: a /trait/ that extends ~Any~, only has ~def~'s as members,
-       and _does no initialization_.
+                       and _does no initialization_.
 
   - /Universal traits/ allow basic inheritance of /methods/ for /value classes/,
     *BUT they incur the _overhead of allocation_.* For example,
@@ -53,9 +53,9 @@
     #+end_src
 
   - The remaining sections of this documentation show
-    + use cases,
-    + details on when /allocations/ do and do not occur,
-    + concrete examples of *limitations* of /value classes/
+    * use cases,
+    * details on when /allocations/ do and do not occur,
+    * concrete examples of *limitations* of /value classes/
 
 * DONE Extension methods
   CLOSED: [2019-06-09 Sun 22:59]
@@ -87,8 +87,8 @@
   Another use case for /value classes/ is to get the *type safety* of a data
   type *without* the /runtime allocation overhead/.
 
-  - For example, a fragment of a data type that represents a distance might look
-    like:
+  - For example,
+    a fragment of a data type that represents a distance might look like:
     #+begin_src scala
       class Meter(val value: Double) extends AnyVal {
         def +(m: Meter): Meter = new Meter(value + m.value)
@@ -127,15 +127,15 @@
        trait Distance extends Any
        case class Meter(val value: Double) extends AnyVal with Distance
      #+end_src
-     + /Allocation/ required:
+     * /Allocation/ required:
        #+begin_src scala
          def add(a: Distance, b: Distance): Distance = // ...
          add(Meter(3.4), Meter(4.3))
        #+end_src
-       * The rule above is true even a call to ~identity~:
+       + The rule above is true even a call to ~identity~:
          ~def identity[T](t: T): T = t~
 
-     + /Allocation/ NOT required:
+     * /Allocation/ NOT required:
        #+begin_src scala
          def add(a: Meter, b: Meter): Distance = // ...
        #+end_src
@@ -147,9 +147,9 @@
        val array = Array[Meter](m)
      #+end_src
      The /array/ here contains
-     + *ACTUAL* ~Meter~ /instances/
+     * *ACTUAL* ~Meter~ /instances/
        and
-     + *NOT* just the underlying /double primitives/.
+     * *NOT* just the underlying /double primitives/.
 
    - Lastly,
      /type tests/ such as those done in /pattern matching/ or ~asInstanceOf~
@@ -232,9 +232,9 @@
      #+end_src
 
    - A /value class/
-     + *CANNOT* have ~lazy val~'s or ~val~'s as /members/
+     * *CANNOT* have ~lazy val~'s or ~val~'s as /members/
        and
-     + *CANNOT* have *nested* /classes/, /traits/, or /objects/:
+     * *CANNOT* have *nested* /classes/, /traits/, or /objects/:
      #+begin_src scala
        class NoLazyMember(val evaluate: () => Double) extends AnyVal {
          val member: Int = 3
@@ -307,14 +307,14 @@
        // class Extend(x: Int) extends Value(x)
        //                              ^
      #+end_src
-     + Look the second error message,
+     * Look the second error message,
        /value classes/ is ALWAYS assumed and must be ~final~.
 
    - Another limitation that is a result of supporting only one parameter to a
      class is that a /value class/ must be
-     + *top-level*
+     * *top-level*
        or
-     + a /member/ of a *statically accessible object*.
+     * a /member/ of a *statically accessible object*.
 
      *This is because a _nested_ /value class/ would _require a second parameter_
      that references the /enclosing class/.* So, this is *NOT allowed*:
