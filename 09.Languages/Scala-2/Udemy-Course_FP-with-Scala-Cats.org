@@ -1,0 +1,415 @@
+#+TITLE: Functional Programming with Scala Cats
+#+LINK: https://conviva.udemy.com/course/functional-programming-with-scala-cats
+#+VERSION: Last updated 2022-12
+#+AUTHOR: Leandro Galvan
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Section 1: Introduction
+  Course code: https://github.com/leusgalvan/fp-course
+
+* Section 2: Typeclasses
+** 4. Introduction
+   - Outline
+     * Channel
+       + Simple
+       + Inheritance
+       + Typeclasses
+
+     * Implicits & Helper methods
+     * Laws
+     * Automatic instance derivation
+     * Syntax
+** 5. Channel - Any
+** 6. Channel - Any - Code
+** 7. Channel - Inheritance
+** 8. Channel - Inheritance - Code
+** 9. Channel - Typeclasses
+*** Trait Channel: Inheritance
+    #+begin_src scala
+      trait ByteEncodable {
+        def encode: Array[Byte]
+      }
+
+      trait Channel {
+        def write(obj: ByteEncodable): Unit
+      }
+    #+end_src
+    - Solved:
+      * Unique responsibility
+      * Easy to test
+      * Unhandled type -> compile error
+
+    - Not solved:
+      * How do we extend classes that we don't have control. e.g.: ~Int~?
+      * You can only provide one implementation -- not flexible
+      * Overloaded interface
+        + You have to put an extra method in the class that you are extending.
+          So in the case of full name, we have to put the encode method there and four classes that may want
+          to implement many trades or that may be already quite big.
+          This can be a problem because you're including yet more methods in the interface and things are getting
+          more complicated.
+          So let's go to our final solution, which is using type glasses.
+
+** 10. Channel - Typeclasses - Code
+** 11. Channel - Typeclasses - Advantages
+   - Solved:
+     * Can be instantiated by any type
+     * Cleaner interface
+     * Several implementations possible
+
+** 12. Implicits and Helper Methods
+** 13. Implicits and Helper Methods - Code - Organizing instances
+** 14. Implicits and Helper Methods - Code - Organizing instances #2
+   - Common situation:
+     * For each type ~A~:
+       + 1 main instance of ~ByteEncoder~
+       + couple more instances for specific use cases
+
+     * Goal:
+       + Use the main instance by default
+       + Provide a different instance for specific use cases
+
+     * Solution:
+       1. Put the default to the typeclass companion object.
+          - You may not have the control to this typeclass
+          - This way shouldn't be widely used, and do this only for widely used
+            basic types: primitive types and ~String~.
+
+       2. Put the default to the target type companion object.
+          - Common and flexible.
+
+** TODO 15. Implicits and Helper Methods - Code - Summoner method
+   - Get the encoder of a concrete type ~A~:
+     * Without customized summoner: ~implicitly[ByteEncoder[A]].encode(...)~
+     * With customized summoner: ~ByteEncoder[A].encode(...)~
+       + Define an ~implicitly~-like ~apply~ method inside the companion object
+         of ~ByteEncoder~
+
+   - TODO: notes
+
+** 16. Implicits and Helper Methods - Code - Instance method
+** 17. Channel - Read
+** 18. Channel - Read - Code
+** 19. Laws
+   #+begin_src scala
+     trait ByteCodec[A]
+         extends ByteEncoder[A]
+            with ByteDecoder[A]
+   #+end_src
+   It should have the property that
+   _encoding and then decoding a value should return the original value
+   *UNCHANGED*._
+
+   - Law:
+     #+begin_src scala
+       def isomorphism(a: A)(
+         implicit codec: ByteCodec[A]
+       ): Boolean = codec.decode(codec.encode(a)) == Some(a)
+     #+end_src
+
+   - Law:
+     Testing laws with the library _discipline_.
+
+   - Law code definition:
+     #+begin_src scala
+       trait ByteCodecLaws[A] {
+         def codec: ByteCodec[A] // we must override it
+
+         def isomorphism(a: A): Boolean = // Cats usually returns `IsEq[A]`
+           codec.decode(codec.encode(a)) == Some(a)
+       }
+
+       // The trait `Laws` is provided by Discipline
+       trait ByteCodecTests[A] extends Laws {
+         def laws: ByteCodecLaws[A] // we must override it
+
+         def byteCodec: RuleSet = new DefaultRuleSet(
+           name = "byteCodec",
+           parent = None,
+           "isomorphism" -> forAll(laws.isomorphism[A] _) // `forAll` is provided by ScalaCheck
+         )
+       }
+     #+end_src
+
+** TODO 20. Laws - Code
+** 21. Automatic instance derivation
+   #+begin_src scala
+     implicit def optionEncoder[A](implicit encA; ByteEncoder[A]): ByteEncoder[Option[A]] =
+       new ByteEncoder[Option[A]] {
+         override def encode(a: Option[A]): Array[Byte] =
+           a match {
+             case Some(v) => encA.encode(v)
+             case None    => Array.empty[Byte]
+           }
+       }
+   #+end_src
+
+** 22. Syntax
+   #+begin_src scala
+     implicit class ByteEncoderOps[A](a: A) {
+       def encode(implicit enc: ByteEncoderr[A]) =
+         enc.encode(a)
+     }
+   #+end_src
+
+** 23. Syntax - Code
+   - Extra memory allocation everytime use a syntax.
+     For example,
+     #+begin_src scala
+       "hello world".encode
+       // is equivalant to
+       new ByteEncoderOps[String]("hello world").encode
+
+       // VS
+
+       StringByteEncoder.encode("hello world")
+     #+end_src
+
+   - Use /Value Class/.
+
+** 24. Summary
+   - Typeclasses enable us to:
+     * Extends types outside of our control (~Int~, ~String~, ...)
+     * Add functionality without modifying the interface
+     * Use certain part of functionality when we need it (ad-hoc polymorphism)
+     * Provide several implementations of the functionality for the same type
+
+   - By using implicits and some helper methods, we can make typeclasses easier
+     to use
+
+   - Typeclasses usually have *laws*
+
+   - Laws make for excellent test cases
+
+** Quiz 1: Typeclasses quiz
+** 25. Assignment: Creating our own typeclass
+
+* Section 3: Well known typeclasses
+** 26. Introduction
+   - Outline
+     * Simple typeclasses
+       + ~Eq~
+       + ~Order~
+       + ~Show~
+       + ~Monoid~
+
+     * Higher Kinded Types
+
+     * More typeclasses
+       + ~Functor~
+       + ~Applicative~
+       + ~Monad~
+       + ~MonadError~
+       + ~Foldable~
+       + ~Traverse~
+
+     * Testing
+
+** 27. Eq
+** 28. Eq - Code
+** TODO 29. Order
+   - Laws (=from Jian= review)
+
+** 30. Order - Code
+   - ~.toOrdering~: from ~cats.Order~ to standard library ~Ordering~
+   - ~Order.reverse(...)~
+
+** 31. Show
+   #+begin_src scala
+     trait Show[A] {
+       def show(a: A): String
+     }
+   #+end_src
+
+** 32. Show - Code
+   - ~Show.fromToString~
+
+   - Example:
+     #+begin_src scala
+       implicit val byOwnerAndBalance: Show[Account] = Show.show { account =>
+         s"${account.owner} - $$${account.balance}"
+       }
+     #+end_src
+
+** 33. Monoid
+** 34. Monoid - Code - Speed
+** 35. Monoid - Code - Exercises
+** 36. Higher Kinded Types
+** 37. Functor
+** 38. Functor - Code
+** 39. Applicative
+** 40. Applicative - Code - Validated
+** 41. Applicative - Code - Option
+** 42. Monad
+** 43. Monad - Code - Option
+** 44. Monad - Code - List
+** 45. Monad - Code - Either
+** 46. Monad - Code - Try
+** 47. Monad Error =TODO=
+   #+begin_src scala
+     def doRequest(req: HttpRequest): HttpResponse =
+       if (math.random() < 0.5)
+         throw new IOException("boom1")
+       else
+         HttpResponse(200)
+
+     // For `Option`
+     def execcuteRequest(req: HttpRequest): Option[HttpResponse] =
+       try {
+         Some(doRequest(req))
+       } catch {
+         case _: Exception => None
+       }
+
+     // For `Either`
+     def execcuteRequest2(req: HttpRequest): Either[String, HttpResponse] =
+       try {
+         Right(doRequest(req))
+       } catch {
+         case _: Exception => Left("Sorry :(")
+       }
+
+     // For `Try`
+     def execcuteRequest3(req: HttpRequest): Try[HttpResponse] =
+       try {
+         Success(doRequest(req))
+       } catch {
+         case e: Exception => Failure(e)
+       }
+   #+end_src
+   (from Jian: This is also an example to show that for discovering pattern, we
+   usually should forget the DIY at the beginning.
+
+   - ~MonadError~:
+     #+begin_src scala
+       trait MonadError[E, A] {
+
+         // from `ApplicativeError`
+         def raiseError[A](e: E): F[A]
+         def raiseError[A](e: E): F[A]
+
+         // from `Monad`
+         def pure[A](x: A): F[A]
+         def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+         def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B]
+
+       }
+     #+end_src
+
+** 48. Monad Error - Code - Instances
+** 49. Monad Error - Code - Example
+** 50. Monad Error - Code - Additional Functions
+** 51. Foldable - FoldRight
+** 52. Foldable - FoldLeft
+** 53. Foldable - Typeclass
+   - ~foldMap~
+
+   - Laws:
+     #+begin_src scala
+       def leftFoldConsistentWithFoldMap[A, B](
+         fa: F[A],
+         f: A => B
+       )(implicit m: Monoid[B]): IsEq[B] =
+         fa.foldMap(f) <-> fa.foldLeft(m.empty) { (b, a) =>
+           b |+| f(a)
+         }
+
+       def rightFoldConsistentWithFoldMap[A, B](
+         fa: F[A],
+         f: A => B
+       )(implicit m: Monoid[B]): IsEq[B] =
+         fa.foldMap(f) <->
+           fa.foldRight(
+             Later(m.empty)
+           )((a, lb) => lb.map(f(a) |+| _)).value
+     #+end_src
+
+** 54. Foldable - Code - MList
+** 55. Foldable - Code - Find
+   Currnet implementation in course is actually ~findLast~,
+   while the usual semantics of "find" is ~findFirst~.
+
+** 56. Foldable - Code - Exists
+** 57. Foldable - Code - To List
+** 58. Foldable - Code - For All
+** TODO 59. Traverse
+   - Laws:
+     #+begin_src scala
+       def traverseIdentity[A, B](fa: F[A], f: A => B): IsEq[F[B]] =
+         fa.traverse[Id, B](f) <-> F.map(fa)(f)
+
+       def traverseSequentialComposition[A, B, C, M[_], N[_]](
+         fa: F[A],
+         f: A => M[B],
+         g: B => N[C]
+       )(implicit n: Applicative[N], m: Applicative[M]): IsEq[Nested[M, N, F[C]]] = {
+         val lhs = Nested(m.map(fa.traverse(f))(fb => fb.traverse(g)))
+         val rhs = fa.traverse[Nested[M, N, *], C](a => Nested(m.map(f(a))(g)))
+         lhs <-> rhs
+       }
+       // Nested(fa.traverse(f).map(fb => fb.traverse(g))) <->
+       //   fa.traverse(a => Nested(f(a).map(g)))
+     #+end_src
+     * ~Nested~ is used to compose ~M[_]~ and ~N[_]~
+
+** 60. Traverse - Code - MList
+** 61. Traverse - Code - Option
+** 62. Testing - Box - =START!!!=
+** 63. Testing - Instances
+** 64. Testing - Properties
+** 65. Summary
+** Quiz 2: Common Typeclasses Quiz
+** 66. Assignment: The Get Monad
+
+* Section 4: Functional Techniques
+** 67. Introduction
+** 68. Validations
+** 69. Validations - Code
+** 70. Dependency Injection
+** 71. Dependency Injection - Code - The Reader Monad
+** 72. Dependency Injection - Code - Modularization
+** 73. Dependency Injection - Code - Exercise
+** 74. Tracking
+** 75. Tracking - Code - The Writer Monad
+** 76. Tracking - Code - Discounts Example
+** 77. Tracking - Code - Exercise
+** 78. State Management
+** 79. State Management - Code - The State Monad
+** 80. State Management - Code - Tic Tac Toe Example
+** 81. Trampolines
+** 82. Trampolines - Code - IsEven
+** 83. Trampolines - Code - FlatMap
+** 84. Evaluation Modes
+** 85. Evaluation Modes - Code - The Eval Monad
+** 86. Evaluation Modes - Code - Stream Example
+** 87. TailRecM
+** 88. Monad Transformers
+** 89. Monad Transformers - Code - ReaderT
+** 90. Monad Transformers - Code - OptionT
+** 91. Suspending Side Effects
+** 92. Suspending Side Effects - Code - IO
+** 93. Suspending Side Effects - Code - Monad
+** 94. Summary
+** Quiz 3: Functional Techniques Quiz
+
+* Section 5: Final Project
+** 95. Introduction
+** 96. Overview
+** 97. Architecture
+** 98. Validations
+** 99. Generators
+** 100. Person
+** 101. Money
+** 102. Expense
+** 103. DebtByPayee
+** 104. DebtByPayer
+** 105. PersonService
+** 106. ExpenseService
+** 107. IO
+** 108. Syntax
+** 109. Command - readParticipants
+** 110. Command - validateData
+** 111. Command - findPerson
+** 112. Command - addPerson
+** 113. App
