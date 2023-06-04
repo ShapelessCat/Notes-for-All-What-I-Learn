@@ -4322,158 +4322,186 @@
 
 * DONE 9. Error Handling - 151
   CLOSED: [2021-01-13 Wed 03:09]
-  - Rust groups errors into TWO major categories:
+  - Rust groups errors into _TWO_ major categories:
     * recoverable errors
-    * unrecoverable errors - always symptoms of bugs
+      Example: file not found
 
-  - Most languages don't distinguish between these TWO kinds of errors and
+    * unrecoverable errors - always symptoms of bugs
+      Example: index out of bound
+
+  - Most languages do _NOT distinguish_ between these TWO kinds of errors and
     handle both in the same way, using mechanisms such as /exceptions/.
 
-  - Rust doesn't have exceptions.
+  - *Rust doesn't have exceptions.*
     Instead, it has
     * the type ~Result<T, E>~ for recoverable errors.
     * the ~panic!~ macro that stops execution when it encounters unrecoverable
       errors.
 
+  - This chapter
+    1. covers calling ~panic!~
+    2. talks about returning ~Result<T, E>~ values.
+
+  - This chapter, additionally, explore considerations
+    *WHEN* deciding whether to try to _recover from an error_ or to _stop execution_.
+
 ** DONE 9.1. Unrecoverable Errors with ~panic!~ - 152
-   CLOSED: [2021-01-07 Thu 01:25]
-   - When this /macro/ executes, your program will:
+   CLOSED: [2023-06-01 Thu 01:59]
+   - When bad things happen in your code, and there's nothing you can do about it,
+     use the ~panic!~ macro.
+
+   - There are two ways to cause a panic in practice:
+     * by taking an action that causes our code tto panic, such as ???
+     * explicitly calling the ~panic!~ macro.
+
+   - _BY DEFAULT,_
+     when this /macro/ executes, your program will:
      1. print a failure message
      2. unwind and clean up the stack
      3. quit
 
+   - Besides the _DEFAULT_:
+     Via an /environment variable/, you can also have Rust display the /call stack/
+     when a /panic/ occurs to make it easier to track down the source of the
+     panic.
+
    - This most commonly occurs when a bug of some kind has been detected and
-     it's _not clear_ to the programmer how to handle the error.
+     it's _NOT clear_ to the programmer how to handle the error.
 
    - *Unwinding the Stack or Aborting in Response to a Panic*
      * /unwinding/ :: walks back up the /stack/ and cleans up the data from each
-                      function it encounters, but this walking and cleanup is a
-                      lot of work.
+                      function it encounters,
 
+     * _However, /unwinding/ walking and cleanup is a lot of work._
 
      * the alternative is to _immediately abort_.
        1. No cleanup by the program.
        2. Memory need to be cleaned up by the OS.
 
      * If you want to make your _resulting binary as small as possible_,
-       you can switch from /unwinding/ to /aborting/ on /panic/ by adding
-       ~panic = 'abort'~ to the appropriate ~[profile]~ sections in the =Cargo.toml=.
-       For example, if you want to abort on /panic/ in release mode, add this:
-       #+BEGIN_SRC toml
-         [profile.release]
-         panic = 'abort'
-       #+END_SRC
+       you can
+       switch from /unwinding/ to /aborting/ on /panic/ by adding ~panic = 'abort'~
+       to the appropriate ~[profile]~ sections in the =Cargo.toml=.
+       + For example, if you want to abort on /panic/ in /release mode/, add this:
+         #+begin_src toml
+           [profile.release]
+           panic = 'abort'
+         #+end_src
 
-    - We can use the backtrace of the functions the ~panic!~ call came from to
-      figure this out.
+   - A simple example program with ~panic!~:
+     #+FILE: src/main.rs
+     #+begin_src rust
+       fn main() {
+           panic!("crash and burn");
+       }
+     #+end_src
+     * Run this program with the shell command ~cargo run~, and you'll see:
+       #+begin_src text
+            Compiling panic v0.1.0 (file:///projects/panic)
+             Finished dev [unoptimized + debuginfo] target(s) in 0.25s
+              Running `target/debug/panic`
+         thread 'main' panicked at 'crash and burn', src/main.rs:2:5
+         note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+       #+end_src
+
+
+   - We can use the backtrace of the functions the ~panic!~ call came from to
+     figure out the code that is causing the problem.
+     =TODO= We'll discuss backtraces in more detail next.
 
 *** DONE Using a ~panic!~ Backtrace - 153
-    CLOSED: [2021-01-07 Thu 01:25]
-    - /buffer overread/
-      * In Rust will trigger a /panic/
-      * In C/C++ will trigger an /undefined behavior/.
+    CLOSED: [2023-06-01 Thu 01:58]
+    - buffer overread :: read beyond the end of a data structure.
+      * This can lead to /security vulnerabilities/
+        if an attacker is able to manipulate the index in such a way as to read
+        data they shouldn't be allowed to that is stored after the data structure.
 
-    - A example:
+    - In C/C++, /buffer overread/ can happen, and then /undefined behavior/ can
+      happen: you might get whatever is at the location in memory that would
+      correspond to that element in the data structure, event though the memory
+      doesn't belong to that structure.
+
+    - In Rust, /buffer overread/ can't happen, behavior that looks like can lead
+      to /buffer overread/ will trigger a /panic/.
+
+    - Listing 9-1:
+      Attempting to access an element beyond the end of a vector, which will
+      cause a call to ~panic!~
+      #+FILE: src/main.rs
       #+BEGIN_SRC rust
         fn main() {
             let v = vec![1, 2, 3];
 
-            v[100];
+            v[99];
         }
       #+END_SRC
-
       * Command ~cargo run~
         #+BEGIN_SRC text
              Compiling panic v0.1.0 (file:///projects/panic)
-              Finished dev [unoptimized + debuginfo] target(s) in 0.27 secs
+              Finished dev [unoptimized + debuginfo] target(s) in 0.27s
                Running `target/debug/panic`
-          thread 'main' panicked at 'index out of bounds: the len is 3 but the index is
-          100', /stable-dist-rustc/build/src/libcollections/vec.rs:1362
-          note: Run with `RUST_BACKTRACE=1` for a backtrace.
-          error: Process didn't exit successfully: `target/debug/panic` (exit code: 101)
+          thread 'main' panicked at 'index out of bounds: the len is 3 but the index is 99', src/main.rs:4:5
+          note: Run with `RUST_BACKTRACE=1` environment variable to display a backtrace
         #+END_SRC
 
+      * backtrace :: a list of all the functions that have been called to get to this point.
+
+      * /Backtraces/ in Rust work as they do in other languages:
+        1. the key to reading the backtrace is to start from the top and read until you see files you wrote.
+           That's the spot where the problem originated.
+
+        2. The lines above that spot are code that your code has called;
+           the lines below are code that called your code.
+           + These before-and-after lines might include
+             * core Rust code,
+             * standard library code, or
+             * crates that you’re using.
+
+        3. Let's try getting a /backtrace/ by setting the ~RUST_BACKTRACE~
+           /environment variable/ to any value *except* ~0~.
+
       * Command ~RUST_BAKTRACE=1 cargo run~
+        #+Listing 9-2: The backtrace generated by a call to panic! displayed when the environment variable RUST_BACKTRACE is set
         #+BEGIN_SRC text
-          $ RUST_BACKTRACE=1 cargo run
-          thread 'main' panicked at 'index out of bounds: the len is 3 but the index is 99', /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/libcore/slice/mod.rs:2806:10
+          thread 'main' panicked at 'index out of bounds: the len is 3 but the index is 99', src/main.rs:4:5
           stack backtrace:
-             0: backtrace::backtrace::libunwind::trace
-                       at /Users/runner/.cargo/registry/src/github.com-1ecc6299db9ec823/backtrace-0.3.40/src/backtrace/libunwind.rs:88
-             1: backtrace::backtrace::trace_unsynchronized
-                       at /Users/runner/.cargo/registry/src/github.com-1ecc6299db9ec823/backtrace-0.3.40/src/backtrace/mod.rs:66
-             2: std::sys_common::backtrace::_print_fmt
-                       at src/libstd/sys_common/backtrace.rs:84
-             3: <std::sys_common::backtrace::_print::DisplayBacktrace as core::fmt::Display>::fmt
-                       at src/libstd/sys_common/backtrace.rs:61
-             4: core::fmt::ArgumentV1::show_usize
-             5: std::io::Write::write_fmt
-                       at src/libstd/io/mod.rs:1426
-             6: std::sys_common::backtrace::_print
-                       at src/libstd/sys_common/backtrace.rs:65
-             7: std::sys_common::backtrace::print
-                       at src/libstd/sys_common/backtrace.rs:50
-             8: std::panicking::default_hook::{{closure}}
-                       at src/libstd/panicking.rs:193
-             9: std::panicking::default_hook
-                       at src/libstd/panicking.rs:210
-            10: std::panicking::rust_panic_with_hook
-                       at src/libstd/panicking.rs:471
-            11: rust_begin_unwind
-                       at src/libstd/panicking.rs:375
-            12: core::panicking::panic_fmt
-                       at src/libcore/panicking.rs:84
-            13: core::panicking::panic_bounds_check
-                       at src/libcore/panicking.rs:62
-            14: <usize as core::slice::SliceIndex<[T]>>::index
-                       at /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/libcore/slice/mod.rs:2806
-            15: core::slice::<impl core::ops::index::Index<I> for [T]>::index
-                       at /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/libcore/slice/mod.rs:2657
-            16: <alloc::vec::Vec<T> as core::ops::index::Index<I>>::index
-                       at /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/liballoc/vec.rs:1871
-            17: panic::main
-                       at src/main.rs:4
-            18: std::rt::lang_start::{{closure}}
-                       at /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/libstd/rt.rs:67
-            19: std::rt::lang_start_internal::{{closure}}
-                       at src/libstd/rt.rs:52
-            20: std::panicking::try::do_call
-                       at src/libstd/panicking.rs:292
-            21: __rust_maybe_catch_panic
-                       at src/libpanic_unwind/lib.rs:78
-            22: std::panicking::try
-                       at src/libstd/panicking.rs:270
-            23: std::panic::catch_unwind
-                       at src/libstd/panic.rs:394
-            24: std::rt::lang_start_internal
-                       at src/libstd/rt.rs:51
-            25: std::rt::lang_start
-                       at /rustc/5e1a799842ba6ed4a57e91f7ab9435947482f7d8/src/libstd/rt.rs:67
-            26: panic::main
+             0: rust_begin_unwind
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/std/src/panicking.rs:584:5
+             1: core::panicking::panic_fmt
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/core/src/panicking.rs:142:14
+             2: core::panicking::panic_bounds_check
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/core/src/panicking.rs:84:5
+             3: <usize as core::slice::index::SliceIndex<[T]>>::index
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/core/src/slice/index.rs:242:10
+             4: core::slice::index::<impl core::ops::index::Index<I> for [T]>::index
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/core/src/slice/index.rs:18:9
+             5: <alloc::vec::Vec<T,A> as core::ops::index::Index<I>>::index
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/alloc/src/vec/mod.rs:2591:9
+             6: panic::main
+                       at ./src/main.rs:4:5
+             7: core::ops::function::FnOnce::call_once
+                       at /rustc/e092d0b6b43f2de967af0887873151bb1c0b18d3/library/core/src/ops/function.rs:248:5
+          note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
         #+END_SRC
         * In order to get /backtraces/ with this information, /debug symbols/
           *must be enabled.*
-
-        * /Debug symbols/ *are enabled by default* when
-          + using ~cargo build~ or ~cargo run~ *without* the ~--release~ flag,
+          + /Debug symbols/ *are enabled by default*
+            _WHEN_
+            using ~cargo build~ or ~cargo run~ *WITHOUT* the ~--release~ flag,
             as we have here.
 
-    - backtrace :: a list of all the /functions/ that have been called to get to
-                   this point.
-
-    - /Backtraces/ in Rust work like they do in other languages:
-      the key to reading the backtrace is to _start from_ the top and read _until_
-      you see files you wrote.
-      1. The lines above the lines mentioning your files are code that your code
-         called;
-      2. the lines below are code that called your code.
+    - We'll come back to ~panic!~ and when we should and should not use panic! to
+      handle error conditions in the =“To panic! or Not to panic!”= (=TODO=)
+      section later in this chapter.
+      * =TODO= Next, we’ll look at how to recover from an error using ~Result~.
 
 ** DONE 9.2. Recoverable Errors with ~Result~ - 155
    CLOSED: [2021-01-12 Tue 16:39]
-   Most errors aren't serious enough to require the program to stop entirely.
+   _MOST errors are NOT SERIOUS ENOUGH to require the program to STOP entirely._
    Sometimes, when a function fails, it's for a reason that you can easily
    interpret and respond to.
 
+   - =TODO=: “Handling Potential Failure with Result” in Chapter 2
    - Definition
      #+BEGIN_SRC rust
        enum Result<T, E> {
@@ -4481,39 +4509,59 @@
            Err(E),
        }
      #+END_SRC
+     =TODO= The ~T~ and ~E~ are /generic type parameters/: we'll discuss generics in more detail in Chapter 10.
 
-   - Note that, like the ~Option~ /enum/, the ~Result~ /enum/ and its /variants/
-     have been brought into /scope/ by the /prelude/, so we don't need to specify
-     ~Result::~ before the ~Ok~ and ~Err~ /variants/ in the /match arms/.
-
-   - Example:
+   - Listing 9-3: Opening a file
+     #+FILENAME: src/main.rs
      #+begin_src rust
-       // Listing 9-4: Using a match expression to handle the Result variants that might
-       //              be returned
        use std::fs::File;
 
        fn main() {
-           let f = File::open("hello.txt");
+           let greeting_file_result = File::open("hello.txt");
+       }
+     #+end_src
+     * The /return type/ of ~File::open~ is a ~Result<T, E>~.
+       + The /generic parameter/ ~T~ has been filled in by the implementation of
+         ~File::open~ with the type of the _SUCCESS value_, ~std::fs::File~, which
+         is a /file handle/.
 
-           let f = match f {
+       + The type of ~E~ used in the _ERROR value_ is ~std::io::Error~.
+
+   - Listing 9-4: Using a match expression to handle the Result variants that might be returned
+     #+FILENAME: src/main.rs
+     #+begin_src rust
+       use std::fs::File;
+
+       fn main() {
+           let greeting_file_result = File::open("hello.txt");
+
+           let greeting_file = match greeting_file_result {
                Ok(file)   => file,
                Err(error) => panic!("Problem opening the file: {:?}", error),
            };
        }
      #+end_src
+     * When handling the ~Err~ case, ~panic!~ macro can be a choice -- log the
+       problem and stop the execution is a way to handle errors.
+
+   - Note:
+     LIKE the ~Option~ /enum/,
+     the ~Result~ /enum/ and its /variants/ _have been brought into /scope/ by the /prelude/,_
+     so we don't need to specify ~Result::~ before the ~Ok~ and ~Err~ /variants/
+     in the /match arms/.
 
 *** DONE Matching on Different Errors - 158
     CLOSED: [2021-01-07 Thu 01:40]
+    Listing 9-5: Handling different kinds of errors in different ways
+    #+FILENAME: src/main.rs
     #+BEGIN_SRC rust
-      // Listing 9-5: Handling different kinds of errors in different ways
-
       use std::fs::File;
       use std::io::ErrorKind;
 
       fn main() {
-          let f = File::open("hello.txt");
+          let greeting_file_result = File::open("hello.txt");
 
-          let f = match f {
+          let greeting_file = match greeting_file_result {
               Ok(file) => file,
               Err(error) => match error.kind() {
                   ErrorKind::NotFound => match File::create("hello.txt") {
@@ -4533,13 +4581,15 @@
         This means we need to consider some other better ways to do chained
         error handlings.
 
-    - A more seasoned Rustacean might write
+    - =TODO= =RE-NOTE=!!!
+      Alternatives to Using ~match~ with ~Result<T, E>~
+      A more seasoned Rustacean might write
       #+begin_src rust
         use std::fs::File;
         use std::io::ErrorKind;
 
         fn main() {
-            let f = File::open("hello.txt").unwrap_or_else(|error| {
+            let greeting_file = File::open("hello.txt").unwrap_or_else(|error| {
                 if error.kind() == ErrorKind::NotFound {
                     File::create("hello.txt").unwrap_or_else(|error| {
                         panic!("Problem creating the file: {:?}", error);
@@ -4550,15 +4600,24 @@
             });
         }
       #+end_src
+      =TODO= Come back to this example after you've read _Chapter 13_, and look up
+      the ~unwrap_or_else~ method in the standard library documentation.
 
 *** DONE Shortcuts for Panic on Error: ~unwrap~ and ~expect~ - 159
     CLOSED: [2021-01-07 Thu 01:44]
     /Pattern matching/ is NOT always concise and communicate intent well.
 
     - ~unwrap~:
-      ~let f = File::open("hello.txt").unwrap();~
-      If the value is the ~Ok~ /variant/, the inside value will be returned.
-      If the value is the ~Err~ /variant/, a ~panic!~ /macro/ will be called.
+      ~let greeting_file = File::open("hello.txt").unwrap();~
+      * If the value is the ~Ok~ /variant/, the inside value will be returned.
+      * If the value is the ~Err~ /variant/, a ~panic!~ /macro/ will be called.
+
+    - For the code above, if there is a file not found error, we can see
+      #+begin_src text
+        thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Os {
+        code: 2, kind: NotFound, message: "No such file or directory" }',
+        src/main.rs:4:49
+      #+end_src
 
     - ~expect~:
       Similar as ~unwrap~, but can take a message for the ~panic!~

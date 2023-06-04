@@ -174,17 +174,55 @@
 ** 37. Completed Notes
 
 * Section 6: Redis Has Gotcha's!
-** 38. Slightly Unpredictable HSET and HGETALL
-** 39. Issues with HSET
-** 40. Issues with HGETALL
+** 38. Slightly Unpredictable ~HSET~ and ~HGETALL~
+** 39. Issues with ~HSET~
+** 40. Issues with ~HGETALL~
 
 * Section 7: Powerful Design Patterns
 ** 41. App Overview
+   1. Deep walkthrough of th ecommerce app we're building
+
+   2. Do some design work on how we're going to store data in Redis
+
+   3. Figure out what data should be stored as hashes
+
+   4. Write code!
+
 ** 42. Reducing the Design to Queries
+   - SQL Database Design Methodology
+     1. Put the data in tables
+     2. Figure out how we will query it
+
+
+   - Redis Design Methodology
+     1. Figure out what queries we need to answer
+     2. Structure data to best answer those queries
+
 ** 43. What Data Type for Each Resource
+   - _Reasons to Store as Hash_
+     * The record has many attributes
+     * A collection of these records have to be sorted many different ways
+     * Often need to access a single record at a time
+
+   - _Don't Use Hashes When ..._
+     * The record is only for counting or enforcing uniqueness
+     * Record stores only one or two attributes
+     * Used only for creating relations between different records
+     * The record is only used for time series data
+
 ** Quiz 2: When to use Hashes
 ** 44. Create User Implementation
 ** 45. Serialization and Deserialization
+   - Serialization
+     * Get an object ready to go INTO Redis as a hash
+     * Removes ID
+     * Turns dates into a queryable format
+
+   - Deserialization
+     * Formats data coming OUT of Redis
+     * Add in ID
+     * Parse string numbers into plain numbers
+
 ** 46. Adding Serialize
 ** 47. Fetching a User
 ** 48. Implementing Sessions
@@ -201,14 +239,49 @@
 
 * Section 9: Enforcing Uniqueness with Sets
 ** 57. Basics of Sets
+   - ~SADD key4set value { value }~: Add a string to a set.
+     * returns '1' if element added, '0' if not.
+
+   - ~SMEMBERS key4set~
+
+   - Kind of do the same thing:
+     * ~SMEMBERS~, ~SSCAN~
+     * ~SMISMEMBER~, ~SISMEMBERS~
+     * ~SUNION~, ~SUNIONSTORE~
+     * ~SDIFF~, ~SDIFFSTORE~
+     * ~SINTER~, ~SINTERSTORE~, ~SINTERCARD~
+     * ~SMOVE~ =???=
+     * ~SPOP~ =???=
+     * ~SRANDMEMBER~ =???=
+
 ** 58. Union of Sets
 ** 59. Intersection of Sets
 ** 60. Difference of Sets
 ** 61. Store Variations
+   - The ~STORE~ suffixed commands ~<X>STORE~:
+     do ~<X>~ and save the result for a given key
+
 ** 62. Checking for an Element in a Set
+   - ~SISMEMBERS key4set toBeChecked~: return 1 if the element exists in the set, 0 if not
+
+   - ~SMISMEMBERS key4set toBeChecked0 { toBeChecked }~: Runs multiple ~SISMEMBER~ at the same time
+     * return an array whoes elements are 1's or 0's.
+
 ** 63. Scanning a Set
+   - ~SCARD key4set~: return the cardinality of the target set
+
+   - ~SREM key4set value~: remove an element from a set
+
+   - ~SSCAN key4set cursorId numberOfElementsToReturn~: return the cardinality of the target set
+     * For example: ~SSCAN colors:1 0 COUNT 2~
+       =TODO= a little bit tricky!!!
+
 ** 64. Completed Notes
 ** 65. Most Common Use Cases of Sets
+   - Enforcing uniqueness of any value
+   - Creating a relatiionship between different records
+   - Finding common attributes between different things
+   - General list of elements where order doesn't matter
 
 * Section 10: A Little Set Implementation
 ** 66. Requiring Unique User Names
@@ -252,7 +325,23 @@
 
 * Section 14: HyperLogLog Structures
 ** 98. HyperLogsLogs
+   - Algorithms for approximately counting the number of unique elements
+   - Similar to a set, but doesn't store the elements
+   - Will seem useless at first glance
+
+   - Commands:
+     * ~PFADD key value~ returns 1 if the value is new 0 if not
+
+     * ~PFCOUNT key~ returns the approximate count of the elements in the value
+       of the given ~key~.
+
 ** 99. When to use HyperLogsLogs
+   - =IMPORTANT=
+     A /HyperLogsLog/ instance has a constant size *12kb*,s
+     not matter how many elements are added.
+
+   - 0.81% error in ~PFCOUNT~ results.
+
 ** 100. HyperLogsLogs in Action
 
 * Section 15: Storing Collections with Lists
