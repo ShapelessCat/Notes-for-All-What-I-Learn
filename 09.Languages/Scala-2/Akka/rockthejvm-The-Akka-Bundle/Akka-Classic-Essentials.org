@@ -1,0 +1,480 @@
+#+TITLE: Akka Classic Essentials
+#+VERSION: 20??
+#+AUTHOR: Daniel Ciocîrlan
+#+STARTUP: indent
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Welcome
+** Welcome (7:44)
+- Order of courses:
+  * Akka Essentials
+  * Akka Persistence
+  * Akka Streams
+  * Akka HTTP
+  * Akka Remoting and Clustering
+  * Akka Serialization
+
+** How to Make the Best out of This Course (2:32)
+
+* Introduction
+** Start Scala Recap (22:21)
+** Start Advanced Scala Recap (15:34)
+** Start Multithreading Recap (13:42)
+** Start Limitations of the Standard Thread Model (19:18)
+
+* Actors
+** Actors Intro (3:30)
+** Actors, Messages, Behaviors - Part 1 (18:07)
+  - Factors about /actors/:
+    * Actors are uniquely identified
+    * Messages are asynchronous
+    * Each actor may respond differenty
+    * Actors are (really) encapsulated
+
+  - ~!~ read as "Tell"
+
+  - ~Receive~ is equivalent to ~PartialFunciton[Any, Unit]~
+
+** Actors, Messages, Behaviors - Part 2 (24:54)
+- /Messages/ can be of any type
+  * messages must be *IMMUTABLE*
+    + Not a hard restriction,
+      but if we don't follow it, we will get into very very very nasty
+      problems).
+
+  * messages must be *SERIALIZABLE*
+    in practice use case classes and case objects
+
+- /Actors/ have info about their context and themselves
+  * ~context.self.toString~ / ~self.toString~
+    =[Actor[akka://actorCapabilitiesDemo/user/simpleActor#-1713303942]] I have received hello, actor=
+
+  * ~context.self.path.toString~
+    =[akka://actorCapabilitiesDemo/user/simpleActor]=
+
+- actors can REPLY to messages
+
+- ~context.sender() ! message~
+  replying to a message
+
+- forwarding messages
+  ~forward~
+
+- Summary:
+  * ???
+
+  * Actor principles upheld:
+    + full encapsuulation*:
+      CANNOT create actors manually,
+      CANNOT directly call methods
+
+    + full parallelism
+
+    + non-blocking interactiono via messages
+
+  * Actor references:
+    + can be sent
+
+    + the ~self~ reference
+
+  * How to reply: use ~sender~
+
+** Actors, Messages, Behaviors - Exercises (21:29)
+- Exercises:
+  1. a Counter actor
+     * Increment
+     * Decrement
+     * Print
+
+  2. a bank account as an actor
+     receives
+     * Deposit an amount
+     * Withdraw an amount
+     * Statement
+
+     replies with
+     * Success
+     * Failure
+
+     interact with some other kind of actor
+
+** How Actors Work (5:20)
+- Q :: Can we assume any ordering of messages?
+
+- Q :: Aren't we causing race conditions?
+
+- Q :: What does "asynchronous" actually mean for actors?
+
+- Q :: How does this all work?!
+
+- A :: Akka has a /thread pool/ that it shares with actors.
+  * /thread/ is active: can run code
+
+  * /actor/ is passive: just a data structure, who has two critical parts:
+    message handler and message queue (mailbox).
+
+  * A few threads (hundreds of) can handle lots of actors (millions of, per GB heap)
+    Akka schedules actors for execution.
+
+- A ::
+  * Sending a message:
+    + messages is enqueued in the actor's mailbox
+    + (thread-safe!)
+
+  * Processing a message:
+    + a thread is scheduled to run this actor
+
+    + messages are extracted from the mailbox, in order
+
+    + the thread invokes the handler on each message
+
+- A :: Guarantees
+  Only one thread operates on an actor at any time
+  * actors are effectively single-threaded
+  * no locks needed!
+  * message processing is atomic
+  * message delivery guarantees:
+    + at most once delivery
+    + for any sender-receiver pair, the message order is maintained
+
+** Changing Actor Behavior - Part 1 (21:31)
+- xxx
+** Changing Actor Behavior - Part 2 (9:43)
+- ~context.become(sadReceive, discardOld = false)~
+  Use ~discardOld~ to config stack or not.
+  Use ~context.unbecome()~ to pop the current behavior off the stack.
+
+- Rules
+  * Akka always uses the latest handler on top of the stack.
+  * If the stack is empty, it calls ~receive~.
+
+** Changing Actor Behavior - Exercises (34:03)
+- xxx
+
+** Child Actors (32:10)
+- ~context.actorOf~
+
+- Guardian actors (top-level):
+  * ~/system~: guardian
+  * ~/user~:   user-level guardian
+  * ~/~:       the root guardian
+
+- ~system.actorSelection(url)~
+  If the selected actor actually doesn't exist,
+  any message sent to it will not be delivered.
+  _dead letter cencountered._
+
+- CAUTION:
+  NEVER PASS MUTABLE ACTOR STATE, OR THE `THIS` REFERENCE, TO CHILD ACTORS.
+  NEVER IN YOUR LIFE.
+
+- /Closing over/
+  Never close over mutable state or ~this~!
+
+- Recap
+  * /Actors/ can create other /actors/
+    #+begin_src scala
+      context.actorOf(Props[MyActor], "child")
+    #+end_src
+
+  * Top-level supervisors (guardians)
+    + ~/system~
+    + ~/user~
+    + ~/~
+
+  * Actor paths
+    ~/user/parent/child~
+
+  * Actor selections
+    ~system.actorSelection("/user/parent/child")~
+    + works with ~context~ as well
+
+  * Actor encapsulation dangers
+    =IMPORTANT=
+    ???
+
+** Child Actors - Exercises (30:12)
+** Actor Logging (11:43)
+- Explicit logging
+  #+begin_src scala
+    class SimpleActorWitthExplicitLogger extends Actor {
+      val logger = Logging(context.system, this)
+    }
+  #+end_src
+
+- Actor logging
+  #+begin_src scala
+    class ActorWithLogging extends Actor with ActorLogging {
+      override def receive: Receive = {
+        case message => log.info(message.toString)
+      }
+    }
+  #+end_src
+
+- Two points:
+  * Logging is asynchronous.
+    Akka logging is done with actors!
+
+  * You can change the logger, e.g. SLF4J
+    Can be configured with a very easy configuration =TODO= next section
+
+** Configuring Akka (25:22)
+- xxx
+
+* Testing Actors
+** Intro to TestKit (26:35)
+- ~Actor.emptyBehavior~
+
+- ~TestKit~
+
+- ~ImplicitSender~
+
+- Message assertions:
+  * ~expectMsg~, default timeout: 3 seconds (configurable)
+  * ~expectNoMessage~
+  * ~expectMsgType[T]~
+  * ~expectMsgAnyOf(...)~ and ~expectMsgAllOf(...)~
+  * ~receiveN(2)~
+  * ~expectMsgPF() { case ... }~, we only care that the PF is defined
+
+** TestProbes (25:06)
+- Recap:
+  * ~TestProbe~'s are useful for interactions with multiple actors
+    #+begin_src scala
+      val probeActor = TestProbe("TestProbeName")
+    #+end_src
+
+  * Can send messages or reply
+    #+begin_src scala
+      probeActor.send(actorunderTest, "a message")
+      probeActor.reply("a message") // to its last sender
+    #+end_src
+
+  * Has the same assertions as the ~testActor~
+
+  * Can watch other actors * =TODO=
+
+** Timed Assertions (21:35)
+- Recap
+  * Put a time cap on the assertions
+    #+begin_src scala
+      within(500.millis, 1.second) {
+        // everything in here must pass
+      }
+    #+end_src
+
+  * Receive and process messages during a time window
+    #+begin_src scala
+      val results = receiveWhile[Int](max = 2.seconds, idle = Duration.Zero, messages = 10) {
+        case WorkResult(...) => // some value
+      }
+    #+end_src
+    then do assertions based on the results
+
+  * TestProbes don't listen to ~within~ blocks!
+
+** Intercepting Logs (31:12)
+- Recap
+  * Use ~EventFilter~'s to intercept logs
+    #+begin_src scala
+      EventFilter.info("my log message", occurrences = 1) intercept {
+        // your test here
+      }
+    #+end_src
+    works for all log levels if you use corresponding level names.
+
+  * Intercept exceptions
+    #+begin_src scala
+      EventFilter[RuntimeException](occurrences = 1) intercept {
+        // your test here
+      }
+    #+end_src
+
+  * Good for integration tests where =IMPORTANT=
+    + It's hard to do message-based testing
+    + there are logs to inspect
+
+** Synchronous Testing (13:42)
+
+* Fault Tolerance, a.k.a. "Let it Crash"
+** DONE Starting and Stopping Actors (29:22)
+CLOSED: [2023-07-05 Wed 13:16]
+- Start actors:
+  * ~system.actorOf~
+  * ~context.actorOf~
+
+- Stop actors:
+  * ~context.stop(actorRef)~: non-blocking behavior
+    No guarantee for stopping immediately
+
+  * ~context.stop(self)~, and this also stop all children.
+    There is a guarantee: =IMPORTANT=
+    Stop the children first, and then the parent.
+
+  * Use special messages:
+    + ~actor ! PoisonPill~
+
+    + ~actor ! Kill~, kind of a litte bit brutal
+      Mix actor stop behavior with an ~akka.actor.ActorKilledException~ thrown
+
+    + ~PoisonPill~ and ~Kill~ are special.
+      You can't be handled them in normal ~receive~, they are handled
+      separately.
+
+- Death Watch
+  * ~context.watch(child)~
+  * ~context.unwatch(child)~
+
+- Recap
+  Stopping Actors
+  * Using ~context.stop(child)~
+    asynchronous - actor may continue to receive messages until actually stopped
+
+  * Using ~context.stop(self)~
+    asynchronous - recursively stop children first, and then self -- this is
+    guaranteed.
+
+  * Using special messages:
+    + ~actor ! PoisonPill~
+    + ~actor ! Kill~ -- makes the actor throw an ~ActorKilledException~
+
+  * Death watch: ~context.watch(actorRef)~,
+    + You'll receive a ~Terminated~ message when this actor dies
+    + can watch more than one actor, not necessarily children.
+    + You'll receive it even if the actor is already dead.
+
+** DONE Actor Lifecycle (17:54)
+CLOSED: [2023-07-05 Wed 23:42]
+- A Small Distinction (01:40)
+  * Actor instance
+    + has methods
+    + may have internal state
+
+  * Actor reference aka incarnation
+    + created with ~actorOf~
+    + has mailbox and can receive messages
+    + contains one actor instance
+    + contains a UUID
+
+  * Actor path
+    + may or may not have an ~ActorRef~ inside
+
+- Actor Lifecycle
+  * Actors can be
+    1. started - create a new ~ActorRef~ with a UUID at a given path
+
+    2. suspended - the actor ref will be enqueue but NOT process more messages
+
+    3. resumed - the actor ref will continue processing more messages
+
+    4. restarted is trickier,
+       1) suspend
+       2) swap the actor instance:
+          - *old* instance calls ~preRestart~
+          - replace actor instance
+          - *new* instance calls ~postRestart~
+       3) resume
+       (internal state is destroyed on restart)
+
+    5. stopping frees the actor ref within a path
+       * call ~postStop~
+       * all watching actors receive ~Terminated(ref)~
+
+    6. After stopping, another actor may be created at the same path
+       * different UUID, so different ~ActorRef~
+
+- Supervision stragegy:
+  * *DEFAULT*:
+    if an exception is thrown, the related message will be dequeued,
+    and supervised actor is restarted, and the mailbox is untouched. =???=
+
+** TODO Supervision (33:53)
+- A parent's duty
+  It's find if actors crash.
+  Parents must decide upon their children's failure.
+
+  * When an actor fails, it
+    + suspends its children
+    + sends a (special) message to its parent
+
+  * The parent can decide to
+    + resume the actor
+    + restart the actor (default)
+    + stop the actor
+    + escalate and fail itself
+
+- *Recap*:
+  Parents decide on their children's failure with a supervision strategy.
+
+  * Strategies
+    + ~OneForOneStrategy~:
+      #+begin_src scala
+        override val supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
+          case _: NullPointerException     => Restart
+          case _: IllegalArgumentException => Stop
+          case _: RuntimeException         => Resume
+          case _: Exception                => Escalate
+        }
+      #+end_src
+      =TODO= More details for each strategy above!!!
+
+    + ~AllForOneStrategy~
+      =TODO= More details for each strategy above!!!
+
+  * The parameters ~maxNrOfRegries~ and ~withinTimeRange~ of
+    ~OneForOneStrategy~ and ~AllForOneStrategy~.
+
+  * ~decider = PartialFunciton[Throwable, Directive]~
+
+  * Results:
+    + fault tolerance
+    + self-healing
+
+** TODO The Backoff Supervisor Pattern (29:46) - =REDO=
+- Problem
+  *PAIN*: the repeated restarts of /actors/
+  * Restarting /actors/ immediately might do more harm than good.
+
+- Example: 00:53 =TODO=
+
+* Akka Infrastructure
+**  Schedulers and Timers (24:19)
+- Goal:
+  * be able to run some code at a defined point in the future
+  * maybe repeatedly
+
+- Things to bear in mind:
+  * Don't use unstable references inside scheduled actions
+  * All scheduled tasks execute when the system is terminated
+  * Schedulers are NOT the best at precision and long-term planning
+
+- Recap:
+  * schedule an action at a defined point in the future.
+    ~system.scheduler.schedulerOnce(1.second)~
+
+  * schedule an action repeatedly.
+    ~system.scheduler.scheduler(1.second, 2.seconds)~
+
+  * Cancel
+    * ~schedule.cancel()~
+
+  * Timers: schedule messages to sself, from within
+    #+begin_src scala
+      timer.startSingleTimer (myTIimeKey, MyMessage, 2.seconds)
+      timer.startPeriodTimer (myTIimeKey, MyMessage, 2.seconds)
+      timers.cancel(MyTimerKey)
+    #+end_src
+
+**  Delegating Tasks with Routers (30:06)
+**  Custom Thread Management with Dispatchers (21:23)
+**  Custom Message Processing with Mailboxes (20:53)
+
+* Advanced Patterns
+** Stashing Messages (16:29)
+** The Ask Pattern (33:42)
+** Finite State Machines (FSM) - Part 1 (35:52)
+** Finite State Machines - Part 2 (31:34)
+
+* Epilogue
+** You Rock! (0:45)
