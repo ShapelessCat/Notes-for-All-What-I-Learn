@@ -431,23 +431,141 @@ CLOSED: [2023-07-05 Wed 23:42]
     + fault tolerance
     + self-healing
 
-** TODO The Backoff Supervisor Pattern (29:46) - =REDO=
+** DONE The Backoff Supervisor Pattern (29:46)
+CLOSED: [2023-07-11 Tue 07:35]
 - Problem
   *PAIN*: the repeated restarts of /actors/
   * Restarting /actors/ immediately might do more harm than good.
 
-- Example: 00:53 =TODO=
+- Code used in examples:
+  #+begin_src scala
+    case object ReadFile
+    class FileBasedPersistentActor extends Actor with ActorLogging {
+      var dataSource: Source = null
 
-* Akka Infrastructure
-**  Schedulers and Timers (24:19)
+      override def preStart(): Unit =
+        log.info("Persistent actor starting")
+
+      override def postStop(): Unit =
+        log.warning("Persistent actor has stopped")
+
+      override def preRestart(reason: Throwable, message: Option[Any]): Unit =
+        log.warning("Persistent actor restarting")
+
+      override def receive: Receive = {
+        case ReadFile =>
+          if (dataSource == null)
+            dataSource = Source.fromFile(new File("src/main/resources/testfiles/important_data.txt"))
+          log.info("I've just read some IMPORTANT data: " + dataSource.getLines().toList)
+      }
+    }
+  #+end_src
+
+- 10:00
+  #+begin_src scala
+    val simpleSupervisorProps = BackoffSupervisor.props(
+      BackoffOpts.onFailure(
+        Props[FileBasedPersistentActor],
+        "simpleBackoffActor",
+        3.seconds, // then 6s, 12s, 24s
+        30.seconds,
+        0.2
+      )
+    )
+
+    val simpleBackoffSupervisor = system.actorOf(simpleSupervisorProps, "simpleSupervisor")
+
+    // simpleSupervisor
+    // - child called simpleBackoffActor (props of type FileBasedPersistentActor)
+    // - supervision strategy is the default one (restarting on everything)
+    //   + first attempt after 3 seconds
+    //   + next attempt is 2x the previous attempt
+  #+end_src
+
+- 15:26
+  #+begin_src scala
+    val stopSupervisorProps =
+      BackoffSupervisor.props(
+        BackoffOpts
+          .onStop(
+            Props[FileBasedPersistentActor],
+            "stopBackoffActor",
+            3.seconds,
+            30.seconds,
+            0.2
+          )
+          .withSupervisorStrategy(
+            OneForOneStrategy() {
+              case _ => Stop
+            }
+          )
+      )
+
+    // val stopSupervisor = system.actorOf(stopSupervisorProps, "stopSupervisor")
+    // stopSupervisor ! ReadFile
+  #+end_src
+
+- 19:40
+  #+begin_src scala
+    class EagerFBPActor extends FileBasedPersistentActor {
+      override def preStart(): Unit = {
+        log.info("Eager actor starting")
+        dataSource = Source.fromFile(new File("src/main/resources/testfiles/important_data.txt"))
+      }
+    }
+
+    // ActorInitializationException => STOP
+
+    val repeatedSupervisorProps = BackoffSupervisor.props(
+      BackoffOpts.onStop(
+        Props[EagerFBPActor],
+        "eagerActor",
+        1.second,
+        30.seconds,
+        0.1
+      )
+    )
+    val repeatedSupervisor = system.actorOf(repeatedSupervisorProps, "eagerSupervisor")
+
+    // eagerSupervisor
+    // - child eagerActor
+    // - will die on start with ActorInitializationException
+    // - trigger the supervision strategy in eagerSupervisor => STOP eagerActor
+    // - backoff will kick in after 1 second, 2s, 4, 8, 16
+  #+end_src
+
+- This is a common pattern when an external resouruce fails.
+
+- Backoff Recap:
+  * *PAIN*: the repeated restarts of /actors/
+    + Restarting /actors/ immediately might be useless, and do more harm than good.
+    + Everyone attempting at the same time can kill resources again
+
+  * Create backoff supervision for exponential delays between attempts
+    #+begin_src scala
+      val simpleSupervisorProps = BackoffSupervisor.props(
+        BackoffOpts.onFailure(             // <-- controls when backoff kicks in
+          Props[FileBasedPersistentActor],
+          "simpleBackoffActor",
+          3.seconds, // then 6s, 12s, 24s  // <-- min and max delay
+          30.seconds,
+          0.2                              // <-- randomness factor
+        )
+      )
+    #+end_src
+
+* TODO Akka Infrastructure
+** DONE Schedulers and Timers (24:19)
+CLOSED: [2023-07-11 Tue 08:53]
 - Goal:
   * be able to run some code at a defined point in the future
   * maybe repeatedly
 
-- Things to bear in mind:
-  * Don't use unstable references inside scheduled actions
-  * All scheduled tasks execute when the system is terminated
-  * Schedulers are NOT the best at precision and long-term planning
+- The scheduling of code has happened in some kind of /thread/,
+  much like /futures/. Mostly, we use ~system.dispatcher~.
+  #+begin_src scala
+    import system.dispatcher
+  #+end_src
 
 - Recap:
   * schedule an action at a defined point in the future.
@@ -457,18 +575,77 @@ CLOSED: [2023-07-05 Wed 23:42]
     ~system.scheduler.scheduler(1.second, 2.seconds)~
 
   * Cancel
-    * ~schedule.cancel()~
-
-  * Timers: schedule messages to sself, from within
     #+begin_src scala
-      timer.startSingleTimer (myTIimeKey, MyMessage, 2.seconds)
-      timer.startPeriodTimer (myTIimeKey, MyMessage, 2.seconds)
+      system.scheduler.scheduleOnce(5.seconds) {
+        routine.cancel()
+      }
+    #+end_src
+
+- Things to bear in mind:
+  * Don't use unstable references inside scheduled actions
+    + For example,
+      *BAD*: A actor is terminated or released while a schedule using this actor is running.
+
+  * All scheduled tasks execute when the system is terminated
+
+  * Schedulers are NOT the best at precision and long-term planning
+
+- Exercise:
+  ???
+
+- _Timers are a SIMPLER and SAFER way to schedule messages to self from within an actor._
+
+- There can only be one timer for a given /timer key/.
+
+- =TODO= NOTE
+
+- *Recap*
+  * Scheduler:
+    #+begin_src scala
+      // Schedule an action at a defined point in the future
+      system.scheduler.schedulerOnce(1.second) { /* code here */ }
+
+      // Repeated action      initial delay  interval
+      system.scheduler.scheduler(1.second, 2.seconds) { /* code here */ }
+    #+end_src
+
+  * Timer:
+    schedule messages to self, from within
+    #+begin_src scala
+      timer.startSingleTimer(myTIimeKey, MyMessage, 2.seconds)
+      timer.startPeriodTimer(myTIimeKey, MyMessage, 2.seconds)
       timers.cancel(MyTimerKey)
     #+end_src
 
-**  Delegating Tasks with Routers (30:06)
-**  Custom Thread Management with Dispatchers (21:23)
-**  Custom Message Processing with Mailboxes (20:53)
+** TODO Delegating Tasks with Routers (30:06)
+- ~RoundRobinRoutingLogic()~
+
+- ~ActorRefRoutee(...)~
+  The second operator of ~Rounter~ should be ~ActorRefRoutee~, not ~ActorRef~.
+
+- EXAMPLE
+
+- Routers:
+  Supported options for routing logic:
+  * round-robin
+  * random (not smart)
+  * smallest mailbox (mailbox with fewest messages)
+  * broadcast
+  * scatter-grather-first (broadcast and only keep the first reply)
+  * tail-chopping
+    + =TODO=
+      As each message is sent to the router, the routees are randomly ordered.
+      The message is sent to the first routee. If no response is received before
+      the interval has passed, the same message is sent to the next routee. This
+      process repeats until either a response is received from some routee, the
+      routees in the pool are exhausted, or the within duration has passed since
+      the first send. If no routee sends a response in time, a Status.Failure
+      wrapping a AskTimeoutException is sent to the sender.
+
+  * consistent-hashing
+
+** TODO Custom Thread Management with Dispatchers (21:23)
+** TODO Custom Message Processing with Mailboxes (20:53)
 
 * Advanced Patterns
 ** Stashing Messages (16:29)
