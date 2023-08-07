@@ -3286,12 +3286,14 @@ handle values that match one pattern and ignore the rest.
 CLOSED: [2023-07-25 Tue 20:25]
 
 * TODO 7. Managing Growing Projects with Packages, Crates, and Modules - 111 - =TODO=
-As you write large programs, organizing your code will be important because
+As you write large programs, organizing your code will be important
+BECAUSE
 keeping track of your entire program in your head will become impossible.
 
 - By grouping related functionality and separating code with distinct features,
-  you'll clarify where to find code that implements a particular feature and
-  where to go to change how a feature works.
+  you'll clarify
+  * where to find code that implements a particular feature and
+  * where to go to change how a feature works.
 
 - The programs we've written SO FAR have been _in *one* /module/ in *one* file._
 
@@ -3304,9 +3306,23 @@ keeping track of your entire program in your head will become impossible.
        become /external dependencies/.
 
 - This chapter covers all these techniques.
-  For very large projects of a set of INTERRELATED /packages/ that evolve
+
+- For very large projects of a set of INTERRELATED /packages/ that evolve
   together, Cargo provides /workspaces/, which we'll cover in the “Cargo
   Workspaces” section in Chapter 14. =TODO=
+
+- We'll also discuss *ENCAPSULATING implementation details*.
+  * call your code via its /public interface/ *WITHOUT* having to know how the
+    implementation works
+
+  * the way you write code DEFINES
+    + which parts are /public/ for other code to use and
+    + which parts are /private/ implementation details that you reserve the right to change.
+
+    This is another way to limit the amount of detail you have to keep in your head.
+
+- scope :: the nested context in which code is written has a set of names that are
+           defined as "in scope".
 
 - Rust has a number of features that allow you to manage your code's organization,
   including
@@ -3321,254 +3337,223 @@ keeping track of your entire program in your head will become impossible.
   * Modules AND use :: Let you control the _organization_, /scope/, and _PRIVACY of paths_
   * Paths :: A way of naming an item, such as a /struct/, /function/, or /module/
 
-- In this chapter, we'll cover all these features,
+- In this chapter, we'll cover all the above features,
   1. discuss how they interact, and
 
-  2. explain how to use them to manage scope.
+  2. explain how to use them to manage /scope/.
 
   3. By the end, you should have a solid understanding of the /module system/
-     and be able to work with scopes like a pro!
+     and be able to work with /scopes/ like a pro!
 
 ** DONE 7.1. Packages and Crates - 112
-   CLOSED: [2021-01-07 Thu 15:21]
-   The first parts of the /module system/ we'll cover are /packages/ and /crates/.
+CLOSED: [2021-01-07 Thu 15:21]
+The first parts of the /module system/ we'll cover are /packages/ and /crates/.
 
-   - A /crate/ is a /binary/ OR /library/.
-     The /crate root/ is a source file that the Rust compiler starts from and
-     makes up the /root module/ of your /crate/ (=TODO= we'll explain /modules/
-     in depth in the “Defining Modules to Control Scope and Privacy” section). A
-     /package/ is one or more /crates/ that provide a set of functionality. A
-     /package/ contains a =Cargo.toml= file that _describes how to build_ those
-     /crates/.
+- A /crate/ is the *SMALLEST* amount of code that the Rust compiler considers at a time.
 
-   - Several rules determine what a /package/ can contain.
-     * A /package/ *must* contain zero or one /library crates/, and no more.
+- /creates/ can contain /modules/, and the /modules/ may be defined in other
+  files that get compiled with the /crate/ =NEXT=, as we'll see in the coming
+  sections.
 
-     * It can contain as many /binary crates/ as you'd like,
-       but it *must* contain _at least one_ /crate/ (either /library/ or
-       /binary/).
+- A /crate/ can come in one of two forms:
+  * binary crate :: programs that can compile to an executable and run.
+    + have a ~main~ function.
 
-   - Let's walk through what happens when we create a /package/.
-     1. =cargo new my-project=.
-        Cargo created a =Cargo.toml= file, giving us a /package/.
+  * library crate :: programs that don't compile to an executable.
+                     they define functionality intended to be shared with multiple
+                     projects.
+    + NO ~main~ function.
+    + Most of the time
+      when Rustaceans say “crate”,
+      they mean /library crate/, and
+      they use /crate/ _INTERCHANGEABLY_ with the general programming concept of a /library/.
 
-        * Looking at the contents of =Cargo.toml=, there's no mention of
-          =src/main.rs= because Cargo follows a convention that =src/main.rs= is
-          the /crate root/ of a /binary crate/ with the *same name* as the
-          /package/.
+- The /crate root/ is a /source file/ that the Rust compiler _starts from_ and
+  makes up the /root module/ of your /crate/
+  * =TODO= we'll explain /modules/ in depth in the “Defining Modules to Control
+           Scope and Privacy” section.
 
-        * Likewise, Cargo knows that if the /package directory/ contains
-          =src/lib.rs=, the /package/ contains a /library crate/ with the *same
-          name* as the /package/, and =src/lib.rs= is its /crate root/. Cargo
-          passes the /crate root/ files to =rustc= to *build* the /library/ or
-          /binary/.
+- A /package/ is a bundle of one or more /crates/ that provide a set of functionality.
+  * A /package/ contains a =Cargo.toml= file that _describes HOW TO BUILD_ those
+    /crates/.
 
-        * Here, we have a /package/ that only contains =src/main.rs=, meaning it
-          ONLY contains a /binary crate/ named =my-project=.
-            If a /package/ contains =src/main.rs= and =src/lib.rs=, it has *two*
-          /crates/: a /library/ and a /binary/, both with the *same name* as the
-          /package/.
+- /Cargo/ is actually a /package/ that contains the /binary crate/ for the command-line
+  tool you've been using to build your code.
 
-        * A /package/ can have *multiple* /binary crates/ by placing files in
-          the =src/bin= directory: _each file_ will be a separate /binary crate/.
+  * The /Cargo/ /package/ also contains a /library crate/ that the /binary crate/
+    depends on.
 
-   - A /crate/ will group related functionality together in a scope so the
-     functionality is easy to share between *multiple* projects.
+  * Other projects can depend on the /Cargo library crate/ to use the same logic
+    the Cargo command-line tool uses.
 
-   - Keeping a /crate/'s functionality in its own scope clarifies whether particular
-     functionality is defined in our /crate/ or the =rand= /crate/ and prevents
-     potential conflicts.
+- Several rules determine what a /package/ can contain:
+  * A /package/ *must* contain zero or one /library crates/, and no more.
 
-   - =TODO= Let's move on and talk about the /module system/!
+  * It can contain as many /binary crates/ as you'd like,
+    but it *must* contain _at least one_ /crate/ (either /library/ or
+    /binary/).
+
+- Let's walk through what happens when we create a /package/.
+  1. =cargo new my-project=.
+     Cargo created a =Cargo.toml= file, giving us a /package/.
+
+     * Looking at the contents of =Cargo.toml=, there's no mention of
+       =src/main.rs= because Cargo follows a convention that =src/main.rs= is
+       the /crate root/ of a /binary crate/ with the *same name* as the
+       /package/.
+
+     * Likewise, Cargo knows that if the /package directory/ contains
+       =src/lib.rs=, the /package/ contains a /library crate/ with the *same
+       name* as the /package/, and =src/lib.rs= is its /crate root/. Cargo
+       passes the /crate root/ files to =rustc= to *build* the /library/ or
+       /binary/.
+
+     * Here, we have a /package/ that only contains =src/main.rs=, meaning it
+       ONLY contains a /binary crate/ named =my-project=.
+         If a /package/ contains =src/main.rs= and =src/lib.rs=, it has *two*
+       /crates/: a /library/ and a /binary/, both with the *same name* as the
+       /package/.
+
+     * A /package/ can have *multiple* /binary crates/ by placing files in
+       the =src/bin= directory: _each file_ will be a separate /binary crate/.
+
+- A /crate/ will group related functionality together in a scope so the
+  functionality is easy to share between *multiple* projects.
+
+- Keeping a /crate/'s functionality in its own scope clarifies whether particular
+  functionality is defined in our /crate/ or the =rand= /crate/ and prevents
+  potential conflicts.
+
+- =TODO= Let's move on and talk about the /module system/!
 
 ** DONE 7.2. Defining Modules to Control Scope and Privacy - 113
-   CLOSED: [2021-01-08 Fri 15:51]
-   - In this section,
-     * we'll talk about
-       + /modules/
-       + other parts of the /module system/, namely
-         - /paths/ that allow you to name items
-         - the ~use~ /keyword/ that brings a /path/ into /scope/
-         - the ~pub~ /keyword/ to make items public
+CLOSED: [2021-01-08 Fri 15:51]
+- In this section,
+  * we'll talk about
+    + /modules/
+    + other parts of the /module system/, namely
+      - /paths/ that allow you to name items
+      - the ~use~ /keyword/ that brings a /path/ into /scope/
+      - the ~pub~ /keyword/ to make items public
 
-     * We'll also discuss
-       + the ~as~ /keyword/
-       + /external packages/
-       + the /glob operator/ =???= =TODO=
+  * We'll also discuss
+    + the ~as~ /keyword/
+    + /external packages/
+    + the /glob operator/ =???= =TODO=
 
 *** Modules Cheat Sheet - =TODO: re-org=
 *** Grouping Related Code in Modules - =TODO: re-org=
-    - /Modules/ let us _organize code within a /crate/ into groups_ for readability
-      and easy reuse.
+- /Modules/ let us _organize code within a /crate/ into groups_ for readability
+  and easy reuse.
 
-    - /Modules/ also _control the PRIVACY of items_.
+- /Modules/ also _control the PRIVACY of items_.
 
-    - As an example,
-      let's write a library crate that provides the functionality of a
-      restaurant.
+- As an example,
+  let's write a library crate that provides the functionality of a
+  restaurant.
 
-      * In the restaurant industry,
-        some parts of a restaurant are referred to as _front of house_ and others
-        as _back of house_.
+  * In the restaurant industry,
+    some parts of a restaurant are referred to as _front of house_ and others
+    as _back of house_.
 
-        + Front of house ::
-          where customers are; this is where hosts seat customers, servers take
-          orders and payment, and bartenders make drinks.
+    + Front of house ::
+      where customers are; this is where hosts seat customers, servers take
+      orders and payment, and bartenders make drinks.
 
-        + Back of house ::
-          where the chefs and cooks work in the kitchen, dishwashers clean up,
-          and managers do administrative work.
+    + Back of house ::
+      where the chefs and cooks work in the kitchen, dishwashers clean up,
+      and managers do administrative work.
 
-      * To structure our /crate/ in the same way that a real restaurant works,
-        we can organize the /functions/ into /nested modules/:
-        Create a new library named restaurant by running
-        =cargo new --lib restaurant=; then put the code in
-        #+begin_src rust
-          // Listing 7-1:
-          // into src/lib.rs to define some modules and function signatures.
-          mod front_of_house {
-              mod hosting {
-                  fn add_to_waitlist() {}
+  * To structure our /crate/ in the same way that a real restaurant works,
+    we can organize the /functions/ into /nested modules/:
+    Create a new library named restaurant by running
+    =cargo new --lib restaurant=; then put the code in
+    #+begin_src rust
+      // Listing 7-1:
+      // into src/lib.rs to define some modules and function signatures.
+      mod front_of_house {
+          mod hosting {
+              fn add_to_waitlist() {}
 
-                  fn seat_at_table() {}
-              }
-
-              mod serving {
-                  fn take_order() {}
-
-                  fn serve_order() {}
-
-                  fn take_payment() {}
-              }
+              fn seat_at_table() {}
           }
-        #+end_src
 
-    - Earlier, we mentioned that =src/main.rs= and =src/lib.rs= are called /crate
-      roots/.
-        The reason for their name is that the contents of either of these two
-      files form a /module named crate/ at the root of the _crate's module
-      structure_, known as the _module tree_.
-      #+begin_src text
-        Listing 7-2 shows the module tree for the structure in Listing 7-1.
+          mod serving {
+              fn take_order() {}
 
-        crate
-         └── front_of_house
-             ├── hosting
-             │   ├── add_to_waitlist
-             │   └── seat_at_table
-             └── serving
-                 ├── take_order
-                 ├── serve_order
-                 └── take_payment
-      #+end_src
-      * This tree shows
-        + how some of the /modules/ nest inside one another (for example, hosting
-          nests inside ~front_of_house~).
+              fn serve_order() {}
 
-        + some /modules/ are siblings to each other, meaning they're defined in
-          the *same* /module/ (~hosting~ and ~serving~ are defined within
-          ~front_of_house~).
-          - Notice that the entire /module tree/ is rooted under the _implicit_
-            /module named crate/.
+              fn take_payment() {}
+          }
+      }
+    #+end_src
+
+- Earlier, we mentioned that =src/main.rs= and =src/lib.rs= are called /crate
+  roots/.
+    The reason for their name is that the contents of either of these two
+  files form a /module named crate/ at the root of the _crate's module
+  structure_, known as the _module tree_.
+  #+begin_src text
+    Listing 7-2 shows the module tree for the structure in Listing 7-1.
+
+    crate
+     └── front_of_house
+         ├── hosting
+         │   ├── add_to_waitlist
+         │   └── seat_at_table
+         └── serving
+             ├── take_order
+             ├── serve_order
+             └── take_payment
+  #+end_src
+  * This tree shows
+    + how some of the /modules/ nest inside one another (for example, hosting
+      nests inside ~front_of_house~).
+
+    + some /modules/ are siblings to each other, meaning they're defined in
+      the *same* /module/ (~hosting~ and ~serving~ are defined within
+      ~front_of_house~).
+      - Notice that the entire /module tree/ is rooted under the _implicit_
+        /module named crate/.
 
 ** DONE 7.3. Paths for Referring to an Item in the Module Tree - 115
-   CLOSED: [2021-01-09 Sat 01:52]
-   To show Rust where to find an item in a /module tree/, we use a /path/ in the
-   same way we use a /path/ when navigating a filesystem.
+CLOSED: [2021-01-09 Sat 01:52]
+To show Rust where to find an item in a /module tree/, we use a /path/ in the
+same way we use a /path/ when navigating a filesystem.
 
-   - If we want to call a /function/, we need to know its /path/.
+- If we want to call a /function/, we need to know its /path/.
 
-   - A /path/ can take *TWO* forms:
-     * An /absolute path/
-       starts from a /crate root/ by using
-       + a _crate name_
-         OR
-       + a literal ~crate~.
+- A /path/ can take *TWO* forms:
+  * An /absolute path/
+    starts from a /crate root/ by using
+    + a _crate name_
+      OR
+    + a literal ~crate~.
 
-     * A /relative path/
-       starts from the CURRENT /module/ and uses
-       + ~self~
-       + ~super~, or
-       + an identifier in the CURRENT /module/.
+  * A /relative path/
+    starts from the CURRENT /module/ and uses
+    + ~self~
+    + ~super~, or
+    + an identifier in the CURRENT /module/.
 
-   - BOTH /absolute and relative paths/ are followed by one or more identifiers
-     _SEPARATED_ by double colons (~::~).
+- BOTH /absolute and relative paths/ are followed by one or more identifiers
+  _SEPARATED_ by double colons (~::~).
 
-   - Let's return to the example in Listing 7-1.
-     * Q :: How do we call the ~add_to_waitlist~ function?
-            This is the same as asking, what's the path of the ~add_to_waitlist~
-            function?
+- Let's return to the example in Listing 7-1.
+  * Q :: How do we call the ~add_to_waitlist~ function?
+         This is the same as asking, what's the path of the ~add_to_waitlist~
+         function?
 
-     * A :: We'll show _TWO_ ways to call the ~add_to_waitlist~ /function/ from a
-            new function ~eat_at_restaurant~ defined in the /crate root/.
-       *Note*: _this example *won't compile* just yet; =TODO= we'll explain why
-               in a bit._
-       #+begin_src rust
-         // In Listing 7-3: we simplified our code a bit by removing some of the
-         //                 modules and functions.
-         mod front_of_house {
-             mod hosting {
-                 fn add_to_waitlist() {}
-             }
-         }
-
-         pub fn eat_at_restaurant() {
-             // Absolute path
-             crate::front_of_house::hosting::add_to_waitlist();
-
-             // Relative path
-             front_of_house::hosting::add_to_waitlist();
-         }
-       #+end_src
-       + The ~eat_at_restaurant~ function is part of our /library crate's public
-         API/, so we mark it with the ~pub~ keyword.
-
-       + =NEXT= In the ”Exposing Paths with the ~pub~ Keyword” section, we'll go
-         into more detail about ~pub~.
-         =FIXME= - =open quote use close quote character=.
-
-   - The first time we call the ~add_to_waitlist~ function in ~eat_at_restaurant~,
-     we use an absolute path. The ~add_to_waitlist~ function is defined in the same
-     crate as ~eat_at_restaurant~, which means we can use the ~crate~ keyword to
-     start an absolute path.
-
-   - Choosing whether to use a /relative or absolute path/ is a decision you'll
-     make based on your project. The decision should depend on
-     * WHETHER you're more likely to move item /definition/ code *separately* from
-     * OR *together* with
-     the code that uses the item.
-
-   - For example,
-     * if we move the ~front_of_house~ /module/ and the ~eat_at_restaurant~
-       /function/ into ~mod customer_experience~,
-       we'd need to *update* the /absolute path/ to ~add_to_waitlist~,
-       BUT the /relative path/ would *still be valid*.
-
-     * However,
-       if we moved the ~eat_at_restaurant~ /function/ *SEPARATELY* into
-       ~mod dining~,
-       the /absolute path/ to the ~add_to_waitlist~ call would *stay the same*,
-       BUT the /relative path/ would need to be *updated*.
-
-     Our preference is to specify /absolute paths/ because it's more likely to
-     move code /definitions/ and item calls *independently* of each other.
-
-   - /Modules/ aren't useful only for organizing your code.
-     They also define Rust's /privacy boundary/.
-
-   - The way /privacy/ works in Rust is that *ALL items (/functions/, /methods/,
-     /structs/, /enums/, /modules/, and /constants/) are private by default*.
-     * Same level object can use each other.
-     * /parent module/ can't use the _private_ items inside /child modules/
-     * items in /child modules/ can use the items in their /ancestor modules/
-
-*** DONE Exposing Paths with the ~pub~ Keyword - 117
-    CLOSED: [2021-01-09 Sat 01:29]
-    Add ~pub~ to ~hosting~ and ~add_to_waitlist~.
+  * A :: We'll show _TWO_ ways to call the ~add_to_waitlist~ /function/ from a
+         new function ~eat_at_restaurant~ defined in the /crate root/.
+    *Note*: _this example *won't compile* just yet; =TODO= we'll explain why
+            in a bit._
     #+begin_src rust
+      // In Listing 7-3: we simplified our code a bit by removing some of the
+      //                 modules and functions.
       mod front_of_house {
-          pub mod hosting {
-              pub fn add_to_waitlist() {}
+          mod hosting {
+              fn add_to_waitlist() {}
           }
       }
 
@@ -3580,387 +3565,447 @@ keeping track of your entire program in your head will become impossible.
           front_of_house::hosting::add_to_waitlist();
       }
     #+end_src
+    + The ~eat_at_restaurant~ function is part of our /library crate's public
+      API/, so we mark it with the ~pub~ keyword.
+
+    + =NEXT= In the ”Exposing Paths with the ~pub~ Keyword” section, we'll go
+      into more detail about ~pub~.
+      =FIXME= - =open quote use close quote character=.
+
+- The first time we call the ~add_to_waitlist~ function in ~eat_at_restaurant~,
+  we use an absolute path. The ~add_to_waitlist~ function is defined in the same
+  crate as ~eat_at_restaurant~, which means we can use the ~crate~ keyword to
+  start an absolute path.
+
+- Choosing whether to use a /relative or absolute path/ is a decision you'll
+  make based on your project. The decision should depend on
+  * WHETHER you're more likely to move item /definition/ code *separately* from
+  * OR *together* with
+  the code that uses the item.
+
+- For example,
+  * if we move the ~front_of_house~ /module/ and the ~eat_at_restaurant~
+    /function/ into ~mod customer_experience~,
+    we'd need to *update* the /absolute path/ to ~add_to_waitlist~,
+    BUT the /relative path/ would *still be valid*.
+
+  * However,
+    if we moved the ~eat_at_restaurant~ /function/ *SEPARATELY* into
+    ~mod dining~,
+    the /absolute path/ to the ~add_to_waitlist~ call would *stay the same*,
+    BUT the /relative path/ would need to be *updated*.
+
+  Our preference is to specify /absolute paths/ because it's more likely to
+  move code /definitions/ and item calls *independently* of each other.
+
+- /Modules/ aren't useful only for organizing your code.
+  They also define Rust's /privacy boundary/.
+
+- The way /privacy/ works in Rust is that *ALL items (/functions/, /methods/,
+  /structs/, /enums/, /modules/, and /constants/) are private by default*.
+  * Same level object can use each other.
+  * /parent module/ can't use the _private_ items inside /child modules/
+  * items in /child modules/ can use the items in their /ancestor modules/
+
+*** DONE Exposing Paths with the ~pub~ Keyword - 117
+CLOSED: [2021-01-09 Sat 01:29]
+Add ~pub~ to ~hosting~ and ~add_to_waitlist~.
+#+begin_src rust
+  mod front_of_house {
+      pub mod hosting {
+          pub fn add_to_waitlist() {}
+      }
+  }
+
+  pub fn eat_at_restaurant() {
+      // Absolute path
+      crate::front_of_house::hosting::add_to_waitlist();
+
+      // Relative path
+      front_of_house::hosting::add_to_waitlist();
+  }
+#+end_src
 
 *** DONE Starting Relative Paths with ~super~ - 119
-    CLOSED: [2021-01-09 Sat 01:32]
-    ~super~ is like the ~..~ syntax in filesystem.
+CLOSED: [2021-01-09 Sat 01:32]
+~super~ is like the ~..~ syntax in filesystem.
 
-    #+begin_src rust
-      fn serve_order() {}
+#+begin_src rust
+  fn serve_order() {}
 
-      mod back_of_house {
-          fn fix_incorrect_order() {
-              cook_order();
-              super::serve_order();
-          }
-
-          fn cook_order() {}
+  mod back_of_house {
+      fn fix_incorrect_order() {
+          cook_order();
+          super::serve_order();
       }
-    #+end_src
+
+      fn cook_order() {}
+  }
+#+end_src
 
 *** DONE Making Structs and Enums Public - 120
-    CLOSED: [2021-01-09 Sat 01:52]
-    We can also use ~pub~ to designate /structs/ and /enums/ as _public_, but
-    there are a few extra details.
+CLOSED: [2021-01-09 Sat 01:52]
+We can also use ~pub~ to designate /structs/ and /enums/ as _public_, but
+there are a few extra details.
 
-    - If we use ~pub~ before a /struct definition/,
-      we _make the /struct/ public_, but the /struct's fields/ will STILL be _private_.
-      We can make each field public or not on a case-by-case basis.
-      The ~pub~ on ~struct~ *dosen't affect* the privacy of this /struct fields/.
-      #+begin_src rust
-        mod back_of_house {
-            pub struct Breakfast {
-                pub toast: String,
-                seasonal_fruit: String,
-            }
+- If we use ~pub~ before a /struct definition/,
+  we _make the /struct/ public_, but the /struct's fields/ will STILL be _private_.
+  We can make each field public or not on a case-by-case basis.
+  The ~pub~ on ~struct~ *dosen't affect* the privacy of this /struct fields/.
+  #+begin_src rust
+    mod back_of_house {
+        pub struct Breakfast {
+            pub toast: String,
+            seasonal_fruit: String,
+        }
 
-            impl Breakfast {
-                pub fn summer(toast: &str) -> Breakfast {
-                    Breakfast {
-                        toast: String::from(toast),
-                        seasonal_fruit: String::from("peaches"),
-                    }
+        impl Breakfast {
+            pub fn summer(toast: &str) -> Breakfast {
+                Breakfast {
+                    toast: String::from(toast),
+                    seasonal_fruit: String::from("peaches"),
                 }
             }
         }
+    }
 
-        pub fn eat_at_restaurant() {
-            // Order a breakfast in the summer with Rye toast
-            let mut meal = back_of_house::Breakfast::summer("Rye");
-            // Change our mind about what bread we'd like
-            meal.toast = String::from("Wheat");
-            println!("I'd like {} toast please", meal.toast);
+    pub fn eat_at_restaurant() {
+        // Order a breakfast in the summer with Rye toast
+        let mut meal = back_of_house::Breakfast::summer("Rye");
+        // Change our mind about what bread we'd like
+        meal.toast = String::from("Wheat");
+        println!("I'd like {} toast please", meal.toast);
 
-            // The next line won't compile if we uncomment it; we're not allowed
-            // to see or modify the seasonal fruit that comes with the meal
-            // meal.seasonal_fruit = String::from("blueberries");
+        // The next line won't compile if we uncomment it; we're not allowed
+        // to see or modify the seasonal fruit that comes with the meal
+        // meal.seasonal_fruit = String::from("blueberries");
+    }
+  #+end_src
+  * If there is no the associated ~summer~ function, we can't construct a
+    an instance of ~Breakfast~ -- ~Breakfast~ has /a private field/.
+
+
+- In contrast, if we make _an /enum/ PUBLIC_,
+  _all of its /variants/ are then PUBLIC._
+  We only need the ~pub~ before the ~enum~ keyword, as shown in Listing 7-10.
+  #+begin_src rust
+    // Listing 7-10: Designating an enum as public makes all its variants public
+    mod back_of_house {
+        pub enum Appetizer {
+            Soup,
+            Salad,
         }
-      #+end_src
-      * If there is no the associated ~summer~ function, we can't construct a
-        an instance of ~Breakfast~ -- ~Breakfast~ has /a private field/.
+    }
 
+    pub fn eat_at_restaurant() {
+        let order1 = back_of_house::Appetizer::Soup;
+        let order2 = back_of_house::Appetizer::Salad;
+    }
+  #+end_src
 
-    - In contrast, if we make _an /enum/ PUBLIC_,
-      _all of its /variants/ are then PUBLIC._
-      We only need the ~pub~ before the ~enum~ keyword, as shown in Listing 7-10.
-      #+begin_src rust
-        // Listing 7-10: Designating an enum as public makes all its variants public
-        mod back_of_house {
-            pub enum Appetizer {
-                Soup,
-                Salad,
-            }
-        }
-
-        pub fn eat_at_restaurant() {
-            let order1 = back_of_house::Appetizer::Soup;
-            let order2 = back_of_house::Appetizer::Salad;
-        }
-      #+end_src
-
-    - =TODO=
-      There's one more situation involving ~pub~ that we haven't covered, and
-      that is our LAST /module system/ feature: the ~use~ keyword.
-        We'll cover ~use~ by itself first, and then we'll show how to *combine*
-      ~pub~ and ~use~.
+- =TODO=
+  There's one more situation involving ~pub~ that we haven't covered, and
+  that is our LAST /module system/ feature: the ~use~ keyword.
+    We'll cover ~use~ by itself first, and then we'll show how to *combine*
+  ~pub~ and ~use~.
 
 ** DONE 7.4. Bringing Paths into Scope with the ~use~ Keyword - 121
-   CLOSED: [2021-01-10 Sun 01:08]
-   - Use ~use~ and an /absolute path/:
-     #+begin_src rust
-       mod front_of_house {
-           pub mod hosting {
-               pub fn add_to_waitlist() {}
-           }
-       }
+CLOSED: [2021-01-10 Sun 01:08]
+- Use ~use~ and an /absolute path/:
+  #+begin_src rust
+    mod front_of_house {
+        pub mod hosting {
+            pub fn add_to_waitlist() {}
+        }
+    }
 
-       use crate::front_of_house::hosting;
+    use crate::front_of_house::hosting;
 
-       pub fn eat_at_restaurant() {
-           hosting::add_to_waitlist();
-           hosting::add_to_waitlist();
-           hosting::add_to_waitlist();
-       }
-     #+end_src
+    pub fn eat_at_restaurant() {
+        hosting::add_to_waitlist();
+        hosting::add_to_waitlist();
+        hosting::add_to_waitlist();
+    }
+  #+end_src
 
-   - Use ~use~ and a /relative path/:
-     #+begin_src rust
-       // Listing 7-12: Bringing a module into scope with use and a relative path
-       mod front_of_house {
-           pub mod hosting {
-               pub fn add_to_waitlist() {}
-           }
-       }
+- Use ~use~ and a /relative path/:
+  #+begin_src rust
+    // Listing 7-12: Bringing a module into scope with use and a relative path
+    mod front_of_house {
+        pub mod hosting {
+            pub fn add_to_waitlist() {}
+        }
+    }
 
-       use self::front_of_house::hosting;
+    use self::front_of_house::hosting;
 
-       pub fn eat_at_restaurant() {
-           hosting::add_to_waitlist();
-           hosting::add_to_waitlist();
-           hosting::add_to_waitlist();
-       }
-     #+end_src
+    pub fn eat_at_restaurant() {
+        hosting::add_to_waitlist();
+        hosting::add_to_waitlist();
+        hosting::add_to_waitlist();
+    }
+  #+end_src
 
 *** DONE Creating Idiomatic ~use~ Paths - 123
-    CLOSED: [2021-01-10 Sun 00:25]
-    - _CONVENTION 1_:
-      See Listing 7-11 in the last section, which is the idiomatic way to bring
-      /functions/ into scope with ~use~:
-      Bringing the /function's parent module/ into /scope/ with ~use~ so we have
-      to specify the /parent module/ when calling the /function/ makes it clear
-      that the /function/ isn't locally defined while still *minimizing*
-      repetition of the /full path/.
+CLOSED: [2021-01-10 Sun 00:25]
+- _CONVENTION 1_:
+  See Listing 7-11 in the last section, which is the idiomatic way to bring
+  /functions/ into scope with ~use~:
+  Bringing the /function's parent module/ into /scope/ with ~use~ so we have
+  to specify the /parent module/ when calling the /function/ makes it clear
+  that the /function/ isn't locally defined while still *minimizing*
+  repetition of the /full path/.
 
-    - _CONVENTION 2_:
-      When bringing in /structs/, /enums/, and other items with ~use~, it's
-      idiomatic to specify the /full path/.
-      #+begin_src rust
-        // Listing 7-14: shows the _idiomatic way_ to bring the standard library's
-        //               HashMap struct into the scope of a binary crate.
-        use std::collections::HashMap;
+- _CONVENTION 2_:
+  When bringing in /structs/, /enums/, and other items with ~use~, it's
+  idiomatic to specify the /full path/.
+  #+begin_src rust
+    // Listing 7-14: shows the _idiomatic way_ to bring the standard library's
+    //               HashMap struct into the scope of a binary crate.
+    use std::collections::HashMap;
 
-        fn main() {
-            let mut map = HashMap::new();
-            map.insert(1, 2);
-        }
-      #+end_src
+    fn main() {
+        let mut map = HashMap::new();
+        map.insert(1, 2);
+    }
+  #+end_src
 
-      * There's no strong reason behind this idiom:
-        it's just the *convention* that has emerged, and folks have gotten used to
-        reading and writing Rust code this way.
+  * There's no strong reason behind this idiom:
+    it's just the *convention* that has emerged, and folks have gotten used to
+    reading and writing Rust code this way.
 
-      * _The *EXCEPTION* to this idiom:_
-        if we're bringing two items with the _SAME name_ into /scope/ with ~use~
-        statements, because Rust doesn't allow that.
-        #+begin_src rust
-          use std::fmt;
-          use std::io;
+  * _The *EXCEPTION* to this idiom:_
+    if we're bringing two items with the _SAME name_ into /scope/ with ~use~
+    statements, because Rust doesn't allow that.
+    #+begin_src rust
+      use std::fmt;
+      use std::io;
 
-          fn function1() -> fmt::Result {
-              // --snip--
-          }
+      fn function1() -> fmt::Result {
+          // --snip--
+      }
 
-          fn function2() -> io:Result<()> {
-              // --snip--
-          }
-        #+end_src
+      fn function2() -> io:Result<()> {
+          // --snip--
+      }
+    #+end_src
 
 *** DONE Providing New Names with the ~as~ Keyword - 124
-    CLOSED: [2021-01-10 Sun 00:29]
-    Alias one of the _SAME name_ to distinguish them:
-    #+begin_src rust
-      // Listing 7-16: Renaming a type when it’s brought into scope with the `as` keyword
-      use std::fmt::Result;
-      use std::io::Result as IoResult;
+CLOSED: [2021-01-10 Sun 00:29]
+Alias one of the _SAME name_ to distinguish them:
+#+begin_src rust
+  // Listing 7-16: Renaming a type when it’s brought into scope with the `as` keyword
+  use std::fmt::Result;
+  use std::io::Result as IoResult;
 
-      fn function1() -> Result {
-          // --snip--
-      }
+  fn function1() -> Result {
+      // --snip--
+  }
 
-      fn function2() -> IoResult<()> {
-          // --snip--
-      }
-    #+end_src
+  fn function2() -> IoResult<()> {
+      // --snip--
+  }
+#+end_src
 
 *** DONE Re-exporting Names with ~pub use~ - 124
-    CLOSED: [2021-01-10 Sun 00:42]
-    Use ~pub use~ to pull names into a /module/ while simultaneously *exposing
-    those names outside* of that /module/.
-    #+begin_src rust
-      mod front_of_house {
-          pub mod hosting {
-              pub fn add_to_waitlist() {}
-          }
+CLOSED: [2021-01-10 Sun 00:42]
+Use ~pub use~ to pull names into a /module/ while simultaneously *exposing
+those names outside* of that /module/.
+#+begin_src rust
+  mod front_of_house {
+      pub mod hosting {
+          pub fn add_to_waitlist() {}
       }
+  }
 
-      pub use crate::front_of_house::hosting;
+  pub use crate::front_of_house::hosting;
 
-      pub fn eat_at_restaurant() {
-          hosting::add_to_waitlist();
-          hosting::add_to_waitlist();
-          hosting::add_to_waitlist();
-      }
-    #+end_src
+  pub fn eat_at_restaurant() {
+      hosting::add_to_waitlist();
+      hosting::add_to_waitlist();
+      hosting::add_to_waitlist();
+  }
+#+end_src
 
-    - /Re-exporting/ is useful when the internal structure of your code is
-      _DIFFERENT from_ how programmers calling your code would think about the
-      domain.
-      * For example, in this _restaurant metaphor_,
-        + the _people running the restaurant_ think about “front of house” and
-          “back of house.”
+- /Re-exporting/ is useful when the internal structure of your code is
+  _DIFFERENT from_ how programmers calling your code would think about the
+  domain.
+  * For example, in this _restaurant metaphor_,
+    + the _people running the restaurant_ think about “front of house” and
+      “back of house.”
 
-        + BUT _customers_ visiting a restaurant probably won't think about the
-          parts of the restaurant in those terms.
-            With ~pub use~, we can *write our code with one structure but expose
-          a different structure.* Doing so makes our library well organized for
-          programmers working on the library and programmers calling the library.
+    + BUT _customers_ visiting a restaurant probably won't think about the
+      parts of the restaurant in those terms.
+        With ~pub use~, we can *write our code with one structure but expose
+      a different structure.* Doing so makes our library well organized for
+      programmers working on the library and programmers calling the library.
 
 *** DONE Using External Packages - 125
-    CLOSED: [2021-01-10 Sun 00:53]
-    - Members of the Rust community have made many packages available at
-      crates.io, and pulling any of them into your package involves these same
-      steps:
-      listing them in your package's =Cargo.toml= file and using ~use~ to bring
-      items _from their /crates/ into /scope/._ For example,
-      #+begin_src toml
-        [dependencies]
-        rand = "0.5.5"
-      #+end_src
+CLOSED: [2021-01-10 Sun 00:53]
+- Members of the Rust community have made many packages available at
+  crates.io, and pulling any of them into your package involves these same
+  steps:
+  listing them in your package's =Cargo.toml= file and using ~use~ to bring
+  items _from their /crates/ into /scope/._ For example,
+  #+begin_src toml
+    [dependencies]
+    rand = "0.5.5"
+  #+end_src
 
-    - Note that the /standard library (~std~)/ is also a /crate/ that's external
-      to our /package/.
-        Because the /standard library/ is shipped with the Rust language, _we don't
-      need to change =Cargo.toml= to include ~std~._ BUT we do need to refer to it
-      with use to bring items from there into our /package's scope/. For example,
-      with ~HashMap~ we would use this line:
-      #+begin_src rust
-        use std::collections::HashMap;
-      #+end_src
+- Note that the /standard library (~std~)/ is also a /crate/ that's external
+  to our /package/.
+    Because the /standard library/ is shipped with the Rust language, _we don't
+  need to change =Cargo.toml= to include ~std~._ BUT we do need to refer to it
+  with use to bring items from there into our /package's scope/. For example,
+  with ~HashMap~ we would use this line:
+  #+begin_src rust
+    use std::collections::HashMap;
+  #+end_src
 
 *** DONE Using Nested Paths to Clean Up Large ~use~ Lists - 126
-    CLOSED: [2021-01-10 Sun 01:08]
-    If we're using multiple items defined in the same /crate/ or same /module/,
-    listing each item on its own line can take up a lot of vertical space in
-    our files. We can use /nested paths/ to simplify this:
+CLOSED: [2021-01-10 Sun 01:08]
+If we're using multiple items defined in the same /crate/ or same /module/,
+listing each item on its own line can take up a lot of vertical space in
+our files. We can use /nested paths/ to simplify this:
 
-    - Import items in the same level:
-      #+begin_src rust
-        // --snip--
-        use std::cmp::Ordering;
-        use std::io;
-        // --snip--
-      #+end_src
+- Import items in the same level:
+  #+begin_src rust
+    // --snip--
+    use std::cmp::Ordering;
+    use std::io;
+    // --snip--
+  #+end_src
 
-      can be simplified as
+  can be simplified as
 
-      #+begin_src rust
-        // Listing 7-18: Specifying a nested path to bring multiple items with the same
-        //               prefix into scope
-        // --snip--
-        use std::{cmp::Ordering, io};
-        // --snip--
-      #+end_src
+  #+begin_src rust
+    // Listing 7-18: Specifying a nested path to bring multiple items with the same
+    //               prefix into scope
+    // --snip--
+    use std::{cmp::Ordering, io};
+    // --snip--
+  #+end_src
 
-    - Import items in different levels:
-      #+begin_src rust
-        // Listing 7-19: Two use statements where one is a subpath of the other
-        use std::io;
-        use std::io::Write;
-      #+end_src
+- Import items in different levels:
+  #+begin_src rust
+    // Listing 7-19: Two use statements where one is a subpath of the other
+    use std::io;
+    use std::io::Write;
+  #+end_src
 
-      can be simplified as
+  can be simplified as
 
-      #+begin_src rust
-        // Listing 7-20: Combining the paths in Listing 7-19 into one use statement
-        use std::io::{self, Write};
-      #+end_src
+  #+begin_src rust
+    // Listing 7-20: Combining the paths in Listing 7-19 into one use statement
+    use std::io::{self, Write};
+  #+end_src
 
 *** DONE The Glob Operator - 127
-    CLOSED: [2021-01-10 Sun 01:08]
-    Bring *all* /public items/ defined in a path into scope.
-    #+begin_src rust
-      use std::collections::*;
-    #+end_src
+CLOSED: [2021-01-10 Sun 01:08]
+Bring *all* /public items/ defined in a path into scope.
+#+begin_src rust
+  use std::collections::*;
+#+end_src
 
-    - Be careful when using the /glob operator/!
-      /Glob/ can *make it harder to tell*
-      * what names are in scope and
-      * where a name used in your program was defined.
+- Be careful when using the /glob operator/!
+  /Glob/ can *make it harder to tell*
+  * what names are in scope and
+  * where a name used in your program was defined.
 
-    - The /glob operator/
-      * It is often used
-        WHEN testing to bring everything under _test_ into the /tests module/;
-        =TODO=
-        we'll talk about that in the “How to Write Tests” section in Chapter 11.
+- The /glob operator/
+  * It is often used
+    WHEN testing to bring everything under _test_ into the /tests module/;
+    =TODO=
+    we'll talk about that in the “How to Write Tests” section in Chapter 11.
 
-      * =TODO= =TODO= =TODO=
-        It is also sometimes used as part of the /prelude pattern/:
-        see the standard library documentation for more information on that
-        pattern.
+  * =TODO= =TODO= =TODO=
+    It is also sometimes used as part of the /prelude pattern/:
+    see the standard library documentation for more information on that
+    pattern.
 
 ** DONE 7.5. Separating Modules into Different Files - 127
-   CLOSED: [2021-01-10 Sun 02:28]
-   So far, all the examples in this chapter _defined MULTIPLE /modules/ in ONE
-   /file/._
-     _When /modules/ get *large*,_ you might want to *MOVE their definitions TO a
-   _separate file_ to make the code easier to navigate.*
+CLOSED: [2021-01-10 Sun 02:28]
+So far, all the examples in this chapter _defined MULTIPLE /modules/ in ONE
+/file/._
+  _When /modules/ get *large*,_ you might want to *MOVE their definitions TO a
+_separate file_ to make the code easier to navigate.*
 
-   - For example,
-     1. Let's start from the code in Listing 7-17
-        #+begin_src rust
-          // Listing 7-17
+- For example,
+  1. Let's start from the code in Listing 7-17
+     #+begin_src rust
+       // Listing 7-17
 
-          // src/lib.rs
-          mod front_of_house {
-              pub mod hosting {
-                  pub fn add_to_waitlist() {}
-              }
-          }
+       // src/lib.rs
+       mod front_of_house {
+           pub mod hosting {
+               pub fn add_to_waitlist() {}
+           }
+       }
 
-          pub use crate::front_of_house::hosting;
+       pub use crate::front_of_house::hosting;
 
-          pub fn eat_at_restaurant() {
-              hosting::add_to_waitlist();
-              hosting::add_to_waitlist();
-              hosting::add_to_waitlist();
-          }
-        #+end_src
+       pub fn eat_at_restaurant() {
+           hosting::add_to_waitlist();
+           hosting::add_to_waitlist();
+           hosting::add_to_waitlist();
+       }
+     #+end_src
 
-     2. Move the ~front_of_house~ /module/ to its own file =src/front_of_house.rs=
-        by changing the /crate root/ file so it contains the code shown in
-        Listing 7-21.
-        *In this case, the /crate root file/ is =src/lib.rs=, but this procedure
-        also works with /binary crates/ whose /crate root file/ is =src/main.rs=.*
-        #+begin_src rust
-          // Listing 7-21: Declaring the front_of_house module whose body will be in
-          //               src/front_of_house.rs
-          mod front_of_house;
+  2. Move the ~front_of_house~ /module/ to its own file =src/front_of_house.rs=
+     by changing the /crate root/ file so it contains the code shown in
+     Listing 7-21.
+     *In this case, the /crate root file/ is =src/lib.rs=, but this procedure
+     also works with /binary crates/ whose /crate root file/ is =src/main.rs=.*
+     #+begin_src rust
+       // Listing 7-21: Declaring the front_of_house module whose body will be in
+       //               src/front_of_house.rs
+       mod front_of_house;
 
-          pub use crate::front_of_house::hosting;
+       pub use crate::front_of_house::hosting;
 
-          pub fn eat_at_restaurant() {
-              hosting::add_to_waitlist();
-              hosting::add_to_waitlist();
-              hosting::add_to_waitlist();
-          }
-        #+end_src
-        =src/front_of_house.rs= gets the definitions FROM _the body of the
-        ~front_of_house~ /module/._
-        #+begin_src rust
-          // Listing 7-22: Definitions inside the front_of_house module in
-          //               src/front_of_house.rs
-          pub mod hosting {
-              pub fn add_to_waitlist() {}
-          }
-        #+end_src
-        Use ~mod front_of_house;~ RATHER THAN using a /block/ tells Rust to
-        *load the contents of the /module/ from another file with the same
-        name as the /module/.*
+       pub fn eat_at_restaurant() {
+           hosting::add_to_waitlist();
+           hosting::add_to_waitlist();
+           hosting::add_to_waitlist();
+       }
+     #+end_src
+     =src/front_of_house.rs= gets the definitions FROM _the body of the
+     ~front_of_house~ /module/._
+     #+begin_src rust
+       // Listing 7-22: Definitions inside the front_of_house module in
+       //               src/front_of_house.rs
+       pub mod hosting {
+           pub fn add_to_waitlist() {}
+       }
+     #+end_src
+     Use ~mod front_of_house;~ RATHER THAN using a /block/ tells Rust to
+     *load the contents of the /module/ from another file with the same
+     name as the /module/.*
 
-     3. To continue with our example and extract the ~hosting~ /module/ to its
-        own file as well, we change =src/front_of_house.rs= to contain only the
-        declaration of the ~hosting~ /module/:
-        #+begin_src rust
-          pub mod hosting;
-        #+end_src
-        Then we create a =src/front_of_house= directory and a file
-        =src/front_of_house/hosting.rs= to contain the definitions made in
-        the ~hosting~ /module/:
-        #+begin_src rust
-          pub fn add_to_waitlist() {}
-        #+end_src
+  3. To continue with our example and extract the ~hosting~ /module/ to its
+     own file as well, we change =src/front_of_house.rs= to contain only the
+     declaration of the ~hosting~ /module/:
+     #+begin_src rust
+       pub mod hosting;
+     #+end_src
+     Then we create a =src/front_of_house= directory and a file
+     =src/front_of_house/hosting.rs= to contain the definitions made in
+     the ~hosting~ /module/:
+     #+begin_src rust
+       pub fn add_to_waitlist() {}
+     #+end_src
 
-   - _The /module tree/ remains the SAME, and the /function/ calls in
-     ~eat_at_restaurant~ will work *WITHOUT ANY MODIFICATION*,_ even though the
-     definitions live in different files.
-     * This technique lets you move modules to new files as they grow in size.
+- _The /module tree/ remains the SAME, and the /function/ calls in
+  ~eat_at_restaurant~ will work *WITHOUT ANY MODIFICATION*,_ even though the
+  definitions live in different files.
+  * This technique lets you move modules to new files as they grow in size.
 
-   - Note that the ~pub use crate::front_of_house::hosting~ statement in
-     =src/lib.rs= also *HASN'T CHANGED*, nor does use have any impact on what
-     files are compiled as part of the /crate/.
+- Note that the ~pub use crate::front_of_house::hosting~ statement in
+  =src/lib.rs= also *HASN'T CHANGED*, nor does use have any impact on what
+  files are compiled as part of the /crate/.
 
 ** DONE Summary - 128
-   CLOSED: [2021-01-10 Sun 02:28]
+CLOSED: [2021-01-10 Sun 02:28]
 
 * DONE 8. Common Collections - 131 - =TODO: PRACTICE=
 CLOSED: [2021-01-11 Mon 22:26]
@@ -5515,10 +5560,8 @@ CLOSED: [2021-01-06 Wed 17:58]
 
 
 
-
-
 * DONE 10. Generic Types, Traits, and Lifetimes - 171
-CLOSED: [2021-01-11 Mon 22:24]
+CLOSED: [2023-07-29 Sat 16:22]
 In this chapter, you'll explore how to *DEFINE your own /types/, /functions/,
 and /methods/ with /generics/!*
 1. code duplication -->
@@ -6101,130 +6144,105 @@ value of some /type/ that implements a /trait/.
 **** TODO (NEW) Specifying Multiple Trait Boundss with the ~+~ Syntax
 **** TODO (NEW) Clearer Trait Bounds with ~where~ Clauses
 
-*** TODO Returning Types that Implement Traits
-*** TODO Using Trait Bounds to Conditionally Implement Methods
-*** DONE (REMOVED) Fixing the ~largest~ Function with Trait Bounds - 189
-    CLOSED: [2021-01-10 Sun 16:25]
-    - Wrong version:
-      * Without the /trait bounds/ ~std::cmp::PartialOrd~
+*** DONE Returning Types that Implement Traits
+CLOSED: [2023-07-29 Sat 13:18]
+- Example:
+  #+begin_src rust
+    fn returns_summarizable() -> impl Summary {
+        Tweet {
+            username: String::from("horse_ebooks"),
+            content: String::from(
+                "of course, as you probably already know, people",
+            ),
+            reply: false,
+            retweet: false,
+        }
+    }
+  #+end_src
 
-      * Only ~std::cmp::PartialOrd~ is OK, but the /type signature/ should be
-        ~&[T] -> &T~ and some change(s) should be make to the body of this
-        function (Check the last implementation in this section of this note,
-        which is not given in this book).
+- =GENERAL USE CASES= =TODO: REVIEW=
+  The ability to specify a /return type/ only by the /trait/ it implements is
+  *especially useful* in the context of /closures/ and /iterators/,
+  =TODO= which we cover in Chapter 13.
 
-    - ~+ Copy~ version
-      #+BEGIN_SRC rust
-        use std::cmp::PartialOrd;
+  /Closures/ and /iterators/ create
+    /types/ that *ONLY* the compiler knows or
+    /types/ that are very long to specify.
 
-        fn largest<T: PartialOrd + Copy>(list: &[T]) -> T {
-            let mut largest_item = list[0];
+  The ~impl Trait~ syntax lets you concisely specify that a function returns some
+  type that implements the ~Iterator~ trait without needing to write out a very
+  long type.
 
-            for &item in list {
-                if item > largest_item {
-                    largest_item = item;
-                }
+- =from Jian=
+  Not as any traditional inheritance-based OOP languge,
+  Only a single type that implements the speicfied trait(s) can be returned.
+  #+COMMENT: can't compile
+  #+begin_src rust
+    fn returns_summarizable(switch: bool) -> impl Summary {
+        if switch {
+            NewsArticle {
+                headline: String::from(
+                    "Penguins win the Stanley Cup Championship!",
+                ),
+                location: String::from("Pittsburgh, PA, USA"),
+                author: String::from("Iceburgh"),
+                content: String::from(
+                    "The Pittsburgh Penguins once again are the best \
+                     hockey team in the NHL.",
+                ),
             }
-
-            largest_item
-        }
-
-        fn main() {
-            let number_list = vec![34, 50, 25, 100, 65];
-
-            let result = largest(&number_list);
-            println!("The largest number is {}", result);
-
-            let char_list = vec!['y', 'm', 'a', 'q'];
-
-            let result = largest(&char_list);
-            println!("The largest char is {}", result);
-        }
-      #+END_SRC
-
-    - ~+ Clone~ version
-      Using the ~clone~ /function/ means we're potentially making more /heap
-      allocations/ in the case of _types that own heap data_ like ~String~, and
-      /heap allocations/ can be slow if we're working with large amounts of data.
-
-    - Return ~&T~ version (least /trait bounds/):
-      #+BEGIN_SRC rust
-        fn largest<T: PartialOrd>(list: &[T]) -> &T {
-            let mut largest_item = &list[0];
-            // 1. precedence:
-            //    `&list[0]` means `&(list[0])` (type `&T`)
-            //    rather than `(&list)[0]` (type `T`).
-            //
-            // 2. Use `&` ONLY here is the simplest way to implement a function
-            //    of this type signature.
-
-            for item in list {
-            // `iter()` of a &[T] returns `&T`, which is the type of `item`
-                if item > largest_item {
-                    largest_item = item;
-                }
+        } else {
+            Tweet {
+                username: String::from("horse_ebooks"),
+                content: String::from(
+                    "of course, as you probably already know, people",
+                ),
+                reply: false,
+                retweet: false,
             }
-
-            largest_item
         }
-      #+END_SRC
+    }
+  #+end_src
 
-*** DONE (REMOVED) Using Trait Bounds to Conditionally Implement Methods - 191
-    CLOSED: [2021-01-10 Sun 23:56]
-    - We can
-      implement some /methods/ for all kind of /type parameters/, and
-      *conditionally* implement some /methods/ for /type parameters/ that satisfy
-      some /trait bound(s)/.
-      * Here we use multiple ~impl~ blocks.
+*** DONE Using Trait Bounds to Conditionally Implement Methods
+CLOSED: [2023-07-29 Sat 14:07]
+- Example:
+  #+begin_src rust
+    use std::fmt::Display;
 
-      * For example,
-        #+begin_src rust
-          // Listing 10-16: Conditionally implement methods on a generic type
-          //                depending on trait bounds
+    struct Pair<T> {
+        x: T,
+        y: T,
+    }
 
-          use std::fmt::Display;
+    impl<T> Pair<T> {
+        fn new(x: T, y: T) -> Self {
+            Self { x, y }
+        }
+    }
 
-          struct Pair<T> {
-              x: T,
-              y: T,
-          }
+    impl<T: Display + PartialOrd> Pair<T> {
+        fn cmp_display(&self) {
+            if self.x >= self.y {
+                println!("The largest member is x = {}", self.x);
+            } else {
+                println!("The largest member is y = {}", self.y);
+            }
+        }
+    }
+  #+end_src
 
-          impl<T> Pair<T> {
-              fn new(x: T, y: T) -> Self {
-                  Self { x, y }
-              }
-          }
+- blanket implementation :: implementations of a /trait/ on *ANY* /type/ that
+                            satisfies the /trait bounds/
 
-          impl<T: Display + PartialOrd> Pair<T> {
-              fn cmp_display(&self) {
-                  if self.x >= self.y {
-                      println!("The largest member is x = {}", self.x);
-                  } else {
-                      println!("The largest member is y = {}", self.y);
-                  }
-              }
-          }
-        #+end_src
+- A example in the standard library:
+  #+begin_src rust
+    impl<T: Display> ToString for T {
+        // --snip--
+    }
+  #+end_src
 
-    - We can
-      *conditionally* implement a /trait/ for _ANY_ /type/ that implements ANOTHER
-      /trait/.
-      * blanket implementations :: implementations of a /trait/ on any /type/ that
-        satisfies the /trait bounds/.
-
-      * /blanket implementations/ are extensively used in the Rust standard library.
-
-      * For example, the standard library implements the ~ToString~ /trait/ on
-        ANY /type/ that implements the ~Display~ /trait/.
-        The ~impl~ block in the standard library looks similar to this code:
-        #+begin_src rust
-          impl<T: Display> ToString for T {
-              // --snip--
-          }
-        #+end_src
-
-      * /Blanket implementations/ appear in the documentation for the /trait/ in
-        the “Implementors” section.
+- Doing this *IMPROVES* _performance_ *without* having to give up the flexibility of generics.
 
 ** DONE 10.3 Validating References with Lifetimes - 192
 CLOSED: [2021-01-11 Mon 03:55]
@@ -6248,6 +6266,14 @@ CLOSED: [2021-01-11 Mon 03:55]
   discuss common ways you might encounter /lifetime/ syntax so you can become
   familiar with the concepts.
   =TODO= =Learn more about the comprehensive knowledge=
+
+  - /Lifetimes/ are another kind of /generic/ that we've already been using.
+    RATHER THAN ensuring that a /type/ has the behavior we want,
+    _/lifetimes/ ensure that /references/ are *VALID as long as we need them to be*._
+
+  - *One thing not discussed in the "References and Borrowing" section in Chapter 4*:
+    every /reference/ in Rust has a /lifetime/
+    * lifetime :: the /scope/ for which that /reference/ is VALID.
 
 *** DONE Preventing Dangling References with Lifetimes - 193
 CLOSED: [2021-01-11 Mon 00:27]
@@ -6396,7 +6422,7 @@ CLOSED: [2021-01-11 Mon 00:46]
 - Just as /functions/ can accept _ANY /type/_ when the /signature/ specifies
   a /generic TYPE parameter/, functions can accept /references/ with _ANY
   /lifetime/_ by specifying a /generic LIFETIME parameter/.
-  * This means *isolated single* /lifetime annotation/ deesn't have much
+  * This means *isolated single* /lifetime annotation/ does *NOT* have much
     meaning.
 
 - /lifetime annotations/ *relate* the /lifetimes/ of multiple /references/ to
@@ -6414,7 +6440,7 @@ CLOSED: [2021-01-11 Mon 00:46]
   * a reference with an explicit lifetime: ~&'a i32~
   * a mutable reference with an explicit lifetime: ~&'a mut i32~
 
-*** DONE Lifetime Annotations in Function Signatures - 197
+*** DONE Lifetime Annotations in Function Signatures - 197 - =TODO: reduce the size of note???=
 CLOSED: [2021-01-11 Mon 03:55]
 Now let's examine /lifetime annotations/ in the context of the ~longest~
 /function/.
@@ -6433,16 +6459,16 @@ Now let's examine /lifetime annotations/ in the context of the ~longest~
     that *live at least as long as /lifetime/ ~'a~.*
 
   * the /string slice/ returned from the /function/ will
-    *live at least as long as /lifetime/ ~'a~.*
+    *live _at least_ as long as /lifetime/ ~'a~.*
 
 - In practice, the /function signature/ means that
-  the /lifetime/ of the _returned /reference/_ is *the same as the smaller*
+  the /lifetime/ of the _returned /reference/_ is *the same as the SMALLER*
   of the /lifetimes/ of the _passed-in /references/._ -- these constraints
   are what we want Rust to enforce.
 
 - Remember,
   when we specify the /lifetime parameters/ in a /function signature/,
-  we're *NOT* changing the /lifetimes/ of any values passed in or returned.
+  we're *NOT changing* the /lifetimes/ of any values passed in or returned.
     Rather, we're specifying that the _borrow checker_ should *reject* _any
   values that don't adhere to these /constraints/._
 
@@ -6540,7 +6566,7 @@ Now let's examine /lifetime annotations/ in the context of the ~longest~
     in other call sites. The compiler must use the /borrow checker/ to do a
     general check according to the /lifetime annotations/.
 
-*** DONE Thinking in Terms of Lifetimes - 199
+*** DONE Thinking in Terms of Lifetimes - 199 - =TODO: reduce the size of note???=
 CLOSED: [2021-01-11 Mon 01:20]
 The way in which you need to specify /lifetime parameters/ depends on _what
 your /function/ is doing._
@@ -6591,8 +6617,8 @@ your /function/ is doing._
   end of the ~longest~ function._ There is no way we can specify /lifetime
   parameters/ that would change the /dangling reference/, and Rust won't let
   us create a /dangling reference/.
-  * In this case, the best fix would be return an /owned data type/:
-    ~String~.
+  * *SOLUTION*:
+    the best fix would be return an /owned data type/: ~String~.
 
 - Ultimately, _lifetime syntax_ is about *connecting* the /lifetimes/ of _various
   arguments_ *and* _return values_ of functions.
@@ -6606,9 +6632,8 @@ _Till now_, we've only defined _/structs/ to hold owned types_.
   It is also possible for /structs/ to hold /references/, but we need to add
 a /lifetime annotation/ on *EVERY* /reference/ in the _struct's definition_.
 
+#+NAME: Listing 10-25: A struct that holds a reference, so its definition needs a lifetime annotation
 #+BEGIN_SRC rust
-  // Listing 10-25: A struct that holds a reference, so its definition needs a
-  //                lifetime annotation
   struct ImportantExcerpt<'a> {
       part: &'a str,
   }
@@ -6657,31 +6682,36 @@ CLOSED: [2021-01-11 Mon 02:04]
         &s[..]
     }
   #+END_SRC
-  * Pre-1.0 Rust wouldn't have this program compiled.
-    EVERY /reference/ needed an EXPLICIT /lifetime/.
+  1. *BEFORE*:
+     Pre-1.0 Rust wouldn't have this program compiled.
+     EVERY /reference/ needed an EXPLICIT /lifetime/.
 
-  * After coding a lot, the Rust team found there are some situations that
-    were predictable and followed a few deterministic patterns.
-      Then the Rust team code programmed these patterns into the compiler's
-    code so the _borrow checker_ could infer the /lifetimes/ in these
-    situations and wouldn't need EXPLICIT annotations.
+  2. *NOW*:
+     After coding a lot, the Rust team found there are some situations that
+     were predictable and followed a few deterministic patterns.
+       Then the Rust team code programmed these patterns into the compiler's
+     code so the _borrow checker_ could infer the /lifetimes/ in these
+     situations and wouldn't need EXPLICIT annotations.
 
-  * This piece of Rust history is relevant
-    BECAUSE it's possible that more deterministic patterns will emerge and
-    be added to the compiler. In the future, even fewer lifetime annotations
-    might be required.
+  3. *FUTURE*:
+     This piece of Rust history is relevant
+     BECAUSE it's possible that *MORE* deterministic patterns will emerge and
+     be added to the compiler.
+     In the future, even fewer lifetime annotations might be required.
 
 - /lifetime elision rules/ ::
+  The patterns programmed into Rust's analysis of /references/ --
   a set of particular cases that the compiler will consider, and if your
   code fits these cases, you don't need to write the /lifetimes/ EXPLICITLY.
+  * These aren't rules for programmers to follow!
 
 - The /elision rules/ do *NOT* provide _FULL_ inference:
   if there is still ambiguity after applying these rules, Rust will issue an
   error.
 
-- /input lifetimes/: lifetimes on function parameters or method parameters.
+- input lifetimes :: lifetimes on function parameters or method parameters.
 
-- /output lifetimes/: lifetimes on return values.
+- output lifetimes :: lifetimes on return values.
 
 - The compiler uses _THREE_ rules to figure out what /lifetimes/ /references/
   have when there aren't EXPLICIT annotations.
@@ -6730,11 +6760,18 @@ CLOSED: [2021-01-11 Mon 02:04]
 
 - =NEXT=
   Because the _third rule_ only really applied in /method signatures/,
-  let's look at /lifetimes/ in that context now, and see why the _third rule_
-  means we don't have to annotate /lifetimes/ in /method signatures/ very often.
+  let's look at /lifetimes/ in that context now,
+  and see
+  *WHY* the _third rule_ means we don't have to annotate /lifetimes/ in /method
+  signatures/ VERY OFTEN.
 
 *** DONE Lifetime Annotations in Method Definitions - 203
 CLOSED: [2021-01-11 Mon 02:54]
+- /Lifetime/ names for /struct/ fields always
+  1. need to be declared _AFTER_ the ~impl~ keyword and then
+  2. used _AFTER_ the ~struct~'s name,
+  because those /lifetimes/ are part of the /struct's type/.
+
 - Apply rule 1
   #+BEGIN_SRC rust
     // The lifetime parameter declaration
@@ -6761,9 +6798,9 @@ CLOSED: [2021-01-11 Mon 02:54]
     }
   #+END_SRC
 
-*** DONE The Static Lifetime - 204
+*** DONE The Static Lifetime - 204 - =IMPORVE DOC=
 CLOSED: [2021-01-11 Mon 01:08]
-- ~'stack~ :: the entire duration of the program.
+- ~'stack~ :: the lifetime covers the entire duration of the program.
 
 - Example:
   #+begin_src rust
@@ -6771,7 +6808,11 @@ CLOSED: [2021-01-11 Mon 01:08]
   #+end_src
   The text of this /string/ is _stored directly in the binary of your program_
   and the binary of your program is always available.
-  Therefore, *the lifetime of all /string literals/ is ~'static~.*
+
+  _THEREFORE_, *the lifetime of all /string literals/ is ~'static~.*
+
+- =FIXME=
+  Need an example for to illustrate the following words!!!
 
 - Sometimes compiler suggests you to use ~'static~ somewhere. =IMPORTANT=
   * But before specifying ~'static~ as the /lifetime/ for a /reference/,
@@ -6814,6 +6855,22 @@ Let's briefly look at the syntax of specifying /generic type parameters/,
 
 ** DONE Summary - 205
 CLOSED: [2021-01-11 Mon 02:59]
+
+- Summary ..
+
+- =TODO= =IMPORTANT=
+  =TODO= =IMPORTANT=
+  =TODO= =IMPORTANT=
+  * Believe it or not, there is much more to learn on the topics we discussed in this chapter:
+    Chapter 17 discusses /trait objects/, which are another way to use /traits/.
+
+  * There are also more complex scenarios involving /lifetime/ annotations that you
+    will only need in very advanced scenarios; for those, you should read the
+    *Rust Reference.*
+
+- =NEXT=
+  How to write tests in Rust so you can make sure your code is working the way it should.
+
 
 * DONE 11. Writing Automated Tests - 207
   CLOSED: [2021-01-15 Fri 03:46]
@@ -7532,37 +7589,37 @@ CLOSED: [2021-01-11 Mon 02:59]
    CLOSED: [2021-01-15 Fri 03:46]
 
 * TODO 12. An I/O Project: Building a Command Line Program - 233 - =start=
-  - This chapter is both
-    * a recap of many skills
-    * an exploration of a few more standard library features
+- This chapter is both
+  * a recap of many skills
+  * an exploration of a few more standard library features
 
-  - Make our own version of the classic command line tool ~grep~ (Globally search
-    a Regular Expression and Print).
+- Make our own version of the classic command line tool ~grep~ (Globally search
+  a Regular Expression and Print).
 
-  - In the simplest use case, ~grep~ searches a specified file for a specified
-    string using the following steps:
-    * Take as arguments a filename and a string.
-    * Read the file.
-    * Find lines in the file that contain the string argument.
-    * Print out those lines.
+- In the simplest use case, ~grep~ searches a specified file for a specified
+  string using the following steps:
+  * Take as arguments a filename and a string.
+  * Read the file.
+  * Find lines in the file that contain the string argument.
+  * Print out those lines.
 
-  - We'll also show how to use environment variables and print to standard error
-    instead of standard out; these tech are commonly used in command line tools.
+- We'll also show how to use environment variables and print to standard error
+  instead of standard out; these tech are commonly used in command line tools.
 
-  - ~ripgrep~ is a fully-featured and faster version of ~grep~ implemented by
-    Andrew Gallant by using Rust.
+- ~ripgrep~ is a fully-featured and faster version of ~grep~ implemented by
+  Andrew Gallant by using Rust.
 
-  - This project will bring together a number of concepts you've learned so far:
-    * Organizing code (using what we learned in modules, _Chapter 7_)
-    * Using vectors and strings (collections, _Chapter 8_)
-    * Handling errors (_Chapter 9_)
-    * Using traits and lifetimes where appropriate (_Chapter 10_)
-    * Writing tests (_Chapter 11_)
+- This project will bring together a number of concepts you've learned so far:
+  * Organizing code (using what we learned in modules, _Chapter 7_)
+  * Using vectors and strings (collections, _Chapter 8_)
+  * Handling errors (_Chapter 9_)
+  * Using traits and lifetimes where appropriate (_Chapter 10_)
+  * Writing tests (_Chapter 11_)
 
-  - We'll also briefly introduce /closures/, /iterators/, and /trait objects/,
-    which Chapter 13 and 17 will cover in detail =TODO=.
+- We'll also briefly introduce /closures/, /iterators/, and /trait objects/,
+  which Chapter 13 and 17 will cover in detail =TODO=.
 
-  - ~cargo new --bin greprs~
+- ~cargo new --bin greprs~
 
 ** DONE 12.1. Accepting Command Line Arguments - 234
    CLOSED: [2017-08-27 Sun 18:48]
@@ -8811,6 +8868,7 @@ CLOSED: [2021-01-11 Mon 02:59]
 
 ** Summary - 289
 
+
 * TODO 14. More About Cargo and Crates.io - 291 - =TODO= =publish=
   In this chapter, we'll discuss some of its other, more advanced features to
   show you how to do the following:
@@ -9141,6 +9199,7 @@ CLOSED: [2021-01-11 Mon 02:59]
 
 ** DONE Summary - 309
    CLOSED: [2021-01-17 Sun 01:30]
+
 
 * TODO 15. Smart Pointers - 311
   - /pointer/ :: a generic programming term for something that refers to a
@@ -9611,6 +9670,7 @@ CLOSED: [2021-01-11 Mon 02:59]
 **** Visualizing Changes to ~strong_count~ and ~weak_count~ - 344
 
 ** Summary - 346
+
 
 * TODO 16. Fearless Concurrency - 347
 ** TODO 16.1. Using Threads to Run Code Simultaneously - 348
