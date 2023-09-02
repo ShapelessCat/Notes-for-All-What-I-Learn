@@ -1,0 +1,339 @@
+#+TITLE: Command-Line Rust
+#+SUBTITLE: A Project-Based Primer for Writing Rust CLIs
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+#+STARTUP: indent
+
+* Preface - ix
+* 1. Truth or Consequences - 1
+You will learn how to do the following:
+- _Compile_ Rust code into an executable
+- Use Cargo to _start a new project_
+- Use the ~$PATH~ environment variable
+- _Include_ an external Rust crate from crates.io
+- _Interpret_ the /exit status/ of a program
+- Use common system commands and options
+- Write Rust versions of the ~true~ and ~false~ programs
+- _Organize_, _write_, and _run tests_
+
+** Getting Started with “Hello, world!” - 1
+- ~cargo new <project-name>~
+
+- ~cargo run~ or ~cargo run -q~ / ~cargo run --quiet~
+
+- *Cargo Commands*
+  =TODO= =NOTE=
+  ~cargo help <command>~
+
+** Organizing a Rust Project Directory - 3
+** Creating and Running a Project with Cargo - 4
+** Writing and Running Integration Tests - 6
+*** Adding a Project Dependency - 10
+*** Understanding Program Exit Values - 11
+- *TIPs*:
+  * _By default_,
+    Rust run many tests in parallel, so the test results may appear in a
+    different order each time you run them.
+
+  * You can run tests on a _SINGLE_ thread via
+    ~cargo test -- --test-thread=1~
+
+- *Rust programs will exit with the value zero _BY DEFAULT_.*
+  * This means the code in =true.rs= can be simplified as:
+    ~fn main() {}~
+
+- =src/bin/false.rs=:
+  #+begin_src rust
+    fn main() {
+        std::process::exit(1);
+    }
+  #+end_src
+  * Exit with any value between 1 and 255 to indicate an error.
+    =from Jian=
+    If the value passed to ~exit~ is greater than _255_, the value shell can see
+    will be ~value4exit % 256~
+
+*** Testing the Program Output - 14
+- x
+
+- x
+
+- x
+
+*** Exit Values Make Programs Composable - 15
+In command line, people often run commands that have dependent to each other
+with ~&&~.
+
+- For example,
+  * ~true && ls~: ~echo $?~ returns 0, this comes from ~ls~, ~true~ success, and
+    ~ls~ is then executed successfully.
+
+  * ~false && ls~: ~echo $?~ returns 1, this comes from ~false~, and ~ls~ wasn't
+    executed.
+
+** Summary - 16
+
+* 2. Test for Echo - 17
+- In this chapter, you'll learn how to do the following:
+  * Process command-line arguments with the =clap= crate
+  * Use Rust types like /strings/, /vectors/, /slices/, and the /unit/ type
+  * Use expressions like ~match~, ~if~, and ~return~
+  * Use ~Option~ to represent an optional value
+  * Handle errors using the ~Result~ variants of ~Ok~ and ~Err~
+  * Understand the DIFFERENCE between /stack and heap memory/
+  * Test for text that is printed to ~STDOUT~ and ~STDERR~
+
+** How echo Works - 17
+** Getting Started - 20
+*** Accessing the Command-Line Arguments - 21
+*** Adding clap as a Dependency - 23
+- clap (command-line argument parser)
+
+- =TODO=
+  Read [[https://oreil.ly/mvf9F][how to specify dependencies]].
+
+- xxx
+
+*** Parsing Command-Line Arguments Using clap - 25
+*** Creating the Program Output - 29
+
+** TODO Writing Integration Tests - 33
+*** Creating the Test Output Files 34
+*** Comparing Program Output 0 35
+*** Using the Result Type - 36
+- =TODO=
+  #+begin_src rust
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+  #+end_src
+  In the preceding code, ~Box~ indicates that the error will live inside a kind
+  of /pointer/ where the memory is _dynamically allocated_ on the /heap/ rather
+  than the /stack/, and ~dyn~ indicates that the method calls on the
+  ~std::error::Error~ trait are /dynamically dispatched/. That's really a lot of
+  information, and I don't blame you if your eyes glazed over. In short, I’m
+  saying that the ~Ok~ part of ~TestResult~ will only ever hold the /unit type/,
+  and the ~Err~ part can hold anything that implements the ~std::error::Error~
+  trait.
+  =TODO= These concepts are more thoroughly explained in *Programming Rust*.
+
+** Summary - 41
+* 3. On the Catwalk - 43
+- You'll learn how to do the following:
+  * _Organize_ your code into a library and a binary crate
+  * Use /testing-first development/
+  * _Define_ _public_ and _private_ variables and functions
+  * _Test_ for the existence of a file
+  * _Create_ a _random string_ for a file that does not exist
+  * _Read_ regular files or ~STDIN~ (pronounced standard in)
+  * Use ~eprintln!~ to print to ~STDERR~ and ~format!~ to format a string
+  * Write a test that provides input on ~STDIN~
+  * Create a struct
+  * Define mutually exclusive arguments
+  * Use the ~enumerate~ method of an iterator
+
+** How cat Works - 44
+- Check the options of ~cat~:
+  * The BSD version of ~cat~ doesn't print the usage for the ~-h | --help~ flags.
+    Use ~man cat~
+
+  * The GNU version has ~--help~.
+
+- For the challenge program,
+  you will
+  * implement ONLY the options ~-b|--number -nonblank~ and ~-n|--number~.
+
+  =TODO= I will also show you how to read regular files and ~STDIN~ when given a filename
+  argument of a dash (~-~). To demonstrate cat, I'll use some files that I have
+  included in the ~03_catr~ directory of the repository. Change into that
+  directory:
+
+- TIP:
+  ~cat~ can use ~-b~ and ~-n~ together, and _the ~-b~ option takes precedence._
+
+- The behavior of ~cat~ when it encounters any file that does not exist or cannot
+  be opened,
+  it will print a message to ~STDERR~ and move to the next file.
+
+- Run ~cat -n~ with multiple files, it starts renumbering the lines of each file.
+
+** Getting Started - 48
+*** Starting with Tests - 48
+*** Creating a Library Crate - 50
+*** Defining the Parameters - 51
+
+- =NOTE=
+  The ~eprint!~ and ~eprintln!~ macros are just like ~print!~ and ~println!~
+  except that they print to ~STDERR~.
+
+- Represent the command line options with a /struct/ called ~Config~.
+  #+begin_src rust
+    #[derive(Debug)]
+    pub struct Config {
+        files: Vec<String>,
+        number_lines: bool,
+        number_nonblank_lines: bool,
+    }
+  #+end_src
+
+*** Iterating Through the File Arguments - 56
+*** Opening a File or STDIN - 56
+*** Using the Test Suite - 59
+
+** Solution - 63
+*** Reading the Lines in a File - 63
+*** Printing Line Numbers - 64
+
+** Going Further - 67
+** Summary - 67
+
+* 4. Head Aches - 69
+** How head Works - 70
+** Getting Started - 73
+*** Writing a Unit Test to Parse a String into a Number - 75
+*** Converting Strings into Errors - 77
+*** Defining the Arguments - 80
+*** Processing the Input Files - 83
+*** Reading Bytes Versus Characters - 85
+
+** Solution - 86
+*** Reading a File Line by Line - 86
+*** Preserving Line Endings While Reading a File - 86
+*** Reading Bytes from a File - 88
+*** Printing the File Separators - 91
+
+** Going Further - 92
+** Summary - 92
+
+* 5. Word to Your Mother - 95
+** How ~wc~ Works - 95
+** Getting Started - 100
+** Iterating the Files - 105
+** Writing and Testing a Function to Count File Elements - 106
+** Solution - 109
+*** Counting the Elements of a File or STDIN - 109
+*** Formatting the Output 111 Going Further - 117
+
+** Summary - 117
+
+* 6. Den of Uniquity - 119
+** How uniq Works - 119
+** Getting Started - 124
+*** Defining the Arguments - 125
+*** Testing the Program - 129
+*** Processing the Input Files - 133
+
+** Solution - 134
+** Going Further - 139
+** Summary - 140
+
+* 7. Finders Keepers - 141
+** How find Works - 142
+** Getting Started - 146
+*** Defining the Arguments - 147
+*** Validating the Arguments - 153
+*** Finding All the Things - 155
+
+** Solution - 157
+** Conditionally Testing on Unix Versus Windows - 163
+** Going Further - 166
+** Summary - 167
+
+* 8. Shave and a Haircut - 169
+** How cut Works - 169
+** Getting Started - 174
+*** Defining the Arguments - 175
+*** Parsing the Position List - 181
+*** Extracting Characters or Bytes - 187
+*** Parsing Delimited Text Files - 189
+
+** Solution - 191
+*** Selecting Characters from a String - 191
+*** Selecting Bytes from a String - 193
+*** Selecting Fields from a ~csv::StringRecord~ - 195
+*** Final Boss - 196
+
+** Going Further - 198
+** Summary - 198
+
+* 9. Jack the Grepper - 201
+** How grep Works - 202
+** Getting Started - 205
+*** Defining the Arguments - 206
+*** Finding the Files to Search - 212
+*** Finding the Matching Lines of Input - 215
+
+** Solution - 219
+** Going Further - 223
+** Summary - 223
+
+* 10. Boston Commons - 225
+** How comm Works - 225
+** Getting Started - 229
+** Defining the Arguments - 229
+** Validating and Opening the Input Files - 233
+** Processing the Files - 235
+** Solution - 236
+** Going Further - 244
+** Summary - 244
+
+* 11. Tailor Swyfte - 245
+** How tail Works - 245
+** Getting Started - 250
+*** Defining the Arguments - 250
+*** Parsing Positive and Negative Numeric Arguments - 255
+*** Using a Regular Expression to Match an Integer with an Optional Sign - 256
+*** Parsing and Validating the Command-Line Arguments - 260
+*** Processing the Files - 262
+*** Counting the Total Lines and Bytes in a File - 262
+*** Finding the Starting Line to Print - 264
+*** Finding the Starting Byte to Print - 265
+*** Testing the Program with Large Input Files - 266
+
+** Solution - 267
+*** Counting All the Lines and Bytes in a File - 267
+*** Finding the Start Index - 268
+*** Printing the Lines - 269
+*** Printing the Bytes - 271
+*** Benchmarking the Solution - 273
+
+** Going Further - 275
+** Summary - 275
+
+* 12. Fortunate Son - 277
+** How fortune Works - 278
+** Getting Started - 281
+*** Defining the Arguments - 282
+*** Finding the Input Sources - 288
+*** Reading the Fortune Files - 291
+*** Randomly Selecting a Fortune - 293
+*** Printing Records Matching a Pattern - 295
+
+** Solution - 296
+** Going Further - 301
+** Summary - 301
+
+* 13. Rascalry - 303
+** How cal Works - 303
+** Getting Started - 306
+*** Defining and Validating the Arguments - 307
+*** Writing the Program - 318
+
+** Solution - 321
+** Going Further - 326
+** Summary - 326
+
+* 14. Elless Island - 329
+** How ls Works - 330
+** Getting Started - 332
+*** Defining the Arguments - 333
+*** Finding the Files - 336
+*** Formatting the Long Listing - 341
+*** Displaying Octal Permissions - 343
+*** Testing the Long Format - 346
+
+** Solution - 349
+** Notes from the Testing Underground - 355
+** Going Further - 358
+** Summary - 359
+
+* Epilogue - 361
+* Index - 363

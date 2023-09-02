@@ -3,622 +3,711 @@
 All my notes for technical book reading.
 Most of these notes are only outlines -- too many things need to learn, and some of them are low priority.
 
-__149 directories, 471 files__:
+__166 directories, 536 files__:
 
-__NOTE__: The 09.Language part has not been updated!
+```text
+.
+├── 00.Algorithm
+│   ├── 00.Methodology
+│   │   └── How-to-Solve-It.org
+│   ├── Algorithmic-Puzzles.org
+│   ├── Algorithms-4th.org
+│   ├── Algorithms.org
+│   ├── Data-Structures-and-Algorithm-Analysis-in-C.org
+│   ├── Data-Structures-and-Algorithms.org
+│   ├── Functional-Algorithm-and-Data-Structures
+│   │   ├── Pearls-of-Functional-Algorithm-Design.org
+│   │   ├── Purely-Functional-Data-Structures.org
+│   │   └── Structuring_Depth-First_Search_Algorithms_in_Haskell.org
+│   ├── Graph-Theory
+│   │   └── Graph-Theory.org
+│   ├── Introduction-to-Algorithms-3rd.org
+│   ├── Quicksort.org
+│   ├── The-Algorithm-Design-Manual-2nd.org
+│   └── Think-Data-Structures.org
+├── 01.Theory
+│   ├── Algebra-Driven_Design.org
+│   ├── CSAPP3rd.org
+│   ├── Category_Theory
+│   │   ├── Category-Theory-for-Programmers-Scala-Edition.org
+│   │   ├── Category-Theory-in-Context.tm
+│   │   └── Conceptual-Mathematics.tm
+│   ├── Code.org
+│   ├── Extended_BNF.org
+│   ├── Introduction-to-Automata-Theory,Languages,and-Computation_3rd.org
+│   ├── Lambda_Calculus
+│   │   ├── A-Tutorial-Introduction-to-the-Lambda-Calculus_by_Raul-Rojas.tm
+│   │   ├── Programming-Language-and-Lambda-Calculi_by_Matthias-Felleisen_Matthew-Flatt.tm
+│   │   └── The-Calculi-Of-Lambda-Conversion.org
+│   ├── Mathematical-Logic-Part-I.tm
+│   ├── Optics-by-Example.org
+│   ├── Paradigms-of-Artificial-Intelligence-Programming.org
+│   ├── Parsing-Techniques-2nd.tm
+│   ├── Pre_Category
+│   │   └── A-Book-of-Abstract-Algebra.tm
+│   ├── Programming-Language-Pragmatics_4th.org
+│   ├── Programming-Languages_Application-and-Interpretation_2nd.org
+│   ├── Semantics
+│   │   ├── [1992 - Semantics of Programming Languages].Carl A. Gunter.tm
+│   │   ├── [1993 - The Formal Semantics of Programming Languages - An Introduction].Glynn Winskel.tm
+│   │   ├── [1995 - Formal Syntax and Semantics of Programming Languages].Kenneth Slonneger, Barry L. Kurtz.tm
+│   │   ├── [2007 - Semantics with Applications - An Appetizer].Hanne Riis Nielson, Flemming Nielson.tm
+│   │   └── [2009 - Semantics engineering with PLT Redex].Matthias Felleisen, Robert Bruce Findler, Matthew Flatt.tm
+│   ├── Software-Design-for-Flexibility.org
+│   ├── The-Little-Typer.org
+│   ├── Type-Systems.tm
+│   ├── Types-and-Programming-Languages.org
+│   ├── Understanding-Computation.org
+│   └── UniMath
+│       └── Symmetry.tm
+├── 02.Ruminations
+│   ├── 97-Things-Every-Programmer-Should-Know.org
+│   ├── A-Philosophy-of-Software-Design.org
+│   ├── Elements-of-Information-Theory-2nd.org
+│   └── Working-Effectively-with-Legacy-Code.org
+├── 03.DevOps
+│   ├── Arch_Linux
+│   │   └── package-management.org
+│   ├── Configuration_File_Formats
+│   │   ├── HOCON
+│   │   │   ├── Config.org
+│   │   │   └── HOCON.org
+│   │   ├── Markdown
+│   │   │   └── GitHub-Flavored-Markdown-Spec.org
+│   │   ├── TOML
+│   │   │   └── TOML.org
+│   │   └── YAML
+│   ├── Postman
+│   │   └── Postman-Official-Document.org
+│   ├── Programming_Etiquette
+│   │   └── Conventional-Commits.org
+│   ├── System_Management
+│   │   ├── Learn-Powershell-Core-6.0.org
+│   │   ├── Learn-Windows-Powershell-in-A-Month-of-Lunches-3rd.org
+│   │   ├── PowerShell-for-SYSADMINS.org
+│   │   ├── The-Unix-Person's-Guide-to-Powershell.org
+│   │   ├── Unix-and-Linux-System-AdminHandbook-4th.org
+│   │   └── Windows-PowerShell-in-Action-3rd.org
+│   ├── The-Secret-Life-of-Programs.org
+│   ├── Version_Control
+│   │   └── Git
+│   │       ├── Got-Git_CN.org
+│   │       ├── Pragmatic-Guide-to-Git.org
+│   │       ├── Pro-Git-2.1.308.org
+│   │       ├── Rys-Git-Tutorial.org
+│   │       ├── Version-Control-with-Git-3rd.org
+│   │       └── Writing-on-GitHub.org
+│   ├── Virtualization_and_Container
+│   │   ├── Kubernetes-Up_and_Running-3rd.org
+│   │   ├── Learning-Helm.org
+│   │   ├── Podman-in-Action.org
+│   │   └── the-Docker-Book-18.03.org
+│   └── curl-Official-Document.org
+├── 04.Architecture_and_OS
+│   ├── Computer-Architecture-6th.org
+│   ├── Computer-Organization-and-Design-5th.org
+│   ├── The-Elements-of-Computing-Systems.org
+│   └── xv6.org
+├── 05.Compiler_and_Static_Analysis
+│   ├── Abstract_Interpretation
+│   │   └── Introduction-to-Abstract-Interpretation.tm
+│   ├── Engineering-a-Compiler-2nd.org
+│   ├── LLVM
+│   │   ├── LLVM-Language-Reference-Manual.org
+│   │   └── LLVM-Tutorial.org
+│   ├── Language_Server_Protocol
+│   │   └── Language-Server-Protocol-Specification.org
+│   ├── Modern-Compiler-Implementation-in-ML.org
+│   ├── Program-Analysis_An-Appetizer.org
+│   └── Static-Single-Assignment-Book.org
+├── 06.Language_Virtual_Machine
+│   ├── CLR
+│   │   ├── Standard-ECMA-335-6th.org
+│   │   ├── dotNET-Core-in-Action.org
+│   │   └── dotNET-IL-Assembler.org
+│   ├── JVM
+│   │   ├── ASM-4-Guide.org
+│   │   ├── Decompiling-Java.org
+│   │   ├── JMH-Samples.org
+│   │   ├── The-JVM-Spec-SE13.org
+│   │   ├── Understanding-the-JVM_3rd.org
+│   │   ├── Virtual-Machines.org
+│   │   └── VisualVM-Documentation.org
+│   └── Principles-of-Computer-Organization-and-Assembly-Language.org
+├── 07.Concurrency_and_Parallel_and_Distributed
+│   ├── Actors_a-Model-of-Concurrent-Computation-in-Distributed-Systems.org
+│   ├── Java-Concurrency-in-Practice.org
+│   ├── Learning-Concurrent-Programming-in-Scala-2nd.org
+│   ├── Parallel-and-Concurrent-Programming-in-Haskell.org
+│   ├── Programming-with-POSIX-Threads.org
+│   ├── Seven-Concurrency-Models-in-Seven-Weeks.org
+│   ├── The-Art-of-Multiprocessor-Programming-Revised.org
+│   └── pthreads-Programming.org
+├── 08.Web
+│   ├── HTTP
+│   │   ├── HTTP-the-Definitive-Guide.org
+│   │   ├── Learning-HTTP2.org
+│   │   └── RFC7230-HTTP1.1.org
+│   ├── Monadic-Design-Patterns-for-the-Web.org
+│   ├── RESTful
+│   │   ├── Architectural-Styles-and-the-Design-of-Network-based-Software-Architectures.org
+│   │   ├── Learn-API-Doc.org
+│   │   ├── OpenAPI-Sepcification.org
+│   │   ├── REST-API-Design-Rulebook.org
+│   │   ├── RESTful-Web-APIs.org
+│   │   ├── RESTful-Web-Services-with-Scala.org
+│   │   └── Web-Design_the-Missing-Link-Ebook.org
+│   ├── Reactive-Web-Applications.org
+│   ├── Spring-in-Action-5th.org
+│   └── Webassembly
+│       └── WebAssembly-Specification-Release1.0.org
+├── 09.Languages
+│   ├── Assembly_and_C
+│   │   ├── Assembly-Language-Step-by-Step3rd.org
+│   │   ├── Managing-Projects-with-GNU-Make.org
+│   │   └── Modern-C.org
+│   ├── C#
+│   │   ├── CSharp-10-in-a-Nutshell.org
+│   │   ├── CSharp-6-in-a-Nutshell.org
+│   │   └── Real-World-Functional-Programming-with-Examples-in-Fsharp-and-Csharp.org
+│   ├── C++
+│   │   └── C++-Primer-5th.org
+│   ├── Common-Lisp
+│   │   ├── Common-Lisp-Recipes.org
+│   │   ├── Practical-Common-Lisp.org
+│   │   └── The-Art-of-the-Metaobject-Protocol.org
+│   ├── Elixir_and_Erlang
+│   │   ├── Elixir-Official-Guides.org
+│   │   ├── Elixir-in-Action-2nd.org
+│   │   ├── Erlang_Official_Documentation
+│   │   │   └── Getting-Started-with-Erlang.org
+│   │   ├── Learn-You-Some-Erlang-for-Great-Good.org
+│   │   ├── Programming-Elixir-greaterThan-1dot6.org
+│   │   ├── Programming-Erlang-2nd.org
+│   │   └── rebar3.org
+│   ├── Emacs_Lisp
+│   │   ├── An-Introduction-to-Programming-in-Emacs-Lisp.org
+│   │   ├── Learn-Elisp.org
+│   │   └── Practical-Emacs.org
+│   ├── Go
+│   │   ├── A-Tour-of-Go.org
+│   │   ├── Concurrency-in-Go.org
+│   │   ├── Effective-Go.org
+│   │   └── the-Go-Programming-Language.org
+│   ├── Groovy
+│   │   └── Groovy-in-Action-2nd.org
+│   ├── Haskell
+│   │   ├── 24-Days-of-GHC-Extensions.org
+│   │   ├── Developing-Web-Apps-with-Haskell-and-Yesod-2nd.org
+│   │   ├── GHC-8.01-Users-Guide.org
+│   │   ├── Haskell-Programming-from-First-Principles.org
+│   │   ├── Haskell-wiki.org
+│   │   ├── Introduction-to-Functional-Programming-in-Haskell_CN.org
+│   │   ├── Learn-You-a-Haskell-for-Great-Good.org
+│   │   ├── Real-World-Haskell.org
+│   │   └── The-Haskell-School-of-Expression.org
+│   ├── Idris
+│   │   └── Type-Driven-Development-with-Idris.org
+│   ├── Java
+│   │   ├── A-Little-Java-a-Few-Patterns.org
+│   │   ├── Best_Practice
+│   │   │   ├── Alibaba-Java-Coding-Guidelines.org
+│   │   │   ├── Effective-Java-3rd.org
+│   │   │   ├── Google-Java-Style-Guide.org
+│   │   │   ├── Java-Cookbook_3rd.org
+│   │   │   ├── Java9-Recipes.org
+│   │   │   └── Modern-Java-Recipes.org
+│   │   ├── Core_Java
+│   │   │   ├── Core-Java-SE-9-for-The-Impatient.org
+│   │   │   └── Core-Java_Volume_1_and_2-11th.org
+│   │   ├── Functional-Programing-in-Java.org
+│   │   ├── JUnit-in-Action_3rd.org
+│   │   ├── Java-13-Revealed-2nd.org
+│   │   ├── Java-Network-Programming-4th.org
+│   │   ├── Java-Puzzlers.org
+│   │   ├── Java-by-Comparison.org
+│   │   ├── Java-the-Legend.org
+│   │   ├── Java8-Lambdas.org
+│   │   ├── Java_in_Action
+│   │   │   ├── Java8-in-Action.org
+│   │   │   └── Modern-Java-in-Action.org
+│   │   ├── Libraries
+│   │   │   ├── Java-Generics-and-Collections.org
+│   │   │   ├── Java-IO-NIO-and-NIO2.org
+│   │   │   └── Java-Threads_3rd.org
+│   │   ├── Logging
+│   │   │   ├── SLF4J.org
+│   │   │   └── sematext-BLOG-logging
+│   │   │       ├── Java-Logging-Frameworks-Comparison_Log4j_vs_Logback_vs_Log4j2_vs_SLF4j_Differences.org
+│   │   │       ├── Java-Logging-Tutorial_Basic-Concepts-to-Help-You-Get-Started.org
+│   │   │       └── SLF4J-Tutorial_Example-of-How-to-Configure-it-for-Logging-Java-Applications.org
+│   │   ├── MetaProgramming
+│   │   │   ├── Java-Reflection-in-Action.org
+│   │   │   └── Trail_The-Reflection-API.org
+│   │   ├── Module_System
+│   │   │   ├── Java9-Modularity.org
+│   │   │   └── The-Java-Module-System.org
+│   │   ├── Official_Documents_and_Standards
+│   │   │   ├── Java-Shell-Users-Guide_JDK10.org
+│   │   │   ├── Java9-with-JShell.org
+│   │   │   ├── Mastering-Lambdas_Java-Programming-in-a-Multicore-World.org
+│   │   │   ├── The-Java-Language-Specification-SE15.tm
+│   │   │   ├── The-Java-Language-Specification-SE9.org
+│   │   │   ├── The-Java-Language-Specification-SE9.tm
+│   │   │   └── The-Java-Virtual-Machine-Specification-SE15.tm
+│   │   └── Thinking-in-Java-4th.org
+│   ├── JavaScript
+│   │   ├── Eloquent-JavaScript-2nd.org
+│   │   ├── Eloquent-JavaScript-3nd.org
+│   │   ├── JavaScript-with-Promises.org
+│   │   ├── Understanding-ECMAScript6.org
+│   │   └── the-Road-to-Learn-React.org
+│   ├── Kotlin
+│   │   └── Kotlin-in-Action.org
+│   ├── Lua
+│   │   └── Lua-5.4-Reference-Manual.org
+│   ├── OCaml
+│   │   ├── Real-World-OCaml-2nd.org
+│   │   └── opam-2.0-documentation.org
+│   ├── Prolog
+│   │   ├── Learn-Prolog-Now.org
+│   │   └── The-Art-of-Prolog-2nd.org
+│   ├── Python
+│   │   ├── Concurrency
+│   │   │   ├── Learning-Concurrency-in-Python.org
+│   │   │   ├── Mastering-Concurrency-in-Python.org
+│   │   │   └── Using-Asyncio-in-Python.org
+│   │   ├── Conda-docs.org
+│   │   ├── Effective-Python-2nd.org
+│   │   ├── Fluent-Python-2nd-early-relase.org
+│   │   ├── Fluent-Python.org
+│   │   ├── High-Performance-Python-2nd.org
+│   │   ├── Learning-Python-5th.org
+│   │   ├── Official_Documentation
+│   │   │   ├── Debugging-and-Profiling.org
+│   │   │   ├── Python-HOWTOs.org
+│   │   │   ├── The-Python-Language-Reference.org
+│   │   │   ├── The-Python-Tutorial.org
+│   │   │   └── The_Python_Standard_Library
+│   │   │       ├── Development_Tools
+│   │   │       │   ├── typing.org
+│   │   │       │   └── unittest.org
+│   │   │       ├── File_and_Directory_Access
+│   │   │       │   └── pathlib.org
+│   │   │       └── Networking_and_Interprocess_Communication
+│   │   │           └── asyncio-Asynchronous-IO.org
+│   │   ├── Programming-Python-4th.org
+│   │   ├── Python-Cookbook.org
+│   │   ├── Python-Testing-with-pytest.org
+│   │   ├── Real_Python
+│   │   │   └── Speed-Up-Your-Python-Program-with-Concurrency.org
+│   │   ├── Standard_Library_third_party_documents
+│   │   │   ├── Python-Standard-Library.org
+│   │   │   └── The-Python-3-Standard-Library-by-Example.org
+│   │   ├── Web-Scraping-with-Python-2nd.org
+│   │   └── packages
+│   │       └── Requests_HTTP-for-Humans.org
+│   ├── R
+│   │   ├── Advanced-R_2nd.org
+│   │   ├── An-Introduction-to-R.org
+│   │   ├── Hands-On-Programming-with-R.org
+│   │   ├── R-Cookbook_2nd.org
+│   │   ├── R-Markdown.org
+│   │   ├── The-Art-of-R-Programming.org
+│   │   ├── The-Book-of-R.org
+│   │   └── The-tidyverse-Style-Guide.org
+│   ├── Racket
+│   │   ├── Guile-Reference-Manual.org
+│   │   ├── Plait-Language.org
+│   │   ├── Plot_Graph-Plotting.org
+│   │   ├── Structure-and-Interpretation-of-Computer-Programs-2nd.org
+│   │   ├── The-Racket-Guide.org
+│   │   ├── The-Racket-Reference.org
+│   │   ├── The-Scheme-Programming-Language-4th.org
+│   │   └── The-Typed-Racket-Guide.org
+│   ├── ReScript
+│   │   └── Official-Documents
+│   │       └── Language-Manual.org
+│   ├── Rust
+│   │   ├── Command-line-apps-in-Rust.org
+│   │   ├── Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org
+│   │   ├── Programming-Rust-2nd.org
+│   │   ├── Programming-Rust.org
+│   │   ├── Programming-WebAssembly-with-Rust.org
+│   │   ├── Rust-Cookbook.org
+│   │   ├── Rust-Standard-Library-Cookbook.org
+│   │   ├── Rust-Style-Guidelines.org
+│   │   ├── Rust-and-WebAssembly.org
+│   │   ├── Rust-by-Example.org
+│   │   ├── Rust-for-Rustaceans.org
+│   │   ├── The-Cargo-Book.org
+│   │   ├── The-Edition-Guide.org
+│   │   ├── The-Embedded-Rust-Book.org
+│   │   ├── The-Rust-Programming-Language-2nd.org
+│   │   ├── The-Rustonomicon.org
+│   │   ├── The-Tao-of-Rust.org
+│   │   ├── The-rustc-book.org
+│   │   └── Zero-to-Production-in-Rust.org
+│   ├── SML
+│   │   ├── ML-for-Working-Programmer-2nd.org
+│   │   └── Programming-in-Standard-ML.org
+│   ├── Scala-2
+│   │   ├── Akka
+│   │   │   ├── Akka-Concurrency.org
+│   │   │   ├── Akka-Cookbook.org
+│   │   │   ├── Akka-in-Action-2nd.org
+│   │   │   ├── Akka-in-Action.org
+│   │   │   ├── Akka_Official_Documentation
+│   │   │   │   ├── Actors.org
+│   │   │   │   ├── Akka-Classic.org
+│   │   │   │   ├── Cluster.org
+│   │   │   │   ├── Clustering.org
+│   │   │   │   ├── Discovery.org
+│   │   │   │   ├── General-Concepts.org
+│   │   │   │   ├── Getting-Started-Guide.org
+│   │   │   │   ├── Other-Akka-modules.org
+│   │   │   │   ├── Package-Deploy-and-Run.org
+│   │   │   │   ├── Persistence-(Durable-State).org
+│   │   │   │   ├── Persistence-(Event-Sourcing).org
+│   │   │   │   ├── Project-Information.org
+│   │   │   │   ├── Security-Announcements.org
+│   │   │   │   ├── Streams.org
+│   │   │   │   └── Utilities.org
+│   │   │   ├── Alpakka-Documentation.org
+│   │   │   ├── Effective-Akka.org
+│   │   │   ├── Learning-Akka.org
+│   │   │   └── rockthejvm-The-Akka-Bundle
+│   │   │       ├── Akka-Classic-Essentials.org
+│   │   │       ├── Akka-Classic-Persistence.org
+│   │   │       └── Akka-Streams-with-Scala.org
+│   │   ├── Ammonite.org
+│   │   ├── Creative-Scala.org
+│   │   ├── Effective-Scala-by-Twitter.org
+│   │   ├── Essential-Scala.org
+│   │   ├── Functional-Programming-Simplified.org
+│   │   ├── Functional-Programming-in-Scala.org
+│   │   ├── Hands-on_Scala.org
+│   │   ├── Libraries
+│   │   │   ├── Database
+│   │   │   │   ├── Essential-Slick.org
+│   │   │   │   ├── Scredis.org
+│   │   │   │   ├── Slick.org
+│   │   │   │   └── quill.org
+│   │   │   ├── HOCON
+│   │   │   │   └── PureConfig.org
+│   │   │   ├── Scalafix.org
+│   │   │   ├── Scalafmt.org
+│   │   │   └── Shapeless
+│   │   │       ├── Shapeless-API.org
+│   │   │       └── The-Type-Astronauts-Guide-to-Shapeless.org
+│   │   ├── Metaprogramming
+│   │   │   ├── Scalameta.org
+│   │   │   └── Separately_Shipped_Standard_Libraries
+│   │   │       └── scala-reflection-library.org
+│   │   ├── Notes4Talks
+│   │   │   ├── How-to-Totally-Fix-PartialFunction_by_Dale-Wijnand.org
+│   │   │   ├── Talks_No-Plan-for-Taking-Note.org
+│   │   │   ├── The-Last-Hope-for-Scala's-Infinity-War_John-A.-De-Goes.org
+│   │   │   └── Think-Less-with-Scala_Daniel-Sivan.org
+│   │   ├── Official_Documents
+│   │   │   ├── Guides_and_Overviews
+│   │   │   │   ├── Authoring_Libraries
+│   │   │   │   │   └── Library-Author-Guide.org
+│   │   │   │   ├── Compatibility
+│   │   │   │   │   ├── Binary-Compatibility-for-Library-Authors.org
+│   │   │   │   │   ├── Binary-Compatibility-of-Scala-Releases.org
+│   │   │   │   │   └── JDK-Version-Compatibility.org
+│   │   │   │   ├── Compiler
+│   │   │   │   │   ├── Error-Formatting.org
+│   │   │   │   │   ├── Optimizer.org
+│   │   │   │   │   ├── Quasiquotes-in-Scala-2.org
+│   │   │   │   │   ├── Scala-2-Compiler-Options.org
+│   │   │   │   │   ├── Scala-2-Compiler-Plugins.org
+│   │   │   │   │   ├── Scala-2-Macros.org
+│   │   │   │   │   └── Scala-2-Reflection.org
+│   │   │   │   ├── Language
+│   │   │   │   │   ├── An-Overview-of-TASTy.org
+│   │   │   │   │   ├── Implicit-Classes.org
+│   │   │   │   │   ├── Migration-from-Scala-2-to-Scala-3.org
+│   │   │   │   │   ├── Scala-3-Macros.org
+│   │   │   │   │   ├── String-Interpolation.org
+│   │   │   │   │   ├── The-Scala-Book.org
+│   │   │   │   │   └── Value-Classes-and-Universal-Traits.org
+│   │   │   │   ├── Legacy
+│   │   │   │   │   ├── Scala-2.8-to-2.12s-Collections.org
+│   │   │   │   │   └── The-Architecture-of-Scala-2.8-to-2.12s-Collections.org
+│   │   │   │   ├── Parallel_and_Concurrent_Programming
+│   │   │   │   │   ├── Futures-and-Promises.org
+│   │   │   │   │   └── Parallel-Collections.org
+│   │   │   │   ├── Standard_Library
+│   │   │   │   │   ├── Adding-Custom-Collection-Operations.org
+│   │   │   │   │   ├── Implementing-Custom-Collections.org
+│   │   │   │   │   ├── Migrating-a-Project-to-Scala-2.13s-Collections.org
+│   │   │   │   │   ├── Scala-Collections.org
+│   │   │   │   │   └── The-Architecture-of-Scala-2.13s-Collections.org
+│   │   │   │   └── Tools
+│   │   │   │       ├── Scala-2-REPL.org
+│   │   │   │       ├── Scaladoc-For-Scala-3.org
+│   │   │   │       └── Scaladoc.org
+│   │   │   ├── SIPs
+│   │   │   │   ├── SIP-11_String_Interpolation.org
+│   │   │   │   ├── SIP-13_Implicit_Classes.org
+│   │   │   │   └── SIP-15_Value_Classes.org
+│   │   │   └── Scala-API.org
+│   │   ├── Personal_Notes
+│   │   │   ├── Scala-Refactor-Recipies.org
+│   │   │   └── Scala-Traps-and-Pitfalls_Personal-Note.org
+│   │   ├── Play_Framework
+│   │   │   ├── Essential-Play.org
+│   │   │   ├── Play-Documentation.org
+│   │   │   ├── Play-Framework-Essentials.org
+│   │   │   └── Play-for-Scala.org
+│   │   ├── Practical-FP-in-Scala-2nd.org
+│   │   ├── Practical-FP-in-Scala.org
+│   │   ├── Programming-in-Scala-3rd.org
+│   │   ├── Programming-in-Scala-4th.org
+│   │   ├── Scala-Collection-Technique-Manual_2.8to2.12.org
+│   │   ├── Scala-Cookbook.org
+│   │   ├── Scala-Design-Patterns-2nd.org
+│   │   ├── Scala-High-Performance-Programming.org
+│   │   ├── Scala-Puzzlers-from-Me.org
+│   │   ├── Scala-Puzzlers.org
+│   │   ├── Scala-for-the-Impatient.org
+│   │   ├── Scala-in-Depth.org
+│   │   ├── Scala.js
+│   │   │   ├── Documentation.org
+│   │   │   └── Hands-on-Scala.js.org
+│   │   ├── Specification_and_Enhancement
+│   │   │   ├── Scala-Language-Specification.org
+│   │   │   └── Scala-Style-Guide.org
+│   │   ├── Talks-Note.org
+│   │   └── Things-you-need-to-know-about-JVM_that-matter-in-Scala.org
+│   ├── Scala-3
+│   │   ├── Advanced-Programming-in-Scala-5th.org
+│   │   ├── DevInsideYou
+│   │   │   └── JSON-and-Circe.org
+│   │   ├── Effect_Systems
+│   │   │   ├── Cats-Effect
+│   │   │   │   ├── Essential-Effects.org
+│   │   │   │   └── cats-effect-3.org
+│   │   │   └── ZIO
+│   │   │       ├── ZIO.org
+│   │   │       ├── ZIO2.org
+│   │   │       └── Zionomicon.org
+│   │   ├── Functional-Programming-in-Scala-2nd.org
+│   │   ├── Functional-event-driven-architecture.org
+│   │   ├── Get-Programming-with-Scala.org
+│   │   ├── Guides
+│   │   │   ├── An-Overview-of-TASTy.org
+│   │   │   └── Migration-from-Scala-2-to-Scala3.org
+│   │   ├── Libraries
+│   │   │   ├── Cats
+│   │   │   │   ├── Functional-effect-handling-in-Scala-with-cats-effect.org
+│   │   │   │   ├── Scala-with-Cats.org
+│   │   │   │   ├── Typelevel-Cats-Document.org
+│   │   │   │   ├── Udemy-Course_FP-with-Scala-Cats.org
+│   │   │   │   ├── Udemy-Functional-effect-handling-in-Scala-with-Cats-Effect.org
+│   │   │   │   ├── cats-API.org
+│   │   │   │   ├── cats-effect-2.org
+│   │   │   │   ├── cats-mtl.org
+│   │   │   │   ├── cats-retry.org
+│   │   │   │   └── herding-cats.org
+│   │   │   ├── Database
+│   │   │   │   ├── Doobie.org
+│   │   │   │   ├── Redis4Cats.org
+│   │   │   │   ├── ScalikeJDBC.org
+│   │   │   │   └── Skunk.org
+│   │   │   ├── Enumeratum.org
+│   │   │   ├── FS2
+│   │   │   │   ├── FS2.org
+│   │   │   │   ├── Functional-Streams-for-Scala-with-FS2.org
+│   │   │   │   └── Udemy_Functional-Streams-for-Scala-with-FS2.org
+│   │   │   ├── HOCON
+│   │   │   │   └── Ciris.org
+│   │   │   ├── Izumi_Project
+│   │   │   │   └── distage.org
+│   │   │   ├── JSON
+│   │   │   │   ├── Circe.org
+│   │   │   │   └── Json4s.org
+│   │   │   ├── Monocle-Official.org
+│   │   │   ├── Scala-with-Cats_me.org
+│   │   │   ├── ScalaPB_Scala-Protocol-Buffer-Compiler.org
+│   │   │   ├── Spire.org
+│   │   │   ├── Squants.org
+│   │   │   ├── TSec.org
+│   │   │   ├── com-lihaoyi
+│   │   │   │   ├── FastParse2.org
+│   │   │   │   ├── OS-Lib.org
+│   │   │   │   └── upickle.org
+│   │   │   ├── http4s
+│   │   │   │   ├── http4s-0.2x.org
+│   │   │   │   └── http4s-1.org
+│   │   │   ├── parboiled2.org
+│   │   │   ├── refined.org
+│   │   │   ├── scodec.org
+│   │   │   └── sttp.org
+│   │   ├── Macro
+│   │   │   └── A-Macro-Almanac.org
+│   │   ├── Notes4Talks
+│   │   │   ├── Preparing-Apache-Kafka-for-Scala3.org
+│   │   │   └── Scala-3-Macros_by-Nicolas-Stucki.org
+│   │   ├── Official_Documents
+│   │   │   ├── 0.New-in-Scala-3.org
+│   │   │   ├── 1.Getting-Started.org
+│   │   │   ├── 2.Scala-3-Book.org
+│   │   │   ├── 3.Migration-Guide.org
+│   │   │   ├── 4.Guides
+│   │   │   │   └── Macros.org
+│   │   │   ├── 5.API.org
+│   │   │   ├── 6.Language-Reference.org
+│   │   │   ├── 7.All-New-Scaladoc-for-Scala-3.org
+│   │   │   ├── Scala-3-Contributing-Guide.org
+│   │   │   ├── The-Scala-Toolkit.org
+│   │   │   └── from-old-reference.org
+│   │   ├── Programming-Scala-3rd.org
+│   │   ├── Programming-in-Scala-5th.org
+│   │   ├── Scala-Cookbook_2nd.org
+│   │   ├── Test_Frameworks
+│   │   │   ├── MUnit.org
+│   │   │   ├── Scala-Test-Driven-Development.org
+│   │   │   ├── ScalaCheck
+│   │   │   │   ├── ScalaCheck-Cookbook.org
+│   │   │   │   ├── ScalaCheck-User-Guide.org
+│   │   │   │   └── ScalaCheck_The-Definitive-Guide.org
+│   │   │   ├── ScalaMock.org
+│   │   │   ├── ScalaTest-User-Guide.org
+│   │   │   ├── Testing-in-Scala.org
+│   │   │   ├── Weaver-Test.org
+│   │   │   └── uTest.org
+│   │   ├── Tools
+│   │   │   ├── Coursier.org
+│   │   │   ├── Giter8.org
+│   │   │   └── Scala-CLI.org
+│   │   └── rockthejvm
+│   │       └── Typelevel-Rite-of-Passage.org
+│   ├── Scala-Native
+│   │   └── Official-Documentation.org
+│   ├── Seven-Languages-in-Seven-Weeks.org
+│   ├── Seven-More-Languages-in-Seven-Weeks.org
+│   ├── SmallTalk
+│   │   ├── A-Little-Smalltalk.org
+│   │   ├── A-Taste-of-SmallTalk.org
+│   │   └── Pharo-by-Example.org
+│   └── TypeScript
+│       ├── Official-Documentation.org
+│       └── Programming-TypeScript.org
+├── 10.Typesetting
+│   ├── Fonts-and-Encodings.org
+│   └── Unicode-Explained.org
+├── 11.Programming_Paradigms
+│   ├── Mastering-Functional-Programming.org
+│   ├── Object-Oriented
+│   │   └── The-Object-Oriented-Thought-Process.org
+│   ├── Reactive
+│   │   ├── Functional-Reactive-Programming.org
+│   │   └── Reactive-Programming-with-Rxjava.org
+│   └── Why-Functional-Programming-Matters.org
+├── 12.Data_Science
+│   ├── An-Introduction-to-Statistical-Learning.org
+│   ├── Apache-Hadoop-Official-Document.org
+│   ├── Database
+│   │   ├── DBeaver.org
+│   │   ├── Database-Management-Systems-3rd.org
+│   │   ├── MySQL
+│   │   │   ├── High-Performance-MySQL-3rd.org
+│   │   │   └── Jump-Start-MySQL.org
+│   │   ├── PostgreSQL
+│   │   │   ├── Official-PostgreSQL-Documentation.org
+│   │   │   ├── PostgreSQL-Bootcamp_Udemy.org
+│   │   │   └── PostgreSQL-Up-and-Running-3rd.org
+│   │   ├── Redis
+│   │   │   ├── Redis-Official-Documentation.org
+│   │   │   └── Redis-The-Complete-Developer's-Guide.org
+│   │   ├── SQL
+│   │   │   ├── Learning-SQL-2nd.org
+│   │   │   ├── SQL-Cookbook.org
+│   │   │   └── SQL-in-10Min-4th.org
+│   │   └── Seven-Databases-in-Seven-Weeks.org
+│   ├── Designing_Data-Intensive_Applicaitons.org
+│   ├── Message-Queue
+│   │   └── Kafka
+│   │       ├── Kafka-Streams-in-Action.org
+│   │       ├── Kafka-in-Action.org
+│   │       ├── Kafka_The-Definitive-Guide_2nd.org
+│   │       ├── Udemy_Apache-Kafka-Series
+│   │       │   ├── Kafka-Streams-for-Data-Processing.org
+│   │       │   └── Kafka_Connect_Hands-on_Learning.org
+│   │       └── Udemy_Apache-Kafka-Series_Learn-Apache-Kafka-for-Beginners-v3.org
+│   ├── Next-Generation-Databases.org
+│   ├── Spark
+│   │   ├── Advanced-Analytics-with-Spark-2nd.org
+│   │   ├── Data-Algorithms-with-Spark.org
+│   │   ├── High-Performance-Spark.org
+│   │   ├── Learning-Spark-SQL.org
+│   │   ├── Learning-Spark.org
+│   │   ├── Learning-Spark_2nd.org
+│   │   ├── Spark-2.4.x-Documentation.org
+│   │   ├── Spark-3.x.x-Documentation.org
+│   │   ├── Spark-The-Definitive-Guide.org
+│   │   ├── Spark-in-Action.org
+│   │   ├── Spark-in-Action_2nd.org
+│   │   └── allaboutscala-Learn-Apache-Spark-2.org
+│   ├── Streaming
+│   │   ├── Streaming-Systems.org
+│   │   └── grokking-Streaming-Systems.org
+│   └── pandas
+│       └── User-Guide.org
+├── 13.Building_System
+│   ├── Apache-Ant-1.10.x-Manual.org
+│   ├── Maven
+│   │   ├── Apache-Maven-Project-Documents.org
+│   │   └── Maven-Essentials.org
+│   ├── Scala_Build_Tools
+│   │   ├── Bloop.org
+│   │   ├── mill-manual.org
+│   │   └── sbt
+│   │       ├── sbt-Reference-Manual.org
+│   │       ├── sbt-assembly.org
+│   │       ├── sbt-in-Action.org
+│   │       └── sbt-native-packager.org
+│   ├── Software-Build-Systems.org
+│   └── make
+│       ├── GNU-make.org
+│       └── Write-Makefile-with-Me.org
+├── 14.Blogs
+│   └── Matthew_Might
+│       └── The-Language-of-Languages.org
+├── 15.System_Programming
+│   └── The-Linux-Programming-Interface.org
+├── 16.Music
+│   ├── Music-Theory-Comprehensive.org
+│   └── The-Haskell-School-of-Music.org
+├── Editors
+│   ├── Spacemacs
+│   │   ├── Important-Layers.org
+│   │   └── Spacemacs-Documentation.org
+│   ├── The-compact-Org-mode-Guide.org
+│   └── Vim
+│       └── Modern-Vim.org
+├── MISC
+│   ├── Bit_Operations
+│   │   ├── Bit-Twiddling-Hacks.org
+│   │   └── Hackers-Delight-2nd.org
+│   ├── Calendrical-Calculations_The-Ultimate-Edition.org
+│   ├── IntelliJ-IDEA-Essentials.org
+│   ├── Intellij-IDEA-Help.org
+│   ├── Low_Priority
+│   │   └── Tool_MATLAB
+│   │       ├── Matlab-Primer-2017b.org
+│   │       └── Matlab-a-Practical-Introduction-to-Programming-and-Problem-Solving.org
+│   ├── Mastering-Regular-Expressions-3rd.org
+│   ├── Real-World_Cryptography.org
+│   ├── Serialization
+│   │   └── Programmers-Guide-to-Apache-Thrift.org
+│   ├── Violent-Python.org
+│   ├── Visualization-Analysis-and-Design.org
+│   └── i3-User's-Guide.org
+└── README.md
+```
 
-* [00.DevOps](./00.DevOps)
-  * [Arch_Linux](./00.DevOps/Arch_Linux)
-    * [package-management.org](./00.DevOps/Arch_Linux/package-management.org)
-  * [Configuration_File_Formats](./00.DevOps/Configuration_File_Formats)
-    * [HOCON.org](./00.DevOps/Configuration_File_Formats/HOCON.org)
-    * [Markdown.org](./00.DevOps/Configuration_File_Formats/Markdown.org)
-    * [TOML.org](./00.DevOps/Configuration_File_Formats/TOML.org)
-    * [YAML.org](./00.DevOps/Configuration_File_Formats/YAML.org)
-  * [Programming_Etiquette](./00.DevOps/Programming_Etiquette)
-    * [Conventional-Commits.org](./00.DevOps/Programming_Etiquette/Conventional-Commits.org)
-  * [System_Management](./00.DevOps/System_Management)
-    * [Learn-Powershell-Core-6.0.org](./00.DevOps/System_Management/Learn-Powershell-Core-6.0.org)
-    * [Learn-Windows-Powershell-in-A-Month-of-Lunches-3rd.org](./00.DevOps/System_Management/Learn-Windows-Powershell-in-A-Month-of-Lunches-3rd.org)
-    * [PowerShell-for-SYSADMINS.org](./00.DevOps/System_Management/PowerShell-for-SYSADMINS.org)
-    * [The-Unix-Person's-Guide-to-Powershell.org](./00.DevOps/System_Management/The-Unix-Person's-Guide-to-Powershell.org)
-    * [Unix-and-Linux-System-AdminHandbook-4th.org](./00.DevOps/System_Management/Unix-and-Linux-System-AdminHandbook-4th.org)
-    * [Windows-PowerShell-in-Action-3rd.org](./00.DevOps/System_Management/Windows-PowerShell-in-Action-3rd.org)
-  * [The-Secret-Life-of-Programs.org](./00.DevOps/The-Secret-Life-of-Programs.org)
-  * [Version_Control](./00.DevOps/Version_Control)
-    * [Git](./00.DevOps/Version_Control/Git)
-      * [Got-Git_CN.org](./00.DevOps/Version_Control/Git/Got-Git_CN.org)
-      * [Pragmatic-Guide-to-Git.org](./00.DevOps/Version_Control/Git/Pragmatic-Guide-to-Git.org)
-      * [Pro-Git-2.1.308.org](./00.DevOps/Version_Control/Git/Pro-Git-2.1.308.org)
-      * [Rys-Git-Tutorial.org](./00.DevOps/Version_Control/Git/Rys-Git-Tutorial.org)
-      * [Writing-on-GitHub.org](./00.DevOps/Version_Control/Git/Writing-on-GitHub.org)
-  * [Virtualization_and_Container](./00.DevOps/Virtualization_and_Container)
-    * [Kubernetes-Up_and_Running-3rd.org](./00.DevOps/Virtualization_and_Container/Kubernetes-Up_and_Running-3rd.org)
-    * [the-Docker-Book-18.03.org](./00.DevOps/Virtualization_and_Container/the-Docker-Book-18.03.org)
-* [01.Theory](./01.Theory)
-  * [Algebra-Driven_Design.org](./01.Theory/Algebra-Driven_Design.org)
-  * [Category_Theory](./01.Theory/Category_Theory)
-    * [Category-Theory-for-Programmers-Scala-Edition.org](./01.Theory/Category_Theory/Category-Theory-for-Programmers-Scala-Edition.org)
-    * [Category-Theory-in-Context.tm](./01.Theory/Category_Theory/Category-Theory-in-Context.tm)
-    * [Conceptual-Mathematics.tm](./01.Theory/Category_Theory/Conceptual-Mathematics.tm)
-  * [Code.org](./01.Theory/Code.org)
-  * [CSAPP3rd.org](./01.Theory/CSAPP3rd.org)
-  * [Extended_BNF.org](./01.Theory/Extended_BNF.org)
-  * [Introduction-to-Automata-Theory,Languages,and-Computation_3rd.org](./01.Theory/Introduction-to-Automata-Theory,Languages,and-Computation_3rd.org)
-  * [Lambda_Calculus](./01.Theory/Lambda_Calculus)
-    * [A-Tutorial-Introduction-to-the-Lambda-Calculus_by_Raul-Rojas.tm](./01.Theory/Lambda_Calculus/A-Tutorial-Introduction-to-the-Lambda-Calculus_by_Raul-Rojas.tm)
-    * [Programming-Language-and-Lambda-Calculi_by_Matthias-Felleisen_Matthew-Flatt.tm](./01.Theory/Lambda_Calculus/Programming-Language-and-Lambda-Calculi_by_Matthias-Felleisen_Matthew-Flatt.tm)
-    * [The-Calculi-Of-Lambda-Conversion.org](./01.Theory/Lambda_Calculus/The-Calculi-Of-Lambda-Conversion.org)
-  * [Mathematical-Logic-Part-I.tm](./01.Theory/Mathematical-Logic-Part-I.tm)
-  * [Optics-by-Example.org](./01.Theory/Optics-by-Example.org)
-  * [Paradigms-of-Artificial-Intelligence-Programming.org](./01.Theory/Paradigms-of-Artificial-Intelligence-Programming.org)
-  * [Parsing-Techniques-2nd.tm](./01.Theory/Parsing-Techniques-2nd.tm)
-  * [Pre_Category](./01.Theory/Pre_Category)
-    * [A-Book-of-Abstract-Algebra.tm](./01.Theory/Pre_Category/A-Book-of-Abstract-Algebra.tm)
-  * [Programming-Language-Pragmatics_4th.org](./01.Theory/Programming-Language-Pragmatics_4th.org)
-  * [Programming-Languages_Application-and-Interpretation_2nd.org](./01.Theory/Programming-Languages_Application-and-Interpretation_2nd.org)
-  * [Semantics](./01.Theory/Semantics)
-    * [\[1992 - Semantics of Programming Languages\].Carl A. Gunter.tm](./01.Theory/Semantics/[1992%20-%20Semantics%20of%20Programming%20Languages].Carl%20A.%20Gunter.tm)
-    * [\[1993 - The Formal Semantics of Programming Languages - An Introduction\].Glynn Winskel.tm](./01.Theory/Semantics/[1993%20-%20The%20Formal%20Semantics%20of%20Programming%20Languages%20-%20An%20Introduction].Glynn%20Winskel.tm)
-    * [\[1995 - Formal Syntax and Semantics of Programming Languages\].Kenneth Slonneger, Barry L. Kurtz.tm](./01.Theory/Semantics/[1995%20-%20Formal%20Syntax%20and%20Semantics%20of%20Programming%20Languages].Kenneth%20Slonneger,%20Barry%20L.%20Kurtz.tm)
-    * [\[2007 - Semantics with Applications - An Appetizer\].Hanne Riis Nielson, Flemming Nielson.tm](./01.Theory/Semantics/[2007%20-%20Semantics%20with%20Applications%20-%20An%20Appetizer].Hanne%20Riis%20Nielson,%20Flemming%20Nielson.tm)
-    * [\[2009 - Semantics engineering with PLT Redex\].Matthias Felleisen, Robert Bruce Findler, Matthew Flatt.tm](./01.Theory/Semantics/[2009%20-%20Semantics%20engineering%20with%20PLT%20Redex].Matthias%20Felleisen,%20Robert%20Bruce%20Findler,%20Matthew%20Flatt.tm)
-  * [Software-Design-for-Flexibility.org](./01.Theory/Software-Design-for-Flexibility.org)
-  * [The-Little-Typer.org](./01.Theory/The-Little-Typer.org)
-  * [Type-Systems.tm](./01.Theory/Type-Systems.tm)
-  * [Types-and-Programming-Languages.org](./01.Theory/Types-and-Programming-Languages.org)
-  * [Understanding-Computation.org](./01.Theory/Understanding-Computation.org)
-  * [UniMath](./01.Theory/UniMath)
-    * [Symmetry.tm](./01.Theory/UniMath/Symmetry.tm)
-* [02.Ruminations](./02.Ruminations)
-  * [97-Things-Every-Programmer-Should-Know.org](./02.Ruminations/97-Things-Every-Programmer-Should-Know.org)
-  * [A-Philosophy-of-Software-Design.org](./02.Ruminations/A-Philosophy-of-Software-Design.org)
-  * [Elements-of-Information-Theory-2nd.org](./02.Ruminations/Elements-of-Information-Theory-2nd.org)
-  * [Working-Effectively-with-Legacy-Code.org](./02.Ruminations/Working-Effectively-with-Legacy-Code.org)
-* [03.Algorithm](./03.Algorithm)
-  * [00.Methodology](./03.Algorithm/00.Methodology)
-    * [How-to-Solve-It.org](./03.Algorithm/00.Methodology/How-to-Solve-It.org)
-  * [Algorithmic-Puzzles.org](./03.Algorithm/Algorithmic-Puzzles.org)
-  * [Algorithms-4th.org](./03.Algorithm/Algorithms-4th.org)
-  * [Algorithms.org](./03.Algorithm/Algorithms.org)
-  * [Data-Structures-and-Algorithm-Analysis-in-C.org](./03.Algorithm/Data-Structures-and-Algorithm-Analysis-in-C.org)
-  * [Data-Structures-and-Algorithms.org](./03.Algorithm/Data-Structures-and-Algorithms.org)
-  * [Functional-Algorithm-and-Data-Structures](./03.Algorithm/Functional-Algorithm-and-Data-Structures)
-    * [Pearls-of-Functional-Algorithm-Design.org](./03.Algorithm/Functional-Algorithm-and-Data-Structures/Pearls-of-Functional-Algorithm-Design.org)
-    * [Purely-Functional-Data-Structures.org](./03.Algorithm/Functional-Algorithm-and-Data-Structures/Purely-Functional-Data-Structures.org)
-    * [Structuring_Depth-First_Search_Algorithms_in_Haskell.org](./03.Algorithm/Functional-Algorithm-and-Data-Structures/Structuring_Depth-First_Search_Algorithms_in_Haskell.org)
-  * [Graph-Theory](./03.Algorithm/Graph-Theory)
-    * [Graph-Theory.org](./03.Algorithm/Graph-Theory/Graph-Theory.org)
-  * [Introduction-to-Algorithms-3rd.org](./03.Algorithm/Introduction-to-Algorithms-3rd.org)
-  * [Quicksort.org](./03.Algorithm/Quicksort.org)
-  * [The-Algorithm-Design-Manual-2nd.org](./03.Algorithm/The-Algorithm-Design-Manual-2nd.org)
-  * [Think-Data-Structures.org](./03.Algorithm/Think-Data-Structures.org)
-* [04.Architecture_and_OS](./04.Architecture_and_OS)
-  * [Computer-Architecture-6th.org](./04.Architecture_and_OS/Computer-Architecture-6th.org)
-  * [Computer-Organization-and-Design-5th.org](./04.Architecture_and_OS/Computer-Organization-and-Design-5th.org)
-  * [The-Elements-of-Computing-Systems.org](./04.Architecture_and_OS/The-Elements-of-Computing-Systems.org)
-  * [xv6.org](./04.Architecture_and_OS/xv6.org)
-* [05.Compiler_and_Static_Analysis](./05.Compiler_and_Static_Analysis)
-  * [Abstract_Interpretation](./05.Compiler_and_Static_Analysis/Abstract_Interpretation)
-    * [Introduction-to-Abstract-Interpretation.tm](./05.Compiler_and_Static_Analysis/Abstract_Interpretation/Introduction-to-Abstract-Interpretation.tm)
-  * [Engineering-a-Compiler-2nd.org](./05.Compiler_and_Static_Analysis/Engineering-a-Compiler-2nd.org)
-  * [Language_Server_Protocol](./05.Compiler_and_Static_Analysis/Language_Server_Protocol)
-    * [Language-Server-Protocol-Specification.org](./05.Compiler_and_Static_Analysis/Language_Server_Protocol/Language-Server-Protocol-Specification.org)
-  * [LLVM](./05.Compiler_and_Static_Analysis/LLVM)
-    * [LLVM-Language-Reference-Manual.org](./05.Compiler_and_Static_Analysis/LLVM/LLVM-Language-Reference-Manual.org)
-    * [LLVM-Tutorial.org](./05.Compiler_and_Static_Analysis/LLVM/LLVM-Tutorial.org)
-  * [Modern-Compiler-Implementation-in-ML.org](./05.Compiler_and_Static_Analysis/Modern-Compiler-Implementation-in-ML.org)
-  * [Program-Analysis_An-Appetizer.org](./05.Compiler_and_Static_Analysis/Program-Analysis_An-Appetizer.org)
-  * [Static-Single-Assignment-Book.org](./05.Compiler_and_Static_Analysis/Static-Single-Assignment-Book.org)
-* [06.Virtual_Machine](./06.Virtual_Machine)
-  * [CLR](./06.Virtual_Machine/CLR)
-    * [Standard-ECMA-335-6th.org](./06.Virtual_Machine/CLR/Standard-ECMA-335-6th.org)
-    * [dotNET-IL-Assembler.org](./06.Virtual_Machine/CLR/dotNET-IL-Assembler.org)
-    * [dotNET-Core-in-Action.org](./06.Virtual_Machine/CLR/dotNET-Core-in-Action.org)
-  * [JVM](./06.Virtual_Machine/JVM)
-    * [ASM-4-Guide.org](./06.Virtual_Machine/JVM/ASM-4-Guide.org)
-    * [Decompiling-Java.org](./06.Virtual_Machine/JVM/Decompiling-Java.org)
-    * [JMH-Samples.org](./06.Virtual_Machine/JVM/JMH-Samples.org)
-    * [The-JVM-Spec-SE13.org](./06.Virtual_Machine/JVM/The-JVM-Spec-SE13.org)
-    * [Understanding-the-JVM_3rd.org](./06.Virtual_Machine/JVM/Understanding-the-JVM_3rd.org)
-    * [Virtual-Machines.org](./06.Virtual_Machine/JVM/Virtual-Machines.org)
-    * [VirtualVM-Documentation.org](./06.Virtual_Machine/JVM/VirtualVM-Documentation.org)
-  * [Principles-of-Computer-Organization-and-Assembly-Language.org](./06.Virtual_Machine/Principles-of-Computer-Organization-and-Assembly-Language.org)
-* [07.Concurrency_and_Parallel_and_Distributed](./07.Concurrency_and_Parallel_and_Distributed)
-  * [Actors-a-Model-of-Concurrent-Computation-in-Distributed-Systems.org](./07.Concurrency_and_Parallel_and_Distributed/Actors-a-Model-of-Concurrent-Computation-in-Distributed-Systems.org)
-  * [Java-Concurrency-in-Practice.org](./07.Concurrency_and_Parallel_and_Distributed/Java-Concurrency-in-Practice.org)
-  * [Learning-Concurrent-Programming-in-Scala-2nd.org](./07.Concurrency_and_Parallel_and_Distributed/Learning-Concurrent-Programming-in-Scala-2nd.org)
-  * [Parallel-and-Concurrent-Programming-in-Haskell.org](./07.Concurrency_and_Parallel_and_Distributed/Parallel-and-Concurrent-Programming-in-Haskell.org)
-  * [Programming-with-POSIX-Threads.org](./07.Concurrency_and_Parallel_and_Distributed/Programming-with-POSIX-Threads.org)
-  * [pthreads-Programming.org](./07.Concurrency_and_Parallel_and_Distributed/pthreads-Programming.org)
-  * [Seven-Concurrency-Models-in-Seven-Weeks.org](./07.Concurrency_and_Parallel_and_Distributed/Seven-Concurrency-Models-in-Seven-Weeks.org)
-  * [The-Art-of-Multiprocessor-Programming-Revised.org](./07.Concurrency_and_Parallel_and_Distributed/The-Art-of-Multiprocessor-Programming-Revised.org)
-* [08.Web](./08.Web)
-  * [HTTP](./08.Web/HTTP)
-    * [HTTP-the-Definitive-Guide.org](./08.Web/HTTP/HTTP-the-Definitive-Guide.org)
-    * [Learning-HTTP2.org](./08.Web/HTTP/Learning-HTTP2.org)
-    * [RFC7230-HTTP1.1.org](./08.Web/HTTP/RFC7230-HTTP1.1.org)
-  * [Monadic-Design-Patterns-for-the-Web.org](./08.Web/Monadic-Design-Patterns-for-the-Web.org)
-  * [Reactive-Web-Applications.org](./08.Web/Reactive-Web-Applications.org)
-  * [RESTful](./08.Web/RESTful)
-    * [Architectural-Styles-and-the-Design-of-Network-based-Software-Architectures.org](./08.Web/RESTful/Architectural-Styles-and-the-Design-of-Network-based-Software-Architectures.org)
-    * [Learn-API-Doc.org](./08.Web/RESTful/Learn-API-Doc.org)
-    * [OpenAPI-Sepcification.org](./08.Web/RESTful/OpenAPI-Sepcification.org)
-    * [REST-API-Design-Rulebook.org](./08.Web/RESTful/REST-API-Design-Rulebook.org)
-    * [RESTful-Web-APIs.org](./08.Web/RESTful/RESTful-Web-APIs.org)
-    * [RESTful-Web-Services-with-Scala.org](./08.Web/RESTful/RESTful-Web-Services-with-Scala.org)
-    * [Web-Design_the-Missing-Link-Ebook.org](./08.Web/RESTful/Web-Design_the-Missing-Link-Ebook.org)
-  * [Spring-in-Action-5th.org](./08.Web/Spring-in-Action-5th.org)
-  * [Webassembly](./08.Web/Webassembly)
-    * [WebAssembly-Specification-Release1.0.org](./08.Web/Webassembly/WebAssembly-Specification-Release1.0.org)
-* [09.Languages](./09.Languages)
-  * [Assembly_and_C](./09.Languages/Assembly_and_C)
-    * [Assembly-Language-Step-by-Step3rd.org](./09.Languages/Assembly_and_C/Assembly-Language-Step-by-Step3rd.org)
-    * [Managing-Projects-with-GNU-Make.org](./09.Languages/Assembly_and_C/Managing-Projects-with-GNU-Make.org)
-    * [Modern-C.org](./09.Languages/Assembly_and_C/Modern-C.org)
-  * [C#](./09.Languages/C#)
-    * [CSharp-10-in-a-Nutshell.org](./09.Languages/C#/CSharp-10-in-a-Nutshell.org)
-    * [CSharp-6-in-a-Nutshell.org](./09.Languages/C#/CSharp-6-in-a-Nutshell.org)
-    * [Real-World-Functional-Programming-with-Examples-in-Fsharp-and-Csharp.org](./09.Languages/C#/Real-World-Functional-Programming-with-Examples-in-Fsharp-and-Csharp.org)
-  * [C++](./09.Languages/C++)
-    * [C++-Primer-5th.org](./09.Languages/C++/C++-Primer-5th.org)
-  * [Common-Lisp](./09.Languages/Common-Lisp)
-    * [Common-Lisp-Recipes.org](./09.Languages/Common-Lisp/Common-Lisp-Recipes.org)
-    * [Practical-Common-Lisp.org](./09.Languages/Common-Lisp/Practical-Common-Lisp.org)
-    * [The-Art-of-the-Metaobject-Protocol.org](./09.Languages/Common-Lisp/The-Art-of-the-Metaobject-Protocol.org)
-  * [Elixir_and_Erlang](./09.Languages/Elixir_and_Erlang)
-    * [Elixir-in-Action-2nd.org](./09.Languages/Elixir_and_Erlang/Elixir-in-Action-2nd.org)
-    * [Elixir-Official-Guides.org](./09.Languages/Elixir_and_Erlang/Elixir-Official-Guides.org)
-    * [Erlang_Official_Documentation](./09.Languages/Elixir_and_Erlang/Erlang_Official_Documentation)
-      * [Getting-Started-with-Erlang.org](./09.Languages/Elixir_and_Erlang/Erlang_Official_Documentation/Getting-Started-with-Erlang.org)
-    * [Learn-You-Some-Erlang-for-Great-Good.org](./09.Languages/Elixir_and_Erlang/Learn-You-Some-Erlang-for-Great-Good.org)
-    * [Programming-Elixir-greaterThan-1dot6.org](./09.Languages/Elixir_and_Erlang/Programming-Elixir-greaterThan-1dot6.org)
-    * [Programming-Erlang-2nd.org](./09.Languages/Elixir_and_Erlang/Programming-Erlang-2nd.org)
-    * [rebar3.org](./09.Languages/Elixir_and_Erlang/rebar3.org)
-  * [Emacs_Lisp](./09.Languages/Emacs_Lisp)
-    * [An-Introduction-to-Programming-in-Emacs-Lisp.org](./09.Languages/Emacs_Lisp/An-Introduction-to-Programming-in-Emacs-Lisp.org)
-    * [Learn-Elisp.org](./09.Languages/Emacs_Lisp/Learn-Elisp.org)
-    * [Practical-Emacs.org](./09.Languages/Emacs_Lisp/Practical-Emacs.org)
-  * [Go](./09.Languages/Go)
-    * [A-Tour-of-Go.org](./09.Languages/Go/A-Tour-of-Go.org)
-    * [Concurrency-in-Go.org](./09.Languages/Go/Concurrency-in-Go.org)
-    * [Effective-Go.org](./09.Languages/Go/Effective-Go.org)
-    * [the-Go-Programming-Language.org](./09.Languages/Go/the-Go-Programming-Language.org)
-  * [Groovy](./09.Languages/Groovy)
-    * [Groovy-in-Action-2nd.org](./09.Languages/Groovy/Groovy-in-Action-2nd.org)
-  * [Haskell](./09.Languages/Haskell)
-    * [24-Days-of-GHC-Extensions.org](./09.Languages/Haskell/24-Days-of-GHC-Extensions.org)
-    * [Developing-Web-Apps-with-Haskell-and-Yesod-2nd.org](./09.Languages/Haskell/Developing-Web-Apps-with-Haskell-and-Yesod-2nd.org)
-    * [GHC-8.01-Users-Guide.org](./09.Languages/Haskell/GHC-8.01-Users-Guide.org)
-    * [Haskell-Programming-from-First-Principles.org](./09.Languages/Haskell/Haskell-Programming-from-First-Principles.org)
-    * [Introduction-to-Functional-Programming-in-Haskell_CN.org](./09.Languages/Haskell/Introduction-to-Functional-Programming-in-Haskell_CN.org)
-    * [Learn-You-a-Haskell-for-Great-Good.org](./09.Languages/Haskell/Learn-You-a-Haskell-for-Great-Good.org)
-    * [Real-World-Haskell.org](./09.Languages/Haskell/Real-World-Haskell.org)
-    * [The-Haskell-School-of-Expression.org](./09.Languages/Haskell/The-Haskell-School-of-Expression.org)
-    * [The-Haskell-School-of-Music.org](./09.Languages/Haskell/The-Haskell-School-of-Music.org)
-  * [Idris](./09.Languages/Idris)
-    * [Type-Driven-Development-with-Idris.org](./09.Languages/Idris/Type-Driven-Development-with-Idris.org)
-  * [Java](./09.Languages/Java)
-    * [A-Little-Java-a-Few-Patterns.org](./09.Languages/Java/A-Little-Java-a-Few-Patterns.org)
-    * [Best_Practice](./09.Languages/Java/Best_Practice)
-      * [Alibaba-Java-Coding-Guidelines.org](./09.Languages/Java/Best_Practice/Alibaba-Java-Coding-Guidelines.org)
-      * [Effective-Java-3rd.org](./09.Languages/Java/Best_Practice/Effective-Java-3rd.org)
-      * [Google-Java-Style-Guide.org](./09.Languages/Java/Best_Practice/Google-Java-Style-Guide.org)
-      * [Java-Cookbook_3rd.org](./09.Languages/Java/Best_Practice/Java-Cookbook_3rd.org)
-      * [Java9-Recipes.org](./09.Languages/Java/Best_Practice/Java9-Recipes.org)
-      * [Modern-Java-Recipes.org](./09.Languages/Java/Best_Practice/Modern-Java-Recipes.org)
-    * [Core_Java](./09.Languages/Java/Core_Java)
-      * [Core-Java_Volume_1_and_2-11th.org](./09.Languages/Java/Core_Java/Core-Java_Volume_1_and_2-11th.org)
-      * [Core-Java-SE-9-for-The-Impatient.org](./09.Languages/Java/Core_Java/Core-Java-SE-9-for-The-Impatient.org)
-    * [Functional-Programing-in-Java.org](./09.Languages/Java/Functional-Programing-in-Java.org)
-    * [Java_in_Action](./09.Languages/Java/Java_in_Action)
-      * [Java8-in-Action.org](./09.Languages/Java/Java_in_Action/Java8-in-Action.org)
-      * [Modern-Java-in-Action.org](./09.Languages/Java/Java_in_Action/Modern-Java-in-Action.org)
-    * [Java-13-Revealed-2nd.org](./09.Languages/Java/Java-13-Revealed-2nd.org)
-    * [Java-by-Comparison.org](./09.Languages/Java/Java-by-Comparison.org)
-    * [Java-Network-Programming-4th.org](./09.Languages/Java/Java-Network-Programming-4th.org)
-    * [Java-Puzzlers.org](./09.Languages/Java/Java-Puzzlers.org)
-    * [Java-the-Legend.org](./09.Languages/Java/Java-the-Legend.org)
-    * [Java8-Lambdas.org](./09.Languages/Java/Java8-Lambdas.org)
-    * [JUnit-in-Action_3rd.org](./09.Languages/Java/JUnit-in-Action_3rd.org)
-    * [Libraries](./09.Languages/Java/Libraries)
-      * [Java-Generics-and-Collections.org](./09.Languages/Java/Libraries/Java-Generics-and-Collections.org)
-      * [Java-IO-NIO-and-NIO2.org](./09.Languages/Java/Libraries/Java-IO-NIO-and-NIO2.org)
-      * [Java-Threads_3rd.org](./09.Languages/Java/Libraries/Java-Threads_3rd.org)
-    * [MetaProgramming](./09.Languages/Java/MetaProgramming)
-      * [Java-Reflection-in-Action.org](./09.Languages/Java/MetaProgramming/Java-Reflection-in-Action.org)
-      * [Trail_The-Reflection-API.org](./09.Languages/Java/MetaProgramming/Trail_The-Reflection-API.org)
-    * [Module_System](./09.Languages/Java/Module_System)
-      * [Java9-Modularity.org](./09.Languages/Java/Module_System/Java9-Modularity.org)
-      * [The-Java-Module-System.org](./09.Languages/Java/Module_System/The-Java-Module-System.org)
-    * [Official_Documents_and_Standards](./09.Languages/Java/Official_Documents_and_Standards)
-      * [Java-Shell-Users-Guide_JDK10.org](./09.Languages/Java/Official_Documents_and_Standards/Java-Shell-Users-Guide_JDK10.org)
-      * [Java9-with-JShell.org](./09.Languages/Java/Official_Documents_and_Standards/Java9-with-JShell.org)
-      * [Mastering-Lambdas_Java-Programming-in-a-Multicore-World.org](./09.Languages/Java/Official_Documents_and_Standards/Mastering-Lambdas_Java-Programming-in-a-Multicore-World.org)
-      * [The-Java-Language-Specification-SE9.org](./09.Languages/Java/Official_Documents_and_Standards/The-Java-Language-Specification-SE9.org)
-      * [The-Java-Language-Specification-SE9.tm](./09.Languages/Java/Official_Documents_and_Standards/The-Java-Language-Specification-SE9.tm)
-      * [The-Java-Language-Specification-SE15.tm](./09.Languages/Java/Official_Documents_and_Standards/The-Java-Language-Specification-SE15.tm)
-      * [The-Java-Virtual-Machine-Specification-SE15.tm](./09.Languages/Java/Official_Documents_and_Standards/The-Java-Virtual-Machine-Specification-SE15.tm)
-    * [SLF4J.org](./09.Languages/Java/SLF4J.org)
-    * [Thinking-in-Java-4th.org](./09.Languages/Java/Thinking-in-Java-4th.org)
-  * [JavaScript](./09.Languages/JavaScript)
-    * [Eloquent-JavaScript-2nd.org](./09.Languages/JavaScript/Eloquent-JavaScript-2nd.org)
-    * [Eloquent-JavaScript-3nd.org](./09.Languages/JavaScript/Eloquent-JavaScript-3nd.org)
-    * [JavaScript-with-Promises.org](./09.Languages/JavaScript/JavaScript-with-Promises.org)
-    * [the-Road-to-Learn-React.org](./09.Languages/JavaScript/the-Road-to-Learn-React.org)
-    * [Understanding-ECMAScript6.org](./09.Languages/JavaScript/Understanding-ECMAScript6.org)
-  * [Kotlin](./09.Languages/Kotlin)
-    * [Kotlin-in-Action.org](./09.Languages/Kotlin/Kotlin-in-Action.org)
-  * [Lua](./09.Languages/Lua)
-    * [Lua-5.4-Reference-Manual.org](./09.Languages/Lua/Lua-5.4-Reference-Manual.org)
-  * [OCaml](./09.Languages/OCaml)
-    * [opam-2.0-documeentation.org](./09.Languages/OCaml/opam-2.0-documeentation.org)
-    * [Real-World-OCaml-2nd.org](./09.Languages/OCaml/Real-World-OCaml-2nd.org)
-  * [Prolog](./09.Languages/Prolog)
-    * [Learn-Prolog-Now.org](./09.Languages/Prolog/Learn-Prolog-Now.org)
-    * [The-Art-of-Prolog-2nd.org](./09.Languages/Prolog/The-Art-of-Prolog-2nd.org)
-  * [Python](./09.Languages/Python)
-    * [Concurrency](./09.Languages/Python/Concurrency/)
-      * [Learning-Concurrency-in-Python.org](./09.Languages/Python/Concurrency/Learning-Concurrency-in-Python.org)
-      * [Mastering-Concurrency-in-Python.org](./09.Languages/Python/Concurrency/Mastering-Concurrency-in-Python.org)
-      * [Using-Asynncio-in-Python.org](./09.Languages/Python/Concurrency/Using-Asynncio-in-Python.org)
-    * [Conda-docs.org](./09.Languages/Python/Conda-docs.org)
-    * [Effective-Python-2nd.org](./09.Languages/Python/Effective-Python-2nd.org)
-    * [Fluent-Python-2nd-early-relase.org](./09.Languages/Python/Fluent-Python-2nd-early-relase.org)
-    * [Fluent-Python.org](./09.Languages/Python/Fluent-Python.org)
-    * [High-Performance-Python-2nd.org](./09.Languages/Python/High-Performance-Python-2nd.org)
-    * [Learning-Python-5th.org](./09.Languages/Python/Learning-Python-5th.org)
-    * [Official_Documentation](./09.Languages/Python/Official_Documentation)
-      * [Debugging-and-Profiling.org](./09.Languages/Python/Official_Documentation/Debugging-and-Profiling.org)
-      * [Python-HOWTOs.org](./09.Languages/Python/Official_Documentation/Python-HOWTOs.org)
-      * [The_Python_Standard_Library](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library)
-        * [Development_Tools](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/Development_Tools)
-          * [typing.org](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/Development_Tools/typing.org)
-          * [unittest.org](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/Development_Tools/unittest.org)
-        * [File_and_Directory_Access](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/File_and_Directory_Access)
-          * [pathlib.org](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/File_and_Directory_Access/pathlib.org)
-        * [Networking_and_Interprocess_Communication](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/Networking_and_Interprocess_Communication)
-          * [asyncio-Asynchronous-IO.org](./09.Languages/Python/Official_Documentation/The_Python_Standard_Library/Networking_and_Interprocess_Communication/asyncio-Asynchronous-IO.org)
-      * [The-Python-Language-Reference.org](./09.Languages/Python/Official_Documentation/The-Python-Language-Reference.org)
-      * [The-Python-Tutorial.org](./09.Languages/Python/Official_Documentation/The-Python-Tutorial.org)
-    * [packages](./09.Languages/Python/packages)
-      * [Requests_HTTP-for-Humans.org](./09.Languages/Python/packages/Requests_HTTP-for-Humans.org)
-    * [Programming-Python_4th.org](./09.Languages/Python/Programming-Python_4th.org)
-    * [Python-Cookbook.org](./09.Languages/Python/Python-Cookbook.org)
-    * [Python-Testing-with-pytest.org](./09.Languages/Python/Python-Testing-with-pytest.org)
-    * [Real_Python](./09.Languages/Python/Real_Python)
-      * [Speed-Up-Your-Python-Program-with-Concurrency.org](./09.Languages/Python/Real_Python/Speed-Up-Your-Python-Program-with-Concurrency.org)
-    * [Standard_Library_third_party_documents](./09.Languages/Python/Standard_Library_third_party_documents)
-      * [Python-Standard-Library.org](./09.Languages/Python/Standard_Library_third_party_documents/Python-Standard-Library.org)
-      * [The-Python-3-Standard-Library-by-Example.org](./09.Languages/Python/Standard_Library_third_party_documents/The-Python-3-Standard-Library-by-Example.org)
-    * [Web-Scraping-with-Python-2nd.org](./09.Languages/Python/Web-Scraping-with-Python-2nd.org)
-  * [R](./09.Languages/R)
-    * [Advanced-R_2nd.org](./09.Languages/R/Advanced-R_2nd.org)
-    * [An-Introduction-to-R.org](./09.Languages/R/An-Introduction-to-R.org)
-    * [Hands-On-Programming-with-R.org](./09.Languages/R/Hands-On-Programming-with-R.org)
-    * [R-Cookbook_2nd.org](./09.Languages/R/R-Cookbook_2nd.org)
-    * [R-Markdown.org](./09.Languages/R/R-Markdown.org)
-    * [The-Art-of-R-Programming.org](./09.Languages/R/The-Art-of-R-Programming.org)
-    * [The-Book-of-R.org](./09.Languages/R/The-Book-of-R.org)
-    * [The-tidyverse-Style-Guide.org](./09.Languages/R/The-tidyverse-Style-Guide.org)
-  * [Racket](./09.Languages/Racket)
-    * [Guile-Reference-Manual.org](./09.Languages/Racket/Guile-Reference-Manual.org)
-    * [Plait-Language.org](./09.Languages/Racket/Plait-Language.org)
-    * [Plot_Graph-Plotting.org](./09.Languages/Racket/Plot_Graph-Plotting.org)
-    * [Structure-and-Interpretation-of-Computer-Programs-2nd.org](./09.Languages/Racket/Structure-and-Interpretation-of-Computer-Programs-2nd.org)
-    * [The-Racket-Guide.org](./09.Languages/Racket/The-Racket-Guide.org)
-    * [The-Racket-Reference.org](./09.Languages/Racket/The-Racket-Reference.org)
-    * [The-Scheme-Programming-Language-4th.org](./09.Languages/Racket/The-Scheme-Programming-Language-4th.org)
-    * [The-Typed-Racket-Guide.org](./09.Languages/Racket/The-Typed-Racket-Guide.org)
-  * [ReScript](./09.Languages/ReScript)
-    * [Official-Documents](./09.Languages/ReScript/Official-Documents)
-      * [Language-Manual.org](./09.Languages/ReScript/Language-Manual.org)
-      * [Programming-Scala-3rd.org](./09.Languages/ReScript/Programming-Scala-3rd.org)
-  * [Rust](./09.Languages/Rust)
-    * [Command-line-apps-in-Rust.org](./09.Languages/Rust/Command-line-apps-in-Rust.org)
-    * [Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org](./09.Languages/Rust/Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org)
-    * [Programming-Rust.org](./09.Languages/Rust/Programming-Rust.org)
-    * [Programming-WebAssembly-with-Rust.org](./09.Languages/Rust/Programming-WebAssembly-with-Rust.org)
-    * [Rust-and-WebAssembly.org](./09.Languages/Rust/Rust-and-WebAssembly.org)
-    * [Rust-by-Example.org](./09.Languages/Rust/Rust-by-Example.org)
-    * [Rust-Cookbook.org](./09.Languages/Rust/Rust-Cookbook.org)
-    * [Rust-Standard-Library-Cookbook.org](./09.Languages/Rust/Rust-Standard-Library-Cookbook.org)
-    * [Rust-Style-Guidelines.org](./09.Languages/Rust/Rust-Style-Guidelines.org)
-    * [The-Cargo-Book.org](./09.Languages/Rust/The-Cargo-Book.org)
-    * [The-Edition-Guide.org](./09.Languages/Rust/The-Edition-Guide.org)
-    * [The-Embedded-Rust-Book.org](./09.Languages/Rust/The-Embedded-Rust-Book.org)
-    * [The-Rust-Programming-Language-2nd.org](./09.Languages/Rust/The-Rust-Programming-Language-2nd.org)
-    * [The-rustc-book.org](./09.Languages/Rust/The-rustc-book.org)
-    * [The-Rustonomicon.org](./09.Languages/Rust/The-Rustonomicon.org)
-    * [The-Tao-of-Rust.org](./09.Languages/Rust/The-Tao-of-Rust.org)
-  * [Scala-2](./09.Languages/Scala-2)
-    * [Akka](./09.Languages/Scala-2/Akka)
-      * [Akka_Official_Documentation](./09.Languages/Scala-2/Akka/Akka_Official_Documentation)
-        * [Actor.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Actor.org)
-        * [Akka-Classic.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Akka-Classic.org)
-        * [Cluster.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Cluster.org)
-        * [Clustering.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Clustering.org)
-        * [Discovery.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Discovery.org)
-        * [General-Concepts.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/General-Concepts.org)
-        * [Getting-Started-Guide.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Getting-Started-Guide.org)
-        * [Other-Akka-modules.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Other-Akka-modules.org)
-        * [Package-Deploy-and-Run.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Package-Deploy-and-Run.org)
-        * [Persistence-(Durable-State).org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Persistence-(Durable-State).org)
-        * [Persistence-(Event-Sourcing).org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Persistence-(Event-Sourcing).org)
-        * [Project-Information.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Project-Information.org)
-        * [Security-Announcements.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Security-Announcements.org)
-        * [Streams.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Streams.org)
-        * [Utilities.org](./09.Languages/Scala-2/Akka/Akka_Official_Documentation/Utilities.org)
-      * [Akka-Cookbook.org](./09.Languages/Scala-2/Akka/Akka-Cookbook.org)
-      * [Akka-in-Action.org](./09.Languages/Scala-2/Akka/Akka-in-Action.org)
-      * [Effective-Akka.org](./09.Languages/Scala-2/Akka/Effective-Akka.org)
-      * [Learning-Akka.org](./09.Languages/Scala-2/Akka/Learning-Akka.org)
-    * [Ammonite.org](./09.Languages/Scala-2/Ammonite.org)
-    * [Core_Libraries](./09.Languages/Scala-2/Core_Libraries)
-      * [Cats](./09.Languages/Scala-2/Core_Libraries/Cats)
-        * [cats-API.org](./09.Languages/Scala-2/Core_Libraries/Cats/cats-API.org)
-        * [cats-effect-2.org](./09.Languages/Scala-2/Core_Libraries/Cats/cats-effect-2.org)
-        * [cats-mtl.org](./09.Languages/Scala-2/Core_Libraries/Cats/cats-mtl.org)
-        * [cats-retry.org](./09.Languages/Scala-2/Core_Libraries/Cats/cats-retry.org)
-        * [herding-cats.org](./09.Languages/Scala-2/Core_Libraries/Cats/herding-cats.org)
-        * [Scala-with-Cats.org](./09.Languages/Scala-2/Core_Libraries/Cats/Scala-with-Cats.org)
-        * [Typelevel-Cats-Document.org](./09.Languages/Scala-2/Core_Libraries/Cats/Typelevel-Cats-Document.org)
-      * [Config](./09.Languages/Scala-2/Core_Libraries/Config)
-        * [PureConfig.org](./09.Languages/Scala-2/Core_Libraries/Config/PureConfig.org)
-      * [Enumeratum.org](./09.Languages/Scala-2/Core_Libraries/Enumeratum.org)
-      * [Izumi_Project](./09.Languages/Scala-2/Core_Libraries/Izumi_Project)
-        * [distage.org](./09.Languages/Scala-2/Core_Libraries/distage.org)
-      * [JSON](./09.Languages/Scala-2/Core_Libraries/JSON)
-        * [Circe.org](./09.Languages/Scala-2/Core_Libraries/JSON/Circe.org)
-        * [upickle.org](./09.Languages/Scala-2/Core_Libraries/JSON/upickle.org)
-      * [Monocle-Official.org](./09.Languages/Scala-2/Core_Libraries/Monocle-Official.org)
-      * [Shapeless](./09.Languages/Scala-2/Core_Libraries/Shapeless)
-        * [Shapeless-API.org](./09.Languages/Scala-2/Core_Libraries/Shapeless/Shapeless-API.org)
-        * [The-Type-Astronauts-Guide-to-Shapeless.org](./09.Languages/Scala-2/Core_Libraries/Shapeless/The-Type-Astronauts-Guide-to-Shapeless.org)
-    * [Creative-Scala.org](./09.Languages/Scala-2/Creative-Scala.org)
-    * [Effective-Scala-by-Twitter.org](./09.Languages/Scala-2/Effective-Scala-by-Twitter.org)
-    * [Essential-Scala.org](./09.Languages/Scala-2/Essential-Scala.org)
-    * [Functional-Programming-in-Scala.org](./09.Languages/Scala-2/Functional-Programming-in-Scala.org)
-    * [Functional-Programming-Simplified.org](./09.Languages/Scala-2/Functional-Programming-Simplified.org)
-    * [Hands-on_Scala.org](./09.Languages/Scala-2/Hands-on_Scala.org)
-    * [Libraries](./09.Languages/Scala-2/Libraries)
-      * [Ciris.org](./09.Languages/Scala-2/Libraries/Ciris.org)
-      * [Database](./09.Languages/Scala-2/Libraries/Database)
-        * [Essential-Slick.org](./09.Languages/Scala-2/Libraries/Database/Essential-Slick.org)
-        * [quill.org](./09.Languages/Scala-2/Libraries/Database/quill.org)
-        * [Skunk.org](./09.Languages/Scala-2/Libraries/Database/Skunk.org)
-      * [FastParse2.org](./09.Languages/Scala-2/Libraries/FastParse2.org)
-      * [OS-Lib.org](./09.Languages/Scala-2/Libraries/OS-Lib.org)
-      * [Typelevel](./09.Languages/Scala-2/Libraries/Typelevel)
-        * [Algebraic-Typeclasses-forScala.org](./09.Languages/Scala-2/Libraries/Typelevel/Algebraic-Typeclasses-forScala.org)
-        * [fs2.org](./09.Languages/Scala-2/Libraries/Typelevel/fs2.org)
-        * [http4s](./09.Languages/Scala-2/Libraries/Typelevel/http4s)
-          * [http4s-0.2x.org](./09.Languages/Scala-2/Libraries/Typelevel/http4s/http4s-0.2x.org)
-          * [http4s-1.org](./09.Languages/Scala-2/Libraries/Typelevel/http4s/http4s-1.org)
-        * [Redis4Cats.org](./09.Languages/Scala-2/Libraries/Typelevel/Redis4Cats.org)
-        * [Squants.org](./09.Languages/Scala-2/Libraries/Typelevel/Squants.org)
-    * [Metaprogramming](./09.Languages/Scala-2/Metaprogramming)
-      * [Scalameta.org](./09.Languages/Scala-2/Metaprogramming/Scalameta.org)
-      * [Separately_Shipped_Standard_Libraries](./09.Languages/Scala-2/Metaprogramming/Separately_Shipped_Standard_Libraries)
-        * [scala-reflection-library.org](./09.Languages/Scala-2/Metaprogramming/Separately_Shipped_Standard_Libraries/scala-reflection-library.org)
-    * [Official_Documents](./09.Languages/Scala-2/Official_Documents)
-      * [Guides_and_Overviews](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews)
-        * [Authoring_Libraries](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Authoring_Libraries)
-          * [Library-Author-Guide.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Authoring_Libraries/Library-Author-Guide.org)
-        * [Compatibility](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compatibility)
-          * [Binnary-Compatibility-for-Library-Authors.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compatibility/Binnary-Compatibility-for-Library-Authors.org)
-          * [Binnary-Compatibility-of-Scala-Releases.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compatibility/Binnary-Compatibility-of-Scala-Releases.org)
-          * [JDK-Version-Compatibility.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compatibility/JDK-Version-Compatibility.org)
-        * [Compiler](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler)
-          * [Error-Formatting.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Error-Formatting.org)
-          * [Optimizer.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Optimizer.org)
-          * [Quasiquotes.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Quasiquotes.org)
-          * [Scala-2-Compiler-Options.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Scala-2-Compiler-Options.org)
-          * [Scala-2-Compiler-Plugins.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Scala-2-Compiler-Plugins.org)
-          * [Scala-2-Macros.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Scala-2-Macros.org)
-          * [Scala-2-Reflection.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Scala-2-Reflection.org)
-          * [Scala-3-Contributing-Guide.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Compiler/Scala-3-Contributing-Guide.org)
-        * [Language](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language)
-          * [An-Overview-of-TASTy.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/An-Overview-of-TASTy.org)
-          * [Implicit-Classes.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/Implicit-Classes.org)
-          * [Migration-from-Scala-2-to-Scala-3.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/Migration-from-Scala-2-to-Scala-3.org)
-          * [Scala-3-Macros.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/Scala-3-Macros.org)
-          * [String-Interpolation.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/String-Interpolation.org)
-          * [Value-Classes-and-Universal-Traits.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Language/Value-Classes-and-Universal-Traits.org)
-        * [Legacy](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Legacy)
-          * [Scala-2.8-to-2.12s-Collections.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Legacy/Scala-2.8-to-2.12s-Collections.org)
-          * [The-Architecture-of-Scala-2.8-to-2.12s-Collections.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Legacy/The-Architecture-of-Scala-2.8-to-2.12s-Collections.org)
-        * [Parallel_and_Concurrent_Programming](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Parallel_and_Concurrent_Programming)
-          * [Futures-and-Promises.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Parallel_and_Concurrent_Programming/Futures-and-Promises.org)
-          * [Parallel-Collections.org](./09.Languages/Scala-2/Official_Documents/Guide_and_Overviews/Parallel_and_Concurrent_Programming/Parallel-Collections.org)
-        * [Standard_Library](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library)
-          * [Adding-Custom-Collection-Operations.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library/Adding-Custom-Collection-Operations.org)
-          * [Implementing-Custom-Collections.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library/Implementing-Custom-Collections.org)
-          * [Migrating-a-Project-to-Scala-2.13s-Collections.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library/Migrating-a-Project-to-Scala-2.13s-Collections.org)
-          * [Scala-Collections.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library/Scala-Collections.org)
-          * [The-Architecture-of-Scala-2.13s-Collections.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Standard_Library/The-Architecture-of-Scala-2.13s-Collections.org)
-        * [Tools](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Tools)
-          * [Scala-REPL.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Tools/Scala-REPL.org)
-          * [Scaladoc-For-Scala-3.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Tools/Scaladoc-For-Scala-3.org)
-          * [Scaladoc.org](./09.Languages/Scala-2/Official_Documents/Guides_and_Overviews/Tools/Scaladoc.org)
-      * [SIPs](./09.Languages/Scala-2/Official_Documents/SIPs)
-        * [SIP-11_String_Interpolation.org](./09.Languages/Scala-2/Official_Documents/SIPs/SIP-11_String_Interpolation.org)
-        * [SIP-13_Implicit_Classes.org](./09.Languages/Scala-2/Official_Documents/SIPs/SIP-13_Implicit_Classes.org)
-        * [SIP-15_Value_Classes.org](./09.Languages/Scala-2/Official_Documents/SIPs/SIP-15_Value_Classes.org)
-      * [Scala-API.org](./09.Languages/Scala-2/Official_Documents/Scala-API.org)
-    * [Personal_Notes](./09.Languages/Scala-2/Personal_Notes)
-      * [Scala-Refactor-Recipies.org](./09.Languages/Scala-2/Personal_Notes/Scala-Refactor-Recipies.org)
-      * [Scala-Traps-and-Pitfalls_Personal-Note.org](./09.Languages/Scala-2/Personal_Notes/Scala-Traps-and-Pitfalls_Personal-Note.org)
-    * [Play-Framework](./09.Languages/Scala-2/Play-Framework)
-      * [Essential-Play.org](./09.Languages/Scala-2/Play-Framework/Essential-Play.org)
-      * [Play-Documentation.org](./09.Languages/Scala-2/Play-Framework/Play-Documentation.org)
-      * [Play-for-Scala.org](./09.Languages/Scala-2/Play-Framework/Play-for-Scala.org)
-      * [Play-Framework-Essentials.org](./09.Languages/Scala-2/Play-Framework/Play-Framework-Essentials.org)
-    * [Practical-FP-in-Scala-2nd.org](./09.Languages/Scala-2/Practical-FP-in-Scala-2nd.org)
-    * [Practical-FP-in-Scala.org](./09.Languages/Scala-2/Practical-FP-in-Scala.org)
-    * [Programming-in-Scala-3rd.org](./09.Languages/Scala-2/Programming-in-Scala-3rd.org)
-    * [Programming-in-Scala-4th.org](./09.Languages/Scala-2/Programming-in-Scala-4th.org)
-    * [Scala-Collection-Technique-Manual_2.8to2.12.org](./09.Languages/Scala-2/Scala-Collection-Technique-Manual_2.8to2.12.org)
-    * [Scala-Cookbook.org](./09.Languages/Scala-2/Scala-Cookbook.org)
-    * [Scala-Design-Patterns-2nd.org](./09.Languages/Scala-2/Scala-Design-Patterns-2nd.org)
-    * [Scala-for-the-Impatient.org](./09.Languages/Scala-2/Scala-for-the-Impatient.org)
-    * [Scala-High-Performance-Programming.org](./09.Languages/Scala-2/Scala-High-Performance-Programming.org)
-    * [Scala-in-Depth.org](./09.Languages/Scala-2/Scala-in-Depth.org)
-    * [Scala-Puzzlers-from-Me.org](./09.Languages/Scala-2/Scala-Puzzlers-from-Me.org)
-    * [Scala-Puzzlers.org](./09.Languages/Scala-2/Scala-Puzzlers.org)
-    * [Scala.js](./09.Languages/Scala-2/Scala.js)
-      * [Documentation.org](./09.Languages/Scala-2/Scala.js/Documentation.org)
-      * [Hands-on-Scala.js.org](./09.Languages/Scala-2/Scala.js/Hands-on-Scala.js.org)
-    * [Specification_and_Enhancement](./09.Languages/Scala-2/Specification_and_Enhancement)
-      * [Scala-Language-Specification.org](./09.Languages/Scala-2/Specification_and_Enhancement/Scala-Language-Specification.org)
-      * [Scala-Style-Guide.org](./09.Languages/Scala-2/Specification_and_Enhancement/Scala-Style-Guide.org)
-    * [Talks-Note.org](./09.Languages/Scala-2/Talks-Note.org)
-    * [Test_Frameworks](./09.Languages/Scala-2/Test_Frameworks)
-      * [MUnit.org](./09.Languages/Scala-2/Test_Frameworks/MUnit.org)
-      * [Scala-Test-Driven-Development.org](./09.Languages/Scala-2/Test_Frameworks/Scala-Test-Driven-Development.org)
-      * [ScalaCheck](./09.Languages/Scala-2/Test_Frameworks/ScalaCheck)
-        * [ScalaCheck-The-Definitive-Guide.org](./09.Languages/Scala-2/Test_Frameworks/ScalaCheck/ScalaCheck-The-Definitive-Guide.org)
-        * [ScalaCheck-Cookbook.org](./09.Languages/Scala-2/Test_Frameworks/ScalaCheck/ScalaCheck-Cookbook.org)
-        * [ScalaCheck-User-Guide.org](./09.Languages/Scala-2/Test_Frameworks/ScalaCheck/ScalaCheck-User-Guide.org)
-      * [ScalaTest-User-Guide.org](./09.Languages/Scala-2/Test_Frameworks/ScalaTest-User-Guide.org)
-      * [Testing-in-Scala.org](./09.Languages/Scala-2/Test_Frameworks/Testing-in-Scala.org)
-      * [uTest.org](./09.Languages/Scala-2/Test_Frameworks/uTest.org)
-    * [Things-you-need-to-know-about-JVM_that-matter-in-Scala.org](./09.Languages/Scala-2/Things-you-need-to-know-about-JVM_that-matter-in-Scala.org)
-  * [Scala-3](./09.Languages/Scala-3)
-    * [Advanced-Programming-in-Scala-5th.org](./09.Languages/Scala-3/Advanced-Programming-in-Scala-5th.org)
-    * [Effect_Systems](./09.Languages/Scala-3/Effect_Systems)
-      * [Cats-Effect](./09.Languages/Scala-3/Effect_Systems/Cats-Effect)
-        * [cats-effect-3.org](./09.Languages/Scala-3/Effect_Systems/Cats-Effect/cats-effect-3.org)
-        * [Essential-Effects.org](./09.Languages/Scala-3/Effect_Systems/Cats-Effect/Essential-Effects.org)
-      * [ZIO](./09.Languages/Scala-3/Effect_Systems/ZIO)
-        * [ZIO.org](./09.Languages/Scala-3/Effect_Systems/ZIO/ZIO.org)
-        * [ZIO2.org](./09.Languages/Scala-3/Effect_Systems/ZIO/ZIO2.org)
-        * [Zionomicon.org](./09.Languages/Scala-3/Effect_Systems/ZIO/Zionomicon.org)
-    * [Functional-event-driven-architecture.org](./09.Languages/Scala-3/Functional-event-driven-architecture.org)
-    * [Functional-Programming-in-Scala-2nd.org](./09.Languages/Scala-3/Functional-Programming-in-Scala-2nd.org)
-    * [Get-Programming-with-Scala.org](./09.Languages/Scala-3/Get-Programming-with-Scala.org)
-    * [Guides](./09.Languages/Scala-3/Guides)
-      * [An-Overview-of-TASTy.org](./09.Languages/Scala-3/Guides/An-Overview-of-TASTy.org)
-      * [Migration-from-Scala-2-to-Scala3.org](./09.Languages/Scala-3/Guides/Migration-from-Scala-2-to-Scala3.org)
-    * [Libraries](./09.Languages/Scala-3/Libraries)
-      * [refined.org](./09.Languages/Scala-3/Libraries/refined.org)
-      * [Scala-with-Cats_me.org](./09.Languages/Scala-3/Libraries/Scala-with-Cats_me.org)
-    * [Notes4Talks](./09.Languages/Scala-3/Notes4Talks)
-      * [How-to-Totally-Fix-PartialFunction_by_Dale-Wijnand.org](./09.Languages/Scala-3/Guides/How-to-Totally-Fix-PartialFunction_by_Dale-Wijnand.org)
-    * [Official_Documents](./09.Languages/Scala-3/Official_Documents)
-      * [0.New-in-Scala-3.org](./09.Languages/Scala-3/Official_Documents/0.New-in-Scala-3.org)
-      * [1.Getting-Started.org](./09.Languages/Scala-3/Official_Documents/1.Getting-Started.org)
-      * [2.Scala-3-Book.org](./09.Languages/Scala-3/Official_Documents/2.Scala-3-Book.org)
-      * [3.Migration-Guide.org](./09.Languages/Scala-3/Official_Documents/3.Migration-Guide.org)
-      * [4.Guides](./09.Languages/Scala-3/Official_Documents/4.Guides)
-        * [Macros.org](./09.Languages/Scala-3/Official_Documents/4.Guides/Macros.org)
-      * [5.API.org](./09.Languages/Scala-3/Official_Documents/5.API.org)
-      * [6.Language-Reference.org](./09.Languages/Scala-3/Official_Documents/6.Language-Reference.org)
-      * [7.All-New-Scaladoc-for-Scala-3.org](./09.Languages/Scala-3/Official_Documents/7.All-New-Scaladoc-for-Scala-3.org)
-    * [Programming-in-Scala-5th.org](./09.Languages/Scala-3/Programming-in-Scala-5th.org)
-    * [Programming-Scala-3rd.org](./09.Languages/Scala-3/Programming-Scala-3rd.org)
-    * [Scala-Cookbook_2nd.org](./09.Languages/Scala-3/Scala-Cookbook_2nd.org)
-    * [Tools](./09.Languages/Scala-3/Tools)
-      * [Coursier.org](./09.Languages/Scala-3/Tools/Coursier.org)
-      * [Giter8.org](./09.Languages/Scala-3/Tools/Giter8.org)
-      * [Scala-CLI.org](./09.Languages/Scala-3/Tools/Scala-CLI.org)
-  * [Scala-Native](./09.Languages/Scala-Native)
-    * [Official-Documentation.org](./09.Languages/Scala-3/Official-Documentation.org)
-  * [SmallTalk](./09.Languages/SmallTalk)
-    * [A-Little-Smalltalk.org](./09.Languages/SmallTalk/A-Little-Smalltalk.org)
-    * [A-Taste-of-SmallTalk.org](./09.Languages/SmallTalk/A-Taste-of-SmallTalk.org)
-    * [Pharo-by-Example.org](./09.Languages/SmallTalk/Pharo-by-Example.org)
-  * [SML](./09.Languages/SML)
-    * [ML-for-Working-Programmer-2nd.org](./09.Languages/SML/ML-for-Working-Programmer-2nd.org)
-    * [Programming-in-Standard-ML.org](./09.Languages/SML/Programming-in-Standard-ML.org)
-  * [TypeScript](./09.Languages/TypeScript)
-    * [Official-Documentation.org](./09.Languages/TypeScript/Official-Documentation.org)
-* [10.Typesetting](./10.Typesetting)
-  * [Fonts-and-Encodings.org](./10.Typesetting/Fonts-and-Encodings.org)
-  * [Unicode-Explained.org](./10.Typesetting/Unicode-Explained.org)
-* [11.Programming_Paradigms](./11.Programming_Paradigms)
-  * [Mastering-Functional-Programming.org](./11.Programming_Paradigms/Mastering-Functional-Programming.org)
-  * [Object-Oriented](./11.Programming_Paradigms/Object-Oriented)
-    * [The-Object-Oriented-Thought-Process.org](./11.Programming_Paradigms/Object-Oriented/The-Object-Oriented-Thought-Process.org)
-  * [Reactive](./11.Programming_Paradigms/Reactive)
-    * [Functional-Reactive-Programming.org](./11.Programming_Paradigms/Reactive/Functional-Reactive-Programming.org)
-    * [Reactive-Programming-with-Rxjava.org](./11.Programming_Paradigms/Reactive/Reactive-Programming-with-Rxjava.org)
-  * [Why-Functional-Programming-Matters.org](./11.Programming_Paradigms/Why-Functional-Programming-Matters.org)
-* [12.Data_Science](./12.Data_Science)
-  * [An-Introduction-to-Statistical-Learning.org](./12.Data_Science/An-Introduction-to-Statistical-Learning.org)
-  * [Database](./12.Data_Science/Database)
-    * [Database-Management-Systems-3rd.org](./12.Data_Science/Database/Database-Management-Systems-3rd.org)
-    * [MySQL](./12.Data_Science/Database/MySQL)
-      * [High-Performance-MySQL-3rd.org](./12.Data_Science/Database/MySQL/High-Performance-MySQL-3rd.org)
-      * [Jump-Start-MySQL.org](./12.Data_Science/Database/MySQL/Jump-Start-MySQL.org)
-    * [Official-PostgreSQL-11.0-Documentation.org](./12.Data_Science/Database/Official-PostgreSQL-11.0-Documentation.org)
-    * [PostgreSQL](./12.Data_Science/Database/PostgreSQL)
-      * [PostgreSQL-Up-and-Running-3rd.org](./12.Data_Science/Database/PostgreSQL/PostgreSQL-Up-and-Running-3rd.org)
-    * [SQL](./12.Data_Science/Database/SQL)
-      * [Learning-SQL-2nd.org](./12.Data_Science/Database/SQL/Learning-SQL-2nd.org)
-      * [SQL-Cookbook.org](./12.Data_Science/Database/SQL/SQL-Cookbook.org)
-      * [SQL-in-10Min-4th.org](./12.Data_Science/Database/SQL/SQL-in-10Min-4th.org)
-  * [Designing_Data-Intensive_Applicaitons.org](./12.Data_Science/Designing_Data-Intensive_Applicaitons.org)
-  * [Kafka](./12.Data_Science/Kafka)
-    * [Kafka_The-Definitive-Guide_2nd.org](./12.Data_Science/Kafka/Kafka_The-Definitive-Guide_2nd.org)
-  * [Next-Generation-Databases.org](./12.Data_Science/Next-Generation-Databases.org)
-  * [pandas](./12.Data_Science/pandas)
-    * [User-Guide.org](./12.Data_Science/pandas/User-Guide.org)
-  * [Spark](./12.Data_Science/Spark)
-    * [Advanced-Analytics-with-Spark-2nd.org](./12.Data_Science/Spark/Advanced-Analytics-with-Spark-2nd.org)
-    * [allaboutscala-Learn-Apache-Spark-2.org](./12.Data_Science/Spark/allaboutscala-Learn-Apache-Spark-2.org)
-    * [Data-Algorithms-with-Spark.org](./12.Data_Science/Spark/Data-Algorithms-with-Spark.org)
-    * [High-Performance-Spark.org](./12.Data_Science/Spark/High-Performance-Spark.org)
-    * [Learning-Spark_2nd.org](./12.Data_Science/Spark/Learning-Spark_2nd.org)
-    * [Learning-Spark-SQL.org](./12.Data_Science/Spark/Learning-Spark-SQL.org)
-    * [Learning-Spark.org](./12.Data_Science/Spark/Learning-Spark.org)
-    * [Spark-2.4.x-Documentation.org](./12.Data_Science/Spark/Spark-2.4.x-Documentation.org)
-    * [Spark-3.x.x-Documentation.org](./12.Data_Science/Spark/Spark-3.x.x-Documentation.org)
-    * [Spark-in-Action_2nd.org](./12.Data_Science/Spark/Spark-in-Action_2nd.org)
-    * [Spark-in-Action.org](./12.Data_Science/Spark/Spark-in-Action.org)
-    * [Spark-The-Definitive-Guide.org](./12.Data_Science/Spark/Spark-The-Definitive-Guide.org)
-* [13.Building_System](./13.Building_System)
-  * [Apache-Ant-1.10.x-Manual.org](./13.Building_System/Apache-Ant-1.10.x-Manual.org)
-  * [make](./13.Building_System/make)
-    * [GNU-make.org](./13.Building_System/GNU-make.org)
-    * [Write-Makefile-with-Me.org](./13.Building_System/Write-Makefile-with-Me.org)
-  * [Maven](./13.Building_System/Maven)
-    * [Apache-Maven-Project-Documents.org](./13.Building_System/Apache-Maven-Project-Documents.org)
-    * [Maven-Essentials.org](./13.Building_System/Maven-Essentials.org)
-  * [Scala_Build_Tools](./13.Building_System/Scala_Build_Tools)
-    * [Bloop.org](./13.Building_System/Scala_Build_Tools/Bloop.org)
-    * [mill-manual.org](./13.Building_System/Scala_Build_Tools/mill-manual.org)
-    * [sbt](./13.Building_System/Scala_Build_Tools/sbt)
-      * [sbt-assembly.org](./13.Building_System/Scala_Build_Tools/sbt/sbt-assembly.org)
-      * [sbt-in-Action.org](./13.Building_System/Scala_Build_Tools/sbt/sbt-in-Action.org)
-      * [sbt-native-packager.org](./13.Building_System/Scala_Build_Tools/sbt/sbt-native-packager.org)
-      * [sbt-Reference-Manual.org](./13.Building_System/Scala_Build_Tools/sbt/sbt-Reference-Manual.org)
-  * [Software-Build-Systems.org](./13.Building_System/Software-Build-Systems.org)
-* [14.Blogs](./14.Blogs)
-  * [Matthew_Might](./14.Blogs/Matthew_Might)
-    * [The-Language-of-Languages.org](./14.Blogs/Matthew_Might/The-Language-of-Languages.org)
-* [15.System_Programming](./15.System_Programming)
-  * [The-Linux-Programming-Interface.org](./15.System_Programming/The-Linux-Programming-Interface.org)
-* [MISC](./MISC)
-  * [Bit_Operations](./MISC/Bit_Operations)
-    * [Bit-Twiddling-Hacks.org](./MISC/Bit_Operations/Bit-Twiddling-Hacks.org)
-    * [Hackers-Delight-2nd.org](./MISC/Bit_Operations/Hackers-Delight-2nd.org)
-  * [Calendrical-Calculations_The-Ultimate-Edition.org](./MISC/Calendrical-Calculations_The-Ultimate-Edition.org)
-  * [i3-User's-Guide.org](./MISC/i3-User's-Guide.org)
-  * [IntelliJ-IDEA-Essentials.org](./MISC/IntelliJ-IDEA-Essentials.org)
-  * [Intellij-IDEA-Help.org](./MISC/Intellij-IDEA-Help.org)
-  * [Low_Priority](./MISC/Low_Priority)
-    * [Tool_MATLAB](./MISC/Low_Priority/Tool_MATLAB)
-      * [Matlab-Primer-2017b.org](./MISC/Low_Priority/Tool_MATLAB/Matlab-Primer-2017b.org)
-      * [Matlab-a-Practical-Introduction-to-Programming-and-Problem-Solving.org](./MISC/Low_Priority/Tool_MATLAB/Matlab-a-Practical-Introduction-to-Programming-and-Problem-Solving.org)
-  * [Mastering-Regular-Expressions-3rd.org](./MISC/Mastering-Regular-Expressions-3rd.org)
-  * [Violent-Python.org](./MISC/Violent-Python.org)
-  * [Visualization-Analysis-and-Design.org](./MISC/Visualization-Analysis-and-Design.org)
-* [Editors](./Editors)
-  * [Spacemacs](./Editors/Spacemacs)
-    * [Important-Layers.org](./Editors/Spacemacs/Important-Layers.org)
-    * [Spacemacs-Documentation.org](./Editors/Spacemacs/Spacemacs-Documentation.org)
-  * [The-compact-Org-mode-Guide.org](./Editors/The-compact-Org-mode-Guide.org)
-  * [Vim](./Editors/Vim)
-    * [Modern-Vim.org](./Editors/Vim/Modern-Vim.org)
-* [README.md](./README.md)
+

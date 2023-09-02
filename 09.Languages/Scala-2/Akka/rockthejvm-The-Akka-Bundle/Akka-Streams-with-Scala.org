@@ -1,0 +1,152 @@
+#+TITLE: Akka Streams with Scala
+#+VERSION: 20??
+#+AUTHOR: Daniel Ciocîrlan
+#+STARTUP: indent
+#+STARTUP: overview
+#+STARTUP: entitiespretty
+
+* Getting Started
+** Welcome (9:01)
+** How to Make the Best out of This Course (2:32)
+** Scala Recap (26:40)
+** Akka Essentials Recap (17:02)
+
+* Akka Streams Primer
+** Akka Streams First Principles (26:16)
+** Materializing Streams (24:34)
+** Operator Fusion (16:16)
+** Backpressure Basics (18:22)
+
+* Akka Streams Graphs
+** Intro to Graphs and the GraphDSL (29:29)
+- Goal:
+  * Write complex Akka Streams graphs
+  * fmailiarize with the Graph DSL
+  * non-linear components:
+    + fan-out
+    + fan-in
+
+- Example:
+  #+begin_src scala
+    // step 1 - setting up the fundamentals for the graph
+    val graph = RunnableGraph.fromGraph(
+      GraphDSl.create() { implicit builder: GraphDSL.Builder[NotUsed] => // builder = MUTABLE data structure
+        import GraphDSL.Implicits._ // brings some nice operators into scope
+
+        // step 2 - add the necessary components of this graph
+        val broadcast = builder.add(Broadcast[Int](2)) // fan-out operator
+        val zip = builder.add(Zip[Int, Int])  // fan-in operator
+
+        // step 3 - tying up the components
+        input ~> broadcast
+        broadcast.out(0) ~> incrementer ~> zip.in0
+        broadcast.out(1) ~> multiplier  ~> zip.in1
+
+        zip.out ~> output
+
+        // step 4 - return a closed shape
+        ClosedShape // FREEZE the builder's shape
+        // shape
+      } // graph
+    ) // runnable graph
+
+    graph.run() // run the graph and materialize it
+  #+end_src
+
+- Exercise 1:
+  Feed a source into 2 sinks at the same time (hint: use a broadcast)
+  #+begin_src scala
+    // step 1 - setting up the fundamentals for the graph
+    val graph = RunnableGraph.fromGraph(
+      GraphDSl.create() { implicit builder =>
+        import GraphDSL.Implicits._
+
+        // step 2 - declaring the components
+        val broadcast = builder.add(Broadcast[Int](2))
+
+        // step 3 - tying up the components
+        input ~> broadcast
+        broadcast.out(0) ~> firstSink
+        broadcast.out(1) ~> secondSink
+
+        // OR
+        // input ~> broadcast ~> firstSink
+        //          broadcast ~> secondSink
+
+        // step 4 - return a closed shape
+        ClosedShape // FREEZE the builder's shape
+        // shape
+      } // graph
+    ) // runnable graph
+
+    graph.run() // run the graph and materialize it
+  #+end_src
+
+- Exercise 2:
+  use ~Merge[Int]~ and ~Balance[Int]~ =TODO=
+
+- Recap:
+  * Complex Akka Streams graphs
+
+  * The Graph DSL
+
+  * Non-linear components:
+    + fan-out
+    + fan-in
+
+  * Fan-out components:
+    + Broadcast
+    + Balance
+
+  * Fan-in components:
+    + Zip/ZipWith
+    + Merge
+    + Concat
+
+** Open Graphs and Graph Shapes (23:37)
+- Source graph
+  Example =TODO=
+
+- Sink graph
+
+- ~FlowShape~
+
+- Everything operates on SHAPES, not bare components
+
+- ~Flow.fromSinkAndSource~
+- ~Flow.fromSinkAndSourceCoupled~
+
+** TODO More Open Graphs (21:52)
+=TODO= NOTE
+
+- More complex shapes with the GraphDSL
+  * fan-out
+  * fan-in
+  * uniform/non-uniform
+
+- FuanOutShape2
+
+** TODO Graph Materialized Values (25:52)
+- xx
+
+** TODO BidirectionalFlows (13:58)
+- yy
+
+** TODO Graph Cycles (24:38)
+
+* Akka Streams Techniques and Best Practices
+** Integrating with Actors (22:22)
+** Integrating with a General External Service (22:22)
+** Advanced Backpressure (17:43)
+** Fault Tolerance (17:07)
+** Testing Akka Streams (24:55)
+
+* Advanced Akka Streams
+** Start Substreams (18:20)
+** Start Dynamic Stream Handling (19:45)
+** Start Custom Graph Shapes (23:06)
+** Start The GraphStage API - Part 1 (23:15)
+** Start The GraphStage API - Part 2 (23:45)
+
+* Epilogue
+** Start You Rock! (0:30)
