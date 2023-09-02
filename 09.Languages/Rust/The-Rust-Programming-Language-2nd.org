@@ -7012,7 +7012,7 @@ CLOSED: [2021-01-11 Mon 02:59]
   How to write tests in Rust so you can make sure your code is working the way it should.
 
 * DONE 11. Writing Automated Tests - 207
-CLOSED: [2021-01-15 Fri 03:46]
+CLOSED: [2023-08-30 Wed 14:00]
 - We'll discuss the mechanics of Rust's testing facilities.
   We'll talk about
   * the /annotations/ and /macros/
@@ -7024,14 +7024,14 @@ CLOSED: [2021-01-15 Fri 03:46]
   * how to *organize* tests *into* /unit tests/ and /integration tests/.
 
 ** DONE 11.1. How to Write Tests - 208
-CLOSED: [2021-01-15 Fri 02:21]
+CLOSED: [2023-08-28 Mon 11:35]
 The features Rust provides specifically for writing tests:
 - the ~test~ /attribute/
 - a few /macros/
 - the ~should_panic~ /attribute/.
 
 *** DONE The Anatomy of a Test Function - 208
-CLOSED: [2021-01-15 Fri 01:46]
+CLOSED: [2023-08-28 Mon 10:34]
 - At its simplest,
   a /test/ in Rust is a /function/ that's annotated with the ~test~
   /attribute/.
@@ -7040,6 +7040,9 @@ CLOSED: [2021-01-15 Fri 01:46]
   * Examples:
     + The ~derive~ we see in Chapter 5
     + The ~test~ we will see in this Chapter
+
+- To change a function into a /test function/,
+  add ~#[test]~ on the line before ~fn~.
 
 - When you run your _tests_ with the =cargo test= command,
   Rust builds a /test runner binary/ that
@@ -7075,6 +7078,7 @@ CLOSED: [2021-01-15 Fri 01:46]
          mod tests {
              #[test]
              fn exploration() {
+                 assert_eq!(2 + 2, 4);
              }
          }
        #+END_SRC
@@ -7103,6 +7107,7 @@ CLOSED: [2021-01-15 Fri 01:46]
          mod tests {
              #[test]
              fn exploration() {
+                 assert_eq!(2 + 2, 4);
              }
 
              #[test]
@@ -7111,6 +7116,9 @@ CLOSED: [2021-01-15 Fri 01:46]
              }
          }
        #+END_SRC
+       + Tests fail when something in the test function panics.
+         Each test is run in a *new* /thread/, and when the /main thread/ sees
+         that _a_ /test thread/ has died, the test is marked as failed.
 
        + =cargo test= result
          #+begin_src text
@@ -7138,11 +7146,11 @@ CLOSED: [2021-01-15 Fri 01:46]
          #+end_src
          - The second to the last line mentioned statistics of _different kind_
            of tests.
-           * =TODO= Talk about =ignored= and =filtered= later.
-           * =TODO= =measured= is for benchmark tests.
+           * =NEXT= Talk about =ignored= and =filtered= later.
+           * =NEXT= =measured= is for benchmark tests.
 
 *** DONE Checking Results with the ~assert!~ Macro - 211
-CLOSED: [2021-01-15 Fri 01:52]
+CLOSED: [2023-08-28 Mon 10:34]
 - ~assert!~ is useful when you want to ensure that some condition in a test
   evaluates to ~true~.
   * If is ~true~, do nothing
@@ -7186,7 +7194,7 @@ CLOSED: [2021-01-15 Fri 01:52]
   #+end_src
 
 *** DONE Testing Equality with the ~assert_eq!~ and ~assert_ne!~ Macros - 214
-CLOSED: [2021-01-15 Fri 02:04]
+CLOSED: [2023-08-28 Mon 10:34]
 - ~assert_eq!~ and ~assert_ne!~ also print out the two compared values
   if the assertion fails, which makes it easier to see WHY the test failed.
 
@@ -7234,14 +7242,11 @@ CLOSED: [2021-01-15 Fri 02:04]
       test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
       ...
     #+end_src
-    + ~assert_eq!~ and ~assert_ne!~ take arguments with no order constraints:
-      In some languages test framework, there is =expected= and =actual=,
-      while Rust doesn't -- it uses the terms =left= and =right=.
 
-- ~assert_ne!~ is most useful for cases
-  when we're not sure what a value will be,
-  but we know what the value definitely won't be if our code is functioning
-  as we intend.
+- ~assert_eq!~ and ~assert_ne!~ take arguments with no order constraints:
+  In the test framework of some languages, the parameters to equality assertion
+  functions are called =expected= and =actual=, order matters,
+  while Rust doesn't -- it uses the terms =left= and =right=.
 
 - ~assert_eq!~ and ~assert_ne!~ /macros/ can only compare values whoes types
   implement
@@ -7249,8 +7254,20 @@ CLOSED: [2021-01-15 Fri 02:04]
   * ~Debug~, because when the _assertions fail_, these /macros/ *print* their
     arguments using /debug formatting/.
 
-*** DONE Adding Custom Failure Messages - 216
-CLOSED: [2021-01-15 Fri 02:10]
+- *ALL* /primitive types/ and *MOST* of the /standard library types/ implement
+  these /traits/.
+
+  For /structs/ and /enums/ that you define yourself, you'll need to implement
+  ~PartialEq~ and ~Debug~.
+
+  Because both traits are /derivable traits/, as mentioned in Listing 5-12 in Chapter 5,
+  this is *usually* (=from Jian= exceptions???) as straightforward as adding the
+  ~#[derive(PartialEq, Debug)]~ annotation to your /struct or enum definition/.
+  =REDO= See Appendix C, “Derivable Traits,” for more details about these and
+         other derivable traits.
+
+*** DONE Adding Custom Failure Messages - 216 - =Re-READ: test report=
+CLOSED: [2023-08-28 Mon 11:35]
 - Additional optional arguments as _failure message_ can be passed to ~assert!~,
   ~assert_eq!~, and ~assert_ne!~.
   * *Any* arguments specified _AFTER_
@@ -7262,28 +7279,98 @@ CLOSED: [2021-01-15 Fri 02:10]
     values to go in those placeholders.
 
 - Example:
-  #+BEGIN_SRC rust
-    pub fn greeting(name: &str) -> String {
-        format!("Hello {}!", name)
-    }
+  * Without a custom failure message:
+    #+begin_src rust
+      pub fn greeting(name: &str) -> String {
+          format!("Hello {}!", name)
+      }
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
+      #[cfg(test)]
+      mod tests {
+          use super::*;
 
-        #[test]
-        fn greeting_contains_name() {
-            let result = greeting("Carol");
-            assert!(
-                result.constants("Carol"),
-                "Greeting did not contain name, value was `{}`", result
-            );
-        }
-    }
-  #+END_SRC
+          #[test]
+          fn greeting_contains_name() {
+              let result = greeting("Carol");
+              assert!(result.contains("Carol"));
+          }
+      }
+    #+end_src
+    If we introduce a bug in ~greeting~ body by replacing the current code with
+    ~String::from(""Hello!")~, we can see this report after running this test:
+    #+begin_src text
+      $ cargo test
+         Compiling greeter v0.1.0 (file:///projects/greeter)
+          Finished test [unoptimized + debuginfo] target(s) in 0.91s
+           Running unittests src/lib.rs (target/debug/deps/greeter-170b942eb5bf5e3a)
+
+      running 1 test
+      test tests::greeting_contains_name ... FAILED
+
+      failures:
+
+      ---- tests::greeting_contains_name stdout ----
+      thread 'tests::greeting_contains_name' panicked at 'assertion failed: result.contains(\"Carol\")', src/lib.rs:12:9
+      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+      failures:
+          tests::greeting_contains_name
+
+      test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+      error: test failed, to rerun pass `--lib`
+    #+end_src
+    We can see the error, but it _is *NOT* very straightforward._
+
+  * An improved version -- use custom failure message:
+    #+begin_src rust
+      pub fn greeting(name: &str) -> String {
+          format!("Hello {}!", name)
+      }
+
+      #[cfg(test)]
+      mod tests {
+          use super::*;
+
+          #[test]
+          fn greeting_contains_name() {
+              let result = greeting("Carol");
+              assert!(
+                  result.constants("Carol"),
+                  "Greeting did not contain name, value was `{}`", result
+              );
+          }
+      }
+    #+end_src
+
+    The test report:
+    #+begin_src text
+      $ cargo test
+         Compiling greeter v0.1.0 (file:///projects/greeter)
+          Finished test [unoptimized + debuginfo] target(s) in 0.93s
+           Running unittests src/lib.rs (target/debug/deps/greeter-170b942eb5bf5e3a)
+
+      running 1 test
+      test tests::greeting_contains_name ... FAILED
+
+      failures:
+
+      ---- tests::greeting_contains_name stdout ----
+      thread 'tests::greeting_contains_name' panicked at 'Greeting did not contain name, value was `Hello!`', src/lib.rs:12:9
+      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+      failures:
+          tests::greeting_contains_name
+
+      test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+      error: test failed, to rerun pass `--lib`
+    #+end_src
 
 *** DONE Checking for Panics with ~should_panic~ - 218
-CLOSED: [2021-01-15 Fri 02:18]
+CLOSED: [2023-08-28 Mon 11:35]
 #+begin_src rust
   // Listing 11-8: Testing that a condition will cause a panic!
   struct Guess {
@@ -7316,7 +7403,7 @@ CLOSED: [2021-01-15 Fri 02:18]
 
 - We can create a bug by removing the ~|| value > 100~ part,
   and the test will fail. We will see the message is _NOT very useful_.
-  * The above ~should_panic~ can be imprecise:
+  * The above ~should_panic~ *can be imprecise*:
     ANY /panic/ can satisfy it, even though it's not what we expect.
     We can add an _optional ~expected~ parameter_ to the ~should_panic~
     /attribute/. A _substring_ of the /panic message/ is enough.
@@ -7352,12 +7439,12 @@ CLOSED: [2021-01-15 Fri 02:18]
           }
       }
     #+END_SRC
-    + If we create a bug by swap the /panic messages/ in the ~new~ function,
-      we can see the test failure messages when ~expected~ /panic messages/
-      can't match.
+    If we create a bug by swap the /panic messages/ in the ~new~ function,
+    we can see the test failure messages when ~expected~ /panic messages/
+    can't match.
 
 *** DONE Using ~Result<T, E>~ in Tests - 221
-CLOSED: [2021-01-15 Fri 02:21]
+CLOSED: [2023-08-28 Mon 11:35]
 - We can also write tests taht use ~Result<T, E>~!
 
 - Example:
@@ -7374,14 +7461,18 @@ CLOSED: [2021-01-15 Fri 02:21]
         }
     }
   #+end_src
+  * *Return an ~Err~ value directly*
+    when the test _should fail_.
 
 - You *can't* use the ~#[should_panic]~ /annotation/ on tests that use
   ~Result<T, E>~.
-  Instead, you should *return an ~Err~ value directly* when the test _should
-  fail_.
+
+- _To assert that an operation returns an ~Err~ variant,_
+  *don't* use the /question mark operator/ on the ~Result<T, E>~ value.
+  Instead, use ~assert!(value.is_err())~.
 
 ** DONE 11.2. Controlling How Tests Are Run - 221
-CLOSED: [2021-01-15 Fri 02:58]
+CLOSED: [2023-08-28 Mon 12:31]
 - Just as =cargo run= compiles your code and then *runs* the _resulting binary_,
   =cargo test= compiles your code in test mode and *runs* the _resulting test
   binary_.
@@ -7401,7 +7492,6 @@ CLOSED: [2021-01-15 Fri 02:58]
     2. followed by the separator ~--~ and
     3. then the ones that go to the _test binary_.
 
-
   * For examle,
     + Running =cargo test --help= displays the options you can use with
       =cargo test=;
@@ -7410,10 +7500,12 @@ CLOSED: [2021-01-15 Fri 02:58]
       the separator ~--~.
 
 *** DONE Running Tests in Parallel or Consecutively - 222
-CLOSED: [2021-01-15 Fri 02:38]
+CLOSED: [2023-08-28 Mon 11:47]
 - When you run multiple tests,
   *by default* they run _in parallel using threads_.
   * =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
     Because of this parallelism, you should take care that
     + your tests do *NOT* depend on each other
 
@@ -7421,31 +7513,34 @@ CLOSED: [2021-01-15 Fri 02:38]
       _shared environment_ such as the current working directory or
       environment variables.
 
-- ~--test-threads~ flag
+- You can get more fine-grained control by using the ~--test-threads~ flag
   * If you *don't* want to run the tests in parallel,
     ~$ cargo test -- --test-threads=1~ does not use any parallelism.
 
-  * If you want more fine-grained control over the _number of threads_ used,
-    ~$ cargo test -- --test-threads=2~
+  * ~$ cargo test -- --test-threads=10~
 
-*** DONE Showing Function Output - 222
-CLOSED: [2021-01-15 Fri 02:42]
+*** DONE Showing Function Output - 222 - =DON'T FORGET!=
+CLOSED: [2023-08-28 Mon 11:59]
 - *By default*
-  * if a test _passes_, all its to standard output prints will be captured by
-    the Rust's test library.
+  * if a test _passes_, *ALL* its to /standard output/ prints will be captured by
+    the Rust's test library.s
 
-  * If a test _fails_, we'll see whatever was printed to standard output with
-    the rest of the failure message.
+    We can't see any ~println!~ output by default in passed test cases.
+
+  * If a test _fails_, we'll *SEE* whatever was printed to the /standard output/
+    with the rest of the failure message.
 
 - *Disable the output capture of tests*: use the ~--show-output~ flag.
   ~$ cargo test -- --show-output~
+  * We can't see the ~println!~ output in tests in the terminal
+
   * We usually *don't use this option alone*, since the default parallelism,
     the output will be interleaved -- we usually disable /parallelism/ and
     _output capture_ together by using
     ~$ cargo test -- --show-output --test-threads=1~
 
 *** DONE Running a Subset of Tests by Name - 224
-CLOSED: [2021-01-15 Fri 02:47]
+CLOSED: [2023-08-28 Mon 12:26]
 You can choose which test(s) to run by _passing ~cargo test~ the name or
 names of the test(s)_ you want to run as an argument.
 #+BEGIN_SRC rust
@@ -7477,20 +7572,26 @@ names of the test(s)_ you want to run as an argument.
 #+END_SRC
 
 **** DONE Running Single Tests - 225
-     CLOSED: [2021-01-15 Fri 02:45]
-     ~$ cargo test one_hundred~
+CLOSED: [2023-08-28 Mon 12:24]
+~$ cargo test one_hundred~
 
-     * *Caution*:
-       _We *can't* specify the names of multiple tests in this way;_
+- *Caution*:
+  We *CAN'T* specify the names of _MULTIPLE tests_ in this way;
+  ONLY the *first* value given to cargo test will be used.
+  =NEXT= But there is a way to run multiple tests.
 
 **** DONE Filtering to Run Multiple Tests - 225
-     CLOSED: [2021-01-15 Fri 02:46]
-     Specify *part of a test name*, multiple tests will run if they share this
-     specified word.
-     ~$ cargo test add~ will run tests whose names contain =add=.
+CLOSED: [2023-08-28 Mon 12:26]
+Specify *part of a test name*, multiple tests will run if they share this
+specified word.
+~$ cargo test add~ will run tests whose names contain =add=.
+
+- NOTE:
+  the /module/ in which a test appears becomes _PART OF_ the test's name,
+  so we can run all the tests in a /module/ by *filtering on the module's name.*
 
 *** DONE Ignore Some Tests Unless Specifically Requested - 226
-CLOSED: [2021-01-15 Fri 02:50]
+CLOSED: [2023-08-28 Mon 12:31]
 You often want to ignore some time-consuming tests during most runs of
 =cargo test=.
 
@@ -7510,15 +7611,15 @@ You often want to ignore some time-consuming tests during most runs of
   * Use the ~#[ignore]~ /attribute/
     *after* ~#[test]~ and *before* the /function/.
 
-  * If you want to _run *only* the IGNORED tests,_
-    run ~$ cargo test -- --ignored~
+  * Run *only* the _IGNORED tests_:
+    ~$ cargo test -- --ignored~
 
-  * Use ~--include-ignored~ option to run all tests.
-    + Only in NIGHTLY version.
+  * Run all tests, including the ignored:
+    ~$ cargo test -- --include-ignored~
 
 ** DONE 11.3. Test Organization - 227
-CLOSED: [2021-01-15 Fri 03:45]
-- The Rust community thinks about tests in terms of _TWO main categories_:
+CLOSED: [2023-08-30 Wed 13:53]
+- The Rust community thinks about tests in terms of _TWO_ main categories:
   * unit tests ::
     _small_ and _more focused_, testing _one module in isolation_ at a time,
     and *can test /private interfaces/.*
@@ -7537,20 +7638,23 @@ CLOSED: [2021-01-15 Fri 03:15]
 - Put /unit tests/ in the =src= directory, in each file with the code that
   they're testing.
 
-- _CONVENTION_:
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *CONVENTION*:
   create a /module/ named ~tests~ *in each file* to contain the _test
   functions_, and we annotate the /module/ with ~cfg(test)~.
 
 **** DONE The Tests Module and ~#[cfg(test)]~ - 227
 CLOSED: [2021-01-15 Fri 03:08]
-- The ~#[cfg(test)]~ annotation on the /tests module/ tells Rust to compile
-  and run the test code _ONLY_ when we run ~cargo test~, and not when we run
-  ~cargo build~. This
-  * *saves* /compile time/
-    when you only want to BUILD the library
+- The ~#[cfg(test)]~ annotation on the /tests module/ tells Rust to
+  compile and run the test code
+  * _ONLY_ when we run ~cargo test~, and
+  * *NOT* when we run ~cargo build~.
 
-  * *saves* _space_ in the _resulting compiled artifact_
-    because the tests are not included.
+  This
+  *saves* /compile time/ when you only want to BUILD the library
+  *saves* _space_ in the _resulting compiled artifact_ because the tests are not included.
 
 - /integration tests/ go in a different directory, they don't need the
   ~[cfg(test)]~ annotation.
@@ -7559,7 +7663,7 @@ CLOSED: [2021-01-15 Fri 03:08]
 CLOSED: [2021-01-15 Fri 03:15]
 There's debate within the testing community about
 *whether or not private functions should be tested directly,*
-and other languages make it difficult or impossible to test private functions.
+and other languages make it difficult or impossible to test /private functions/.
 
 Regardless of which testing ideology you adhere to,
 =IMPORTANT= _Rust's privacy rules do *allow* you to TEST /private functions/._
@@ -7585,28 +7689,40 @@ Regardless of which testing ideology you adhere to,
         }
     }
   #+end_src
+  As we discussed in the “Paths for Referring to an Item in the Module Tree”
+  section, _items in child /modules/ can use the items in their /ancestor modules/._
 
 *** DONE Integration Tests - 228
-CLOSED: [2021-01-15 Fri 03:45]
-In Rust, integration tests are _entirely external_ to your library -- they
+CLOSED: [2023-08-30 Wed 13:53]
+In Rust, /integration tests/ are _entirely external_ to your library -- they
 use your library in the same way any other code would, which means they can
 only call functions that are part of your library's public API (/private
 functions/ tests are already done in the /unit tests/ part).
 
 - Units of code that work correctly on their own could have problems when
-  integrated, so *test /coverage/ of the /integrated code/ is important as
-  well.*
+  integrated, so *test /coverage/ of the /integrated code/ is important* as
+  well.
 
 - To create /integration tests/, you first need a =tests= directory.
 
 **** DONE The =tests= Directory - 229
-CLOSED: [2021-01-15 Fri 03:45]
+CLOSED: [2023-08-30 Wed 13:21]
 - Make a =tests= directory in the top level of your project, next to =src=.
   * Cargo knows to look for /integration test/ files in this directory.
 
-  * We can make as many test files as we want =FIXME= (remove "to") in this
-    directory, and Cargo will compile *each* of the files as an *individual*
-    /crate/.
+  * We can make as many test files as we want in this directory, and
+    Cargo will compile *each* of the files as an *individual* /crate/.
+
+- Directory structure:
+  #+begin_src text
+    adder
+    ├── Cargo.lock
+    ├── Cargo.toml
+    ├── src
+    │   └── lib.rs
+    └── tests
+        └── integration_test.rs
+  #+end_src
 
 - Example:
   #+begin_src rust
@@ -7620,47 +7736,60 @@ CLOSED: [2021-01-15 Fri 03:45]
         assert_eq!(4, adder::add_two(2));
     }
   #+end_src
-  * ~use adder~:
-    _each file_ in the tests directory is a *separate* /crate/,
-    so we need to bring our library into each test /crate's scope/.
+  * integration tests VS unit tests
+    + ~use adder~:
+      _each file_ in the tests directory is a *separate* /crate/,
+      so we need to bring our library into each test /crate's scope/.
+      - For that reason we add ~use adder~ at the top of the code,
+        which we didn't need in the /unit tests/.
+
+    + ~#[cfg(test)]~:
+      Integration tests doesn't need this attribute:
+      Cargo treats _the ~tests~ directory_ *SPECIALLY* and
+      compiles files in this directory
+      *ONLY* when we run ~cargo test~.
 
   * ~$ cargo test~ output:
     #+begin_src text
          Compiling adder v0.1.0 (file:///projects/adder)
-          Finished test [unoptimized + debuginfo] target(s) in 0.73s
-           Running target/debug/deps/adder-92948b65e88960b4
+          Finished test [unoptimized + debuginfo] target(s) in 1.31s
+           Running unittests src/lib.rs (target/debug/deps/adder-1082c4b063a8fbe6)
 
       running 1 test
       test tests::internal ... ok
 
-      test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+      test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-           Running target/debug/deps/integration_test-82e7799c1bc62298
+           Running tests/integration_test.rs (target/debug/deps/integration_test-1082c4b063a8fbe6)
 
       running 1 test
       test it_adds_two ... ok
 
-      test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+      test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
          Doc-tests adder
 
       running 0 tests
 
-      test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+      test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
     #+end_src
-    The /integration tests/ section starts with the line
-    =Running target/debug/deps/integration_test-ce99bcc2479f4607=
-    =FIXME= this hash is different from the one above.
+    1. The _THREE_ sections of output include
+       + the unit tests,
+       + the integration test, and
+       + the doc tests.
 
-- We can still run a *particular* _integration test function_
-  by specifying the _test function's name_ as an argument to ~cargo test~.
+    2. =IMPORTANT=
+       if any test in a section _fails_, the following sections will _NOT_ be run.
 
-- To run _ALL the tests_ in a PARTICULAR _integration test file,_
+- Run _ONE_ *particular* _integration test function_:
+  ~cargo test <function-name>~.
+
+- Run _ALL_ the tests in a PARTICULAR _integration test file,_
   use the ~--test~ argument of ~cargo test~ followed by the name of the
-  file: ~cargo test --test integration_test~
+  file: ~cargo test --test <integration-test-file-name>~
 
 **** DONE Submodules in integration Tests - 230
-CLOSED: [2021-01-15 Fri 03:45]
+CLOSED: [2023-08-30 Wed 13:52]
 As mentioned earlier, _each file_ in the =tests= directory is compiled as
 its own *separate* /crate/.
 
@@ -7688,7 +7817,14 @@ its own *separate* /crate/.
     /module/ as an /integration test file/._ Then we have a expected output
     in ~cargo test~.
 
-- Example:
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Files in _subdirectories_ of _the =tests= directory_ don't get compiled as
+  separate crates or have sections in the =test= output.
+
+- After creating =tests/common/mod.rs=, we can use it from any of the _integration
+  test files_ as a /module/.
   #+begin_src rust
     use adder;
 
@@ -7705,11 +7841,12 @@ its own *separate* /crate/.
     we demonstrated in Listing 7-21.
 
 **** DONE Integration Tests for Binary Crates - 232
-CLOSED: [2021-01-15 Fri 03:45]
+CLOSED: [2023-08-30 Wed 13:52]
 - If our project is a binary crate that _ONLY_ contains a =src/main.rs= and
-  does not have a =src/lib.rs=, we are *NOT able* to create /integration tests/
-  in the =tests= directory and bring functions defined in the =src/main.rs=
-  file into scope with a ~use~ statement.
+  does _NOT have_ a =src/lib.rs=,
+  we are *NOT able* to create /integration tests/ in the =tests= directory and
+  bring functions defined in the =src/main.rs= file into scope with a ~use~
+  statement.
 
 - Only /library crates/ expose functions that OTHER /crates/ are able to call
   and use; /binary crates/ are meant to be run on their own.
@@ -7725,38 +7862,45 @@ CLOSED: [2021-01-15 Fri 03:45]
       - =From Jian= Keep your =src/main.rs= simple!!!!!!!!!!!!!!!
 
 ** DONE Summary - 232
-CLOSED: [2021-01-15 Fri 03:46]
+CLOSED: [2023-08-30 Wed 14:00]
 
 * TODO 12. An I/O Project: Building a Command Line Program - 233 - =start=
 - This chapter is both
   * a recap of many skills
   * an exploration of a few more standard library features
 
+- =IMPORTANT=
+  Rust's speed, safety, single binary output, and cross-platform support make it
+  an ideal language for creating command line tools
+
 - Make our own version of the classic command line tool ~grep~ (Globally search
   a Regular Expression and Print).
 
-- In the simplest use case, ~grep~ searches a specified file for a specified
+- In the simplest use case, ~grep~ _SEARCHES_ a specified file for a specified
   string using the following steps:
   * Take as arguments a filename and a string.
   * Read the file.
   * Find lines in the file that contain the string argument.
   * Print out those lines.
 
-- We'll also show how to use environment variables and print to standard error
-  instead of standard out; these tech are commonly used in command line tools.
+- Along the way, We'll show
+  _HOW to_
+  1. use /environment variables/ and
+  2. print to /standard error/ instead of /standard out/;
+  these tech are commonly used in _command line tools_.
 
 - ~ripgrep~ is a fully-featured and faster version of ~grep~ implemented by
-  Andrew Gallant by using Rust.
+  Andrew Gallant by using Rust. By comparison, our version will be fairly simple.
 
 - This project will bring together a number of concepts you've learned so far:
-  * Organizing code (using what we learned in modules, _Chapter 7_)
-  * Using vectors and strings (collections, _Chapter 8_)
+  * Organizing code (using what we learned in /modules/, _Chapter 7_)
+  * Using /vectors/ and /strings/ (collections, _Chapter 8_)
   * Handling errors (_Chapter 9_)
-  * Using traits and lifetimes where appropriate (_Chapter 10_)
+  * Using /traits/ and /lifetimes/ where appropriate (_Chapter 10_)
   * Writing tests (_Chapter 11_)
 
 - We'll also briefly introduce /closures/, /iterators/, and /trait objects/,
-  which Chapter 13 and 17 will cover in detail =TODO=.
+  which Chapter 13 and 17 will cover in detail =NEXT=.
 
 - ~cargo new --bin greprs~
 
@@ -8333,8 +8477,16 @@ CLOSED: [2017-08-30 Wed 05:32]
 
 * DONE 13. Functional Language Features: Iterators and Closures - 263 - =TODO=
 CLOSED: [2021-01-16 Sat 23:58]
+- Rust's design has taken insspiration from many exising languages and techniques,
+  and one significant influence is /functional programming/.
+  * Programming in a /functional style/ often includes
+    + using functions as values by
+      - passing them in arguments,
+      - returning them from other functions,
+      - assigning them to variables for later execution, and so forth.
+
 - In this chapter,
-  1. we *won't debate* the issue of what functional programming is or isn't
+  1. we *won't debate* the issue of _what functional programming is or isn't_
   2. but will instead discuss some features of Rust that are similar to features
      in many languages often referred to as /functional/.
 
@@ -8344,8 +8496,8 @@ CLOSED: [2021-01-16 Sat 23:58]
   * How to use these two features to improve the I/O project in Chapter 12
   * The _performance_ of these two features (Spoiler alert: they're faster than you might think!)
 
-- Mastering /closures/ and /iterators/ is an important part of writing idiomatic,
-  fast Rust code, so we'll devote this entire chapter to them.
+- Mastering /closures/ and /iterators/ is an important part of
+  _writing idiomatic, fast Rust code,_ so we'll devote this entire chapter to them.
 
 ** DONE 13.1 Closures: Anonymous Functions that Can Capture Their Environment - 264
 CLOSED: [2021-01-16 Sat 03:34]
@@ -8454,7 +8606,7 @@ CLOSED: [2021-01-16 Sat 01:57]
 *** TODO Capturing References or Moving Ownership
 *** DONE Moving Captured Values Out of Closures and the ~Fn~ Traits
 CLOSED: [2021-01-16 Sat 02:32]
-Create a /struct/ and use memoization to *cache* this expensive calculation.
+Create a /struct/ and use /memoization/ to *cache* this expensive calculation.
 #+begin_src rust
   struct Cacher<T>
   where
@@ -8624,39 +8776,46 @@ would make reusing it in different contexts difficult.
 
 ** DONE 13.2 Processing a Series of Items with Iterators - 276
 CLOSED: [2021-01-16 Sat 23:42]
-The /iterator pattern/ allows you to perform some task on a sequence of items
-in turn.
+_The /iterator pattern/ allows you to perform some task on a sequence of items in turn._
 
 - An /iterator/ is responsible for the logic of
   ITERATING over each item and
   DETERMINING when the sequence has finished.
   * When you use /iterators/, you don't have to reimplement that logic yourself.
 
-- In Rust, *iterators are LAZY,* meaning they have no effect until you call
+- In Rust, *iterators are LAZY*, meaning they have no effect until you call
   /methods/ that consume the /iterator/ to use it up.
-  * For example,
-    #+begin_src rust
-      let v1 = vec![1, 2, 3];
-      let v1_iter = v1.iter();
-    #+end_src
-
-- Example:
+  #+NAME: Listing 13-11: Using an iterator in a for loop
   #+begin_src rust
     let v1 = vec![1, 2, 3];
-    let v1_iter = v1.iter();
+    let v1_iter = v1.iter(); // This code by itself doesn’t do anything useful.
 
     for val in v1_iter {
         println!("Got: {}", val);
     }
   #+end_src
+  * In languages that don't have /iterators/ provided by their standard libraries,
+    you would likely write this same functionality by starting a variable at
+    index 0, using that variable to index into the vector to get a value, and
+    incrementing the variable value in a loop until it reached the total number
+    of items in the vector.
+
+  * /Iterators/ handle all that logic for you,
+    cutting down on repetitive code you could potentially mess up.
+
+    Iterators give you more flexibility to use the same logic with many
+    different kinds of sequences, not just data structures you can index into,
+    like /vectors/.
+    =NEXT= Let's examine how /iterators/ do that.
 
 *** DONE The ~Iterator~ Trait and the ~next~ Method - 277
 CLOSED: [2021-01-16 Sat 19:57]
+In standard library:
 #+BEGIN_SRC rust
   trait Iterator {
       type Item;
 
-      fn next(&mut self) => Option<Self::Item>;
+      fn next(&mut self) -> Option<Self::Item>;
 
       // methods with default implementations elided
   }
@@ -8707,16 +8866,19 @@ CLOSED: [2021-01-16 Sat 19:57]
       we can call ~iter_mut~ instead of ~iter~.
 
 *** DONE Methods that Consume the Iterator - 278
-CLOSED: [2021-01-16 Sat 20:03]
+CLOSED: [2023-09-02 Sat 23:33]
 - The ~Iterator~ /trait/ has a number of different /methods/ with _default
   implementations_ provided by the standard library.
+  =TODO=
+  =TODO=
+  =TODO=
 
-- The /methods/ that call the ~next~ /method/ are called /consuming adaptors/,
-  because calling them uses up the /iterator/.
+- Consuming adaptors :: the ~next~ /method/ in ~Iterator~.
+  * because calling them uses up the /iterator/.
 
 - Example:
   The ~sum~ /method/
-  *takes* /ownership/ of the /iterator/ and
+  *takes* /ownership of the iterator/ and
   *iterates through* the items by repeatedly calling ~next~, thus CONSUMING
   the /iterator/.
   #+BEGIN_SRC rust
@@ -8733,13 +8895,14 @@ CLOSED: [2021-01-16 Sat 20:03]
         assert_eq!(total, 6);
     }
   #+END_SRC
-  The ~sum~ /method/ takes the /ownership/ of ~v1_iter~,
+  Since the ~sum~ /method/ takes the /ownership/ of ~v1_iter~,
   and ~v1_iter~ CANNOT be used after the ~let total~ line.
 
 *** DONE Methods that Produce Other Iterators - 279
-CLOSED: [2021-01-16 Sat 20:31]
-- /iterator adaptors/ :: methods defined on the ~Iterator~ trait that allow
-                         you to change /iterators/ into different kinds of /iterators/.
+CLOSED: [2023-09-03 Sun 00:08]
+- /iterator adaptors/ :: methods defined on the ~Iterator~ trait that
+  * don't consume the /iterator/,
+  * produce different /iterators/ by changing some aspect of the original /iterator/.
 
 - /iterator adaptor/ ~map~
   #+BEGIN_SRC rust
@@ -8756,13 +8919,17 @@ CLOSED: [2021-01-16 Sat 20:31]
       assert_eq!(v2, vec![2, 3, 4]);
     #+end_src
 
+- Chain multiple calls to /iterator adaptors/ to perform complex actions in a readable way.
+  BUT because all /iterators/ are /lazy/, you have to call one of the /consuming adaptor methods/
+  to get results from calls to /iterator adaptors/.
+
 *** DONE Using Closures that Capture Their Environment - 280
 CLOSED: [2021-01-16 Sat 23:19]
 We can demonstrate a common use of /closures/ that _capture their environment_
 by using the ~filter~ /iterator adaptor/.
 
+#+NAME: Listing 13-19: Using the `filter` method with a closure that captures `shoe_size`
 #+BEGIN_SRC rust
-  // Listing 13-19: Using the `filter` method with a closure that captures `shoe_size`
   #[derive(PartialEq, Debug)]
   struct Shoe {
       size: i32,
@@ -8796,10 +8963,26 @@ by using the ~filter~ /iterator adaptor/.
           );
       }
   }
-
-  fn main() {}
 #+END_SRC
-- The /closure/ *captures* the ~shoe_size~ parameter _from the environment_.
+1. The ~shoes_in_size~ function
+   * takes
+     + /ownership/ of a vector of shoes and
+     + a shoe size as parameters.
+
+   * returns a vector containing only shoes of the specified size.
+
+2. In the body of ~shoes_in_size~,
+   1) we call ~into_iter~ to _CREATE_ an /iterator/ that _takes /ownership/ of the vector_.
+
+   2) Then we call ~filter~ to _ADAPT_ that /iterator/ into a new /iterator/ that
+      only contains elements for which the /closure/ returns ~true~.
+
+3. The /closure/
+   1) captures the ~shoe_size~ parameter from the environment and
+   2) compares the value with each shoe's size,
+      keeping only shoes of the size specified.
+   3) Finally, calling ~collect~ _GATHERS the values returned by the /adapted iterator/
+      INTO a vector_ that's returned by the function.
 
 *** DONE (REMOVED) Creating Our Own Iterators with the ~Iterator~ Trait - 281
 CLOSED: [2021-01-16 Sat 23:42]
@@ -9838,7 +10021,6 @@ CLOSED: [2017-09-01 Fri 16:31]
 *** TODO Implementing ~Send~ and ~Sync~ Manually Is ~Unsafe~ - 369
 
 ** TODO Summary - 370
-
 
 * TODO 17. Object-Oriented Programming Features of Rust - 371
 - Object-Oriented Programming is a way of modeling programs that originated
