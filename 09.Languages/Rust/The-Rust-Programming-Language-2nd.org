@@ -7918,7 +7918,8 @@ CLOSED: [2023-08-30 Wed 13:52]
 ** DONE Summary - 232
 CLOSED: [2023-08-30 Wed 14:00]
 
-* TODO 12. An I/O Project: Building a Command Line Program - 233 - =start=
+* DONE 12. An I/O Project: Building a Command Line Program - 233
+CLOSED: [2023-09-05 Tue 21:44]
 - This chapter is both
   * a recap of many skills
   * an exploration of a few more standard library features
@@ -8511,26 +8512,232 @@ CLOSED: [2017-08-28 Mon 02:14]
     }
   #+end_src
 
-** DONE 12.4. Developing the Library's Functionality with Test-Driven Development - 250 - =TODO=
-CLOSED: [2017-08-30 Wed 05:23]
+** DONE 12.4. Developing the Library's Functionality with Test-Driven Development - 250
+CLOSED: [2023-09-05 Tue 17:14]
+- We've extracted the logic into =src/lib.rs= and left the argument
+  collecting and error handling in =src/main.rs=.
+  * Now, it's much easier to test core functionality of our code without calling
+    binary from the command line.
+
+- In this section,
+  Use the /test-driven development (TDD)/ process to add _searching logic_:
+  1. Write a test that fails and run it to make sure it fails for the reason you expect.
+
+  2. Write or modify just enough code to make the new test pass.
+
+  3. Refactor the code you just added or changed and make sure the tests continue to pass.
+
+  4. Repeat from step 1!
+
+*** DONE Writing a Failing Test - 250
+CLOSED: [2023-09-05 Tue 17:03]
+#+DESCRIPTION: Listing 12-15: Creating a failing test for the `search` function we wish we had
+#+begin_src rust
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn one_result() {
+          let query = "duct";
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.";
+
+          assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+      }
+  }
+#+end_src
+
+#+DESCRIPTION: Listing 12-16: Defining just enough of the `search` function so our test will compile
+#+begin_src rust
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      vec![]
+  }
+#+end_src
+=IMPORTANT=
+This /lifetime/ annotation can help us to avoid one kind of error:
+The result must comes from the ~contents~ parameter.
+_If, by mistake, we use ~query~, and compile will fail._
+
+*** DONE Writing Code to Pass the Test - 253
+CLOSED: [2023-09-05 Tue 17:14]
+To fix that and implement ~search~, our program needs to follow these steps:
+1. Iterate through each line of the contents.
+2. Check whether the line contains our query string.
+3. If it does, add it to the list of values we’re returning.
+4. If it doesn't, do nothing.
+5. Return the list of results that match.
+
+**** DONE Iterating Through Lines with the ~lines~ Method - 253
+CLOSED: [2023-09-05 Tue 17:13]
+**** DONE Searching Each Line for the Query - 253
+CLOSED: [2023-09-05 Tue 17:13]
+**** DONE Storing Matching Lines - 254
+CLOSED: [2023-09-05 Tue 17:13]
+#+begin_src rust
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      let mut results = Vec::new();
+
+      for line in contents.lines() {
+          if line.contains(query) {
+              results.push(line);
+          }
+      }
+
+      results
+  }
+#+end_src
+
+**** DONE Using the ~search~ Function in the ~run~ Function - 254
+CLOSED: [2023-09-05 Tue 17:13]
+#+begin_src rust
+  pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+      let contents = fs::read_to_string(config.file_path)?;
+
+      for line in search(&config.query, &contents) {
+          println!("{line}");
+      }
+
+      Ok(())
+  }
+#+end_src
+
+** DONE 12.5. Working with Environment Variables - 255
+CLOSED: [2023-09-05 Tue 21:44]
+Improve ~minigrep~ by adding an extra feature:
+an option for _case-insensitive searching_ that the user can turn on via an
+/environment variable/.
+
+- Make this setting a command line option is OK, but making it an environment
+  variable can affect all searches.
+  =from Jian=
+  People don't always need this, but this can be a practice.
+
+*** DONE Writing a Failing Test for the Case-Insensitive ~search~ Function - 255
+CLOSED: [2023-09-05 Tue 21:30]
+#+begin_src rust
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn case_sensitive() {
+          let query = "duct";
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.
+  Duct tape.";
+
+          assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+      }
+
+      #[test]
+      fn case_insensitive() {
+          let query = "rUsT";
+          let contents = "\
+          Rust:
+  safe, fast, productive.
+  Pick three.
+  Trust me.";
+
+          assert_eq!(
+              vec!["Rust:", "Trust me."],
+              search_case_insensitive(query, contents)
+          );
+      }
+  }
+#+end_src
+
+*** DONE Implementing the ~search_case_insensitive~ Function - 257
+CLOSED: [2023-09-05 Tue 21:44]
+#+begin_src rust
+  pub fn search_case_insensitive<'a>(
+      query: &str,
+      contents: &'a str,
+  ) -> Vec<&'a str> {
+      let query = query.to_lowercase();
+      let mut results = Vec::new();
+
+      for line in contents.lines() {
+          if line.to_lowercase().contains(&query) {
+              results.push(line);
+          }
+      }
+
+      results
+  }
+#+end_src
+While ~to_lowercase~ will handle *basic* /Unicode/, *it will _NOT_ be 100% accurate.*
+
+If we were writing a real application, we'd want to do a bit more work here, but this
+section is about /environment variables/, not Unicode, so we'll leave it at that
+here.
+
+- Add configuration option to the ~Config~ struct to
+  *switch* between _case-sensitive_ and _case-insensitive_ search:
+  #+begin_src rust
+    pub struct Config {
+        pub query: String,
+        pub file_path: String,
+        pub ignore_case: bool,
+    }
+  #+end_src
+
+  #+begin_src rust
+    pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+        let contents = fs::read_to_string(config.file_path)?;
+
+        let results =
+            if config.ignore_case {
+                search_case_insensitive(&config.query, &contents)
+            }
+            else {
+                search(&config.query, &contents)
+            };
+
+        for line in results {
+            println!("{line}");
+        }
+
+        Ok(())
+    }
+  #+end_src
+
+  Let's set and use the /environment variable/ ~IGNORE_CASE~:
+  #+begin_src rust
+    use std::env;
+    // --snip--
+
+    impl Config {
+        pub fn build(args: &[String]) -> Result<Config, &'static str> {
+            if args.len() < 3 {
+                return Err("not enough arguments");
+            }
+
+            let query = args[1].clone();
+            let file_path = args[2].clone();
+
+            let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+            Ok(Config {
+                query,
+                file_path,
+                ignore_case,
+            })
+        }
+    }
+  #+end_src
+
 - =TODO=
-
-*** TODO Writing a Failing Test - 250
-*** TODO Writing Code to Pass the Test - 253
-**** TODO Iterating Through Lines with the ~lines~ Method - 253
-**** TODO Searching Each Line for the Query - 253
-**** TODO Storing Matching Lines - 254
-**** TODO Using the ~search~ Function in the ~run~ Function - 254
-
-** DONE 12.5. Working with Environment Variables - 255 =TODO=
-CLOSED: [2017-08-30 Wed 05:39]
--
-
-*** TODO Writing a Failing Test for the Case-Insensitive ~search~ Function - 255
-*** TODO Implementing the ~search_case_insensitive~ Function - 257
+  The ~std::env~ module contains many more useful features for dealing with
+  /environment variables/:
+  check out its documentation to see what is available.
 
 ** DONE 12.6. Writing Error Message to Standard Error Instead of Standard Output - 260
-CLOSED: [2023-09-05 Tue 14:55]
+CLOSED: [2023-09-05 Tue 21:44]
  - In most terminals, there are _TWO_ kinds of output:
    * /standard output (~stdout~)/ for general information
    * /standard error (~stderr~)/ for error messages.
@@ -9634,60 +9841,95 @@ Cargo is designed so you can _extend it with new subcommands_
 CLOSED: [2021-01-17 Sun 01:30]
 
 * TODO 15. Smart Pointers - 311
-- /pointer/ :: a generic programming term for something that refers to a
-               location that stores some other data.
+- pointer :: A general concept for a variable that contains an address in memory.
+             This address refers to, or "point at", some other data.
+  * The most common kind of pointer in Rust is a /reference/.
+    + /References/ are indicated by the ~&~ symbol and /borrow/ the value they point to.
+    + They
+      - don't have any special capabilities other than referring to data, and
+      - have no overhead.
 
-- /smart pointers/ :: data structures that
+- smart pointers :: data structures that
   * act like a pointer
-  * have additional metadata and capabilities, such as /reference counting/.
+  * BUT have additional metadata and capabilities.
 
-- The /smart pointers/ pattern originated in C++.
+- The concept of /smart pointers/ originated in C++ and exist in other languages as well.
 
-- In Rust, an additional difference between /plain references/ and
-  /smart pointers/ is that
-  * /references/ are a kind of pointer that ONLY borrow data;
-  * by contrast, in many cases, /smart pointers/ own the data that they point to.
+- Rust has a variety of /smart pointers/ defined in the /standard library/ that
+  provide functionality beyond that provided by /references/.
 
-- We've actually already encountered a few smart pointers in this book,
-  even though we didn't call them that by name at the time.
+  To explore the general concept, we'll look at a couple of different examples
+  of /smart pointers/, including a /reference counting smart pointer type/.
 
-  For example, ~String~ and ~Vec<T>~ are both /smart pointers/.
+  This /pointer/
+  * enables you to allow data to have _multiple owners_ by *keeping track of* the
+    _number of owners_ and,
+  * when no owners remain, *cleaning up* the data.
 
-- /smart pointers/
-  * _own_ some memory and allow you to manipulate it,
-  * have
-    + metadata (like their /capacity/)
-    + extra capabilities or guarantees (~String~ data will always be valid UTF-8).
+- In Rust, an additional difference
+  BETWEEN /plain references/ and /smart pointers/ is that
+  * /references/ are a kind of /pointer/ that ONLY /borrow/ data;
+  * by contrast, in many cases, /smart pointers/ *own* the data that they point to.
 
-- The characteristics that distinguish a /smart pointer/ from an
-  /ordinary struct/ are:
+- We've actually already encountered a few /smart pointers/ in this book,
+  EVEN THOUGH we *didn't call them that by name at the time*:
+  for example, ~String~ and ~Vec<T>~ are both /smart pointers/.
+  * Both these types count as /smart pointers/
+    BECAUSE
+    + They _own_ some memory and allow you to manipulate it.
+    + They also have
+      - /metadata/ and
+      - extra capabilities or guarantees.
+
+  * ~String~, for example,
+    + stores its /capacity/ as /metadata/ and
+    + has the _extra ability_ to *ensure its data will always be valid UTF-8.*
+
+- /Smart pointers/ are usually implemented using /structs/.
+
+- The characteristics that
+  _DISTINGUISH_ a /smart pointer/ from an ORDINARY /struct/ are:
   /smart pointers/ implement the ~Deref~ and ~Drop~ traits, and in this chapter
-  we'll be discussing both of those traits and why they're important to smart pointers.
-  =TODO= _in this chapter_
+  we'll be discussing both of those traits and why they're important to /smart pointers/.
+  =NEXT= _in this chapter_
 
-- There won't be complete coverage of all the features of the /smart pointer/
-  pattern.
+- Given that *the /smart pointer pattern/ is a general design pattern used frequently in Rust*,
+  this chapter won't be complete coverage of all the features of the /smart pointer pattern/.
 
-  The ones we cover here are the most common ones from the standard library:
-  * ~Box<T>~, for allocating values on the /heap/.
+- Since the /smart pointer/ is a pattern, many libraries have their own /smart pointers/,
+  and you can even write your own.
 
-  * ~Rc<T>~, a reference counted type so data can have multiple owners
-    (=From Jian= as I know, reference count can solve /circular reference/
-    =double check here=).
+- The ones we cover here are the most common ones from the standard library:
+  * ~Box<T>~
+    for allocating values on the /heap/.
+
+  * ~Rc<T>~
+    a _reference counted type_ so data can have _multiple owners_
 
   * ~RefCell<T>~, which isn't a /smart pointer/ itself, but manages access to
-    the /smart pointers/ ~Ref~ and ~RefMut~ to enforce the borrowing rules
-    _at runtime_ instead of compile time.
+    the /smart pointers/ ~Ref~ and ~RefMut~ to
+    ENFORCE the /borrowing rules/ *at runtime* INSTEAD OF /compile time/.
 
-  Along the way, we'll also cover:
-  * The /interior mutability/ pattern where an immutable type exposes an API
-    for mutating an interior value, and the borrowing rules apply _at runtime_
-    instead of compile time.
+  Along the way, we'll also COVER:
+  * The /interior mutability pattern/
+    WHERE an /immutable type/ exposes an API
+    for mutating an /interior value/, and the /borrowing rules/ apply _at
+    runtime_ instead of /compile time/.
 
-  * Reference cycles, how they can leak memory, and how to prevent them.
+  * /Reference cycles/, how they can _leak memory_, and *how to prevent them*.
 
-** DONE 15.1. Using ~Box<T>~ to Point to Data on the Heap - 312
+** DONE 15.1. Using ~Box<T>~ to Point to Data on the Heap - 312 - =TODO= =NOTE=
 CLOSED: [2017-08-31 Thu 10:30]
+The most straightforward /smart pointer/ is a _box_, whose type is written ~Box<T>~.
+
+- /Boxes/ allow you to store data on the /heap/ rather than the /stack/.
+  What remains on the /stack/ is _the pointer to the /heap/ data._
+
+- =Learned=
+  Refer to Chapter 4 to review the difference between the /stack/ and the /heap/.
+
+- 
+  
 *** Using a ~Box<T>~ to Store Data on the Heap - 313
 *** Enabling Recursive Types with Boxes - 314
 **** More Information About the Cons List - 314
@@ -9845,9 +10087,100 @@ CLOSED: [2017-08-31 Thu 19:58]
     + From ~&mut T~ to ~&U~ when ~T: Deref<Target=U>~.
 
 ** DONE 15.3. Running Code on Cleanup with the ~Drop~ Trait - 323
-CLOSED: [2017-08-31 Thu 21:34]
+CLOSED: [2023-09-11 Mon 13:23]
+
+The second /trait/ important to the /smart pointer pattern/ is ~Drop~,
+which lets you _CUSTOMIZE_
+  _WHAT happens when a value is about to go out of /scope/._
+
+- Example:
+  You can provide an implementation for the ~Drop~ trait on *ANY* /type/, and that
+  code can be used to *RELEASE resources* like _files_ or _network connections_.
+
+- The functionality of the ~Drop~ trait is almost always used
+  WHEN implementing a /smart pointer/.
+
+  * For example,
+    when a ~Box<T>~ is dropped it will _deallocate_ the space on the /heap/ that
+    the box points to.
+
+- You
+  SPECIFY the code to run _when a value goes out of scope_
+  BY implementing the ~Drop~ trait.
+    The ~Drop~ trait requires you to implement one method named ~drop~ that
+  takes a /mutable reference/ to ~self~.
+
+  * To see when Rust calls ~drop~,
+    let's implement ~drop~ with ~println!~ statements for now.
+    #+DESCRIPTION: Listing 15-14: A `CustomSmartPointer` struct that implements the `Drop` trait where we would put our cleanup code
+    #+begin_src rust
+      struct CustomSmartPointer {
+          data: String,
+      }
+
+      impl Drop for CustomSmartPointer {
+          fn drop(&mut self) {
+              println!("Dropping CustomSmartPointer with data `{}`!", self.data);
+          }
+      }
+
+      fn main() {
+          let c = CustomSmartPointer {
+              data: String::from("my stuff"),
+          };
+          let d = CustomSmartPointer {
+              data: String::from("other stuff"),
+          };
+          println!("CustomSmartPointers created.");
+      }
+
+      // $ cargo run
+      //    Compiling drop-example v0.1.0 (file:///projects/drop-example)
+      //     Finished dev [unoptimized + debuginfo] target(s) in 0.60s
+      //      Running `target/debug/drop-example`
+      // CustomSmartPointers created.
+      // Dropping CustomSmartPointer with data `other stuff`!
+      // Dropping CustomSmartPointer with data `my stuff`!
+    #+end_src
+    + We
+      implement the ~Drop~ trait on ~CustomSmartPointer~ and
+      provide an implementation for the ~drop~ method that calls ~println!~.
+
+    + The body of the ~drop~ function is where you would place any logic that you
+      wanted to *run* _WHEN an instance of your type goes out of scope_.
+
+    + We're printing some text here to demonstrate _VISUALLY_ when Rust will call
+      ~drop~.
+
+    + *Variables are dropped in the _reverse order_ of their creation.*
+
+- The ~Drop~ /trait/ is included in the /prelude/,
+  so we don't need to _bring it into /scope/._
+
 *** Dropping a Value Early with ~std::mem::drop~ - 325
-- =TODO=
+- Unfortunately, it's _not straightforward_ to
+  disable the automatic ~drop~ functionality.
+
+  * Disabling ~drop~ isn't usually necessary;
+    the whole point of the ~Drop~ trait is that it's taken care of
+    _automatically_.
+
+  * _OCCASIONALLY, however, you might want to clean up a value *EARLY*._
+    + Example:
+      when using /smart pointers/ that MANAGE /locks/:
+      you might want to *force* the ~drop~ method that _releases the /lock/_
+      so that other code in the same scope can _acquire the /lock/_.
+
+  * Rust does *NOT* let you call the ~Drop~ trait's ~drop~ method manually;
+    instead you have to call the ~std::mem::drop~ function provided by the standard
+    library if you want to _force a value to be dropped_ *BEFORE* the end of its scope.
+    + Rust does *NOT* let us call ~drop~ explicitly
+      _BECAUSE_
+      Rust would still automatically call ~drop~ on the value at the end of ~main~.
+      This would cause a /double free error/ because Rust would be trying to
+      clean up the same value twice.
+
+- destructor :: it is the general programming term for a function that cleans up an instance.
 
 - The ~Drop~ trait requires us to implement one method named ~drop~ that takes
   a /mutable reference/ to ~self~.
@@ -9894,10 +10227,11 @@ CLOSED: [2017-08-31 Thu 21:34]
     ~c.drop~) directly. If we did it, the error message will be
     =explicit destructor calls not allowed=.
 
-  * We are also NOT allowed to call ~Drop::drop~ directly because Rust inserts
-    its call to ~Drop::drop~ automatically when the value goes out of scope,
-    if we are allowed to do this manually, there will be doulbe (or multiple)
-    free problem.
+  * We are also _NOT ALLOWED to call ~Drop::drop~ DIRECTLY_
+    BECAUSE
+    Rust inserts its call to ~Drop::drop~ automatically when the value goes out
+    of scope, if we are allowed to do this manually, there will be /doulbe (or
+    multiple) free problem/.
 
   * The definition of ~std::mem::drop~:
     #+BEGIN_SRC rust
@@ -9909,32 +10243,45 @@ CLOSED: [2017-08-31 Thu 21:34]
     #+END_SRC
     NO function body. It only takes the ownership of ~x~.
 
-- We've gone over ~Box<T>~ and some of the characteristics of smart pointers.
-  =TODO= let's talk about a few other smart pointers defined in the standard
+- We've gone over ~Box<T>~ and some of the characteristics of /smart pointers/.
+  =NEXT= let's talk about a few other /smart pointers/ defined in the standard
   library that add different kinds of useful functionality.
 
 ** DONE 15.4. ~Rc<T>~, the Reference Counted Smart Pointer - 326
 CLOSED: [2017-09-01 Fri 14:39]
-- Sometimes, you may actually need multiple owners.
-  For this, use ~Rc<T>~, whose name is an abbr for /reference counting/.
+- In the majority of cases, /ownership/ is clear:
+  you know exactly which variable owns a given value.
+  * =from Jian= Here "majority" means high frequency in you everyday work.
 
-- ~Rc<T>~ is for use when we want to allocate some data on the /heap/ for
-  multiple parts of our program to read, and we _CANNOT_ determine at compile
-  time which part of our program using this data will finish using it last.
+- There are cases a single value might have *MULTIPLE* /owners/.
+  * Example:
+    In /graph data structures/, multiple edges might point to the same node, and
+    that node is _conceptually *owned by* ALL of the edges that point to it_.
 
-  (If we knew which part would finish last, we could make that part the owner
-   of the data and the normal ownership rules enforced at compile time would
-   kick in
-   =FROM JIAN= I don't think this sentence is completely right.
-   I think
-   If we only know the last owner, and we don't know the order of operations,
-   which may not be fixed everytime, ~Rc<T>~ is still useful.).
+    A node shouldn't be cleaned up unless it doesn't have any edges pointing to
+    it and so has no owners.
+
+- For this kind of scenarios, use ~Rc<T>~, whose name is an abbreviation for
+  /reference counting/.
+  * The ~Rc<T>~ type keeps track of the number of /references/ to a value
+    TO DETERMINE whether or not the value is still in use.
+    + If there ZERO /references/ to a value,
+      the value can be cleaned up _WITHOUT any /references/ becoming invalid._
+
+- ~Rc<T>~ is for the use when we want to allocate some data on the /heap/ for
+  _multiple_ parts of our program to read, and we _CANNOT_ determine at /compile
+  time/ which part of our program using this data will finish using it *LAST*.
+
+  If we knew which part would finish last, we could make that part the owner
+  of the data and the NORMAL /ownership rules/ enforced at /compile time/ would
+  kick in.
 
 - =IMPORTANT=
-  ~Rc<T>~ is only for use in single-threaded scenarios. If you try to use
-  ~Rc<T>~ with multiple threads, you'll get a compile-time error.
+  ~Rc<T>~ is *ONLY for use in single-threaded scenarios*.
+  If you try to use ~Rc<T>~ with _MULTIPLE threads_, you'll get a compile-time
+  error. =TODO= use ~Arc<T>~
   =TODO=
-  the next chapter on concurrency will cover how to do reference counting in
+  the next chapter on /concurrency/ will cover how to do reference counting in
   multithreaded programs.
 
 *** DONE Using ~Rc<T>~ to Share Data - 327
@@ -9977,8 +10324,8 @@ CLOSED: [2017-09-01 Fri 14:38]
   code. =TODO=
 
 - Use ~Rc<T>~
+  #+FILENAME: src/main.rs
   #+BEGIN_SRC rust
-    // src/main.rs
     enum List {
         Cons(i32, Rc<List>),
         Nil,
@@ -9989,10 +10336,14 @@ CLOSED: [2017-09-01 Fri 14:38]
 
     fn main() {
         let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Nil)))));
-        let b = Cons(3, a.clone());
-        let b = Cons(4, a.clone());
+        let b = Cons(3, Rc.clone(&a));
+        let b = Cons(4, Rc.clone(&a));
     }
   #+END_SRC
+
+- =TODO= !!!
+- =TODO= !!!
+- =TODO= !!!
 
 *** DONE Cloning an ~Rc<T>~ Increases the Reference Count - 329
 CLOSED: [2017-09-01 Fri 14:38]
@@ -10095,7 +10446,22 @@ CLOSED: [2017-09-01 Fri 16:31]
 *** Having Multiple Owners of Mutable Data by Combining ~Rc<T>~ and ~RefCell<T>~ - 337
 
 ** TODO 15.6. Reference Cycles Can Leak Memory - 339
+Accidentally create memory that is NEVER cleaned up (known as a /memory leak/) is
+still possible, though difficult because of Rust's memory safety guarantees.
+
+- _Preventing memory leaks entirely is *NOT* one of Rust's guarantees_, meaning
+  /memory leaks/ are /memory safe/ in Rust. We can see that Rust allows /memory
+  leaks/ by using ~Rc<T>~ and ~RefCell<T>~:
+  it's *POSSIBLE* to _create /references/ where items refer to each other in a cycle._
+  * This creates /memory leaks/
+    BECAUSE the /reference count/ of each item in the cycle will *never reach 0*,
+    and the values will *never be dropped*.
+
 *** Creating a Reference Cycle - 339
+- x
+
+- x
+
 *** Preventing Reference Cycles: Turning an ~Rc<T>~ into a ~Weak<T>~ - 341
 **** Creating a Tree Data Structure: a ~Node~ with Child Nodes - 342
 **** Adding a Reference from a Child to Its Parent - 343
@@ -10103,7 +10469,7 @@ CLOSED: [2017-09-01 Fri 16:31]
 
 ** Summary - 346
 
-* TODO 16. Fearless Concurrency - 347
+* TODO 16. Fearless Concurrency - 347 - =TODO=
 ** TODO 16.1. Using Threads to Run Code Simultaneously - 348
 *** TODO Creating a New Thread with ~spawn~ - 350
 *** TODO Waiting for All Threads to Finish Using ~join~ Handles - 351
@@ -10130,21 +10496,25 @@ CLOSED: [2017-09-01 Fri 16:31]
 
 ** TODO Summary - 370
 
-* TODO 17. Object-Oriented Programming Features of Rust - 371
-- Object-Oriented Programming is a way of modeling programs that originated
-  with *Simula* in the 1960s and became popular with *C++* in the 1990s.
-  =From Jian= The milestones should be mentioned: *Smalltalk* and *Java*.
+* TODO 17. Object-Oriented Programming Features of Rust - 371 - =TODO: NOTE=
+- /Object-Oriented Programming (OOP)/ is a way of modeling programs.
 
-- There are many _competing definitions_ for what OOP is:
-  * under some definitions, Rust is object-oriented;
-  * under other definitions, Rust is not.
+- History:
+  1. /Objects/ as a programmatic concept were introduced in the programming language
+     Simuula in the 1960s.
 
-  =From Jian= Let's see which parts is the good parts in OOP in Rust's point of
-  view.
+  2. Those /objects/ influenced Alan Kay's programming architecture in which
+     _objects pass messages to each other_.
+     * To describe this architecture, _he coined the term /object-oriented
+       programming/ in 1967._
+
+  3. There are many _competing definitions_ for what OOP is:
+     * under some definitions, Rust is object-oriented;
+     * under other definitions, Rust is not.
 
 - In this chapter, we'll explore
-  * some characteristics that are commonly considered to be object-oriented.
-  * how those characteristics translate to idiomatic Rust.
+  1. some characteristics that are *COMMONLY* considered to be object-oriented.
+  2. how those characteristics translate to idiomatic Rust.
 
 ** DONE 17.1. Characteristics of Object-Oriented Languages - 371
 CLOSED: [2017-08-30 Wed 21:26]
@@ -10254,7 +10624,8 @@ CLOSED: [2017-08-30 Wed 21:26]
   _Rust has multiple polymorphism-related features, unlike many OOP languages_.
   =TODO=
 
-** TODO 17.2. Using Trait Objects That Allow for Values of Differnt Types - 375
+** DONE 17.2. Using Trait Objects That Allow for Values of Differnt Types - 375
+CLOSED: [2023-09-18 Mon 17:14]
 =RE-READ=
 /enums/ is a way we can use to hold some variants, and use them as one
 single data type.
@@ -10464,15 +10835,31 @@ NOT all /traits/ can be made into /trait objects/; ONLY /object safe/
 
 * DONE 18. Patterns and Maching - 395
 CLOSED: [2017-08-30 Wed 04:43]
-- =TODO= the difference between /refutable/ and /irrefutable/ patterns,
+- A /pattern/ consists of some combination of the following:
+  * Literals
+  * Destructured arrays, enums, structs, or tuples
+  * Variables
+  * Wildcards
+  * Placeholders
+
+- This chapter is a reference on *ALL things* related to /patterns/.
+  We'll cover
+  * the _valid places_ to use /patterns/,
+
+  * the *difference* between /refutable and irrefutable patterns/, =TODO=
+
+  * the *different kinds* of /pattern syntax/ that you might see.
+
+  By the end of the chapter, you'll know
+  _HOW TO use patterns to express many concepts in a clear way_.
 
 ** DONE 18.1. All the Places Patterns May be Used - 396
-CLOSED: [2017-08-30 Wed 00:58]
+CLOSED: [2023-09-18 Mon 17:39]
 *** DONE ~match~ Arms - 396
-CLOSED: [2017-08-29 Tue 23:15]
+CLOSED: [2023-09-18 Mon 17:31]
 
 *** DONE Conditional ~if let~ Expressions - 396
-CLOSED: [2017-08-29 Tue 23:22]
+CLOSED: [2023-09-18 Mon 17:31]
 It's possbile to mix and match ~if let~, ~else if~, and ~else if let~.
 =IMPORTANT= NOT like ~match~!!! NO exhaustiveness check!!!
 
@@ -10499,8 +10886,14 @@ It's possbile to mix and match ~if let~, ~else if~, and ~else if let~.
   }
 #+END_SRC
 
+- Write ~if let Ok(age) = age && age > 30~ in the last ~else~ is not possbile!!!
+  The *shadowed* ~age~ we want to compare to 30 *is NOT valid until the new
+  scope starts with the curly bracket.*
+
+- ~if let~ expression *cannot* do /exhaustive check/.
+
 *** DONE ~while let~ Conditional Loops - 398
-CLOSED: [2017-08-30 Wed 00:43]
+CLOSED: [2023-09-18 Mon 17:36]
 #+BEGIN_SRC rust
   let mut stack = Vec::new();
 
@@ -10514,7 +10907,7 @@ CLOSED: [2017-08-30 Wed 00:43]
 #+END_SRC
 
 *** DONE ~for~ Loops - 398
-CLOSED: [2017-08-30 Wed 00:44]
+CLOSED: [2023-09-18 Mon 17:36]
 #+BEGIN_SRC rust
   let v = vec![1, 2, 3];
 
@@ -10524,13 +10917,12 @@ CLOSED: [2017-08-30 Wed 00:44]
 #+END_SRC
 
 *** DONE ~let~ Statements - 399
-CLOSED: [2017-08-30 Wed 00:45]
-=TODO=We saw another example of destructuring a tuple in _Chapter 16_,
-Listing 16-6, where we destructured the return value of ~mpsc::channel()~
-into the ~tx~ (transmitter) and ~rx~ (receiver) parts.
+CLOSED: [2023-09-18 Mon 17:36]
+
+See "Ignoring Valuues in Patterns" section. =NEXT=
 
 *** DONE Function Parameters - 400
-CLOSED: [2017-08-30 Wed 00:58]
+CLOSED: [2023-09-18 Mon 17:39]
 #+BEGIN_SRC rust
   // src/main.rs
 
@@ -10546,73 +10938,96 @@ CLOSED: [2017-08-30 Wed 00:58]
 
 - =IMPORTANT=
   One difference between the places we can use patterns is that with
-  + ~for~ loops
-  + ~let~
-  + in function parameters
-  the patterns must be /irrefutable/. =TODO= next section.
+  * ~for~ loops
+  * ~let~
+  * in function parameters
+
+  if this patterns must be /irrefutable/. =NEXT= next section.
+
+- At this point,
+  you've seen several ways of using /patterns/,
+  _BUT_ /patterns/ _do *not* work the same in every place we can use them._
+
+  * In some places, the patterns *must be* /irrefutable/;
+
+  * in other circumstances, they *can be* /refutable/.
+
+  =NEXT= We'll discuss these two concepts next.
 
 ** DONE 18.2. Refutability: Whether a Pattern Might Fail to Match - 401
-CLOSED: [2017-08-30 Wed 01:10]
+CLOSED: [2023-09-18 Mon 18:09]
 - Patterns come in _two_ forms:
-  + /refutable/: patterns which can fail to match for some possible value.
+  * /refutable/: patterns which can fail to match for some possible value.
 
-  + /irrefutable/: patterns which CANNOT fail to match for any possible value.
+  * /irrefutable/: patterns which CANNOT fail to match for any possible value.
 
-- ~let~ statements, function parameters, and ~for~ loops are restricted to
-  _ONLY accept_ /irrefutable patterns/,
+- *Must be /irrefutable patterns/:*
+  * ~let~ statements,
+  * function parameters,
+  * ~for~ loops
 
   since there's nothing correct the program could do if the pattern fails to
   match.
 
-- ~if let~, and ~while let~ expressions are restricted to _ONLY accept_
-  /refutable patterns/,
+- *Should be /refutable patterns/ and can be /irrefutable patterns/ (compiler warning):*
+  * ~if let~
+  * ~while let~
 
   since they're made to handle possible failure and we wouldn't need their
   functionality if the pattern could never fail.
 
-- When we use these two concepts, nothing complicated.
+- Examples:
+  1. Want to use /refutable patterns/ in ~let~?
+     Replace ~let~ with ~if let~.
+     #+BEGIN_SRC rust
+       let Some(x) = some_option_value; // Can be `None`
 
-  What we really need to know is that when these concepts show up in an error
-  message, which should know what do they mean.
+       // error[E0005]: refutable pattern in local binding: `None` not covered
+       //  --> <anon>:3:5
+       //   |
+       // 3 | let Some(x) = some_option_value;
+       //   |     ^^^^^^^ pattern `None` not covered
+     #+END_SRC
 
-- For example,
-  #+BEGIN_SRC rust
-    let Some(x) = some_option_value; // Can be `None`
+     Solution:
+     #+BEGIN_SRC rust
+       if let Some(x) = some_option_value {
+           println!("{}", x);
+       }
+     #+END_SRC
 
-    // error[E0005]: refutable pattern in local binding: `None` not covered
-    //  --> <anon>:3:5
-    //   |
-    // 3 | let Some(x) = some_option_value;
-    //   |     ^^^^^^^ pattern `None` not covered
-  #+END_SRC
+  2. Want to use /irrefutable patterns/ in ~if let~?
+     Replace ~if let~ with ~if let~.
+     #+BEGIN_SRC rust
+       if let x = 5 {
+           println!("{}", x);
+       };
 
-  Solution:
-  #+BEGIN_SRC rust
-    if let Some(x) = some_option_value {
-        println!("{}", x);
-    }
-  #+END_SRC
+       // error[E0162]: irrefutable if-let pattern
+       //  --> <anon>:2:8
+       //   |
+       // 2 | if let x = 5 {
+       //   |        ^ irrefutable pattern
+     #+END_SRC
 
-- For example,
-  #+BEGIN_SRC rust
-    if let x = 5 {
-        println!("{}", x);
-    };
+     Solution: ~let x = 5; println!("{}", x);~ or just ~println!("{}", x);~
 
-    // error[E0162]: irrefutable if-let pattern
-    //  --> <anon>:2:8
-    //   |
-    // 2 | if let x = 5 {
-    //   |        ^ irrefutable pattern
-  #+END_SRC
+- For this reason,
+  /match arms/
+  *MUST* use /refutable patterns/,
+  *except* for the /last arm/, which should match any remaining values with an
+  /irrefutable pattern/.
 
-  Solution: ~let x = 5; println!("{}", x);~ or just ~println!("{}", x);~
+- Rust allows us to use an /irrefutable pattern/ in _a ~match~ with ONLY ONE arm,_
+  _BUT_
+  this syntax *isn't particularly useful* and could be replaced with a simpler
+  ~let~ statement.
 
-** DONE 18.3. Pattern Syntax - 402
+** DONE 18.3. Pattern Syntax - 402 - =START HERE!!!=
 CLOSED: [2017-08-30 Wed 04:43]
 
 *** DONE Matching Literals - 402
-CLOSED: [2017-08-30 Wed 01:12]
+CLOSED: [2023-09-18 Mon 18:21]
 #+BEGIN_SRC rust
   // Suppose `x` is a number
 
@@ -10626,7 +11041,7 @@ CLOSED: [2017-08-30 Wed 01:12]
 This is like a non-fall-through switch in C/C++/Java.
 
 *** DONE Matching Named Variables - 403
-CLOSED: [2017-08-30 Wed 01:19]
+CLOSED: [2023-09-18 Mon 18:25]
 - Named variables are irrefutable patterns that match any value.
   For example, if an arm of ~match~ is ~Some(y)~, here ~y~ is the named
   variables.
@@ -10638,7 +11053,7 @@ CLOSED: [2017-08-30 Wed 01:19]
   =TODO= We'll be talking about match guards later in this section.
 
 *** DONE Multiple Patterns - 404
-CLOSED: [2017-08-30 Wed 01:19]
+CLOSED: [2023-09-18 Mon 18:25]
 Use ~|~
 #+BEGIN_SRC rust
   match x {
@@ -10649,12 +11064,12 @@ Use ~|~
 #+END_SRC
 
 *** DONE Matching Ranges of Values with ~..=~ - 404
-CLOSED: [2017-08-30 Wed 01:23]
+CLOSED: [2023-09-18 Mon 18:26]
 - ~..=~ is used to match an _inclusive_ range.
 
-- Ranges are only allowed with
-  + numeric values (=TODO= =From Jian= CANNOT be Flotaing, Right???)
-  + ~char~ values
+- Ranges are *ONLY allowed* with
+  * numeric values (=TODO= =From Jian= CANNOT be Flotaing, Right???)
+  * ~char~ values
 
 - Example:
   #+BEGIN_SRC rust
@@ -10673,8 +11088,7 @@ CLOSED: [2017-08-30 Wed 01:23]
     }
   #+END_SRC
 
-*** DONE Destructuring to Break Apart Values - 405
-CLOSED: [2017-08-30 Wed 01:30]
+*** TODO Destructuring to Break Apart Values - 405
 
 **** Destructuring Structs
 **** Destructuring Enums
@@ -10751,8 +11165,7 @@ CLOSED: [2017-08-30 Wed 01:30]
          //               found type `Point`
        #+END_SRC
 
-*** DONE Ignoring Values in a Pattern - 409
-CLOSED: [2017-08-30 Wed 01:48]
+*** TODO Ignoring Values in a Pattern - 409
 ~_~ and ~..~
 
 **** DONE Ignoring an Entire Value with ~_~
@@ -10859,7 +11272,7 @@ CLOSED: [2017-08-30 Wed 01:48]
   elements they indicate.
 
 *** DONE Extra Conditionals with March Guards - 413
-CLOSED: [2017-08-30 Wed 02:10]
+CLOSED: [2023-09-18 Mon 18:30]
 #+BEGIN_SRC rust
   let num = Some(4);
 
@@ -10903,14 +11316,14 @@ CLOSED: [2017-08-30 Wed 02:10]
   #+END_SRC
 
   In other words,
-  + it is ~(4 | 5 | 6) if y => ...~
-  + it is NOT ~4 | 5 | (6 if y) => ...~, though this is NOT compilable.
+  * it is ~(4 | 5 | 6) if y => ...~
+  * it is NOT ~4 | 5 | (6 if y) => ...~, though this is NOT compilable.
 
 - If you just want to use guard when only part of the ~|~ patterns match,
   just split and re-group the patterns.
 
 *** DONE ~@~ Bindings - 415
-CLOSED: [2017-08-30 Wed 04:43]
+CLOSED: [2023-09-18 Mon 18:32]
 #+BEGIN_SRC rust
   enum Message {
       Hello { id: i32 },
