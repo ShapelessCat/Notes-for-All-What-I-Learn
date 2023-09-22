@@ -10834,7 +10834,7 @@ NOT all /traits/ can be made into /trait objects/; ONLY /object safe/
 ** TODO Summary - 393
 
 * DONE 18. Patterns and Maching - 395
-CLOSED: [2017-08-30 Wed 04:43]
+CLOSED: [2023-09-19 Tue 00:08]
 - A /pattern/ consists of some combination of the following:
   * Literals
   * Destructured arrays, enums, structs, or tuples
@@ -11023,8 +11023,8 @@ CLOSED: [2023-09-18 Mon 18:09]
   this syntax *isn't particularly useful* and could be replaced with a simpler
   ~let~ statement.
 
-** DONE 18.3. Pattern Syntax - 402 - =START HERE!!!=
-CLOSED: [2017-08-30 Wed 04:43]
+** DONE 18.3. Pattern Syntax - 402
+CLOSED: [2023-09-19 Tue 00:08]
 
 *** DONE Matching Literals - 402
 CLOSED: [2023-09-18 Mon 18:21]
@@ -11068,112 +11068,209 @@ CLOSED: [2023-09-18 Mon 18:26]
 - ~..=~ is used to match an _inclusive_ range.
 
 - Ranges are *ONLY allowed* with
-  * numeric values (=TODO= =From Jian= CANNOT be Flotaing, Right???)
+  * numeric values
+    + Example:
+      #+begin_src rust
+        // Suppose `x` is number
+        match x {
+            1..=5 => println!("one through five"),
+            _     => println!("something else"),
+        }
+      #+end_src
+
   * ~char~ values
+    + Example:
+      #+begin_src rust
+        match x {
+            'a'..='j' => println!("early ASCII letter"),
+            'k'..='z' => println!("late ASCII letter"),
+            _         => println!("something else"),
+        }
+      #+end_src
+
+*** DONE Destructuring to Break Apart Values - 405
+CLOSED: [2023-09-18 Mon 23:48]
+
+**** DONE Destructuring Structs
+CLOSED: [2023-09-18 Mon 23:38]
+- Full form:
+  #+begin_src rust
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    fn main() {
+        let p = Point { x: 0, y: 7 };
+
+        let Point { x: a, y: b } = p;
+        assert_eq!(0, a);
+        assert_eq!(7, b);
+    }
+  #+end_src
+
+- Shorthand:
+  #+begin_src rust
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    fn main() {
+        let p = Point { x: 0, y: 7 };
+
+        let Point { x, y } = p;
+        assert_eq!(0, x);
+        assert_eq!(7, y);
+    }
+  #+end_src
+  *Shorthand* for patterns that match _struct fields_:
+  you only need to *list* _the name of the struct field_, and the /variables/
+  created from the pattern will have the *same names*.
+
+- Destructure with /literal values/ as part of the struct pattern
+  _RATHER THAN_
+  creating variables for all the fields.
+  * Example:
+    #+begin_src rust
+      fn main() {
+          let p = Point { x: 0, y: 7 };
+
+          match p {
+              Point { x, y: 0 } => println!("On the x axis at {x}"),
+              Point { x: 0, y } => println!("On the y axis at {y}"),
+              Point { x, y } => {
+                  println!("On neither axis: ({x}, {y})");
+              }
+          }
+      }
+    #+end_src
+
+**** DONE Destructuring Enums
+CLOSED: [2023-09-18 Mon 23:41]
+#+begin_src rust
+  enum Message {
+      Quit,
+      Move { x: i32, y: i32 },
+      Write(String),
+      ChangeColor(i32, i32, i32),
+  }
+
+  fn main() {
+      let msg = Message::ChangeColor(0, 160, 255);
+
+      match msg {
+          Message::Quit => {
+              println!("The Quit variant has no data to destructure.");
+          }
+          Message::Move { x, y } => {
+              println!("Move in the x direction {x} and in the y direction {y}");
+          }
+          Message::Write(text) => {
+              println!("Text message: {text}");
+          }
+          Message::ChangeColor(r, g, b) => {
+              println!("Change the color to red {r}, green {g}, and blue {b}",)
+          }
+      }
+  }
+#+end_src
+
+**** DONE Destructuring Nested Structs and Enums
+CLOSED: [2023-09-18 Mon 23:43]
+#+begin_src rust
+  enum Color {
+      Rgb(i32, i32, i32),
+      Hsv(i32, i32, i32),
+  }
+
+  enum Message {
+      Quit,
+      Move { x: i32, y: i32 },
+      Write(String),
+      ChangeColor(Color),
+  }
+
+  fn main() {
+      let msg = Message::ChangeColor(Color::Hsv(0, 160, 255));
+
+      match msg {
+          Message::ChangeColor(Color::Rgb(r, g, b)) => {
+              println!("Change color to red {r}, green {g}, and blue {b}");
+          }
+          Message::ChangeColor(Color::Hsv(h, s, v)) => {
+              println!("Change color to hue {h}, saturation {s}, value {v}")
+          }
+          _ => (),
+      }
+  }
+#+end_src
+
+**** DONE Destructuring Structs and Tuples
+CLOSED: [2023-09-18 Mon 23:48]
+- Patterns can be used to _destructure_ =TODO: find out the origin of this sentence=
+  * structs
+  * enums
+  * tuples
+  * references
+
+- Example:
+  #+begin_src rust
+    let ((feet, inches), Point { x, y }) = ((3, 10), Point { x: 3, y: -10 });
+  #+end_src
 
 - Example:
   #+BEGIN_SRC rust
-    // Suppose `x` is number
-    match x {
-        1..=5 => println!("one through five"),
-        _ => println!("something else"),
-    }
+    let points = vec![
+        Point { x: 0, y: 0 },
+        Point { x: 1, y: 5 },
+        Point { x: 10, y: -3 },
+    ];
+
+    let sum_of_squares: i32 = points
+        .iter()
+        .map(|&Point {x, y}| x * x + y * y)
+        .sum();
+
+
+    // If we forget the `&`
+    //
+    // The error message is:
+    // error[E0308]: mismatched types
+    //   -->
+    //    |
+    // 14 |         .map(|Point {x, y}| x * x + y * y)
+    //    |               ^^^^^^^^^^^^ expected &Point, found struct `Point`
+    //    |
+    //    = note: expected type `&Point`
+    //               found type `Point`
   #+END_SRC
 
-  #+BEGIN_SRC rust
-    match x {
-        'a'..='j' => println!("early ASCII letter"),
-        'k'..='z' => println!("late ASCII letter"),
-        _ => println!("something else"),
-    }
-  #+END_SRC
-
-*** TODO Destructuring to Break Apart Values - 405
-
-**** Destructuring Structs
-**** Destructuring Enums
-**** Destructuring Nested Structs and Enums
-**** Destructuring Structs and Tuples
-
-     - =OLD NOTE !!!=
-
-     - Patterns can be used to _destructure_
-       + structs
-       + enums
-       + tuples
-       + references
-
-     - Example:
-       #+BEGIN_SRC rust
-         struct Point {
-             x: i32,
-             y: i32,
-         }
-
-         fn main() {
-             let p = Point { x: 0, y: 7 };
-
-             let Point { x, y } = p;
-             assert_eq!(0, x);
-             assert_eq!(7, y);
-
-             // The below code is also available:
-             //
-             // let Point { x: a, y: b } = p;
-             // assert_eq!(0, a);
-             // assert_eq!(7, b);
-         }
-       #+END_SRC
-
-     - Example:
-       #+BEGIN_SRC rust
-         fn main() {
-             let p = Point { x: 0, y: 7 };
-
-             match p {
-                 Point { x, y: 0 } => println!("On the x axis at {}", x),
-                 Point { x: 0, y } => println!("On the y axis at {}", y),
-                 Point { x, y } => println!("On neither axis: ({}, {})", x, y),
-             }
-         }
-       #+END_SRC
-
-     - Example:
-       #+BEGIN_SRC rust
-         let points = vec![
-             Point { x: 0, y: 0 },
-             Point { x: 1, y: 5 },
-             Point { x: 10, y: -3 },
-         ];
-
-         let sum_of_squares: i32 = points
-             .iter()
-             .map(|&Point {x, y}| x * x + y * y)
-             .sum();
-
-
-         // If we forget the `&`
-         //
-         // The error message is:
-         // error[E0308]: mismatched types
-         //   -->
-         //    |
-         // 14 |         .map(|Point {x, y}| x * x + y * y)
-         //    |               ^^^^^^^^^^^^ expected &Point, found struct `Point`
-         //    |
-         //    = note: expected type `&Point`
-         //               found type `Point`
-       #+END_SRC
-
-*** TODO Ignoring Values in a Pattern - 409
+*** DONE Ignoring Values in a Pattern - 409
+CLOSED: [2023-09-19 Tue 00:08]
 ~_~ and ~..~
 
+- There are _a few ways_ to *ignore* entire values or parts of values in a pattern:
+  * using the ~_~ /pattern/ (which yourve seen),
+
+  * using the _ pattern within another pattern,
+
+  * =IMPORTANT= =Scala should support this=
+    using a name that starts with an underscore, or
+
+  * using ~..~ to *ignore* _remaining parts_ of a value.
+
 **** DONE Ignoring an Entire Value with ~_~
-CLOSED: [2017-08-30 Wed 01:33]
+CLOSED: [2023-09-18 Mon 23:57]
 - Example:
+  #+DESCRIPTION: Listing 18-17: Using _ in a function signature
   #+BEGIN_SRC rust
-    fn foo(_: i32) {
-        // code goes here
+    fn foo(_: i32, y: i32) {
+        println!("This code only uses the y parameter: {}", y);
+    }
+
+    fn main() {
+        foo(3, 4);
     }
   #+END_SRC
 
@@ -11186,30 +11283,42 @@ CLOSED: [2017-08-30 Wed 01:33]
   parameters_
 
 **** DONE Ignoring Parts of a Value with a Nested ~_~
-CLOSED: [2017-08-30 Wed 01:35]
-#+BEGIN_SRC rust
-  match x {
-      Some(_) => println!("got a Some and I don't care what's inside"),
-      None => (),
-  }
+CLOSED: [2023-09-19 Tue 00:00]
+- Example 0:
+  #+BEGIN_SRC rust
+    let mut setting_value = Some(5);
+    let new_setting_value = Some(10);
 
+    match (setting_value, new_setting_value) {
+        (Some(_), Some(_)) => {
+            println!("Can't overwrite an existing customized value");
+        }
+        _ => {
+            setting_value = new_setting_value;
+        }
+    }
 
-  // let numbers = (2, 4, 8, 16, 32);
+    println!("setting is {:?}", setting_value);
+  #+END_SRC
 
-  match numbers {
-      (first, _, third, _, fifth) => {
-          println!("Some numbers: {}, {}, {}", first, third, fifth)
-      },
-  }
-#+END_SRC
+- Example 1:
+  #+begin_src rust
+    let numbers = (2, 4, 8, 16, 32);
+
+    match numbers {
+        (first, _, third, _, fifth) => {
+            println!("Some numbers: {first}, {third}, {fifth}")
+        }
+    }
+  #+end_src
 
 **** DONE Ignoring an Unused Variable by Starting Its Name with ~_~
-CLOSED: [2017-08-30 Wed 01:48]
+CLOSED: [2023-09-19 Tue 00:03]
 - The difference between ~_x~ and ~_~:
-  + ~_x~ still binds the value, though there is no warning when ~_x~ is
+  * ~_x~ still binds the value, though there is no warning when ~_x~ is
     unused.
 
-  + ~_~ doesn't bind at all.
+  * ~_~ doesn't bind at all.
 
 - Underscore prefixed variables are useful when you want to /move/ a
   variable when do pattern matchings -- disable that variable.
@@ -11229,7 +11338,7 @@ CLOSED: [2017-08-30 Wed 01:48]
   #+END_SRC
 
 **** DONE Ignoring Remaining Parts of a Value with ~..~
-CLOSED: [2017-08-30 Wed 01:48]
+CLOSED: [2023-09-19 Tue 00:07]
 - Example:
   #+BEGIN_SRC rust
     struct Point {
@@ -11264,7 +11373,7 @@ CLOSED: [2017-08-30 Wed 01:48]
     }
   #+END_SRC
 
-- ~..~ mustn't be ambiguous.
+- *Using ~..~ mustn't be ambiguous.*
   For example, one arm of ~match~ CANNOT be ~(.., second, ..)~
 
 - =From Jian=
@@ -11356,7 +11465,7 @@ CLOSED: [2023-09-18 Mon 18:32]
   ~id~.
 
 ** DONE Summary - 416
-CLOSED: [2017-08-30 Wed 04:43]
+CLOSED: [2023-09-19 Tue 00:08]
 
 * TODO 19. Advanced Features - 417
 ** TODO 19.1. Unsafe Rust - 418
