@@ -10388,22 +10388,48 @@ CLOSED: [2017-09-01 Fri 14:38]
 
 ** DONE 15.5. ~RefCell<T>~ and the Interior Mutability Pattern - 330
 CLOSED: [2017-09-01 Fri 16:31]
-- interior mutability ::
+- interior mutability :: a /design pattern/ in Rust that allows you to
+                         *mutate* data even when there are /immutable references/ to that data;
+                         _NORMALLY, this action is DISALLOWED by the /borrowing rules/._
+
+- Implementation:
+  1. To *mutate* data,
+     the pattern uses /unsafe code/ inside a data structure to
+     *bend*
+     Rust's usual rules that govern /mutation/ and /borrowing/.
+
+  2. /Unsafe code/ indicates to the compiler that
+     we're checking the rules manually
+     instead of relying on the compiler to check them for us;
+     =TODO= =NEXT= we will discuss /unsafe code/ more in Chapter 19.
+
+- We can use /types/ that use the /interior mutability pattern/
+  ONLY WHEN
+  we can ensure that the /borrowing rules/ will be followed /at runtime/,
+  EVEN THOUGH the compiler can't guarantee that.
+  * The ~unsafe~ code involved is then wrapped in a _safe API_, and the outer type
+    is still immutable.
 
 *** Enforcing Borrowing Rules at Runtime with ~RefCell<T>~ - 330
 *** Interior Mutability: A Mutable Borrow to an Immutable Value - 331
+
+- xxxx
+
+- xxxx
+
 **** A Use Case for Interior Mutability: Mock Objects - 332
 **** Keeping Track of Borrows at Runtime with ~RefCell<T>~ - 336
 - Similarly to ~Rc<T>~, ~RefCell<T>~ is only for use in _single-threaded_
   scenarios.
 
-  We'll talk about how to get the functionality of ~RefCell<T>~ in a multi-
-  threaded program in the next chapter on concurrency =TODO=.
+  * =NEXT= =TODO=
+    We'll talk about how to get the functionality of ~RefCell<T>~ in a
+    /multithreaded/ program in the next chapter on concurrency =TODO=.
 
   For now, all you need to know is that if you try to use ~RefCell<T>~ in a
   multithreaded context, you'll get a compile time error.
 
-- With references, we use the ~&~ and ~&mut~ syntax to create references and
+- With /references/, we use the ~&~ and ~&mut~ syntax to create references and
   mutable references, respectively.
 
   _But_ with ~RefCell<T>~, we use the ~borrow~ and ~borrow_mut~ methods, which
@@ -10470,6 +10496,83 @@ still possible, though difficult because of Rust's memory safety guarantees.
 ** Summary - 346
 
 * TODO 16. Fearless Concurrency - 347 - =TODO=
+- Another of Rust's major goals ::
+  Handling concurrent programming *safely* and *efficiently*.
+
+- /Concurrent programming/ and /parallel programming/
+  are becoming increasingly important as more computers take advantage of their
+  multiple processors:
+
+  * /Concurrent programming/, where different parts of a program execute
+    *independently*.
+
+  * /Parallel programming/, where different parts of a program execute at the *same
+    time*.
+
+- Historically, programming in these contexts has been difficult and error prone:
+  Rust hopes to change that.
+
+- The EVOLUTION of the Rust team's cognition:
+  * Initially,
+    the Rust team thought that ensuring memory safety and preventing concurrency
+    problems were two separate challenges to be solved with different methods.
+
+  Over time, the team discovered that the ownership and type systems
+  are a powerful set of tools to help manage memory safety and concurrency
+  problems! By leveraging ownership and type checking, many concurrency errors
+  are compile-time errors in Rust rather than runtime errors.
+
+  Therefore, rather than making you spend lots of time trying to reproduce the
+  exact circumstances under which a runtime concurrency bug occurs, incorrect
+  code will refuse to compile and present an error explaining the problem. As a
+  result, you can fix your code while you’re working on it rather than
+  potentially after it has been shipped to production.
+
+  We’ve nicknamed this aspect of Rust fearless concurrency. Fearless concurrency
+  allows you to write code that is free of subtle bugs and is easy to refactor
+  without introducing new bugs.
+
+- *NOTE*: =IN THIS BOOK=
+  For simplicity's sake, we'll refer to many of the problems as concurrent
+  rather than being more precise by saying concurrent and/or parallel. If this
+  book were about concurrency and/or parallelism, we’d be more specific. For
+  this chapter, please mentally substitute concurrent and/or parallel whenever
+  we use concurrent.
+
+- Many languages are dogmatic about the solutions they offer for handling
+  concurrent problems.
+  =From Jian=
+  I don't think "dogmatic" is a proper word.
+  Decisions are made based on _design philosophy_ and _target users and questions_.
+
+  * For example,
+    Erlang
+    + has elegant functionality for /message-passing concurrency/
+
+    + BUT has only obscure ways to share state between /threads/.
+
+  * Supporting only a subset of possible solutions is a reasonable strategy for
+    _higher-level languages_, because a _higher-level language_
+    PROMISES
+    *benefits from GIVING UP some control to gain abstractions.*
+
+  * However,
+    _lower-level languages_ are expected to provide the solution with the best
+    performance in any given situation and have fewer abstractions over the
+    hardware.
+    THEREFORE, Rust offers a variety of tools for modeling problems in whatever
+    way is appropriate for your situation and requirements.
+
+- Here are the topics we'll cover in this chapter:
+  1. How to create /threads/ to run multiple pieces of code at the *SAME time*
+
+  2. /Message-passing concurrency/, where _channels send messages between /threads/_
+
+  3. /Shared-state concurrency/, where MULTIPLE /threads/ have access to some piece of data
+
+  4. The ~Sync~ and ~Send~ traits, which extend Rust's concurrency guarantees to
+     user-defined types as well as types provided by the standard library
+
 ** TODO 16.1. Using Threads to Run Code Simultaneously - 348
 *** TODO Creating a New Thread with ~spawn~ - 350
 *** TODO Waiting for All Threads to Finish Using ~join~ Handles - 351
