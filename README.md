@@ -3,7 +3,7 @@
 All my notes for technical book reading.
 Most of these notes are only outlines -- too many things need to learn, and some of them are low priority.
 
-__166 directories, 536 files__:
+__183 directories, 574 files__:
 
 ```text
 .
@@ -25,6 +25,8 @@ __166 directories, 536 files__:
 │   ├── Quicksort.org
 │   ├── The-Algorithm-Design-Manual-2nd.org
 │   └── Think-Data-Structures.org
+├── 00.Understand_Computers
+│   └── The-Secret-Life-of-Programs.org
 ├── 01.Theory
 │   ├── Algebra-Driven_Design.org
 │   ├── CSAPP3rd.org
@@ -33,6 +35,8 @@ __166 directories, 536 files__:
 │   │   ├── Category-Theory-in-Context.tm
 │   │   └── Conceptual-Mathematics.tm
 │   ├── Code.org
+│   ├── DSL
+│   │   └── DSLs-in-Action.org
 │   ├── Extended_BNF.org
 │   ├── Introduction-to-Automata-Theory,Languages,and-Computation_3rd.org
 │   ├── Lambda_Calculus
@@ -45,8 +49,10 @@ __166 directories, 536 files__:
 │   ├── Parsing-Techniques-2nd.tm
 │   ├── Pre_Category
 │   │   └── A-Book-of-Abstract-Algebra.tm
+│   ├── Program-Construction.org
 │   ├── Programming-Language-Pragmatics_4th.org
 │   ├── Programming-Languages_Application-and-Interpretation_2nd.org
+│   ├── Programming-Languages_Application-and-Interpretation_3rd.org
 │   ├── Semantics
 │   │   ├── [1992 - Semantics of Programming Languages].Carl A. Gunter.tm
 │   │   ├── [1993 - The Formal Semantics of Programming Languages - An Introduction].Glynn Winskel.tm
@@ -88,7 +94,6 @@ __166 directories, 536 files__:
 │   │   ├── The-Unix-Person's-Guide-to-Powershell.org
 │   │   ├── Unix-and-Linux-System-AdminHandbook-4th.org
 │   │   └── Windows-PowerShell-in-Action-3rd.org
-│   ├── The-Secret-Life-of-Programs.org
 │   ├── Version_Control
 │   │   └── Git
 │   │       ├── Got-Git_CN.org
@@ -98,6 +103,8 @@ __166 directories, 536 files__:
 │   │       ├── Version-Control-with-Git-3rd.org
 │   │       └── Writing-on-GitHub.org
 │   ├── Virtualization_and_Container
+│   │   ├── Docker-Crash-Course-for-busy-DevOps-and-Developers.org
+│   │   ├── Docker-and-Kubernetes_The-Practical-Guide_2024-Edition.org
 │   │   ├── Kubernetes-Up_and_Running-3rd.org
 │   │   ├── Learning-Helm.org
 │   │   ├── Podman-in-Action.org
@@ -165,14 +172,15 @@ __166 directories, 536 files__:
 │   ├── Assembly_and_C
 │   │   ├── Assembly-Language-Step-by-Step3rd.org
 │   │   ├── Managing-Projects-with-GNU-Make.org
-│   │   └── Modern-C.org
+│   │   ├── Modern-C.org
+│   │   └── The-Art-of-64bit-Assembly-Language.org
 │   ├── C#
 │   │   ├── CSharp-10-in-a-Nutshell.org
 │   │   ├── CSharp-6-in-a-Nutshell.org
 │   │   └── Real-World-Functional-Programming-with-Examples-in-Fsharp-and-Csharp.org
 │   ├── C++
 │   │   └── C++-Primer-5th.org
-│   ├── Common-Lisp
+│   ├── Common_Lisp
 │   │   ├── Common-Lisp-Recipes.org
 │   │   ├── Practical-Common-Lisp.org
 │   │   └── The-Art-of-the-Metaobject-Protocol.org
@@ -225,6 +233,7 @@ __166 directories, 536 files__:
 │   │   ├── Java-13-Revealed-2nd.org
 │   │   ├── Java-Network-Programming-4th.org
 │   │   ├── Java-Puzzlers.org
+│   │   ├── Java-Threads-3rd.org
 │   │   ├── Java-by-Comparison.org
 │   │   ├── Java-the-Legend.org
 │   │   ├── Java8-Lambdas.org
@@ -266,6 +275,8 @@ __166 directories, 536 files__:
 │   │   └── Kotlin-in-Action.org
 │   ├── Lua
 │   │   └── Lua-5.4-Reference-Manual.org
+│   ├── MoonBit
+│   │   └── MoonBit.org
 │   ├── OCaml
 │   │   ├── Real-World-OCaml-2nd.org
 │   │   └── opam-2.0-documentation.org
@@ -277,15 +288,23 @@ __166 directories, 536 files__:
 │   │   │   ├── Learning-Concurrency-in-Python.org
 │   │   │   ├── Mastering-Concurrency-in-Python.org
 │   │   │   └── Using-Asyncio-in-Python.org
-│   │   ├── Conda-docs.org
 │   │   ├── Effective-Python-2nd.org
-│   │   ├── Fluent-Python-2nd-early-relase.org
+│   │   ├── Environment_Management
+│   │   │   └── Conda-docs.org
+│   │   ├── Fluent-Python-2nd.org
 │   │   ├── Fluent-Python.org
 │   │   ├── High-Performance-Python-2nd.org
 │   │   ├── Learning-Python-5th.org
+│   │   ├── Libraries
+│   │   │   └── Requests_HTTP-for-Humans.org
+│   │   ├── Linters
+│   │   │   └── Flake8.org
 │   │   ├── Official_Documentation
 │   │   │   ├── Debugging-and-Profiling.org
 │   │   │   ├── Python-HOWTOs.org
+│   │   │   ├── Python_Enhancement_Proposals
+│   │   │   │   ├── Packaging_PEPs
+│   │   │   │   └── Typing_PEPs
 │   │   │   ├── The-Python-Language-Reference.org
 │   │   │   ├── The-Python-Tutorial.org
 │   │   │   └── The_Python_Standard_Library
@@ -301,12 +320,17 @@ __166 directories, 536 files__:
 │   │   ├── Python-Testing-with-pytest.org
 │   │   ├── Real_Python
 │   │   │   └── Speed-Up-Your-Python-Program-with-Concurrency.org
+│   │   ├── Robust-Python.org
 │   │   ├── Standard_Library_third_party_documents
 │   │   │   ├── Python-Standard-Library.org
 │   │   │   └── The-Python-3-Standard-Library-by-Example.org
+│   │   ├── Violent-Python.org
 │   │   ├── Web-Scraping-with-Python-2nd.org
-│   │   └── packages
-│   │       └── Requests_HTTP-for-Humans.org
+│   │   └── packaging
+│   │       ├── Publishing-Python-Packages.org
+│   │       ├── Python-Packaging-Authority.org
+│   │       ├── Setuptools.org
+│   │       └── pip-documentation.org
 │   ├── R
 │   │   ├── Advanced-R_2nd.org
 │   │   ├── An-Introduction-to-R.org
@@ -326,32 +350,53 @@ __166 directories, 536 files__:
 │   │   ├── The-Scheme-Programming-Language-4th.org
 │   │   └── The-Typed-Racket-Guide.org
 │   ├── ReScript
-│   │   └── Official-Documents
+│   │   └── Official_Documents
 │   │       └── Language-Manual.org
 │   ├── Rust
+│   │   ├── Command-Line_Rust.org
 │   │   ├── Command-line-apps-in-Rust.org
-│   │   ├── Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org
+│   │   ├── Easy-Rust.org
+│   │   ├── Libraries
+│   │   │   ├── A-Thoughtful-Introduction-to-The-Pest-Parser.org
+│   │   │   ├── The-Nominomicon.org
+│   │   │   └── nom.org
+│   │   ├── Official_Documentation
+│   │   │   ├── Clippy-Documentation.org
+│   │   │   ├── Rust-by-Example.org
+│   │   │   ├── The-Cargo-Book.org
+│   │   │   ├── The-Edition-Guide.org
+│   │   │   ├── The-Rust-Style-Guide.org
+│   │   │   ├── The-rustc-book.org
+│   │   │   └── The-rustdoc-book.org
+│   │   ├── Practical-Rust-1.x-Cookbook.org
 │   │   ├── Programming-Rust-2nd.org
 │   │   ├── Programming-Rust.org
 │   │   ├── Programming-WebAssembly-with-Rust.org
+│   │   ├── Rust-Atomics-and-Locks.org
 │   │   ├── Rust-Cookbook.org
 │   │   ├── Rust-Standard-Library-Cookbook.org
 │   │   ├── Rust-Style-Guidelines.org
 │   │   ├── Rust-and-WebAssembly.org
-│   │   ├── Rust-by-Example.org
 │   │   ├── Rust-for-Rustaceans.org
-│   │   ├── The-Cargo-Book.org
-│   │   ├── The-Edition-Guide.org
+│   │   ├── Serde
+│   │   │   ├── Serde-JSON.org
+│   │   │   └── Serde.org
 │   │   ├── The-Embedded-Rust-Book.org
+│   │   ├── The-Little-Book-of-Rust-Macros.org
 │   │   ├── The-Rust-Programming-Language-2nd.org
+│   │   ├── The-Rust-Reference.org
 │   │   ├── The-Rustonomicon.org
 │   │   ├── The-Tao-of-Rust.org
-│   │   ├── The-rustc-book.org
-│   │   └── Zero-to-Production-in-Rust.org
+│   │   ├── Tour-of-Rust.org
+│   │   ├── Zero-to-Production-in-Rust.org
+│   │   ├── rust-analyzer-user-manual.org
+│   │   └── rust-unofficial
+│   │       ├── Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org
+│   │       └── Rust-Design-Patterns.org
 │   ├── SML
 │   │   ├── ML-for-Working-Programmer-2nd.org
 │   │   └── Programming-in-Standard-ML.org
-│   ├── Scala-2
+│   ├── Scala_2
 │   │   ├── Akka
 │   │   │   ├── Akka-Concurrency.org
 │   │   │   ├── Akka-Cookbook.org
@@ -464,6 +509,8 @@ __166 directories, 536 files__:
 │   │   │   └── Play-for-Scala.org
 │   │   ├── Practical-FP-in-Scala-2nd.org
 │   │   ├── Practical-FP-in-Scala.org
+│   │   ├── Practice
+│   │   │   └── tetrix-in-Scala.org
 │   │   ├── Programming-in-Scala-3rd.org
 │   │   ├── Programming-in-Scala-4th.org
 │   │   ├── Scala-Collection-Technique-Manual_2.8to2.12.org
@@ -482,7 +529,7 @@ __166 directories, 536 files__:
 │   │   │   └── Scala-Style-Guide.org
 │   │   ├── Talks-Note.org
 │   │   └── Things-you-need-to-know-about-JVM_that-matter-in-Scala.org
-│   ├── Scala-3
+│   ├── Scala_3
 │   │   ├── Advanced-Programming-in-Scala-5th.org
 │   │   ├── DevInsideYou
 │   │   │   └── JSON-and-Circe.org
@@ -494,6 +541,7 @@ __166 directories, 536 files__:
 │   │   │       ├── ZIO.org
 │   │   │       ├── ZIO2.org
 │   │   │       └── Zionomicon.org
+│   │   ├── Functional-Programming-Strategies-in-Scala-with-Cats.org
 │   │   ├── Functional-Programming-in-Scala-2nd.org
 │   │   ├── Functional-event-driven-architecture.org
 │   │   ├── Get-Programming-with-Scala.org
@@ -503,7 +551,6 @@ __166 directories, 536 files__:
 │   │   ├── Libraries
 │   │   │   ├── Cats
 │   │   │   │   ├── Functional-effect-handling-in-Scala-with-cats-effect.org
-│   │   │   │   ├── Scala-with-Cats.org
 │   │   │   │   ├── Typelevel-Cats-Document.org
 │   │   │   │   ├── Udemy-Course_FP-with-Scala-Cats.org
 │   │   │   │   ├── Udemy-Functional-effect-handling-in-Scala-with-Cats-Effect.org
@@ -585,7 +632,7 @@ __166 directories, 536 files__:
 │   │   │   └── Scala-CLI.org
 │   │   └── rockthejvm
 │   │       └── Typelevel-Rite-of-Passage.org
-│   ├── Scala-Native
+│   ├── Scala_Native
 │   │   └── Official-Documentation.org
 │   ├── Seven-Languages-in-Seven-Weeks.org
 │   ├── Seven-More-Languages-in-Seven-Weeks.org
@@ -601,7 +648,7 @@ __166 directories, 536 files__:
 │   └── Unicode-Explained.org
 ├── 11.Programming_Paradigms
 │   ├── Mastering-Functional-Programming.org
-│   ├── Object-Oriented
+│   ├── Object_Oriented
 │   │   └── The-Object-Oriented-Thought-Process.org
 │   ├── Reactive
 │   │   ├── Functional-Reactive-Programming.org
@@ -629,7 +676,9 @@ __166 directories, 536 files__:
 │   │   │   └── SQL-in-10Min-4th.org
 │   │   └── Seven-Databases-in-Seven-Weeks.org
 │   ├── Designing_Data-Intensive_Applicaitons.org
-│   ├── Message-Queue
+│   ├── Jupyter
+│   │   └── Programming-in-Scala-5th.org
+│   ├── Message_Queue
 │   │   └── Kafka
 │   │       ├── Kafka-Streams-in-Action.org
 │   │       ├── Kafka-in-Action.org
@@ -687,15 +736,21 @@ __166 directories, 536 files__:
 │   │   ├── Important-Layers.org
 │   │   └── Spacemacs-Documentation.org
 │   ├── The-compact-Org-mode-Guide.org
-│   └── Vim
-│       └── Modern-Vim.org
+│   ├── Vim
+│   │   ├── Learning-the-vi&Vim-Editors.org
+│   │   └── Modern-Vim.org
+│   ├── Visual_Studio_Code
+│   │   └── Learning-the-vi&Vim-Editors.org
+│   └── code.md
 ├── MISC
 │   ├── Bit_Operations
 │   │   ├── Bit-Twiddling-Hacks.org
 │   │   └── Hackers-Delight-2nd.org
 │   ├── Calendrical-Calculations_The-Ultimate-Edition.org
-│   ├── IntelliJ-IDEA-Essentials.org
-│   ├── Intellij-IDEA-Help.org
+│   ├── IntelliJ-IDEA
+│   │   ├── IntelliJ-IDEA-Essentials.org
+│   │   ├── Intellij-IDEA-Help.org
+│   │   └── Udemy_Java-Debugging-With-IntelliJ-IDEA.org
 │   ├── Low_Priority
 │   │   └── Tool_MATLAB
 │   │       ├── Matlab-Primer-2017b.org
@@ -704,10 +759,7 @@ __166 directories, 536 files__:
 │   ├── Real-World_Cryptography.org
 │   ├── Serialization
 │   │   └── Programmers-Guide-to-Apache-Thrift.org
-│   ├── Violent-Python.org
 │   ├── Visualization-Analysis-and-Design.org
 │   └── i3-User's-Guide.org
-└── README.md
+├── README.md
 ```
-
-
