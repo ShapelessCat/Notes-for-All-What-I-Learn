@@ -7742,239 +7742,277 @@ You first want to factor out some of functionalities from the executable to a
      divvy up - 分紅
 
 * TODO 15. Iterators - 321 - =Reading=
-  Rust has a very rich API for its /iterators/.
-    Use the /methods/ of /iterators/ is very common in idiomatic Rust, and being
-  familiar with the tools that come with them is essential to mastering the
-  language.
+- An /iterator/ is a value that produces a sequence of values, typically for a
+  loop to operate on.
 
-  - ~for~ loop provides a natural syntax for using /iterators/, but there are more
-    /methods/ can be called from /iterators/.
+- _Rust's standard library_ provides
+  * not only /iterators/ that *traverse* vectors, strings, hash tables, and other
+    collections,
 
-  - Example:
-    1. Use ~for~ and the ~Range<i32>~ /iterator/:
-       #+begin_src rust
-         fn triangle(n: i32) -> i32 {
-             let mut sum = 0;
-             for i in 1..n+1 {
-                 sum += i;
-             }
-             sum
-         }
-       #+end_src
+  * but also /iterators/ to produce
+    + lines of text from an input stream,
 
-    2. A equivalent but more concise way:
-       #+begin_src rust
-         fn triangle(n: i32) -> i32 {
-             (1..n+1).fold(0, |sum, item| sum + item)
-         }
-       #+end_src
-       This is concise, and it is a pretty standard fare for functional
-       programming languages.
-       + Q :: Then what is special for it in Rust?
-       + A :: Rust's iterators were carefully designed to ensure that the compiler
-              can translate them into excellent machine code as well!
+    + connections arriving at a network server,
 
-  - In a /release build/ of the 2 shown above,Rust knows the definition of ~fold~,
-    and will do:
-    1. INLINE the ~fold~ into ~triangle~
-    2. INLINE the /closure/ ~|sum, item| sum + item~
-    3. Replace the summation with the formula ~n * (n+1) / 2~
+    + values received from other threads over a communications channel, and so on.
 
-  - The rest of this chapter falls into *five* parts:
-    1. We'll explain the ~Iterator~ and ~IntoIterator~ /traits/, which are the
-       foundation of Rust's /iterators/.
+- Rust has a very rich API for its /iterators/.
+    Use the /methods/ of /iterators/ is very common in *idiomatic Rust*, and
+  being familiar with the tools that come with them is essential to mastering
+  the language.
 
-    2. Then we'll go over the *three* stages of a typical /iterator/ pipeline:
-       1. *creating* an /iterator/ from some sort of _value source_;
+- ~for~ loop provides a natural syntax for using /iterators/, but there are more
+  /methods/ can be called from /iterators/.
 
-       2. *adapting* one sort of /iterator/ into another by *selecting* or *processing*
-          values as they go by;
+  1. Use ~for~ and the ~RangeInclusive<i32>~ /iterator/:
+     #+begin_src rust
+       fn triangle(n: i32) -> i32 {
+           let mut sum = 0;
+           for i in 1..=n {
+               sum += i;
+           }
+           sum
+       }
+     #+end_src
 
-       3. *consuming* the values the /iterator/ produces.
+  2. A equivalent but more concise way:
+     #+begin_src rust
+       fn triangle(n: i32) -> i32 {
+           (1..=n).fold(0, |sum, item| sum + item)
+       }
+     #+end_src
+     This is concise, and it is a pretty standard fare for functional
+     programming languages.
+     * Q :: Then what is special for it in Rust?
+     * A :: Rust's iterators were carefully designed to ensure that the compiler
+            can translate them into excellent machine code as well!
 
-    3. We'll show how to *implement* /iterators/ for your own types.
+       + In a /release build/ of the 2 shown above,Rust knows the definition of
+         ~fold~, and will do:
+         1. INLINE the ~fold~ into ~triangle~
+         2. INLINE the /closure/ ~|sum, item| sum + item~
+         3. Replace the summation with the formula ~n * (n+1) / 2~
+
+- The rest of this chapter falls into *five* parts:
+  1. Explain the ~Iterator~ and ~IntoIterator~ /traits/, which are the foundation
+     of Rust's /iterators/.
+
+  2. Then we'll go over the *three* stages of a typical /iterator/ pipeline:
+     1. *creating* an /iterator/ from some sort of _value source_;
+
+     2. *adapting* one sort of /iterator/ into another by *selecting* ors
+        *processing* values as they go by;
+
+     3. *consuming* the values the /iterator/ produces.
+
+  3. How to *implement* /iterators/ for your own types.
 
 ** DONE The ~Iterator~ and ~IntoIterator~ Traits - 347
-   CLOSED: [2018-06-12 Tue 22:08]
-   - iterator :: Any value that implements the ~std::iter::Iterator~ /trait/.
+CLOSED: [2018-06-12 Tue 22:08]
+ - iterator :: Any value that implements the ~std::iter::Iterator~ /trait/.
 
-   - The ~Iterator~ trait:
-     #+BEGIN_SRC rust
-       trait Iterator {
-           type Item;
+ - The ~Iterator~ trait:
+   #+BEGIN_SRC rust
+     trait Iterator {
+         type Item;
 
-           fn next(&mut self) -> Option<Self::Item>;
-           // ... // many default methods
-       }
-     #+END_SRC
+         fn next(&mut self) -> Option<Self::Item>;
+         // ... // many default methods
+     }
+   #+END_SRC
+   * Omitted Iterator's many default methods;
+     =TODO=
+     we'll cover them individually throughout the rest of this chapter.
 
-   - If there's a natural way to iterate over certain type, this type can implement
-     ~std::iter::IntoIterator~, whose ~into_iter~ /method/ takes a value and
-     returns an /iterator/ over it:
-     #+BEGIN_SRC rust
-       trait IntoIterator where Self::IntoIter::Item == Self::Item {
-           type Item;
-           type IntoIter: Iterator;
-           fn into_iter(self) -> Self::IntoIter;
-       }
-     #+END_SRC
+ - If there's a natural way to iterate over certain type, this type can implement
+   ~std::iter::IntoIterator~, whose ~into_iter~ /method/ takes a value and
+   returns an /iterator/ over it:
+   #+BEGIN_SRC rust
+     trait IntoIterator where Self::IntoIter::Item == Self::Item {
+         type Item;
+         type IntoIter: Iterator;
+         fn into_iter(self) -> Self::IntoIter;
+     }
+   #+END_SRC
 
-   - ~IntoIter~ is the type of the /iterator/ value ITSELF, and ~Item~ is the type
+   * ~IntoIter~ is the type of the /iterator/ value ITSELF, and ~Item~ is the type
      of value it produces.
 
      The /vector reference/ ~&v~ is the /iterable/ in this case.
 
-   - iterable :: Any type that implements ~IntoIterator~ (because it's something
-                 you could iterate over if you asked)
+ - iterable :: Any type that implements ~IntoIterator~ (because it's something
+               you could iterate over if you asked)
 
-   - Under the hood, every ~for~ loop is just shorthand for calls to ~IntoIterator~
-     and ~Iterator~ methods:
-     #+BEGIN_SRC rust
-       let mut iterator = (&v).into_iter();
+ - Under the hood, every ~for~ loop is just shorthand for calls to ~IntoIterator~
+   and ~Iterator~ methods:
+   #+BEGIN_SRC rust
+     let mut iterator = (&v).into_iter();
 
-       while let Some(element) = iterator.next() {
-           println!("{}", element);
-       }
-     #+END_SRC
-     Although a ~for~ loop always calls ~into_iter~ on its operand, you can also
-     pass /iterators/ to ~for~ loops directly; this occurs when you loop over a
-     ~Range~.
+     while let Some(element) = iterator.next() {
+         println!("{}", element);
+     }
+   #+END_SRC
+   Although a ~for~ loop always calls ~into_iter~ on its operand, you can also
+   pass /iterators/ to ~for~ loops directly; this occurs when you loop over a
+   ~Range~.
 
-     + Rationale:
-       ALL /iterators/ AUTOMATICALLY implement ~IntoIterator~, with an ~into_iter~
-       /method/ that simply returns the /iterator/.
+   * Rationale:
+     *ALL* /iterators/ AUTOMATICALLY implement ~IntoIterator~, with an ~into_iter~
+     /method/ that simply returns the /iterator/.
 
-   - After a /iterator/'s ~next~ /method/ returns ~None~, in most cases, it will
-     keep returning ~None~, but NOT all /iterators/ have this behavior.
+ - After a /iterator/'s ~next~ /method/ returns ~None~, in most cases, it will
+   keep returning ~None~, but NOT all /iterators/ have this behavior.
 
-     See page 338 -- use the ~fuse~ /adapter method/ to force the ~None~ values
-     after the first ~None~ value.
+   See page 338 -- use the ~fuse~ /adapter method/ to force the ~None~ values
+   after the first ~None~ value.
 
-   - Here's some terminology for /iterators/:
-     + An /iterator/ produces /values/.
+ - Here's some terminology for /iterators/:
+   + An /iterator/ produces /values/.
 
-     + The /values/ an /iterator/ produces are /items/.
+   + The /values/ an /iterator/ produces are /items/.
 
-     + The code that receives the /items/ an /iterator/ produces is the /consumer/.
-       In this example, the ~for~ loop *consumes* the /iterator/'s /items/.
+   + The code that receives the /items/ an /iterator/ produces is the /consumer/.
+     In this example, the ~for~ loop *consumes* the /iterator/'s /items/.
 
 ** DONE Creating ~Iterator~'s - 348
-   CLOSED: [2018-07-03 Tue 12:22]
-   The Rust standard library documentation explains in detail what sort of /iterators/
-   each type provides, but the library _follows some general conventions_ to help you
-   get oriented and find what you need.
+CLOSED: [2018-07-03 Tue 12:22]
+The Rust standard library documentation explains in detail what sort of /iterators/
+each type provides, but the library *follows some general conventions* to help you
+get oriented and find what you need.
 
 *** DONE ~iter~ and ~iter_mut~ Methods - 348
-    CLOSED: [2018-07-03 Tue 11:54]
-    - ~iter~ produces a /shared reference/ to each /item/.
+CLOSED: [2024-01-29 Mon 16:54]
+- MOST _collection types_ provide ~iter~ and ~iter_mut~ methods that
+  * return the /NATURAL iterators/ over the type,
+    producing a /shared or mutable reference/ to each item.
 
-    - ~iter_mut~ produces a /mutable reference/ to each /item/.
+- ~iter~ produces a /shared reference/ to each /item/.
 
-    - /Slices/ like ~&[T]~ and ~&str~ have ~iter~ and ~iter_mut~ methods too.
+- ~iter_mut~ produces a /mutable reference/ to each /item/.
+
+- /Slices/ like ~&[T]~ and ~&str~ have ~iter~ and ~iter_mut~ methods too.
+
+- These two methods are _the MOST common way_ to get an /iterator/,
+  if you're NOT going to let a ~for~ loop take care of it for you.
+
+- =IMPORTANT=
+  * Each type is free to implement ~iter~ and ~iter_mut~ in whatever way makes the
+    most sense for its purpose.
+    + Example:
+      The ~iter~ method on ~std::path::Path~ returns an iterator that produces one
+      path component at a time, whose itme type is ~&std::ffi::OsStr~.
+
+  * If there's *more than one* common way to iterate over a type,
+    the type usually provides specific methods for each sort of traversal, since
+    a plain iter method would be *ambiguous*.
+    + Example:
+      No ~iter~ method on the ~&str~.
+      Instead, if ~s~ is a ~&str~, then
+      - ~s.bytes()~ returns an iterator that produces each byte of ~s~,
+
+      - ~s.chars()~ interprets the contents as UTF-8 and produces each Unicode
+        character.
 
 *** DONE ~IntoIterator~ Implementations - 348
-    CLOSED: [2018-07-03 Tue 12:22]
-    - MOST /collections/ actually provide _several_ implementations of ~IntoIterator~,
-      for /shared references/, /mutable references/, and /moves/:
-      + Given a /shared reference/ to the /collection/, ~into_iter~ returns an
-        /iterator/ that produces /shared references/ to its items.
+CLOSED: [2018-07-03 Tue 12:22]
+- MOST /collections/ actually provide _several_ implementations of ~IntoIterator~,
+  for /shared references/, /mutable references/, and /moves/:
+  * Given a /shared reference/ to the /collection/, ~into_iter~ returns an
+    /iterator/ that produces /shared references/ to its items.
 
-        For example,
-        ~favorites~ is a ~Vec<String>~, and the call ~(&favorites).into_iter()~
-        would return an /iterator/ whose ~Item~ type is ~&String~.
+    + For example,
+      ~favorites~ is a ~Vec<String>~, and the call ~(&favorites).into_iter()~
+      would return an /iterator/ whose ~Item~ type is ~&String~.
 
-        ~for element in &collection { ... }~
+      ~for element in &collection { ... }~
 
-      + Given a /mutable reference/ to the /collection/, ~into_iter~ returns an
-        /iterator/ that produces /mutable references/ to the items.
+  * Given a /mutable reference/ to the /collection/, ~into_iter~ returns an
+    /iterator/ that produces /mutable references/ to the items.
 
-        For example,
-        ~vector~ is some ~Vec<String>~, and the call ~(&mut vector).into_iter()~
-        returns an /iterator/ whose ~Item~ type is ~&mut String~.
+    + For example,
+      ~vector~ is some ~Vec<String>~, and the call ~(&mut vector).into_iter()~
+      returns an /iterator/ whose ~Item~ type is ~&mut String~.
 
-        ~for element in &mut collection { ... }~
+      ~for element in &mut collection { ... }~
 
-      + When passed the /collection/ by value, ~into_iter~ returns an /iterator/
-        that takes /ownership/ of the /collection/ and returns /items/ by /value/;
+  * When passed the /collection/ by value, ~into_iter~ returns an /iterator/
+    that takes /ownership/ of the /collection/ and returns /items/ by /value/;
 
-        the items' /ownership/ moves from the /collection/ to the /consumer/, and
-        the _ORIGINAL_ /collection/ is *consumed* in the process.
+    the items' /ownership/ moves from the /collection/ to the /consumer/, and
+    the _ORIGINAL_ /collection/ is *consumed* in the process.
 
-        For example, the call ~favorites.into_iter()~ in the preceding code
-        returns an /iterator/ that produces each string by value; the consumer
-        receives /ownership/ of each string. When the /iterator/ is /dropped/,
-        any elements remaining in the ~BTreeSet~ are /dropped/ too, and the set's
-        non-empty husk is disposed of.
+    + For example, the call ~favorites.into_iter()~ in the preceding code
+      returns an /iterator/ that produces each string by value; the consumer
+      receives /ownership/ of each string. When the /iterator/ is /dropped/,
+      any elements remaining in the ~BTreeSet~ are /dropped/ too, and the set's
+      non-empty husk is disposed of.
 
-        ~for element in collection { ... }~
+      ~for element in collection { ... }~
 
-    - =EN=
-      husk - 壳
+- *NOT every type provides all THREE implementations.*
+  =page= 350 start
 
-    - *NOT every type provides all THREE implementations.*
-      =page= 326 start
+  For example,
+  + ~HashSet~, ~BTreeSet~ and ~BinaryHeap~ do _NOT_ implement ~IntoIterator~
+    on /mutable references/,
+    SINCE modifying their elements *would probably VIOLATE* the type's /invariants/:
+    the modified value might have a different hash value, or be ordered
+    differently with respect to its neighbors, so modifying it would leave
+    it incorrectly placed.
 
-      For example,
-      + ~HashSet~, ~BTreeSet~ and ~BinaryHeap~ do _NOT_ implement ~IntoIterator~
-        on /mutable references/,
-        SINCE modifying their elements *would probably VIOLATE* the type's /invariants/:
-        the modified value might have a different hash value, or be ordered
-        differently with respect to its neighbors, so modifying it would leave
-        it incorrectly placed.
+  + Other types do support _mutation_, but only PARTIALLY.
+    For example, ~HashMap~ and ~BTreeMap~ produce
+    * /mutable reference/ to their /entries' values/,
 
-      + Other types do support _mutation_, but only PARTIALLY.
-        For example, ~HashMap~ and ~BTreeMap~ produce
-        * /mutable reference/ to their /entries' values/,
+    * but ONLY /shared references/ to their keys, for similar reasons to those
+      given earlier.
 
-        * but ONLY /shared references/ to their keys, for similar reasons to those
-          given earlier.
+  + /Slices/ implement *two* of the three ~IntoIterator~ variants;
+    SINCE they _do NOT own_ their elements, there is NO "by value" case.
+    INSTEAD, ~into_iter~ for ~&[T]~ and ~&mut [T]~ returns an /iterator/
+    that produces /shared and mutable references/ to the elements.
 
-      + /Slices/ implement *two* of the three ~IntoIterator~ variants;
-        SINCE they _do NOT own_ their elements, there is NO "by value" case.
-        INSTEAD, ~into_iter~ for ~&[T]~ and ~&mut [T]~ returns an /iterator/
-        that produces /shared and mutable references/ to the elements.
+    If you imagine the underlying /slice/ type ~[T]~ as a collection of some
+    sort, this fits neatly into the overall pattern.
 
-        If you imagine the underlying /slice/ type ~[T]~ as a collection of some
-        sort, this fits neatly into the overall pattern.
+- You may have noticed that the first two ~IntoIterator~ variants, for /shared
+  and mutable references/, are *equivalent to* calling ~iter~ or ~iter_mut~
+  on the referent.
 
-    - You may have noticed that the first two ~IntoIterator~ variants, for /shared
-      and mutable references/, are *equivalent to* calling ~iter~ or ~iter_mut~
-      on the referent.
+  + Q :: Why does Rust provide both?
 
-      + Q :: Why does Rust provide both?
+  + A ::
+    1. ~IntoIterator~ is what makes ~for~ loops work, so that's obviously necessary.
+       But when you're not using a ~for~ loop, ~favorites.iter()~ is clearer than
+       ~(&favorites).into_iter()~.
 
-      + A ::
-        1. ~IntoIterator~ is what makes ~for~ loops work, so that's obviously necessary.
-           But when you're not using a ~for~ loop, ~favorites.iter()~ is clearer than
-           ~(&favorites).into_iter()~.
+       Iteration by /shared reference/ is something you'll need frequently,
+       so ~iter~ and ~iter_mut~ are still valuable for their _ergonomics_.
 
-           Iteration by /shared reference/ is something you'll need frequently,
-           so ~iter~ and ~iter_mut~ are still valuable for their _ergonomics_.
+    2. IntoIterator can also be useful in generic code: you can use a bound
+       like ~T~:
+       ~IntoIterator~ to restrict the type variable ~T~ to types that can be
+       iterated over. Or, you can write ~T: IntoIterator<Item=U>~ to further
+       require the iteration to produce a particular type ~U~. For example,
+       this function dumps values from any iterable whose items are
+       printable with the ~"{:?}"~ format:
+       #+BEGIN_SRC rust
+         use std::fmt::Debug;
 
-        2. IntoIterator can also be useful in generic code: you can use a bound
-           like ~T~:
-           ~IntoIterator~ to restrict the type variable ~T~ to types that can be
-           iterated over. Or, you can write ~T: IntoIterator<Item=U>~ to further
-           require the iteration to produce a particular type ~U~. For example,
-           this function dumps values from any iterable whose items are
-           printable with the ~"{:?}"~ format:
-           #+BEGIN_SRC rust
-             use std::fmt::Debug;
-
-             fn dump<T, U>(t: T)
-                 where T: IntoIterator<Item=U>,
-                       U: Debug
-             {
-                 for u in t {
-                     println!("{:?}", u);
-                 }
+         fn dump<T, U>(t: T)
+             where T: IntoIterator<Item=U>,
+                   U: Debug
+         {
+             for u in t {
+                 println!("{:?}", u);
              }
-           #+END_SRC
+         }
+       #+END_SRC
 
-           =IMPORTANT=
-           You *CANNOT* write this /generic function/ using ~iter~ and ~iter_mut~,
-           SINCE *they're NOT /methods/ of any /trait/:*
-           most /iterable/ types just happen to have /methods/ by those names.
+       =IMPORTANT=
+       You *CANNOT* write this /generic function/ using ~iter~ and ~iter_mut~,
+       SINCE *they're NOT /methods/ of any /trait/:*
+       most /iterable/ types just happen to have /methods/ by those names.
 
 *** TODO ~from_fn~ and successors - 351
 *** DONE ~drain~ Methods - 353 =???=
@@ -11177,205 +11215,241 @@ You first want to factor out some of functionalities from the executable to a
       as the Unicode standard _evolves_.
 
 * DONE 18. Input and Output - 471
-  CLOSED: [2018-06-19 Tue 22:29]
-  - Rust's /standard library/ features for /input/ and /output/ are organized
-    around *three* /traits/:
-    + ~Read~
-    + ~BufRead~
-    + ~Write~
+CLOSED: [2018-06-19 Tue 22:29]
+- Rust's /standard library/ features for /input/ and /output/ are organized
+  around *three* /traits/:
+  * ~Read~
+  * ~BufRead~
+  * ~Write~
 
-    and the various types that implement them:
+  and the various types that implement them:
 
-    + Values that implement ~Read~ have /methods/ for *byte-oriented input*.
-      They're called /readers/.
+  * Values that implement ~Read~ have /methods/ for *byte-oriented input*.
+    They're called /readers/.
 
-    + Values that implement ~BufRead~ have
-      * all the /methods/ of ~Read~
-      * (plus) /methods/ for _reading lines of text_ and so forth.
+  * Values that implement ~BufRead~ have
+    + all the /methods/ of ~Read~
+    + (plus) /methods/ for _reading lines of text_ and so forth.
 
-      They're called /buffered readers/.
+    They're called /buffered readers/.
 
-    + Values that implement ~Write~ support _BOTH_
-      * *byte-oriented output*
-      * *UTF-8 text output*.
+  * Values that implement ~Write~ support _BOTH_
+    + *byte-oriented output*
+    + *UTF-8 text output*.
 
-      They're called /writers/.
+    They're called /writers/.
 
-  - Figure 18-1. Selected /reader (bufferd or non-buffered)/ and /writer/ types
-    from the Rust standard library.
+- Figure 18-1. Selected /reader (bufferd or non-buffered)/ and /writer/ types
+  from the Rust standard library:
+  #+begin_src text
+    Read
+    |- Stdin
+    |- File
+    |- TcpStream
+    |- BufRead
+       |- BufReader<R>
+       |- Cursor<&[u8]>
+       |- StdinLock
+
+    Write
+    |- Stdout
+    |- Stderr
+    |- File
+    |- TcpStream
+    |- Vec<u8>
+    |- BufWriter<W>
+  #+end_src
+
+- In this chapter, we'll explains
+  HOW TO use these traits and their methods,
+  * cover the reader and writer types shown in the figure, and
+  * show other ways to interact with
+    + files,
+    + the terminal, and
+    + the network.
 
 ** DONE Readers and Writers - 472
-   CLOSED: [2018-06-19 Tue 22:29]
-   - /Readers/ are values that your program can _read bytes from_.
-     Examples include:
-     + _Files opened_ using ~std::fs::File::open(filename)~;
+CLOSED: [2018-06-19 Tue 22:29]
+- /Readers/ are values that your program can _read bytes from_.
+  Examples include:
+  * _Files opened_ using ~std::fs::File::open(filename)~;
 
-     + ~std::net::TcpStream~'s, for *receiving* data over the _network_;
+  * ~std::net::TcpStream~'s, for *receiving* data over the _network_;
 
 
-     + ~std::io::stdin()~, for *reading* from the /process's standard input stream/;
+  * ~std::io::stdin()~, for *reading* from the /process's standard input stream/;
 
-     + ~std::io::Cursor<&[u8]>~ values, which are /readers/ that "read" from a
-       /byte array/ that's _ALREADY in memory_.
+  * ~std::io::Cursor<&[u8]>~ and ~std::io::Cursor<Vec<u8>>~ values, which are
+    /readers/ that "read" from a /byte array/ that's _ALREADY in memory_.
 
-   - /Writers/ are values that your program can _write bytes to_.
-     Examples include:
-     + _Files opened_ using ~std::fs::File::create(filename)~;
+- /Writers/ are values that your program can _write bytes to_.
+  Examples include:
+  * _Files opened_ using ~std::fs::File::create(filename)~;
 
-     + ~std::net::TcpStream~'s, for *sending* data over the _network_;
+  * ~std::net::TcpStream~'s, for *sending* data over the _network_;
 
-     + ~std::io::stdout()~ and ~std::io:stderr()~, for *writing* to the terminal;
+  * ~std::io::stdout()~ and ~std::io:stderr()~, for *writing* to the terminal;
 
-     + ~std::io::Cursor<&mut [u8]>~ values, which let you treat any /mutable slice
-       of bytes/ *as a file* for *writing*;
+  * ~Vec<u8>~, a /writer/ whose ~write~ /methods/ *append* to the vector =TODO= =???=
 
-     + ~Vec<u8>~, a /writer/ whose ~write~ /methods/ *append* to the vector =TODO= =???=
+  * ~std::io::Cursor<Vec<u8>>~, which is similar but lets you both read and write
+    data, and seek to different positions within the vector;
 
-   - For example, here's a function that *copies all bytes* _from_ ANY /reader/
-     _to_ ANY /writer/:
-     #+BEGIN_SRC rust
-       use std::io::{self, Read, Write, ErrorKind};
+  * ~std::io::Cursor<&mut [u8]>~, which is much like ~std::io::Cursor<Vec<u8>>~,
+    except that it can't grow the buffer, since it's just a slice of some
+    existing byte array.
 
-       const DEFAULT_BUF_SIZE: usize = 8 * 1024;
+- Since there are _standard traits_ for /readers/ and /writers/ (~std::io::Read~
+  and ~std::io::Write~), it's quite common to write generic code that works
+  across a variety of input or output channels.
 
-       pub fn copy<R: ?Size, W: ?Sized>(reader: &mut R, writer: &mut W) -> io::Result<u64>
-           where R: Read, W: Write
-       {
-           let mut buf = [0; DEFAULT_BUF_SIZE];
-           let mut written = 0;
-           loop {
-               let len = match reader.read(&mut buf) {
-                   Ok(0)                                            => return Ok(written),
-                   Ok(len)                                          => len,
-                   Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
-                   Err(e)                                           => return Err(e),
-               };
-               writer.write_all(&buf[..len])?;
-               written += len as u64;
-           }
-       }
-     #+END_SRC
-     + This is the implementation of ~std::io::copy()~ from /Rust's standard
-       library/.
+  * For example,
+    here's a function that copies all bytes from *ANY* /reader/ to *ANY*
+    /writer/:
+    #+BEGIN_SRC rust
+      use std::io::{self, Read, Write, ErrorKind};
 
-       Since it's /generic/, you can use it to copy data from a ~File~ to a
-       ~TcpStream~, from ~Stdin~ to an in-memory ~Vec<u8>~, etc.
+      const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
-   - The *four* ~std::io~ /traits/ ~Read~, ~BufRead~, ~Write~, and ~Seek~ are so
-     commonly used that there's a /prelude module/ containing _ONLY_ those /traits/:
-     ~use std::io::prelude::*;~
+      pub fn copy<R: ?Size, W: ?Sized>(reader: &mut R, writer: &mut W) -> io::Result<u64>
+          where R: Read, W: Write
+      {
+          let mut buf = [0; DEFAULT_BUF_SIZE];
+          let mut written = 0;
+          loop {
+              let len = match reader.read(&mut buf) {
+                  Ok(0)                                            => return Ok(written),
+                  Ok(len)                                          => len,
+                  Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
+                  Err(e)                                           => return Err(e),
+              };
+              writer.write_all(&buf[..len])?;
+              written += len as u64;
+          }
+      }
+    #+END_SRC
+    + This is the implementation of ~std::io::copy()~ from /Rust's standard
+      library/.
 
-   - The ~self~ in the statement ~use std::io::{self, Read, Write, ErrorKind};~ is
-     an alias to the ~std::io~. This means you can, for example, write ~io::Result~,
-     rather than ~std::io::Result~.
+      Since it's /generic/, you can use it to copy data from a ~File~ to a
+      ~TcpStream~, from ~Stdin~ to an in-memory ~Vec<u8>~, etc.
+
+- The *four* ~std::io~ /traits/ ~Read~, ~BufRead~, ~Write~, and ~Seek~ are so
+  commonly used that there's a /prelude module/ containing _ONLY_ those /traits/:
+  ~use std::io::prelude::*;~.
+
+- The ~self~ in the statement ~use std::io::{self, Read, Write, ErrorKind};~ is
+  an alias to the ~std::io~. This means you can, for example, write ~io::Result~,
+  rather than ~std::io::Result~.
 
 *** DONE Readers - 473
-    CLOSED: [2018-06-19 Tue 22:29]
-    ~std::io::Read~ has several /methods/ for _reading data_.
-    All of them take the /reader/ itself _by ~mut~ /reference/._
+CLOSED: [2018-06-19 Tue 22:29]
+~std::io::Read~ has several /methods/ for _reading data_.
+All of them take the /reader/ itself _by ~mut~ /reference/._
 
-    - The main /methods/ of the ~Read~ /trait/.
-      + ~reader.read(&mut buffer)~
-        * Read some bytes from the data source
-          and
-          store them in the given ~buffer~.
+- The main /methods/ of the ~Read~ /trait/.
+  + ~reader.read(&mut buffer)~
+    * Read some bytes from the data source
+      and
+      store them in the given ~buffer~.
 
-        * The type of the ~buffer~ argument is ~&mut [u8]~.
+    * The type of the ~buffer~ argument is ~&mut [u8]~.
 
-        * This reads up to ~buffer.len()~ bytes.
+    * This reads up to ~buffer.len()~ bytes.
 
-        * The /return type/ is ~io::Result<u64>~ (an alias for ~Result<u64, io::Error>~).
-          - One success, the ~u64~ value is the number of bytes read.
-            ~Ok(0)~ means there is no more input to read.
+    * The /return type/ is ~io::Result<u64>~ (an alias for ~Result<u64, io::Error>~).
+      - One success, the ~u64~ value is the number of bytes read.
+        ~Ok(0)~ means there is no more input to read.
 
-        * One error, this /method/ returns ~Err(err)~, here the ~err~ is an
-          ~io::Error~ value.
-          - An ~io::Error~ is printable, for the benefit of humans;
+    * One error, this /method/ returns ~Err(err)~, here the ~err~ is an
+      ~io::Error~ value.
+      - An ~io::Error~ is printable, for the benefit of humans;
 
-          - ~io::Error~ has a ~kind()~ method that returns an error code of type
-            ~io::ErrorKind~, of course, as you can guess, it is a /enum/.
+      - ~io::Error~ has a ~kind()~ method that returns an error code of type
+        ~io::ErrorKind~, of course, as you can guess, it is a /enum/.
 
-          - ~io::ErrorKind~ has members like ~PermissionDenied~ and ~ConnectionReset~.
+      - ~io::ErrorKind~ has members like ~PermissionDenied~ and ~ConnectionReset~.
 
-            Most of them indicate serious errors that you can't ignore,
-            _BUT_ one /kind/ of error, ~io::ErrorKind::Interrupted~, should be
-            handled specially -- it corresponds to the Unix error code ~EINTER~,
-            which means the read happened to be interrupted by a /signal/.
+        Most of them indicate serious errors that you can't ignore,
+        _BUT_ one /kind/ of error, ~io::ErrorKind::Interrupted~, should be
+        handled specially -- it corresponds to the Unix error code ~EINTER~,
+        which means the read happened to be interrupted by a /signal/.
 
-            _UNLESS_ the program is designed to do something clever with /signals/,
-            it SHOULD JUST RETRY the ~read~.
-              The code for ~copy()~, in the preceding section, shows an example
-            of this.
+        _UNLESS_ the program is designed to do something clever with /signals/,
+        it SHOULD JUST RETRY the ~read~.
+          The code for ~copy()~, in the preceding section, shows an example
+        of this.
 
-        * As you can see, the ~read~ /method/ is very low-level, even inheriting
-          quirks of the underlying operating system
-          - if you're implementing the ~Read~ /trait/ for a new type of data source,
-            this gives you a lot of leeway.
+    * As you can see, the ~read~ /method/ is very low-level, even inheriting
+      quirks of the underlying operating system
+      - if you're implementing the ~Read~ /trait/ for a new type of data source,
+        this gives you a lot of leeway.
 
-          - to relif the pain of using this ~read~ /method/,
-            Rust provides several *higher-level CONVENIENCE* methods. All of them
-            have default implementations in terms of ~.read()~. They all handle
-            ~ErrorKind::Interrupted~, so you don't have to.
+      - to relif the pain of using this ~read~ /method/,
+        Rust provides several *higher-level CONVENIENCE* methods. All of them
+        have default implementations in terms of ~.read()~. They all handle
+        ~ErrorKind::Interrupted~, so you don't have to.
 
-      + ~reader.read_to_end(&mut byte_vec)~
-        Read all _remaining input_ from this ~reader~, appending it to ~byte_vec~,
-        which is a ~Vec<u8>~.
+  + ~reader.read_to_end(&mut byte_vec)~
+    Read all _remaining input_ from this ~reader~, appending it to ~byte_vec~,
+    which is a ~Vec<u8>~.
 
-        * Return ~io::Result<()>~.
+    * Return ~io::Result<()>~.
 
-        * *CAUTION*
-          There is _no limit_ on the amount of data this method will pile into
-          the /vector/, so *don't use it on an UNTRUSTED SOURCE.* (You can impose
-          a limit using the ~.take()~ method, described below.)
+    * *CAUTION*
+      There is _no limit_ on the amount of data this method will pile into
+      the /vector/, so *don't use it on an UNTRUSTED SOURCE.* (You can impose
+      a limit using the ~.take()~ method, described below.)
 
-      + ~reader.read_to_string(&mut string)~
-        It is similar to ~reader.read_to_end(&mut byte_vec)~,
-        BUT append the data to the given ~String~.
+  + ~reader.read_to_string(&mut string)~
+    It is similar to ~reader.read_to_end(&mut byte_vec)~,
+    BUT append the data to the given ~String~.
 
-        If the stream isn't valid UTF-8, this returns an ~ErrorKind::InvalidData~ error.
+    If the stream isn't valid UTF-8, this returns an ~ErrorKind::InvalidData~ error.
 
-        =RE-READ= =???=
-        In some languages, byte input and character input are handled by
-        different types. These days, UTF-8 is so dominant that Rust acknowledges
-        this de facto standard and supports UTF-8 everywhere. Other character
-        sets are supported with the open source encoding crate.
+    =RE-READ= =???=
+    In some languages, byte input and character input are handled by
+    different types. These days, UTF-8 is so dominant that Rust acknowledges
+    this de facto standard and supports UTF-8 everywhere. Other character
+    sets are supported with the open source encoding crate.
 
-      + ~reader.read_exact(&mut buf)~
-        Read exactly enough data to fill the given buffer ~buf~.
+  + ~reader.read_exact(&mut buf)~
+    Read exactly enough data to fill the given buffer ~buf~.
 
-        * The /argument type/ is ~&[u8]~.
+    * The /argument type/ is ~&[u8]~.
 
-        * IF the /reader/ runs out of data before reading ~buf.len()~ bytes,
-          this returns an ~ErrorKind::UnexpectedEof~ error.
+    * IF the /reader/ runs out of data before reading ~buf.len()~ bytes,
+      this returns an ~ErrorKind::UnexpectedEof~ error.
 
 
-    - Four adapter /methods/ that take the /reader/ by value, transforming it into
-      an /iterator/ or a DIFFERENT /reader/:
-      + ~reader.bytes()~
-        Return an /iterator/ over the bytes of the input stream.
+- Four adapter /methods/ that take the /reader/ by value, transforming it into
+  an /iterator/ or a DIFFERENT /reader/:
+  + ~reader.bytes()~
+    Return an /iterator/ over the bytes of the input stream.
 
-        The item type is ~io::Result<u8>~, so _an error check is required for
-        every byte_.
+    The item type is ~io::Result<u8>~, so _an error check is required for
+    every byte_.
 
-        Furthermore, this calls ~reader.read()~ once per byte, which will be
-        very *INEFFICIENT* IF the /reader/ is *NOT buffered*.
+    Furthermore, this calls ~reader.read()~ once per byte, which will be
+    very *INEFFICIENT* IF the /reader/ is *NOT buffered*.
 
-      + ~reader.chars()~
-        Similar to ~reader.bytes()~ but the item contains ~char~.
-        Treat the input as UTF-8. Invalid UTF-8 causes an ~InvalidData~ error.
+  + ~reader.chars()~
+    Similar to ~reader.bytes()~ but the item contains ~char~.
+    Treat the input as UTF-8. Invalid UTF-8 causes an ~InvalidData~ error.
 
-      + ~reader.chain(reader2)~
-        Return a new /reader/ that produces all the input from /reader/,
-        followed by all the input from ~reader2~.
+  + ~reader.chain(reader2)~
+    Return a new /reader/ that produces all the input from /reader/,
+    followed by all the input from ~reader2~.
 
-      + ~reader.take(n)~
-        Return a new /reader/ that reads from the same source as ~reader~,
-        BUT is limited to ~n~ /bytes/ of input.
+  + ~reader.take(n)~
+    Return a new /reader/ that reads from the same source as ~reader~,
+    BUT is limited to ~n~ /bytes/ of input.
 
-    - There is *NO* /method/ for _closing_ a /reader/.
+- =IMPORTANT=
+  There is *NO* /method/ for _closing_ a /reader/.
 
-      /Readers/ and /writers/ typically implement ~Drop~ so that they are
-      _closed AUTOMATICALLY_.
+  /Readers/ and /writers/ typically implement ~Drop~ so that they are
+  _closed AUTOMATICALLY_.
 
 *** DONE Buffered Readers - 475
     CLOSED: [2018-06-16 Sat 22:42]
@@ -11879,11 +11953,11 @@ You first want to factor out some of functionalities from the executable to a
             ~{"location":"Cobble Crawl", "items":["a wand"],"health":3}~
 
 ** DONE Files and Directories - 486
-   CLOSED: [2018-06-08 Fri 22:22]
-   The next few sections cover Rust's features for working with _files_ and
-   _directories_, which live in the ~std::path~ and ~std::fs~ /modules/. All of
-   these features involve _working with filenames_, so we'll start with the
-   /filename types/.
+CLOSED: [2018-06-08 Fri 22:22]
+The next few sections cover Rust's features for working with _files_ and
+_directories_, which live in the ~std::path~ and ~std::fs~ /modules/. All of
+these features involve _working with filenames_, so we'll start with the
+/filename types/.
 
 *** DONE ~OsStr~ and ~Path~ - 486
     CLOSED: [2018-06-08 Fri 20:30]
@@ -12122,32 +12196,32 @@ You first want to factor out some of functionalities from the executable to a
 *** TODO Platform-Specific Features - 493 =RE-READ= =TAKE NOTES=
 
 ** DONE Networking - 494
-   CLOSED: [2018-06-08 Fri 23:00]
-   =From Jian= I only take nots, I don't understand /network programing/.
-   Re-read later when I understand.
+CLOSED: [2018-06-08 Fri 23:00]
+=From Jian= I only take nots, I don't understand /network programing/.
+Re-read later when I understand.
 
-   - For _low-level networking code_, start with the ~std::net module~, which
-     provides _cross-platform_ SUPPORT _for TCP and UDP networking_.
+- For _low-level networking code_, start with the ~std::net module~, which
+  provides _cross-platform_ SUPPORT _for TCP and UDP networking_.
 
-   - Use the ~native_tls~ /crate/ for _SSL/TLS_ SUPPORT.
+- Use the ~native_tls~ /crate/ for _SSL/TLS_ SUPPORT.
 
-   - For high-performance servers, you'll need to use /ASYNCHRONOUS input and
-     output/. The ~mio~ /crate/ provides the needed support.
+- For high-performance servers, you'll need to use /ASYNCHRONOUS input and
+  output/. The ~mio~ /crate/ provides the needed support.
 
-   - There's also the EXPERIMENTAL ~tokio~ /crate/, which wraps the ~mio~ event
-     loop in a futures-based API, reminiscent of JavaScript promises.
+- There's also the EXPERIMENTAL ~tokio~ /crate/, which wraps the ~mio~ event
+  loop in a futures-based API, reminiscent of JavaScript promises.
 
-   - Higher-level protocols are supported by third-party crates.
-     For example, the ~reqwest~ /crate/ offers a beautiful API for HTTP clients.
+- Higher-level protocols are supported by third-party crates.
+  For example, the ~reqwest~ /crate/ offers a beautiful API for HTTP clients.
 
-   - The ~iron~ framework for HTTP servers offers high-level touches such as the
-     ~BeforeMiddleware~ and ~AfterMiddleware~ traits, which help you compose an
-     app from pluggable parts.
+- The ~iron~ framework for HTTP servers offers high-level touches such as the
+  ~BeforeMiddleware~ and ~AfterMiddleware~ traits, which help you compose an
+  app from pluggable parts.
 
-   - The ~websocket~ /crate/ implements the _WebSocket protocol_.
+- The ~websocket~ /crate/ implements the _WebSocket protocol_.
 
-   - And so on. Rust is a young language with a busy open source ecosystem. Support
-     for networking is rapidly expanding.
+- And so on. Rust is a young language with a busy open source ecosystem. Support
+  for networking is rapidly expanding.
 
 * TODO 19. Concurrency - 497
 ** TODO Fork-Join Parallelism - 499
