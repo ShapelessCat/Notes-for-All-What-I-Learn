@@ -1,6 +1,6 @@
 #+TITLE: Docker and Kubernetes: The Practical Guide [2024 Edition]
 #+SUBTITLE: Learn Docker, Docker Compose, Multi-Container Projects, Deployment and all about Kubernetes from the ground up!
-#+VERSION: Last Updated 2024-01
+#+VERSION: Last Updated 2024-04
 #+AUTHOR: Academind by Maximilian Schwarzmüller, Maximilian Schwarzmüller
 #+STARTUP: entitiespretty
 #+STARTUP: indent
@@ -23,48 +23,318 @@
 ** 4. Join Our Learning Community
 ** 5. Virtual Machines vs Docker Containers
 ** 6. Docker Setup - Overview
+- For both macOS and Windows,
+  1. if the requirements are met, install _Docker Desktop_
+  2. else, install _Docker Toolbox_
+
+- Docker is supported by Linux naturally.
+
 ** 7. Docker Setup - macOS
 ** 8. Docker Setup - Windows
 ** 9. Docker Setup - Docker Toolbox for Older Systems
 ** 10. Docker Playground
+If you can't install docker, try this playground:
+https://labs.play-with-docker.com/
+
 ** 11. An Overview of the Docker Tools
 ** 12. Installing & Configuring an IDE
 ** 13. Getting Our Hands Dirty!
+1. ~cd~ to the project directory that contains =Dockerfile=,
+   and then ~docker build .~. In the output, you can find the SHA.
+
+2. ~docker run -p 3000:3000 d06b2bfd3b56c39a730ef0d441ff72f3e151c6191119ceb5618a447dd19870f5~
+   - Map port 3000 to localhost 3000.
+   - The last parameter is the SHA.
+
+3. Use ~docker ps~ to find out the running one.
+   #+begin_quote
+   CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                    NAMES
+   3b647ead69a4   d06b2bfd3b56   "docker-entrypoint.s…"   50 seconds ago   Up 48 seconds   0.0.0.0:3000->3000/tcp   magical_lalande
+   #+end_quote
+
+4. Stop it with ~docker stop <name>~
+
 ** 14. Course Outline
+1. Getting Started & Overview
+
+2. Foundation
+   1) Images & Containers
+   2) Data & Volumes (in Containers)
+   3) Containers & Networking
+
+3. "Real Life"
+   1) Multi-Container Projects
+   2) Using Docker-Composse
+   3) "Utility Containers"
+   4) Deploying Docker Containers
+
+4. Kubernetes
+   1) Kubernetes Introduction & Basics
+   2) Kubernetes: Data & Volumes
+   3) Kubernetes: Networking
+   4) Deploying a Kubernetes Cluster
+
 ** 15. How To Get The Most Out Of This Course
 ** 16. Course Resources
 
-* Section 2: Docker Images & Containers: The Core Building Blocks
+* DONE Section 2: Docker Images & Containers: The Core Building Blocks
+CLOSED: [2024-05-06 Mon 12:09]
 ** 17. Module Introduction
+- Two Core Concepts: Images & Containers
+- Using Pre-Built & Custom Images
+- Creating & Managing Containers
+
 ** 18. Images & Containers: What and Why?
+Docker
+- Containers: =from Jian= Like instances of certain classes
+  * The running "unit of software"
+  * Multiple /containers/ can be created based on one /image/
+
+- Images: =from Jian= Like classes
+  * Templates/Blueprints for /containers/
+  * Contains code + required tools/runtimes
+
 ** 19. Using & Running External (Pre-Built) Images
+An pre-build /image/ example:
+- ~docker run node~ searches =node= image from Docker Hub or any
+   registries you setup, and build a /contrainer/ from it.
+  * Unless you have =node= image in your local,
+    You can see at the beginning of the output of this command:
+    =Unable to find image 'node:latest' locally=
+    and then
+    =latest: Pulling from library/node=
+
+- ~docker ps -a~ show all the containers, including existed ones.
+
+- ~docker run -it node~ start in interactive mode.
+  Ctrl+C twice can shut down this /container/.
+
+- Run ~docker ps -a~ again, we can see two *exited* /containers/.
+
 ** 20. Our Goal: A NodeJS App
 ** 21. Building our own Image with a Dockerfile
-** 22. Running a Container based on our own Image
-** 23. EXPOSE & A Little Utility Functionality
-** 24. Images are Read-Only!
-** 25. Understanding Image Layers
-** 26. A First Summary
-** Quiz 1: Images & Containers
-** 27. Managing Images & Containers
-** 28. Stopping & Restarting Containers
-** 29. Understanding Attached & Detached Containers
-** 30. Attaching to an already-running Container
-** 31. Entering Interactive Mode
-** 32. Deleting Images & Containers
-** 33. Removing Stopped Containers Automatically
-** 34. A Look Behind the Scenes: Inspecting Images
-** 35. Copying Files Into & From A Container
-** 36. Naming & Tagging Containers and Images
-** Assignment 1: Time to Practice: Images & Containers
-** 37. Sharing Images - Overview
-** 38. Pushing Images to DockerHub
-** 39. Pulling & Using Shared Images
-** Quiz 2: Managing Images & Containers
-** 40. Module Summary
-** 41. Module Resources
+#+begin_src text
+  FROM node
 
-* Section 3: Managing Data & Working with Volumes
+  ## Can be:
+  # COPY . . # from host file system to image/container file system
+
+  WORKDIR /app
+
+  COPY . ./ # point to WORKDIR
+
+  RUN npm install
+
+  EXPOSE 80
+
+  CMD ["node", "server.js"]
+#+end_src
+
+- If you don't specify a CMD, the CMD of the base image will be executed.
+- With no base imaage and no CMD, you'd get an error.
+
+** 22. Running a Container based on our own Image
+- ~dockerr build .~
+
+- The ~EXPORT 80~ is only for document, tell people how to use the /containers/
+  built from this image. People should follow it. However, even if removing it,
+  you can still use ~-p~ to map port 80 to local port.
+
+** 23. ~EXPOSE~ & A Little Utility Functionality
+Optional but best practice.
+
+** 24. Images are Read-Only!
+** 25. Understanding Image Layers =IMPORTANT=
+- Every instruction is a layer, and the build is incremental with previous
+  caches.
+
+- When re-build, all layers AFTER the chaning layers can't use caches.
+  * Base on this mechanism and the layer concept, we can *OPTIMIZE* our
+    =Dockerfile=:
+    #+begin_src text
+      FROM node
+
+      WORKDIR /app
+
+      COPY package.json /app
+
+      RUN npm install
+
+      COPY . /app
+
+      EXPOSE 80
+
+      CMD ["node", "server.js"]
+    #+end_src
+
+- /Container layer/ is an extra layer on top of corresponding /image/.
+
+** 26. A First Summary
+** DONE Quiz 1: Images & Containers
+CLOSED: [2024-05-05 Sun 00:51]
+** DONE 27. Managing Images & Containers
+CLOSED: [2024-05-05 Sun 19:12]
+- Add ~--help~ after any docker command to see all options.
+
+- Images:
+  * Can be *tagged (named)* ~-t~, ~docker tag ...~
+  * Can be *listed* ~docker images~
+  * Can be *analyzed* ~docker image inspect~
+  * Can be *removed* ~docker rmi~, ~docker prune~.
+
+- Containers:
+  * Can be *named* ~--name~
+  * Can be *configured in detail* see ~--help~
+  * Can be *listed* ~docker ps~
+  * Can be *removed* ~docker rm~
+
+** DONE 28. Stopping & Restarting Containers
+CLOSED: [2024-05-05 Sun 19:17]
+~docker start container_name~: restart a stopped container
+
+** DONE 29. Understanding Attached & Detached Containers
+CLOSED: [2024-05-05 Sun 19:48]
+** DONE 30. Attaching to an already-running Container
+CLOSED: [2024-05-05 Sun 19:48]
+- Restarted /container/ is by default /detached/ -- can't be listen.
+  * ~docker start -a CONTAINER_NAME~ can restart and attach.
+  * ~docker container attach CONTAINER_NAME~ can let you attach yourself to a
+    /detached container/.
+
+- Use ~docker run~ to start a new /container/, and we can listen to it
+  (/attached/).
+  * Add ~-d~ before SHA, and enter the _detach mode_.
+
+- ~docker logs CONTAINER_NAME~ see all past logs.
+  ~docker logs -f CONTAINER_NAME~ see all past logs and keep listening.
+
+** DONE 31. Entering Interactive Mode
+CLOSED: [2024-05-05 Sun 20:06]
+- ~docker run -it IMAGE_ID~
+
+- ~docker start -ai CONTAINER_NAME~
+  * ~-t~ is remembered.
+
+** DONE 32. Deleting Images & Containers
+CLOSED: [2024-05-05 Sun 22:47]
+- ~docker rm CONTAINER_NAME0 CONTAINER_NAME1 ...~
+  * Of course, you can't remove a running container.
+
+  * Remove all stopped containers at once:
+    ~docker container prune~
+
+- List images: ~docker images~
+
+- Remove images: ~docker rmi IMAGE0 IMAGE1 ...~
+  * Of course, you can only remove images that are not used by any containers.
+
+  * Remove all unused images at once:
+    + ~docker image prune~ (only remove images that have no tag)
+    + ~docker image prune -a~ (remove all images)
+
+** DONE 33. Removing Stopped Containers Automatically
+CLOSED: [2024-05-05 Sun 22:50]
+- ~--rm~
+  * ~docker run -p 3000:90 -d --rm IMAGE_SHA~
+
+** DONE 34. A Look Behind the Scenes: Inspecting Images
+CLOSED: [2024-05-05 Sun 22:55]
+~docker image inspect IMAGE_ID~
+
+** DONE 35. Copying Files Into & From A Container
+CLOSED: [2024-05-05 Sun 23:00]
+~docker cp ...~ into or out from a container
+
+- ~docker cp dummy/. boring_vaughan:/test~
+
+- Copy something *into* a container is error prone, and it is not a good solution.
+
+- Copy something out from a container is useful.s
+  For instance, you can copy all the log files out.
+
+** DONE 36. Naming & Tagging Containers and Images
+CLOSED: [2024-05-05 Sun 23:11]
+- ~docker run -p 3000:80 -d --rm --name goalsapp IMAGE_ID~
+
+- Image tag contains two parts: ~name:tag~
+  * *name* defines a group of, possible more specialized, images
+    + Example: node
+
+  * *tag* defines a specialized image within a group of images
+    + Example: 14
+
+- ~docker build -t NAME:TAG .~
+  * After doing this, run ~docker images~, and we can see two related images:
+    + the original one (see the ~FROM~ line in =Dockerfile=), and
+    + the one build with the ~NAME:TAG~.
+
+
+- Remove all images, including tagged ones:
+  ~docker image prune -a~
+
+** DONE Assignment 1: Time to Practice: Images & Containers - =REDO=
+CLOSED: [2024-05-06 Mon 12:09]
+** DONE 37. Sharing Images - Overview
+CLOSED: [2024-05-05 Sun 23:21]
+** DONE 38. Pushing Images to DockerHub
+CLOSED: [2024-05-06 Mon 10:36]
+- Docker Hub - Free Usage Possible!
+  * Official Docker Image Registry
+  * Public, private and "official" Images
+
+- Private Registry:
+  Come back to this with more details when we talk about /deployment/.
+
+  * Any provider/registry you want to use
+
+  * Only your own (or team) images
+
+- Share: ~docker push IMAGE_NAME~
+  * Examaple:
+    1. Create =academind/node-hello-world= in Docker Hub
+
+    2. ~docker push academind/node-hello-world~
+       We see
+       #+begin_quote
+       The push refers to repository [docker.io/academind/node-hello-world]
+       An image does not exist locally with the tag: academind/node-hello-world
+       #+end_quote
+       The last sentence says "does not exist", because the image local name is
+       not =academind/node-hello-world=. To avoid this:
+       We can
+       + rebuild and tag it ~docker build -t academind/node-hello-world .~
+
+       + ~docker tag node-demo:latest academind/node-hello-world~
+         - Old image is not removed, a new image is crated with this given name.
+
+    3. ~docker push academind/node-hello-world~ again, and we see
+       #+begin_quote
+       denied: requested access to the resource is denied
+       #+end_quote
+       + Need ~docker login~ and push again.
+
+- Use: ~docker pull IMAGE_NAME~
+
+- For private registries: the above ~IMAGE_NAME~'s should include host:
+  ~IMAGE_NAME~ should be replaced with ~HOST:IMAGE_NAME~.
+
+- ~docker login~ and ~docker logout~
+
+** DONE 39. Pulling & Using Shared Images
+CLOSED: [2024-05-06 Mon 10:44]
+~docker run IMAGE_ID~ *DOESN'T check update*: if you have that image in
+your local, it won't try to check if there is any update in Docker Hub or
+the private resigry you are using, and just run the local one.
+- If you want use the latest one, you need ~docker pull~
+
+** DONE Quiz 2: Managing Images & Containers
+CLOSED: [2024-05-06 Mon 11:18]
+** DONE 40. Module Summary
+CLOSED: [2024-05-06 Mon 12:09]
+** DONE 41. Module Resources
+CLOSED: [2024-05-06 Mon 12:09]
+
+* TODO Section 3: Managing Data & Working with Volumes
 ** 42. Module Introduction
 ** 43. Understanding Data Categories / Different Kinds of Data
 ** 44. Analyzing a Real App
@@ -161,7 +431,7 @@
 ** 122. Bind Mounts and COPY: When To Use What
 ** 123. Module Resources
 
-* Section 9: Deploying Docker Containers
+* TODO Section 9: Deploying Docker Containers
 ** 124. Module Introduction
 ** 125. From Development To Production
 ** 126. Deployment Process & Providers
@@ -202,7 +472,7 @@
 ** 161. Module Summary
 ** 162. Module Resources
 
-* Section 10: Docker & Containers - A Summary
+* TODO Section 10: Docker & Containers - A Summary
 ** 163. Module Introduction
 ** 164. Images & Containers
 ** 165. Key Commands
