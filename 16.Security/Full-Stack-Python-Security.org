@@ -10,182 +10,526 @@
 * about this book - xiv
 * about the author - xvii
 * about the cover illustration - xviii
-* 1 Defense in depth - 1
-** 1.1 Attack surface - 2
-** 1.2 Defense in depth - 3
-*** Security standards - 4
-*** Best practices - 5
-*** Security fundamentals - 6
+* DONE 1 Defense in depth - 1 - _NOTE_
+CLOSED: [2024-07-29 Mon 18:52]
+- Security :: the ability to resist attack.
 
-** 1.3 Tools - 8
-*** Staying practical - 11
+- Every attack begins with an /entry point/.
+
+- Attack Surface :: The sum of ALL /entry points/ for a particular system.
+
+- Beneath the /attack surface/ of a secure system are layers of security, an
+  architectural design known as /defense in depth/.
+
+- Defense layers adhere to standards and best practices to ensure security
+  fundamentals.
+
+** TODO 1.1 Attack surface - 2
+** TODO 1.2 Defense in depth - 3
+- Each layer of security is dual-purpose:
+  1. it resists an attack, and
+  2. it acts as a backup when other layers fail.
+
+- The Defense in depth strategy works based on one FACT:
+  _cost for defense last 10% or risk_ > _cost for defense first 90% or risk_
+  This is just a illustration, the 10% and 90% are not exact!
+
+  * Eliminating the last 10% of risk is going to be *a lot more expensive* than
+    eliminating the first 10% of risk.
+
+  * =from Jian=
+    However, if you can find a scenario that this fact can't hold, you can drop this
+    "Defense in depth" strategy.
+
+- The cost-benefit analysis of defense in depth boils down to arithmetic and probability.
+  Adding another layer is always more cost-effective than trying to perfect a single
+  layer. *Defense in depth recognizes the futility of perfection; this is a strength,
+  not a weakness.*
+
+- Over time, an implementation of a defense layer becomes more successful and
+  popular than others;
+  1. there are only so many ways to dig a moat. A common solution to a common
+     problem emerges.
+
+  2. The security community begins to recognize a pattern, and a new technology
+     graduates from experimental to standardized.
+
+  3. A standards body evaluates the pattern, argues about the details, defines a
+     specification, and a security standard is born.
+
+*** 1.2.1 Security standards - 4
+*** 1.2.2 Best practices - 5
+*** 1.2.3 Security fundamentals - 6
+
+** TODO 1.3 Tools - 8
+*** 1.3.1 Staying practical - 11
+
+** Summary - 11
 
 * PART 1 CRYPTOGRAPHIC FOUNDATIONS - 13
-* 2 Hashing - 15
+* TODO 2 Hashing - 15
 ** 2.1 What is a hash function? - 15
-*** Cryptographic hash function properties - 17
+*** 2.1.1 Cryptographic hash function properties - 17
+- *ONE-WAY FUNCTION*
+- *COLLISION RESISTANCE*
 
 ** 2.2 Archetypal characters - 19
 ** 2.3 Data integrity - 20
 ** 2.4 Choosing a cryptographic hash function - 21
-*** Which hash functions are safe? - 21
-*** Which hash functions are unsafe? - 22
+*** 2.4.1 Which hash functions are *SAFE*? - 21
+The safe and secure hash functions of ~algorithms_guaranteed~ fall under the
+following hash algorithm families:
+- SHA-2
+- SHA-3
+- BLAKE2
+
+*** 2.4.2 Which hash functions are unsafe? - 22
+- =TODO=
+  - MD5
+  - SHA-1
+
+- *SUMMARY*:
+  * Use _SHA-256_ for general-purpose cryptographic hashing.
+  * Use _SHA3-256_ in high-security environments, but expect less support than for _SHA-256_.
+  * Use _BLAKE2_ to hash large messages.
+  * Never use _MD5_ or _SHA1_ for security purposes.
 
 ** 2.5 Cryptographic hashing in Python - 23
 ** 2.6 Checksum functions - 25
+** Summary - 26
 
-* 3 Keyed hashing - 28
+* TODO 3 Keyed hashing - 28
+- This chapter covers
+  * Generating a secure key
+  * Verifying data authentication with keyed hashing
+  * Using the ~hmac~ module for cryptographic hashing
+  * Preventing timing attacks
+
+- In the previous chapter, you learned how to ensure _data integrity_ with hash
+  functions.
+
+- In this chapter, you’ll learn how to ensure _data authentication_ with keyed
+  hash functions.
+  1. I'll show you how to safely generate random numbers and passphrases.
+
+  2. Along the way, you’ll learn about the ~os~, ~secrets~, ~random~, and ~hmac~
+     modules.
+
+  3. Finally, you learn how to resist /timing attacks/ by comparing hash values
+     in length-constant time.
+
 ** 3.1 Data authentication - 28
-*** Key generation - 29
-*** keyed hashing - 32
+Let’s revisit Alice’s document management system from the previous chapter. The
+system hashes each new document before storing it. To verify the integrity of a
+document, the system rehashes it and compares the new hash value to the old hash
+value. If the hash values don’t match, the document is considered corrupt. If
+the hash values do match, the document is considered intact.
+
+Alice’s system effectively detects accidental data corruption but is less than
+perfect. Mallory, a malicious attacker, can potentially take advantage of Alice.
+Suppose Mallory gains write access to Alice’s filesystem. From this position,
+she can not only alter a doc- ument, but also replace its hash value with the
+hash value of the altered document. By replacing the hash value, Mallory
+prevents Alice from detecting that the document has been tampered with. Alice’s
+solution can therefore detect only accidental message corruption; it cannot
+detect intentional message modification.
+
+If Alice wants to resist Mallory, she’ll need to change the system to verify the
+integ- rity and the origin of each document. The system can’t just answer the
+question, “Has the data changed?” The system must also answer, “Who authored
+this data?” In other words, the system will need to ensure data integrity and
+data authentication.
+
+Data authentication, sometimes referred to as message authentication, ensures
+that a data reader can verify the identity of the data writer. This
+functionality requires two things: a key and a keyed hash function. In the next
+sections, I cover key generation and keyed hashing; Alice combines these tools
+to resist Mallory.
+
+*** 3.1.1 Key generation - 29
+**** Random numbers - 29
+**** Passphrases - 30
+
+*** 3.1.2 keyed hashing - 32
 
 ** 3.2 HMAC functions - 33
-*** Data authentication between parties - 35
+*** 3.2.1 Data authentication between parties - 35
 
 ** 3.3 Timing attacks - 36
+** Summary - 38
 
-* 4 Symmetric encryption - 39
+* TODO 4 Symmetric encryption - 39
+- This chapter covers
+  * Ensuring confidentiality with encryption
+  * Introducing the cryptography package
+  * Choosing a symmetric encryption algorithm
+  * Rotating encryption keys
+
 ** 4.1 What is encryption? - 39
-*** Package management - 40
+*** 4.1.1 Package management - 40
 
 ** 4.2 The cryptography package - 41
-*** Hazardous materials layer - 42
-*** Recipes layer - 42
-*** Key rotation - 44
+*** 4.2.1 Hazardous materials layer - 42
+*** 4.2.2 Recipes layer - 42
+*** 4.2.3 Key rotation - 44
 
 ** 4.3 Symmetric encryption - 45
-*** Block ciphers - 45
-*** Stream ciphers - 47
-*** Encryption modes - 47
+*** 4.3.1 Block ciphers - 45
+**** TRIPLE DES - 46
+**** BLOWFISH - 46
+**** TWOFISH - 46
+**** ADVANCED ENCRYPTION STANDARD - 46
 
-* 5 Asymmetric encryption - 51
-** 5.1 Key-distribution problem 51
-** 5.2 Asymmetric encryption - 52
-*** RSA public-key encryption - 53
+*** 4.3.2 Stream ciphers - 47
+*** 4.3.3 Encryption modes - 47
+**** ELECTRONIC CODEBOOK MODE - 47
+**** CIPHER BLOCK CHAINING MODE - 49
 
-** 5.3 Nonrepudiation - 56
-*** Digital signatures - 56
-*** RSA digital signatures - 57
-*** RSA digital signature verification - 58
-*** Elliptic-curve digital signatures - 60
+** Summary - 50
 
-* 6 Transport Layer Security - 62
-** 6.1 SSL? TLS? HTTPS? - 63
-** 6.2 Man-in-the-middle attack - 63
-** 6.3 The TLS handshake - 65
-*** Cipher suite negotiation - 65
-*** Key exchange - 66
-*** Server authentication - 68
+* TODO 5 Asymmetric encryption - 51
+- This chapter covers
+  * Introducing the key-distribution problem
+  * Demonstrating asymmetric encryption with the cryptography package
+  * Ensuring nonrepudiation with digital signatures
 
-** 6.4 HTTP with Django - 72
-*** The DEBUG setting - 74
+- In the previous chapter, you learned:
+  1. how to ensure confidentiality with symmetric encryption.
 
-** 6.5 HTTPS with Gunicorn - 74
-*** Self-signed public-key certificates - 75
-*** The Strict-Transport-Security response header - 77
-*** HTTPS redirects - 77
+  Symmetric encryption, unfortunately, is no panacea.
+  _By itself, symmetric encryption is unsuitable for key distribution,_ a
+  classic problem in cryptography.
 
-** 6.6 TLS and the requests package - 78
-** 6.7 TLS and database connections - 79
-** 6.8 TLS and email - 80
-*** Implicit TLS - 81
-*** Email client authentication - 81
-*** SMTP authentication credentials - 81
+- In this chapter, you'll learn:
+  1. how to solve this problem with /asymmetric encryption/.
+     Along the way, you’ll learn more about the Python package named _cryptography_.
+
+- Finally, I’ll show you how to ensure nonrepudiation with /digital signatures/.
+
+** DONE 5.1 Key-distribution problem - 51
+CLOSED: [2024-08-02 Fri 20:52]
+No good solution for /key-distribution problem/ if only /symmetric encryption/
+is used.
+
+** TODO 5.2 Asymmetric encryption - 52
+*** 5.2.1 RSA public-key encryption - 53
+
+- _This section_ has demonstrated how *public-key* encryption ensures /confidentiality/.
+  _The next section_ demonstrates how *private-key* encryption ensures snonrepudiations.
+
+** TODO 5.3 Nonrepudiation - 56
+- In chapter 3, you learned how Alice and Bob _ensured message authentication_
+  with /keyed hashing/.
+
+  From the perspective of a third party, Charlie, he can't know who create the
+  message.
+
+- nonrepudiation :: when a system prevents a participant from denying their actions.
+  * In the real world, /nonrepudiation/ is often used when the message represents
+    an online transaction.
+
+- If Alice, Bob, and Charlie want /nonrepudiation/, Alice and Bob are going to _have
+  to STOP *sharing a key* and START *using digital signatures*._
+
+*** 5.3.1 Digital signatures - 56
+- /Digital signatures/ go one step beyond /data authentication/ and /data integrity/
+  to ensure /nonrepudiation/.
+
+- A /digital signature/ allows anyone, not just the receiver, to answer two
+  questions:
+  * Q: *WHO* sent the message?
+  * Q: *HAS* the message been modified in transit?
+
+- A /digital signature/ shares many things in common with a handwritten signature:
+  * Both signature types are unique to the signer.
+  * Both signature types can be used to legally bind the signer to a contract.
+  * Both signature types are difficult to forge.
+
+- /Digital signatures/ are traditionally created by combining a /hash function/
+  with /public-key encryption/.
+
+  To digitally sign a message, the sender first hashes the message. The hash
+  value and the sender’s /private key/ then become the input to an /asymmetric
+  encryption algorithm/; the output of this algorithm is the message sender’s
+  /digital signature/. In other words, the plaintext is a hash value, and the
+  ciphertext is a /digital signature/. The message and the /digital signature/
+  are then transmitted together. Figure 5.2 depicts how Bob would implement this
+  protocol.
+
+- The /digital signature/ is openly transmitted with the message; *it is not a secret.*
+
+  Some programmers have a hard time accepting this. This is understandable to a
+  degree: the signature is ciphertext, and an attacker can easily decrypt it
+  with the public key. Remember, although ciphertext is often concealed, /digital
+  signatures/ are an exception. The goal of a /digital signature/ is to ensure
+  /nonrepudiation/, not confidentiality. If an attacker decrypts a /digital
+  signature/, they do not gain access to private information.
+
+*** 5.3.2 RSA digital signatures - 57
+*** 5.3.3 RSA digital signature verification - 58
+*** 5.3.4 Elliptic-curve digital signatures - 60
+
+** Summary - 61
+- Asymmetric encryption algorithms use different keys for encryption and decryption.
+- Public-key encryption is a solution to the key-distribution problem.
+- RSA key pairs are a classic and secure way to asymmetrically encrypt data.
+- Digital signatures guarantee nonrepudiation.
+- Elliptic-curve digital signatures are more efficient than RSA digital signatures.
+
+* TODO 6 Transport Layer Security - 62
+- This chapter covers
+  * Resisting man-in-the-middle attacks
+  * Understanding the Transport Layer Security handshake
+  * Building, configuring, and running a Django web application
+  * Installing a public-key certificate with Gunicorn
+  * Securing HTTP, email, and database traffic with Transport Layer Security
+
+- Review:
+  In the previous chapters, I introduced you to cryptography.
+  You learned about
+  * hashing,
+  * encryption, and
+  * digital signatures.
+
+- Outlook:
+  * Overview:
+    In this chapter, you'll learn how to use /Transport Layer Security (TLS)/,
+    a ubiquitous secure networking protocol. This protocol is an application of
+    /data integrity/, /data authentication/, /confidentiality/, and
+    /nonrepudiation/.
+
+  * Target:
+    After reading this chapter, you'll
+    + understand _how the /TLS handshake/ and /public-key certificates/ work._
+    + learn _how to generate and configure a Django web application._
+    + learn _how to secure email and database traffic with TLS._
+
+** DONE 6.1 SSL? TLS? HTTPS? - 63
+CLOSED: [2024-08-04 Sun 14:36]
+Before we dive into this subject, let's establish some vocabulary terms.
+
+- Some programmers use /SSL/, /TLS/, and /HTTPS/ INTERCHANGEABLY,
+  even though they mean *DIFFERENT* things.
+
+- Secure Socket Layer (SSL) :: this protocol is the insecure predecessor of /TLS/.
+  * The latest version of SSL is more than 20 years old.
+    Over time, numerous vulnerabilities have been discovered in this protocol.
+
+  * In 2015, the IETF deprecated it (https://tools.ietf.org/html/rfc7568).
+
+- /Transport Layer Security (TLS)/ supersedes /SSL/ with _BETTER security and performance_.
+
+- HTTPS :: HTTP over SSL or TLS.
+  * Q :: Why should you run HTTP over TLS?
+  * A :: HTTP was defined in the 1980s, when the internet was a smaller and safer
+         place.
+    * _BY DESIGN_, HTTP provides no security:
+      + the conversation is not _confidential_, and
+      + neither participant is _authenticated_.
+
+- =TODO= In the next section,
+  you'll learn about a category of attacks designed to exploit the limitations
+  of HTTP.
+
+** DONE 6.2 Man-in-the-middle attack - 63
+CLOSED: [2024-08-04 Sun 14:56]
+- Man-in-the-middle (MITM) :: An attacker begins by taking control of a position
+                              between two vulnerable parties.
+  * This position can be
+    + a network segment or
+    + an intermediary system.
+
+  * The attacker can use their position to launch either of these forms of MITM attack:
+    + PASSIVE MITM attack
+      - /TLS/ cannot protect Bob's wireless network.
+
+        It would, however, provide /confidentiality/ -- preventing Eve from
+        reading the conversation in a meaningful way.
+
+    + ACTIVE MITM attack
+      - /TLS/ cannot protect the network device between Bob and Alice.
+        It would, however, prevent Eve from _impersonating_ Bob or Alice.
+
+        /TLS/ does this by *authenticating* the conversation, ensuring Bob that
+        he is communicating directly to Alice.
+
+** TODO 6.3 The TLS handshake - 65
+- /TLS/ is a point-to-point, client/server protocol.
+
+- Every TLS connection begins with a handshake between the client and server.
+
+- You may have already heard of the TLS handshake.
+
+- =TODO=
+
+- In reality, there isn't one TLS handshake; there are many.
+  For example, versions 1.1, 1.2, and 1.3 of TLS all define a different
+  handshake protocol. Even within each TLS version, the handshake is affected by
+  which algorithms the client and server use to communicate. Furthermore, many
+  parts of the handshake, such as server authentication and client
+  authentication, are optional.
+
+- In this section, I cover the most common type of TLS handshake: the one that your
+  browser (the client) performs with a modern web server. This handshake is
+  always ini- tiated by the client. The client and server will use version 1.3
+  of TLS. Version 1.3 is faster, more secure—and, fortunately, for you and
+  I—simpler than version 1.2. The whole point of this handshake is to perform
+  three tasks:
+  1. Cipher suite negotiation
+  2. Key exchange
+  3. Server authentication
+
+*** 6.3.1 Cipher suite negotiation - 65
+*** 6.3.2 Key exchange - 66
+**** DIFFIE-HELLMAN KEY EXCHANGE - 66
+
+*** 6.3.3 Server authentication - 68
+**** PUBLIC-KEY CERTIFICATES - 69
+
+** TODO 6.4 HTTP with Django - 72
+*** 6.4.1 The DEBUG setting - 74
+
+** TODO 6.5 HTTPS with Gunicorn - 74
+*** 6.5.1 Self-signed public-key certificates - 75
+*** 6.5.2 The Strict-Transport-Security response header - 77
+*** 6.5.3 HTTPS redirects - 77
+
+** TODO 6.6 TLS and the requests package - 78
+** TODO 6.7 TLS and database connections - 79
+** TODO 6.8 TLS and email - 80
+*** 6.8.1 Implicit TLS - 81
+*** 6.8.2 Email client authentication - 81
+*** 6.8.3 SMTP authentication credentials - 81
+
+** TODO Summary - 82
 
 * PART 2 AUTHENTICATION AND AUTHORIZATION - 83
-* 7 HTTP session management - 85
+* TODO 7 HTTP session management - 85
 ** 7.1 What are HTTP sessions? - 85
 ** 7.2 HTTP cookies - 87
-*** Secure directive - 87
-*** Domain directive - 88
-*** Max-Age directive - 88
-*** Browser-length sessions - 89
-*** Setting cookies programmatically - 89
+*** 7.2.1 Secure directive - 87
+*** 7.2.2 Domain directive - 88
+*** 7.2.3 Max-Age directive - 88
+*** 7.2.4 Browser-length sessions - 89
+*** 7.2.5 Setting cookies programmatically - 89
 
 ** 7.3 Session-state persistence - 90
-*** The session serializer - 90
-*** Simple cache-based sessions - 91
-*** Write-through cache-based sessions - 94
-*** Database-based session engine - 94
-*** File-based session engine - 94
-*** Cookie-based session engine - 94
+*** 7.3.1 The session serializer - 90
+*** 7.3.2 Simple cache-based sessions - 91
+**** MEMCACHED BACKENDS - 92
+**** DATABASE BACKEND - 92
+**** LOCAL MEMORY, DUMMY, AND FILESYSTEM BACKENDS - 93
 
-* 8 User authentication - 100
+*** 7.3.3 Write-through cache-based sessions - 94
+*** 7.3.4 Database-based session engine - 94
+*** 7.3.5 File-based session engine - 94
+*** 7.3.6 Cookie-based session engine - 94
+*** THE _SECRET_KEY_ SETTING - 95
+*** COOKIE SIZE LIMITATIONS - 96
+*** UNAUTHORIZED ACCESS TO SESSION STATE - 96
+*** REPLAY ATTACKS - 96
+*** REMOTE CODE-EXECUTION ATTACKS - 97
+
+** Summary - 99
+
+* TODO 8 User authentication - 100
 ** 8.1 User registration - 101
-*** Templates - 104
-*** Bob registers his account - 107
+*** 8.1.1 Templates - 104
+*** 8.1.2 Bob registers his account - 107
 
 ** 8.2 User authentication - 108
-*** Built-in Django views - 109
-*** Creating a Django app - 110
-*** Bob logs into and out of his account - 112
+*** 8.2.1 Built-in Django views - 109
+*** 8.2.2 Creating a Django app - 110
+*** 8.2.3 Bob logs into and out of his account - 112
+**** LOGGING OUT - 113
 
 ** 8.3 Requiring authentication concisely - 114
 ** 8.4 Testing authentication - 114
+** Summary - 116
 
-* 9 User password management - 117
+* TODO 9 User password management - 117
 ** 9.1 Password-change workflow - 118
-*** Custom password validation - 120
+*** 9.1.1 Custom password validation - 120
 
 ** 9.2 Password storage - 122
-*** Salted hashing - 125
-*** Key derivation functions - 127
+*** 9.2.1 Salted hashing - 125
+*** 9.2.2 Key derivation functions - 127
 
 ** 9.3  Configuring password hashing - 130
-*** Native password hashers - 131
-*** Custom password hashers - 131
-*** Argon2 password hashing - 132
-*** Migrating password hashers 133
+*** 9.3.1 Native password hashers - 131
+*** 9.3.2 Custom password hashers - 131
+*** 9.3.3 Argon2 password hashing - 132
+*** 9.3.4 Migrating password hashers 133
 
 ** 9.4 Password-reset workflow - 136
+** Summary - 138
 
-* 10 Authorization - 139
+* TODO 10 Authorization - 139
 ** 10.1 Application-level authorization - 140
-*** Permissions - 141
-*** User and group administration - 142
+*** 10.1.1 Permissions - 141
+*** 10.1.2 User and group administration - 142
 
 ** 10.2 Enforcing authorization - 147
-*** The low-level hard way - 147
-*** The high-level easy way - 149
-*** Conditional rendering - 151
-*** Testing authorization - 152
+*** 10.2.1 The low-level hard way - 147
+*** 10.2.2 The high-level easy way - 149
+*** 10.2.3 Conditional rendering - 151
+*** 10.2.4 Testing authorization - 152
 
 ** 10.3 Antipatterns and best practices - 153
+** Summary - 154
 
-* 11 OAuth 2 - 155
+* TODO 11 OAuth 2 - 155
 ** 11.1 Grant types - 157
-*** Authorization code flow - 157
+*** 11.1.1 Authorization code flow - 157
+**** REQUESTING AUTHORIZATION - 157
+**** GRANTING AUTHORIZATION - 158
+**** PERFORMING TOKEN EXCHANGE - 159
+**** ACCESSING PROTECTED RESOURCES - 159
 
 ** 11.2 Bob authorizes Charlie - 161
-*** Requesting authorization - 162
-*** Granting authorization - 162
-*** Token exchange - 162
-*** Accessing protected resources - 163
+*** 11.2.1 Requesting authorization - 162
+*** 11.2.2 Granting authorization - 162
+*** 11.2.3 Token exchange - 162
+*** 11.2.4 Accessing protected resources - 163
 
 ** 11.3 Django OAuth Toolkit - 164
-*** Authorization server responsibilities - 165
-*** Resource server responsibilities - 168
+*** 11.3.1 Authorization server responsibilities - 165
+**** DEFINING SCOPE - 166
+**** AUTHENTICATING RESOURCE OWNERS - 166
+**** GENERATING REDIRECT URIS - 167
+**** MANAGING GRANT CODES - 168
+
+*** 11.3.2 Resource server responsibilities - 168
+**** MANAGING ACCESS TOKENS - 168
+**** SERVING PROTECTED RESOURCES - 169
+**** ENFORCING SCOPE - 170
+**** FUNCTION-BASED VIEWS - 171
 
 ** 11.4 requests-oauthlib - 172
-*** OAuth client responsibilities - 173
+*** 11.4.1 OAuth client responsibilities - 173
+**** REVOKING TOKENS - 175
+
+** Summary - 176
 
 * PART 3 ATTACK RESISTANCE - 177
-* 12 Working with the operating system - 179
+* TODO 12 Working with the operating system - 179
 ** 12.1 Filesystem-level authorization - 180
-*** Asking for permission - 180
-*** Working with temp files - 181
-*** Working with filesystem permissions - 182
+*** 12.1.1 Asking for permission - 180
+*** 12.1.2 Working with temp files - 181
+*** 12.1.3 Working with filesystem permissions - 182
 
 ** 12.2 Invoking external executables - 184
-*** Bypassing the shell with internal APIs - 185
-*** Using the subprocess module - 187
+*** 12.2.1 Bypassing the shell with internal APIs - 185
+*** 12.2.2 Using the subprocess module - 187
 
-* 13 Never trust input - 190
+** Summary - 189
+
+* TODO 13 Never trust input - 190
 ** 13.1 Package management with Pipenv - 191
 ** 13.2 YAML remote code execution - 193
 ** 13.3 XML entity expansion - 195
-*** Quadratic blowup attack - 196
-*** Billion laughs attack - 196
+*** 13.3.1 Quadratic blowup attack - 196
+*** 13.3.2 Billion laughs attack - 196
 
 ** 13.4 Denial of service - 198
 ** 13.5 Host header attacks - 199
@@ -194,68 +538,81 @@
 *** Raw SQL queries - 205
 *** Database connection queries - 206
 
-* 14 Cross-site scripting attacks - 208
+* TODO 14 Cross-site scripting attacks - 208
 ** 14.1 What is XSS? - 209
-*** Persistent XSS - 209
-*** Reflected XSS - 210
-*** DOM-based XSS - 211
+*** 14.1.1 Persistent XSS - 209
+*** 14.1.2 Reflected XSS - 210
+*** 14.1.3 DOM-based XSS - 211
 
 ** 14.2 Input validation - 212
-*** Django form validation - 215
+*** 14.2.1 Django form validation - 215
 
 ** 14.3 Escaping output - 218
-*** Built-in rendering utilities - 219
-*** HTML attribute quoting - 221
+*** 14.3.1 Built-in rendering utilities - 219
+*** 14.3.2 HTML attribute quoting - 221
 
 ** 14.4 HTTP response headers - 222
-*** Disable JavaScript access to cookies - 222
-*** Disable MIME type sniffing - 224
-*** The X-XSS-Protection header - 225
+*** 14.4.1 Disable JavaScript access to cookies - 222
+*** 14.4.2 Disable MIME type sniffing - 224
+*** 14.4.3 The X-XSS-Protection header - 225
 
-* 15 Content Security Policy - 227
+** Summary - 225
+
+* TODO 15 Content Security Policy - 227
 ** 15.1 Composing a content security policy - 228
-*** Fetch directives - 230
-*** Navigation and document directives - 234
+*** 15.1.1 Fetch directives - 230
+**** THE DEFAULT-SRC DIRECTIVE - 230
+**** THE SCRIPT-SRC DIRECTIVE - 231
+**** THE STYLE-SRC DIRECTIVE - 232
+**** THE IMG-SRC DIRECTIVE - 233
+
+*** 15.1.2 Navigation and document directives - 234
 
 ** 15.2 Deploying a policy with django-csp - 234
 ** 15.3 Using individualized policies - 236
 ** 15.4 Reporting CSP violations - 238
 ** 15.5 Content Security Policy Level 3 - 240
+** Summary - 241
 
-* 16 Cross-site request forgery - 242
+* TODO 16 Cross-site request forgery - 242
 ** 16.1 What is request forgery? - 242
 ** 16.2 Session ID management - 244
 ** 16.3 State-management conventions - 246
-** HTTP method validation - 247
+*** 16.3.1 HTTP method validation - 247
+
 ** 16.4 Referer header validation - 248
-*** Referrer-Policy response header - 249
+*** 16.4.1 Referrer-Policy response header - 249
 
 ** 16.5 CSRF tokens - 250
-*** POST requests - 251
-*** Other unsafe request methods - 252
+*** 16.5.1 POST requests - 251
+*** 16.5.1 Other unsafe request methods - 252
 
-* 17 Cross-Origin Resource Sharing - 254
+** Summary - 253
+
+* TODO 17 Cross-Origin Resource Sharing - 254
 ** 17.1 Same-origin policy - 255
 ** 17.2 Simple CORS requests - 256
-*** Cross-origin asynchronous requests - 257
+*** 17.2.1 Cross-origin asynchronous requests - 257
 
 ** 17.3 CORS with django-cors-headers - 257
-*** Configuring Access-Control-Allow-Origin - 258
+*** 17.3.1 Configuring Access-Control-Allow-Origin - 258
 
 ** 17.4 Preflight CORS requests - 259
-*** Sending the preflight request - 260
-*** Sending the preflight response -263
+*** 17.4.1 Sending the preflight request - 260
+*** 17.4.2 Sending the preflight response -263
 
 ** 17.5 Sending cookies across origins - 264
 ** 17.6 CORS and CSRF resistance - 265
+** Summary - 266
 
-* 18 Clickjacking - 267
+* TODO 18 Clickjacking - 267
 ** 18.1 The X-Frame-Options header - 270
-*** Individualized responses - 270
+*** 18.1.1 Individualized responses - 270
 
 ** 18.2 The Content-Security-Policy header - 271
-*** X-Frame-Options versus CSP - 272
+*** 18.2.1 X-Frame-Options versus CSP - 272
 
 ** 18.3 Keeping up with Mallory - 272
+** Summary - 273
 
 * index - 275
