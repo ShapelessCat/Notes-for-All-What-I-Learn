@@ -5,14 +5,20 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
+- Read the https://rust-book.cs.brown.edu/ version.
+
+- This version of the text assumes you’re using Rust _1.78.0 (released 2024-05-02) or later_.
+
+- Offline version: Run ~rustup doc --book~ to open
+
 * Foreword
-  -- by Nicholas Matsakis and Aaron Turon
+**by Nicholas Matsakis and Aaron Turon**
 
-  - =EN=
-    * arcane
-    * lest
-
-  - xxx
+- =EN=
+  * arcane
+  * lest
+  * customary
+  * fickle
 
 * Introduction
 ** Who Rust Is For
@@ -305,14 +311,19 @@ CLOSED: [2023-09-03 Sun 23:56]
 This chapter introduces you to a few common Rust concepts by showing you how to
 use them in a real program.
 
+- You'll learn about
+  * ~let~,
+  * ~match~,
+  * /methods/,
+  * /associated functions/,
+  * /external crates/, and
+  * more!
 
-- You'll learn about ~let~, ~match~, /methods/, /associated functions/,
-  /external crates/, and more!
-  * =TODO= =NEXT=
-    In the following chapters, we'll explore these ideas in more detail.
-    In this chapter, you'll just practice the fundamentals.
+  In the following chapters, we'll explore these ideas in more detail.
+  In this chapter, you'll just practice the fundamentals.
 
-- Guessing game:
+- We'll implement a classic beginner programming problem: a guessing game.
+  Here's how it works:
   1. Generate a random integer between 1 and 100.
   2. Prompt the player to enter a guess.
   3. After a guess is entered, the program tells you if it is right, too low, or to high?
@@ -320,28 +331,36 @@ use them in a real program.
      If right print congratulations and exit.
 
 *** DONE Setting Up a New Project
-CLOSED: [2023-09-03 Sun 18:13]
-~$ cargo new guessing_game~
-~$ cd guessing_game~
+CLOSED: [2024-08-17 Sat 01:29]
+#+begin_src shell
+cargo new guessing_game
+cd guessing_game
+#+end_src
 
 - Look at the generated =Cargo.toml= file:
   #+begin_src toml
     [package]
     name = "guessing_game"
     version = "0.1.0"
-    author = ["Your Name <you@example.com>"]
-    edition = "2018"
+    edition = "2021"
+
+    # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
     [dependencies]
   #+end_src
   If the author information that Cargo obtained from your environment is not
   correct, fix that in the file and save it again.
 
-*** DONE Processing a Guess
-CLOSED: [2023-09-03 Sun 20:06]
-#+begin_src rust
-  // src/main.rs
+- This new project =src/main.rs= includes a "Hello, world!" program for you.
+  You can use ~cargo run~ to try it, and this command comes in handy when you
+  need a rapidly iterate on a project.
 
+- You'll be wring all this chapter code in this =src/main.rs= file.
+
+*** DONE Processing a Guess
+CLOSED: [2024-08-17 Sat 02:02]
+#+FILENAME: src/main.rs
+#+begin_src rust
   use std::io;
 
   fn main() {
@@ -360,18 +379,23 @@ CLOSED: [2023-09-03 Sun 20:06]
 #+end_src
 
 - ~std~ means the standard library.
-  ~io~ library comes from the standard library.
+  ~io~ (input/output) library comes from the standard library.
 
 - prelude :: a set of items defined in the standard library that Rust brings
              into the scope of every program *by default*.
+  * https://doc.rust-lang.org/std/prelude/index.html
 
 - Use ~use~ when the required libraries are not in the /prelude/.
+
+- The ~main~ function is the entry point into this program.
 
 - This code is printing a prompt stating what the game is and requesting input
   from the user.
 
 **** DONE Storing Values with Variables
-CLOSED: [2023-09-03 Sun 20:01]
+CLOSED: [2024-08-17 Sat 01:41]
+- ~let~, ~let mut~
+
 - ~String~ :: a /string type/ provided by the /standard library/ that is a
               _growable_, _UTF-8 encoded bit_ of text.
 
@@ -379,11 +403,7 @@ CLOSED: [2023-09-03 Sun 20:01]
     function/ of the ~String~ type.
 
     + associated function ::
-      a function that is implemented *on a /type/*.
-
-      In this case ~String~,
-      _rather than on a particular instance_ of a ~String~ (Some languages
-      call this a /static method/).
+      a function that is implemented *on a /type/*, in this case ~String~.
 
   * ~String::new()~ create a _NEW, EMPTY string._
 
@@ -392,17 +412,27 @@ CLOSED: [2023-09-03 Sun 20:01]
     /mutable variable/ that is currently bound to a NEW, EMPTY /instance/ of
     a ~String~.
 
+**** DONE Receiving User Input
+CLOSED: [2024-08-17 Sat 01:47]
+#+begin_src rust
+  io::stdin()
+      .read_line(&mut guess)
+#+end_src
+
 - ~io::stdin~ should be written as ~std::io::stdin~ if you did NOT
   ~use std::io~.
 
-- The job of ~read_line~ is to
+- ~std::io::stdin~ returns an instance of ~std:io::Stdin~,
+  which is a type that repressents a handle to the standard input for your terminal.
+
+- The job of ~read_line(&mut guess)~ is to
   1. take whatever the user types into standard input
      and
-  2. place that into a /string/, so it takes that string as an argument.
+  2. place that into a /string/, ~guess~ in this case, so it takes that string as an argument.
 
 - The /string argument/ of ~read_line~, ~guess~,
   needs to be /mutable/
-  so the /method/ can change the _string's content_ by adding the user input.
+  so the /method/ can change the _string's content_ by appending the user input into ~guess~.
 
 - The ~&~ indicates that this argument is a /reference/, which gives you a way
   to let multiple parts of your code access one piece of data _without_ needing
@@ -412,29 +442,10 @@ CLOSED: [2023-09-03 Sun 20:01]
   how safe and easy it is to use /references/.
   * /references/ are *immutable* BY DEFAULT.
     Hence, you need to write ~&mut guess~ rather than ~&guess~ to make it /mutable/.
-    =TODO= (Chapter 4 will explain references more thoroughly.)
-
-**** DONE Receiving User Input
-CLOSED: [2023-09-03 Sun 20:01]
-#+begin_src rust
-  io::stdin()
-      .read_line(&mut guess)
-#+end_src
-- ~std::io::stdin~ returns an instance of ~std:io::Stdin~,
-  which is a type that repressents a handle to the standard input for your terminal.
-
-- The full job of ~read_line~ is to
-  1. take whatever the user types into standard input and
-  2. append that into a string (*without overwriting its contents*),
-     so we therefore pass that string as an argument.
-     * The _string argument_ needs to be /mutable/ so the method can change the
-       string's content.
-
-- ~&mut~
 
 **** DONE Handling Potential Failure with ~Result~
-CLOSED: [2023-09-03 Sun 20:01]
-- ~read_line~ also returns a value -- an ~io::Result~ typed value.
+CLOSED: [2024-08-17 Sat 02:00]
+- ~read_line~ returns a value -- an ~io::Result~ typed value.
 
 - Rust has a number of /types/ named ~Result~ in its standard library:
   * a generic ~Rusult~
@@ -443,11 +454,10 @@ CLOSED: [2023-09-03 Sun 20:01]
 - The ~Result~ types are /enumerations/, often referred to as ~enums~.
     An enumeration is a type that can have a _fixed_ set of values, and those
   values are called the /enum's variants/.
-  =TODO= CHAPTER 6
 
 - For ~Result~, the /variants/ are ~Ok~ or ~Err~.
-  * ~Ok~ indicates the operation was successful, and it contains the success-
-    fully generated value.
+  * ~Ok~ indicates the operation was successful, and it contains the
+    successfully generated value.
 
   * ~Err~ indicates the operation was failed, and it contains info about
     _how_ and _why_ the operation failed.
@@ -459,19 +469,41 @@ CLOSED: [2023-09-03 Sun 20:01]
   * With an ~Ok~ value, ~expect~ will take the return value that ~Ok~ is
     holding and return just the value to you.
 
-- If you have a ~Result~ type value, and you don't use ~expect~ method or try
-  to catch the error (=TODO= CHAPTER 9), The compiler will issue a warning
-  becuase of _unused value_ issue.
+- If here you don't call ~expect~, the program will compile, but you'll get a warning:
+  #+begin_src text
+    $ cargo build
+       Compiling guessing_game v0.1.0 (file:///projects/guessing_game)
+    warning: unused `Result` that must be used
+      --> src/main.rs:10:5
+       |
+    10 |     io::stdin().read_line(&mut guess);
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+       |
+       = note: this `Result` may be an `Err` variant, which should be handled
+       = note: `#[warn(unused_must_use)]` on by default
+    help: use `let _ = ...` to ignore the resulting value
+       |
+    10 |     let _ = io::stdin().read_line(&mut guess);
+       |     +++++++
 
-- =TODO= =NEXT=
-  Chapter 9 will show how to recover from errors.
+    warning: `guessing_game` (bin "guessing_game") generated 1 warning
+        Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.59s
+  #+end_src
+  Since ~read_line~ returns a ~io::Result<()>~ type value, call ~expect~, this
+  warning can be eliminated. However, if the type parameter is not ~()~, only
+  call ~expect~ is not enough, you also need to bind this extracted non-() value
+  to a variable.
+
+- *The right way to suppress the warning is to actually write error-handling code*,
+  but in our case we just want to crash this program when a problem occurs, so
+  we can use ~expect~.
+  * =TODO= You'll learn about recovering from errors in Chapter 9.
 
 **** DONE Printing Values with ~println!~ Placeholders
-CLOSED: [2023-09-03 Sun 20:04]
-The ~{}~ syntax for ~println!~ ......
+CLOSED: [2024-08-17 Sat 02:01]
 
 **** DONE Testing the First Part
-CLOSED: [2023-09-03 Sun 20:05]
+CLOSED: [2024-08-17 Sat 02:02]
 ~cargo run~ and try it (we currently only finished the input part).
 
 Output:
@@ -485,23 +517,35 @@ Output:
   You guessed: 6
 #+end_src
 
+At this point, _the first part of the game is done_:
+we're getting input from the keyboard and then printing it.
+
 *** DONE Generating a Secret Number
 CLOSED: [2023-09-03 Sun 23:43]
-No random number functionality in /standard library/,
+Next, we need to generate a secret number that the user will try to guess.
+
+*NO* random number functionality in /standard library/,
 HOWEVER, the Rust team does provide a =rand= /create/.
 
 **** DONE Using a Crate to Get More Functionality
-CLOSED: [2023-09-03 Sun 23:35]
-- /crate/ is a collection of Rust source code files.
+CLOSED: [2024-08-17 Sat 02:30]
+- crate :: a collection of Rust source code files.
 
   * The project we've been building is a /binary crate/, which is an
-    executable.
+    /executable/.
 
   * The =rand= /crate/ is a /library crate/, which contains code intended to be
     used in other programs.
 
-- To use a crate in a Rust project, we need to modify the =Cargo.toml= -- add
-  a /dependency/:
+- To use a crate in a Rust project, we can
+  1. modify the =Cargo.toml= -- add a /dependency/.
+
+  OR
+
+  1. Use the command ~cargo add rand@0.8.5~.
+
+  After adding this dependency:
+  #+FILE_NAME: Cargo.toml
   #+begin_src toml
     [dependencies]
     rand = "0.8.5"
@@ -509,19 +553,26 @@ CLOSED: [2023-09-03 Sun 23:35]
 
 - Cargo understand [[http://semver.org][Semantic Versioning]] (/SemVer/ for short), which is a
   standard for writing version numbers.
-  * The =0.8.5= is a _shorthand_ for =^0.8.5=, which means
-    "any version that has a public API compatible with version =0.8.5=".
+  * *The ~0.8.5~ is a _shorthand_ for ~^0.8.5~,*
+    which means any version that is at least ~0.8.5~ but below ~0.9.0~.
 
-    In the semantic version context, this means *at least 0.8.5 but below 0.9.0*.
-    =IMPORTANT=
+    In the Semantic Versioning context, this is equivalent to
+    _any version that has a public API COMPATIBLE with version ~0.8.5~._
+    Versions >= ~0.9.0~ can be compatible with ~0.8.5~, but there is no guarantee
+    from the Semantic Versioning specification.
 
 - /Crates.io/ :: a place people in the Rust ecosystem post their open source
                  Rust projects for others to use.
 
 - /registry/ :: a copy of data from Crates.io.
 
-- Now that we have an _external dependency_,
-  Cargo fetches the latest versions of everything from the /registry/.
+- When we include an external dependency and run ~cargo build~,
+  Cargo
+  1. fetches the latest versions of everything that dependency needs from the registry;
+  2. checks the ~[dependencies]~ section and downloads any crates listed that aren't
+     already downloaded.
+  3. downloads dependencies and other crates that our project direct dependencies
+     depend on.
 
 - ~$ cargo build~
   Output:
@@ -553,9 +604,9 @@ CLOSED: [2023-09-03 Sun 23:35]
     we can see the =Downloaded ...= lines.
 
 ***** Ensuring Reproducible Builds with the =Cargo.lock= File
-The first time you run ~$ cargo build~ (or ~$cargo run~) Cargo tries to
-figure out the versions of the dependencies that fit the criteria and then
-writes them to the =Cargo.lock= file.
+The first time you run ~$ cargo build~ Cargo tries to figure out the versions of
+the dependencies that fit the criteria and then writes them to the =Cargo.lock=
+file.
 
 When you build in the future, Cargo will read =Cargo.lock= rather then tries
 to figure out the verions of dependencies again through parsing =Cargo.toml=.
@@ -565,47 +616,53 @@ to figure out the verions of dependencies again through parsing =Cargo.toml=.
   different from the ones written in =Cargo.toml= -- Cargo may choose a higher
   but can fit version.
 
+- =Cargo.lock= changes only when you explicitly upgrade.
+
 - _from The Cargo Book_:
   =Cargo.lock= is often checked into source control with the rest of the code in
   your project for /binary crates/.
+  =IMPORTANT=
 
 ***** Updating a Crate to Get a New Version
 - ~$ cargo update~
   Update the dependencies to the lastest compatible version (under the context
-  of SemVer). *Ignore the =Cargo.lock= file* and figure out all the latest versions
-  that fit your specifications in =Cargo.toml=.
+  of SemVer). *Ignore the =Cargo.lock= file*, figure out all the latest versions
+  that fit your specifications in =Cargo.toml=, aand write those versions to the
+  =Cargo.lock=.
 
 - If the *first time* you run ~$ cargo build~ it used version _0.5.5_, the
   later ~$ cargo update~ will choose version _exclusively_ between _0.5.5_
   and _0.6.0_.
 
-- If you want a higher version, like _0.6.0_, you must manually update the
+- If you want a higher version, like _0.6.0_, you must *MANUALLY update* the
   =Cargo.toml= file.
+  =IMPORTANT= =IMPORTANT= =IMPORTANT= =IMPORTANT=
 
 **** DONE Generating a Random Number
 CLOSED: [2023-09-03 Sun 23:43]
 Update the =src/main.rs=.
 
 #+BEGIN_SRC rust
-  use std::io;
-  use rand::Rng;
+    use std::io;
+    use rand::Rng;
 
-  fn main() {
-      println!("Guess the number!");
+    fn main() {
+        println!("Guess the number!");
 
-      let secret_number = rand::thread_rng().gen_range(1..=100);
+        let secret_number = rand::thread_rng().gen_range(1..=100);
 
-      println!("The secret number is: {secret_number}");
+        println!("The secret number is: {secret_number}");
 
-      println!("Please input your guess.");
+        println!("Please input your guess.");
 
-      let mut guess = String::new();
+        let mut guess = String::new();
 
-      io::stdin().read_line(&mut guess)
-          .expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut guess)
+            .expect("Failed to read line");
 
-      println!("You guessed: {guess}");
-  }
+        println!("You guessed: {guess}");
+    }
 #+END_SRC
 
 - ~Rng~ is the /trait/ that defines /methods/ that /random number generators/
@@ -1468,19 +1525,19 @@ CLOSED: [2021-01-03 Sun 03:16]
 
 * DONE 4. Understanding Ownership
 CLOSED: [2023-07-23 Sun 22:02]
-  /ownership/ is Rust's *MOST UNIQUE feature* and has deep implications for the
-  rest of the language.
+/ownership/ is Rust's *MOST UNIQUE feature* and has deep implications for the
+rest of the language.
 
-  It *enables* Rust to make
-  /memory safety/ guarantees _without_ needing a /garbage collector/.
+It *enables* Rust to make
+/memory safety/ guarantees _without_ needing a /garbage collector/.
 
-  This chapter will talk about
-  - /ownership/
-    as well as several
-  - _RELATED features_:
-    * /borrowing/
-    * /slice/
-    * how Rust lays data out in memory. =IMPORTANT=
+This chapter will talk about
+- /ownership/
+  as well as several
+- _RELATED features_:
+  * /borrowing/
+  * /slice/
+  * how Rust lays data out in memory. =IMPORTANT=
 
 ** DONE 4.1. What is Ownership?
 CLOSED: [2023-07-23 Sun 17:13]
@@ -2950,24 +3007,24 @@ CLOSED: [2021-01-06 Wed 02:17]
 
 * DONE 6. Enums and Pattern Matching
 CLOSED: [2023-07-25 Tue 20:25]
-  - enums :: a type that enumerates its possible variants.
+- enums :: a type that enumerates its possible variants.
 
-  - This chapter will discuss:
-    1. DEFINE and USE an /enum/ to show how an /enum/ can encode meaning along
-       with data.
+- This chapter will discuss:
+  1. DEFINE and USE an /enum/ to show how an /enum/ can encode meaning along
+     with data.
 
-    2. EXPLORE a particularly useful /enum/, called ~Option~.
+  2. EXPLORE a particularly useful /enum/, called ~Option~.
 
-    3. LOOK AT how /pattern matching/ in the /match expression/ makes it easy to
-       run different code for different values of an /enum/.
+  3. LOOK AT how /pattern matching/ in the /match expression/ makes it easy to
+     run different code for different values of an /enum/.
 
-    4. COVER how the ~if let~ construct is another _convenient and concise_ idiom
-       available to you to handle /enums/ in your code.
+  4. COVER how the ~if let~ construct is another _convenient and concise_ idiom
+     available to you to handle /enums/ in your code.
 
-  - /Enums/ are a feature in many languages, but their capabilities _differ_ in
-    each language.
-      /Rust's enums/ are most similar to /algebraic data types/ in functional
-    languages, such as F#, OCaml, and Haskell.
+- /Enums/ are a feature in many languages, but their capabilities _differ_ in
+  each language.
+    /Rust's enums/ are most similar to /algebraic data types/ in functional
+  languages, such as F#, OCaml, and Haskell.
 
 ** DONE 6.1. Defining an Enum
    CLOSED: [2021-01-06 Wed 13:56]
