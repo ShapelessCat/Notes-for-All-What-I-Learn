@@ -4,458 +4,24 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
-* TODO Preface - v
-* DONE 1. Types - 1 - =TODO: Note=
-CLOSED: [2024-08-22 Thu 17:42]
-- The Items in this chapter cover
-  * the fundamental types that the language provides and
-  * how to combine them into data structures that _precisely express the semantics
-    of your program._
-
-- =IMPORTANT=
-  This concept of *encoding behavior into the type system*
-  helps to
-  _reduce the amount of checking and error path code that's required,_
-
-  BECAUSE invalid states are rejected by the toolchain at /compile time/ rather
-  than by the program at /runtime/.
-
-- This chapter also describes
-  some of the ubiquitous data structures that are provided by Rust's standard library:
-  * ~Option~'s,
-  * ~Result~'s,
-  * ~Error~'s and
-  * ~Iterator~'s.
-
-  Familiarity with these standard tools will help you write idiomatic Rust that
-  is efficient and compact— in particular, they allow use of Rust’s question
-  mark operator, which supports error handling that is unobtrusive but still
-  type-safe.
-
-- This chapter has a degree of overlap with next chapter (about Rust /traits/),
-  *because /traits/ describe the behavior of /types/.*
-
-** DONE Item 1: Use the type system to express your data structures - 2 - =TODO: NOTE=
-CLOSED: [2024-08-20 Tue 09:58]
-- This Item provides a quick tour of /Rust's type system/,
-  1. starting with the fundamental types that the compiler makes available,
-
-  2. then moving on to the various ways that values can be combined into data
-     structures.
-
-  3. Rust's ~enum~ type.
-
-*** Fundamental Types
-*** Aggregate Types
-*** enums
-*** enums with Fields
-*** Ubiquitous enum Types
-**** ~Option<T>~
-**** ~Result<T, E>~
-
-** TODO Item 2: Use the type system to express common behavior - 10
-*** Functions and Methods
-*** Function Pointers
-*** Closures
-*** Traits
-**** Trait bounds
-**** Trait objects
-
-** TODO Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
-*** Things to Remember
-
-** TODO Item 4: Prefer idiomatic ~Error~ types - 25
-- _Item 3_:
-  * It described
-    _HOW_ to use the transformations that the standard library provides
-    for the ~Option~ and ~Result~ types to allow concise, idiomatic handling of
-    result types using the ~?~ operator.
-
-  * It stopped short of discussing
-    _HOW_ best to handle the variety of different error types ~E~ that arise as
-    the second type argument of a ~Result<T, E>~;
-
-    *that's the subject of this Item.*
-
-- This is relevant only when there are a variety of different error types in play.
-
-  * If all of the different errors that a function encounters are already of the
-    *SAME type*, it can just return that type.
-
-  * When there are errors of *DIFFERENT types*, there's a decision to make about
-    whether the suberror type information should be preserved.
-
-*** TODO The ~Error~ Trait
-- It's always good to understand what the standard traits (Item 10) involve, and
-  the relevant trait here is ~std::error::Error~.
-
-- The ~E~ type parameter for a ~Result~ *DOESN'T have to* be a /type/ that
-  implements ~Error~, but it's a *common convention* that allows wrappers to
-  express appropriate /trait bounds/ -- so *PREFER* to implement ~Error~ for
-  your error types.
-
-- The first thing to notice is that the only hard requirement for ~Error~ types
-  is the /trait bounds/:
-  _ANY_ type that implements ~Error~ also has to implement the following traits:
-  * The ~Display~ trait, meaning that it can be ~format!~'ed with ~{}~
-  * The ~Debug~ trait, meaning that it can be ~format!~'ed with ~{:?}~
-
-  In other words, it should be possible to *DISPLAY* ~Error~ types to both the
-  user and the programmer.
-
-- The only method in the trait is ~source()~ (or at least the only nondeprecated,
-  stable method), which allows an ~Error~ type to expose an inner, nested error.
-  This method is optional—it comes with a default implementation (Item 13)
-  returning ~None~, indicating that inner error information isn't available.
-
-- =IMPORTANT=
-  One final thing to note:
-  if you're writing code for a ~no_std~ environment (Item 33) =TODO=, it may not
-  be possible to implement ~Error~ -- the ~Error~ trait is currently implemented
-  in ~std~, NOT ~core~, and so is not available.
-  * footnote 10:
-    At the time of writing, ~Error~ has been moved to ~core~ but is not yet
-    available in stable Rust.
-
-*** TODO Minimal Errors
-*** TODO Nested Errors
-*** TODO Trait Objects
-*** TODO Libraries Versus Applications
-*** TODO Things to Remember
-
-** TODO Item 5: Understand type conversions - 34
-*** User-Defined Type Conversions
-*** Casts
-*** Coercion
-
-** TODO Item 6: Embrace the newtype pattern - 40
-*** Bypassing the Orphan Rule for Traits
-*** Newtype Limitations
-
-** DONE Item 7: Use builders for complex types - 45
-CLOSED: [2024-08-20 Tue 00:17]
-- Rust insists that all fields in a struct must be filled in when a new instance
-  of that struct is created. This
-  * keeps the code safe by ensuring that there are never any uninitialized values
-  * BUT does lead to more verbose boilerplate code than is ideal.
-
-- For example, any optional fields have to be explicitly marked as absent with ~None~:
-  #+begin_src rust
-    /// Phone number in E164 format.
-    #[derive(Debug, Clone)]
-    pub struct PhoneNumberE164(pub String);
-
-    #[derive(Debug, Default)]
-    pub struct Details {
-        pub given_name: String,
-        pub preferred_name: Option<String>,
-        pub middle_name: Option<String>,
-        pub family_name: String,
-        pub mobile_phone: Option<PhoneNumberE164>,
-    }
-
-    // ...
-
-    let dizzy = Details {
-        given_name: "Dizzy".to_owned(),
-        preferred_name: None,
-        middle_name: None,
-        family_name: "Mixer".to_owned(),
-        mobile_phone: None,
-    };
-  #+end_src
-  * =IMPORTANT=
-    _This boilerplate code is also brittle, in the sense that_
-    a future change that adds a new field to the struct requires an update to
-    every place that builds the structure.
-
-  * The boilerplate can be significantly reduced by implementing and using the
-    ~Default~ trait, as described in *Item 10*:
-    #+begin_src rust
-      let dizzy = Details {
-          given_name: "Dizzy".to_owned(),
-          family_name: "Mixer".to_owned(),
-          ..Default::default()
-      };
-    #+end_src
-    1. However, automatically derive implementation of ~Default~ requires all of
-       the field types implement the ~Default~ trait. This is not always true.
-       - For instance, this doesn't work for a modified ~Details~:
-         #+begin_src rust
-           // Can't compile!!!
-           #[derive(Debug, Default)]
-           pub struct Details {
-               pub given_name: String,
-               pub preferred_name: Option<String>,
-               pub middle_name: Option<String>,
-               pub family_name: String,
-               pub mobile_phone: Option<PhoneNumberE164>,
-               pub date_of_birth: time::Date,
-               pub last_seen: Option<time::OffsetDateTime>,
-           }
-         #+end_src
-         This can't compile have two reasons:
-         * _SYNTAX reason_: orphan rule
-         * _LOGICAL reason_: using a default value for date of birth is going to be
-           wrong almost all of the time.
-
-    2. The absence of ~Default~ means that all of the fields have to be filled out manually:
-       #+begin_src rust
-         let bob = Details {
-             given_name: "Robert".to_owned(),
-             preferred_name: Some("Bob".to_owned()),
-             middle_name: Some("the".to_owned()),
-             family_name: "Builder".to_owned(),
-             mobile_phone: None,
-             date_of_birth: time::Date::from_calendar_date(
-                 1998,
-                 time::Month::November,
-                 28,
-             )
-             .unwrap(),
-             last_seen: None,
-         };
-       #+end_src
-       *These ergonomics can be improved if you implement the /builder pattern/
-       for complex data structures.*
-
-- _Version 0_:
-  The simplest variant of the builder pattern:
-  #+begin_src rust
-    pub struct DetailsBuilder(Details);
-
-    impl DetailsBuilder {
-        /// Start building a new [`Details`] object.
-        pub fn new(
-            given_name: &str,
-            family_name: &str,
-            date_of_birth: time::Date,
-        ) -> Self {
-            DetailsBuilder(Details {
-                given_name: given_name.to_owned(),
-                preferred_name: None,
-                middle_name: None,
-                family_name: family_name.to_owned(),
-                mobile_phone: None,
-                date_of_birth,
-                last_seen: None,
-            })
-        }
-    }
-  #+end_src
-
-  The builder type, here it is ~DetailsBuilder~, can then be equipped with
-  /helper methods/ that fill out the nascent item's fields.
-
-  * Each such method consumes ~self~ but emits a new ~Self~, allowing different
-    construction methods to be _chained_:
-    #+begin_src rust
-      impl DetailsBuilder {
-          // pub fn new(...) ...
-
-
-          // setter-like helper methods
-
-          /// Set the preferred name.
-          pub fn preferred_name(mut self, preferred_name: &str) -> Self {
-              self.0.preferred_name = Some(preferred_name.to_owned());
-              self
-          }
-
-          /// Set the middle name.
-          pub fn middle_name(mut self, middle_name: &str) -> Self {
-              self.0.middle_name = Some(middle_name.to_owned());
-              self
-          }
-
-          // other helper methods
-          /// Update the `last_seen` field to the current date/time.
-          pub fn just_seen(mut self) -> Self {
-              self.0.last_seen = Some(time::OffsetDateTime::now_utc());
-              self
-          }
-      }
-    #+end_src
-
-  * The final method to be invoked for the builder consumes the builder and emits
-    the built item:
-    #+begin_src rust
-      // impl DetailsBuilder
-
-
-      /// Consume the builder object and return a fully built [`Details`]
-      /// object.
-      pub fn build(self) -> Details {
-          self.0
-      }
-    #+end_src
-    *The all-consuming nature of this style of builder leads to a couple of wrinkles.*
-
-    1. The first is that separating out stages of the build process can't be done
-       on its own:
-       #+begin_src rust
-         // Does not compile
-
-         let builder = DetailsBuilder::new(
-             "Robert",
-             "Builder",
-             time::Date::from_calendar_date(1998, time::Month::November, 28)
-                 .unwrap(),
-         );
-         if informal {
-             builder.preferred_name("Bob");
-         }
-         let bob = builder.build();
-       #+end_src
-
-       Here is the workaround:
-       #+begin_src rust
-         let mut builder = DetailsBuilder::new(
-             "Robert",
-             "Builder",
-             time::Date::from_calendar_date(1998, time::Month::November, 28)
-                 .unwrap(),
-         );
-         if informal {
-             builder = builder.preferred_name("Bob");
-         }
-         let bob = builder.build();
-       #+end_src
-
-    2. The other downside to the all-consuming nature of this builder is that only
-       one item can be built; trying to create multiple instances by repeatedly
-       calling ~build()~ on the same builder *FALLS* foul of the compiler, as you'd
-       expect.
-
-- _Version 1_:
-  Change all helper function signatures, except the ~build~ function's, to ~&mut
-  self -> &mut Self~.
-
-  This can help remove self-assignment in separate build stages,
-  #+begin_src rust
-    let mut builder = DetailsBuilder::new(
-        "Robert",
-        "Builder",
-        time::Date::from_calendar_date(1998, time::Month::November, 28)
-            .unwrap(),
-    );
-    if informal {
-        builder.preferred_name("Bob"); // no `builder = ...`
-    }
-    let bob = builder.build();
-  #+end_src
-
-  but it also make it *impossible to chain* the construction of the /builder/
-  together with invocation of its setter methods:
-  #+begin_src rust
-    // Can't compile
-
-    let builder = DetailsBuilder::new(
-        "Robert",
-        "Builder",
-        time::Date::from_calendar_date(1998, time::Month::November, 28)
-            .unwrap(),
-    )
-    .middle_name("the")
-    .just_seen();
-
-    let bob = builder.build();
-  #+end_src
-
-  Compilation error:
-  #+begin_src text
-    error[E0716]: temporary value dropped while borrowed
-       --> src/main.rs:265:19
-        |
-    265 |       let builder = DetailsBuilder::new(
-        |  ___________________^
-    266 | |         "Robert",
-    267 | |         "Builder",
-    268 | |         time::Date::from_calendar_date(1998, time::Month::November, 28)
-    269 | |              .unwrap(),
-    270 | |     )
-        | |_____^ creates a temporary value which is freed while still in use
-    271 |       .middle_name("the")
-    272 | |     .just_seen();
-        |                   - temporary value is freed at the end of this statement
-    273 |       let bob = builder.build();
-        |                 --------------- borrow later used here
-        |
-        = note: consider using a `let` binding to create a longer lived value
-  #+end_src
-
-- _Version 2_:
-  As indicated by the compiler error in Version 1, you can work around this by
-  letting the builder item have a name:
-  #+begin_src rust
-    let mut builder = DetailsBuilder::new(
-        "Robert",
-        "Builder",
-        time::Date::from_calendar_date(1998, time::Month::November, 28)
-            .unwrap(),
-    );
-    builder.middle_name("the").just_seen();
-    if informal {
-        builder.preferred_name("Bob");
-    }
-    let bob = builder.build();
-  #+end_src
-  _This mutating builder variant also allows for building multiple items._
-  Of course, ~build~ method implementation need change because of its signature change:
-  #+begin_src rust
-    /// Construct a fully built [`Details`] object.
-    pub fn build(&self) -> Details {
-        // ...
-    }
-  #+end_src
-
-  The implementation of this *repeatable* ~build()~ method then has to construct
-  a fresh item on each invocation.
-  * If the underlying item implements ~Clone~, this is easy -- the builder can
-    hold a template and ~clone()~ it for each build.
-
-  * If the underlying item doesn't implement ~Clone~, then the builder needs to
-    have enough state to be able to manually construct an instance of the
-    underlying item on each call to ~build()~.
-    =IMPORTANT=
-    =???=
-    =TODO: Need examples=
-
-- With any style of builder pattern, the boilerplate code is now *confined to one
-  place* -- the builder -- rather than being needed at every place that uses the
-  underlying type.
-
-- The boilerplate that remains can potentially be reduced still further by use of
-  a /macro/ (Item 28),
-
-  =TODO=
-  =TODO=
-  =TODO=
-  _BUT_ if you go down this road, you should also check whether there's an
-  existing crate (such as the *derive_builder* crate, in particular) that
-  provides what's needed -- assuming that you're happy to take a dependency on
-  it (Item 25).
-
-** TODO Item 8: Familiarize yourself with reference and pointer types - 51
-*** Rust References
-*** Pointer Traits
-*** Fat Pointer Types
-**** Slices
-**** Trait objects
-
-*** More Pointer Traits
-*** Smart Pointer Types
-
-** TODO Item 9: Consider using iterator transforms instead of explicit loops - 64
-*** Iterator Traits
-*** Iterator Transforms
-*** Iterator Consumers
-*** Building Collections from ~Result~ Values
-*** Loop Transformation
-*** When Explicit Is Better
-
-* TODO 2. Traits - 77 - _READING_
+* Preface - v
+* 1. Types - 1
+** Item 1: Use the type system to express your data structures - 2
+** Item 2: Use the type system to express common behavior - 10
+** Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
+** Item 4: Prefer idiomatic ~Error~ types - 25
+** Item 5: Understand type conversions - 34
+** Item 6: Embrace the newtype pattern - 40
+** Item 7: Use builders for complex types - 45
+** Item 8: Familiarize yourself with reference and pointer types - 51
+** Item 9: Consider using iterator transforms instead of explicit loops - 64
+
+* 2. Traits - 77
 ** Item 10: Familiarize yourself with standard traits - 77
+Rust encodes key behavioral aspects of its type system in the type system
+itself, through a collection of fine-grained standard traits that describe those
+behaviors (see Item 2)
+
 *** Common Standard Traits
 **** ~Clone~
 **** ~Copy~
@@ -467,48 +33,298 @@ CLOSED: [2024-08-20 Tue 00:17]
 
 *** Standard Traits Covered Elsewhere
 *** Operator Overloads
+- Rust allows various built-in unary and binary operators to be overloaded for
+  /user-defined types/, by implementing various standard traits from the
+  ~std::ops~ module.
+
+  * These traits
+    + are *NOT derivable* and
+    + are typically needed *ONLY* for types that represent “algebraic” objects,
+      where there is a natural interpretation of these operators.
+
+- However, experience from C++ has shown that it's best to *avoid* overloading
+  operators for unrelated types as it often leads to code that is _hard to maintain_
+  and has unexpected performance properties (e.g., x + y silently invokes an
+  expensive O(N) method).
+
+  * To comply with the principle of least astonishment, if you implement any operator
+    overloads, you should implement a *COHERENT* set of operator overloads.
+    + For example,
+      if x + y has an overload (Add), and -y (Neg) does too, then you should also
+      implement x - y (Sub) and make sure it gives the same answer as x + (-y).
+
+- The items passed to the operator overload traits are *moved*, which means that
+  nonCopy types will be consumed by default. Adding implementations for ~&'a
+  MyType~ can help with this but requires more boilerplate to cover all of the
+  possibilities (e.g., there are 4 = 2 × 2 possibilities for combining
+  reference/non-reference arguments to a binary operator).
+
 *** Summary
 
 ** Item 11: Implement the ~Drop~ trait for RAII patterns - 89
-** Item 12: Understand the trade-offs between generics and trait objects - 93
+** TODO Item 12: Understand the trade-offs between generics and trait objects - 93
+- _Item 2_ described the use of traits to encapsulate behavior in the type system,
+  as a collection of related methods, and observed that there are _TWO_ ways to
+  make use of traits:
+  * as /trait bounds/ for generics or
+  * in /trait objects/.
+
+  This Item explores the trade-offs between these two possibilities.
+
+- As a running example, consider a /trait/ that covers functionality for displaying
+  graphical objects:
+  #+begin_src rust
+    #[derive(Debug, Copy, Clone)]
+    pub struct Point {
+        x: i64,
+        y: i64,
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    pub struct Bounds {
+        top_left: Point,
+        bottom_right: Point,
+    }
+
+    /// Calculate the overlap between two rectangles, or `None` if there is no
+    /// overlap.
+    fn overlap(a: Bounds, b: Bounds) -> Option<Bounds> {
+        // ...
+    }
+
+    /// Trait for objects that can be drawn graphically.
+    pub trait Draw {
+        /// Return the bounding rectangle that encompasses the object.
+        fn bounds(&self) -> Bounds;
+        // ...
+    }
+  #+end_src
+
 *** Generics
+- Specific uses of the generic code are generated at /compile time/ -- a process
+  known as
+  * /monomorphization/ in Rust, and
+  * /template instantiation/ in C++.
+
+- Unlike C++, Rust explicitly encodes the expectations for the type ~T~ in the
+  /type system/, in the form of /trait bounds/ for the /generic/.
+
+- For the example, a /generic function/ that uses the trait's ~bounds()~ method
+  has an explicit ~Draw~ /trait bound/, *THREE* ways in syntax (same effect):
+  1. Bound in ~where~ clause:
+     #+begin_src rust
+       pub fn on_screen<T>(draw: &T) -> bool
+       where
+           T: Draw,
+       {
+           overlap(SCREEN_BOUNDS, draw.bounds()).is_some()
+       }
+     #+end_src
+
+  2. Bound in ~where~ clause:
+     #+begin_src rust
+       pub fn on_screen<T: Draw>(draw: &T) -> bool {
+           overlap(SCREEN_BOUNDS, draw.bounds()).is_some()
+       }
+     #+end_src
+
+  3. Bound in ~where~ clause:
+     #+begin_src rust
+       pub fn on_screen(draw: &impl Draw) -> bool {
+           overlap(SCREEN_BOUNDS, draw.bounds()).is_some()
+       }
+     #+end_src
+
+- The programmer writes a _SINGLE_ /generic function/, but the compiler outputs a
+  _DIFFERENT_ monomorphized version of that function for every different type that
+  the function is invoked with.
+
 *** Trait Objects
+In comparison, /trait objects/ are /fat pointers/ (_Item 8_) that combine a
+pointer to the underlying concrete item with a pointer to a /vtable/ that in
+turn holds /function pointers/ for all of the /trait implementation's methods/,
+as depicted in Figure 2-1:
+#+begin_src rust
+  let square = Square {
+      top_left: Point { x: 1, y: 2 },
+      size: 2,
+  };
+
+  let draw: &dyn Draw = &square;
+#+end_src
+
+This means that a function that accepts a /trait object/ _doesn't need to be
+/generic/ and doesn't need /monomorphization/._
+
+#+begin_src rust
+  /// Indicate whether an object is on-screen.
+  pub fn on_screen(draw: &dyn Draw) -> bool {
+      overlap(SCREEN_BOUNDS, draw.bounds()).is_some()
+  }
+
+  // Calls `on_screen(&dyn Draw) -> bool`.
+  let visible = on_screen(&square);
+  // Also calls `on_screen(&dyn Draw) -> bool`.
+  let visible = on_screen(&circle);
+#+end_src
+
 *** Basic Comparisons
+- These basic facts already allow some immediate comparisons between the two
+  possibilities:
+  * Generics are likely to lead to bigger code sizes, because the compiler
+    generates a fresh copy (on_screen::<T>(&T)) of the code for every type T that
+    uses the generic version of the on_screen function. In contrast, the trait
+    object version (on_screen(&dyn T)) of the function needs only a single
+    instance.
+
+  * Invoking a trait method from a generic will generally be ever-so-slightly
+    faster than invoking it from code that uses a trait object, because the
+    latter needs to perform two dereferences to find the location of the code
+    (trait object to vtable, vtable to implementation location).
+
+  * Compile times for generics are likely to be longer, as the compiler is
+    building more code and the linker has more work to do to fold duplicates.
+
 *** More Trait Bounds
 *** Trait Object Safety
 *** Trade-Offs
 
-** Item 13: Use default implementations to minimize required trait methods - 103
+** DONE Item 13: Use default implementations to minimize required trait methods - 103
+CLOSED: [2024-08-27 Tue 00:25]
+- =From Jian=
+  This is similar in Rust and in other languages whose interfaces
+  ALLOW /default method implementation/.
+
+- /Trait methods/ can impose /trait bounds/, indicating that a method is ONLY
+  available if the types involved implement particular traits.
 
 * 3. Concepts - 105
 ** Item 14: Understand lifetimes - 106
+*** Introduction to the Stack
+*** Evolution of Lifetimes
+*** Scope of a Lifetime
+*** Algebra of Lifetimes
+*** Lifetime Elision Rules
+*** The ~'static~ Lifetime
+*** Lifetimes and the Heap
+*** Lifetimes in Data Structures
+*** Anonymous Lifetimes
+*** Things to Remember
+
 ** Item 15: Understand the borrow checker - 123
+*** Access Control
+*** Borrow Rules
+*** Owner Operations
+*** Winning Fights Against the Borrow Checker
+**** Local code refactoring
+**** Data structure design
+**** Smart pointers
+**** Self-referential data structures
+
+*** Things to Remember
+
 ** Item 16: Avoid writing ~unsafe~ code - 142
 ** Item 17: Be wary of shared-state parallelism - 145
+*** Data Races
+**** Data races in C++
+**** Data races in Rust
+**** Standard marker traits
+
+*** Deadlocks
+*** Advice
+
 ** Item 18: Don't panic - 159
 ** Item 19: Avoid reflection - 162
+*** Upcasting in Future Versions of Rust
+
 ** Item 20: Avoid the temptation to over-optimize - 169
+*** Data Structures and Allocation
+*** Who’s Afraid of the Big Bad Copy?
+*** References and Smart Pointers
 
 * 4. Dependencies - 175
 ** Item 21: Understand what semantic versioning promises - 176
+*** Semver Essentials
+*** Semver for Crate Authors
+*** Semver for Crate Users
+*** Discussion
+
 ** Item 22: Minimize visibility - 181
+*** Visibility Syntax
+*** Visibility Semantics
+
 ** Item 23: Avoid wildcard imports - 186
 ** Item 24: Re-export dependencies whose types appear in your API - 188
 ** Item 25: Manage your dependency graph - 191
+*** Version Specification
+*** Solving Problems with Tooling
+*** What to Depend On
+*** Things to Remember
+
 ** Item 26: Be wary of feature creep - 197
+*** Conditional Compilation
+*** Features
+*** Things to Remember
 
 * 5. Tooling - 203
 ** Item 27: Document public interfaces - 203
+*** Tooling
+*** Additional Documentation Locations
+*** Published Crate Documentation
+*** What Not to Document
+*** Things to Remember
+
 ** Item 28: Use macros judiciously - 209
+*** Declarative Macros
+*** Procedural Macros
+**** Function-like macros
+**** Attribute macros
+**** Derive macros
+
+*** When to Use Macros
+*** Disadvantages of Macros
+*** Advice
+
 ** Item 29: Listen to Clippy - 223
 ** Item 30: Write more than unit tests - 227
+*** Unit Tests
+*** Integration Tests
+*** Doc Tests
+*** Examples
+*** Benchmarks
+*** Fuzz Testing
+*** Testing Advice
+*** Things to Remember
+
 ** Item 31: Take advantage of the tooling ecosystem - 235
+*** Tools to Remember
+
 ** Item 32: Set up a continuous integration (CI) system - 237
+*** CI Steps
+*** CI Principles
+*** Public CI Systems
 
 * 6. Beyond Standard Rust - 243
 ** Item 33: Consider making library code ~no_std~ compatible - 243
+*** ~core~
+*** ~alloc~
+*** Writing Code for ~no_std~
+*** Fallible Allocation
+*** Things to Remember
+
 ** Item 34: Control what crosses FFI boundaries - 249
+*** Invoking C Functions from Rust
+**** Linking logistics
+**** Code concerns
+**** Name mangling
+
+*** Accessing C Data from Rust
+*** Lifetimes
+*** Invoking Rust from C
+*** Things to Remember
+
 ** Item 35: Prefer bindgen to manual FFI mappings - 261
+*** Beyond C
 
 * Afterword - 265
 * Index - 267
