@@ -62,7 +62,8 @@ behaviors (see Item 2)
 *** Summary
 
 ** Item 11: Implement the ~Drop~ trait for RAII patterns - 89
-** TODO Item 12: Understand the trade-offs between generics and trait objects - 93
+** DONE Item 12: Understand the trade-offs between generics and trait objects - 93
+CLOSED: [2024-08-28 Wed 23:16]
 - _Item 2_ described the use of traits to encapsulate behavior in the type system,
   as a collection of related methods, and observed that there are _TWO_ ways to
   make use of traits:
@@ -171,23 +172,224 @@ This means that a function that accepts a /trait object/ _doesn't need to be
 *** Basic Comparisons
 - These basic facts already allow some immediate comparisons between the two
   possibilities:
-  * Generics are likely to lead to bigger code sizes, because the compiler
-    generates a fresh copy (on_screen::<T>(&T)) of the code for every type T that
-    uses the generic version of the on_screen function. In contrast, the trait
-    object version (on_screen(&dyn T)) of the function needs only a single
-    instance.
+  * /Generics/ are likely to lead to *bigger code sizes*,
+    because
+    1. the compiler generates a fresh copy (~on_screen::<T>(&T)~) of the code for
+       *EVERY* type ~T~ that uses the generic version of the ~on_screen~ function.
 
-  * Invoking a trait method from a generic will generally be ever-so-slightly
-    faster than invoking it from code that uses a trait object, because the
-    latter needs to perform two dereferences to find the location of the code
-    (trait object to vtable, vtable to implementation location).
+    2. In contrast, the /trait object/ version (~on_screen(&dyn T)~) of the
+       function needs only *a single instance*.
 
-  * Compile times for generics are likely to be longer, as the compiler is
-    building more code and the linker has more work to do to fold duplicates.
+  * _Invoking a trait method from a generic_ will generally be ever-so-slightly
+    *faster than* _invoking it from code that uses a trait object,_
+    BECAUSE
+    the latter needs to perform *TWO* dereferences to find the location of the
+    code (/trait object/ to /vtable/, /vtable/ to /implementation location/).
+    + =from Jian=
+      Another more significant *PENALTY* for /trait object/:
+      CAN'T inline. Many optimization can't be applied a piece of code can't be
+      inlined.
+
+  * /Compile times/ for /generics/ are likely to be *LONGER*, as
+    + the compiler is building more code and
+    + the linker has more work to do to fold duplicates.
+
+- *An extra flexibility for /generics/:*
+  A more significant difference is that /generic trait bounds/ can be used to
+  conditionally make different functionality available, depending on whether the
+  /type parameter/ implements *MULTIPLE* /traits/:
+
+  * The /trait object/ equivalent is much more awkward.
+    To make life easier, you need to define a TEMPORARY /trait/, together with a
+    /blanket implementation/:
+    #+begin_src rust
+      trait DebugDraw: Debug + Draw {}
+
+      /// Blanket implementation applies whenever the individual traits
+      /// are implemented.
+      impl<T: Debug + Draw> DebugDraw for T {}
+    #+end_src
+    However, if there are *MULTIPLE* combinations of distinct traits, it's clear
+    that the combinatorics of this approach rapidly become unwieldy!
 
 *** More Trait Bounds
+- In addition to using /trait bounds/ to RESTRICT what /type parameters/ are
+  acceptable for a /generic function/, you can also apply them to /trait
+  definitions/ themselves:
+  #+begin_src rust
+    /// Anything that implements `Shape` must also implement `Draw`.
+    trait Shape: Draw {
+        /// Render that portion of the shape that falls within `bounds`.
+        fn render_in(&self, bounds: Bounds);
+
+        /// Render the shape.
+        fn render(&self) {
+            // Default implementation renders that portion of the shape
+            // that falls within the screen area.
+            if let Some(visible) = overlap(SCREEN_BOUNDS, self.bounds()) {
+                self.render_in(visible);
+            }
+        }
+    }
+  #+end_src
+  In this example, the ~render()~ method's /default implementation/ (_Item 13_)
+  makes use of the /trait bound/, relying on the availability of the ~bounds()~
+  method from ~Draw~.
+
+- Under the covers, trait objects for traits that have trait bounds:
+  #+begin_src rust
+    let square = Square {
+        top_left: Point { x: 1, y: 2 },
+        size: 2,
+    };
+    let draw: &dyn Draw = &square;
+    let shape: &dyn Shape = &square;
+  #+end_src
+  * have a single combined /vtable/ that includes
+    + the methods of the /top-level trait/, plus
+    + the methods of all of the /trait bounds/.
+
+  * This is shown in Figure 2-2: the /vtable/ for ~Shape~ includes the ~bounds~
+    method from the ~Draw~ /trait/, as well as the two methods from the ~Shape~
+    /trait/ itself.
+
+- =IMPORTANT=
+  _At the time of writing (and as of Rust 1.70),_
+  this means that there is *no way* to “upcast” from ~Shape~ to ~Draw~,
+  BECAUSE
+  the (pure) ~Draw~ /vtable/ *can't be recovered at runtime;*
+  there is no way to convert between related /trait objects/,
+  which in turn means there is *NO* /Liskov substitution/.
+
+  =CAUTION=
+  =TODO=
+  However, this is likely to change in later versions of Rust --
+  see _Item 19_ for more on this.
+
+- *SUMMARY*:
+  * *Trait object*
+    Repeating the same point in different words, a method that accepts a ~Shape~
+    /trait object/ has the following _CHARACTERISTICS_:
+    + It *CAN* make use of methods from ~Draw~ (because ~Shape~ also-implements
+      ~Draw~, and because the relevant /function pointers/ are present in the
+      ~Shape~ /vtable/).
+
+    + It *CANNOT (yet) pass* the /trait object/ onto another method that expects
+      a ~Draw~ /trait object/ (because ~Shape~ *is-not* ~Draw~, and because the
+      ~Draw~ /vtable/ isn't available).
+
+ * *Generic method*
+   In contrast, a /generic method/ that accepts items that implement ~Shape~ has
+   these _CHARACTERISTICS_:
+   • It *CAN* use methods from ~Draw~.
+   • It *CAN PASS* the item on to another /generic method/ that has a ~Draw~
+     /trait bound/, because the /trait bound/ is monomorphized at compile time
+   to use the ~Draw~ methods of the concrete type.
+
 *** Trait Object Safety
+- Another restriction on /trait objects/ is the requirement for /object safety/:
+  only /traits/ that comply with the following TWO rules can be used as /trait
+  objects/:
+  * The trait's methods *MUST NOT* be /generic/.
+  * The trait's methods *MUST NOT* involve a type that includes ~Self~,
+    except for the /receiver/ (the object on which the method is invoked).
+    +  At the time of writing, the restriction on methods that return ~Self~
+      includes types like ~Box<Self>~ that could be safely stored on the stack;
+      this restriction might be relaxed in the future.
+
+- _The first restriction_ is easy to understand:
+  a /generic method/ ~f~ is really an *infinite* set of methods, potentially
+  encompassing ~f::<i16>~, ~f::<i32>~, ~f::<i64>~, ~f::<u8>~, etc. The /trait
+  object/'s ~vtable~, on the other hand, is very much a *finite* collection of
+  /function pointers/, and so it's not possible to fit the infinite set of
+  monomorphized implementations into it.
+
+- _The second restriction_ is a little bit more subtle but tends to be the
+  restriction that's hit more often in practice -- traits that impose ~Copy~ or
+  ~Clone~ /trait bounds/ (_Item 10_) immediately fall under this rule, because
+  they return ~Self~. To see why it's disallowed, consider code that has a /trait
+  object/ in its hands; what happens if that code calls (say) ~let y = x.clone()?~
+  The calling code needs to reserve enough space for ~y~ on the stack, but it has
+  no idea of the size of ~y~ because ~Self~ is an arbitrary type. As a result,
+  return types that mention ~Self~ lead to a trait that is not object safe.
+
+  * There is an _EXCEPTION_ to this _second restriction_.
+    A method returning some ~Self~-related type does not affect /object safety/
+    _IF_
+    ~Self~ comes with an explicit restriction to types _whose size is known at
+    compile time,_ indicated by the ~Sized~ marker trait as a /trait bound/:
+    #+begin_src rust
+      /// A `Stamp` can be copied and drawn multiple times.
+      trait Stamp: Draw {
+          fn make_copy(&self) -> Self
+          where
+              Self: Sized;
+      }
+
+      let square = Square {
+              top_left: Point { x: 1, y: 2 },
+              size: 2,
+      };
+
+      // `Square` implements `Stamp`, so it can call `make_copy()`.
+      let copy = square.make_copy();
+
+      // Because the `Self` -- returning method has a `Sized` trait bound,
+      // creating a `Stamp` trait object is possible.
+      let stamp: &dyn Stamp = &square;
+    #+end_src
+    This /trait bound/ means that the method *CAN'T be used with /trait objects/
+    anyway,* BECAUSE /trait objects/ refer to something that's of unknown size
+    (~dyn Trait~), and so the method is irrelevant for /object safety/:
+    =DOES NOT COMPILE=
+    #+begin_src rust
+      // However, the method can't be invoked via a trait object.
+      let copy = stamp.make_copy();
+
+      // error: the `make_copy` method cannot be invoked on a trait object
+      //    --> src/main.rs:397:22
+      //     |
+      // 353 |         Self: Sized;
+      //     |               ----- this has a `Sized` requirement
+      // ...
+      // 397 | let copy = stamp.make_copy();
+      //     |                  ^^^^^^^^^
+    #+end_src
+
 *** Trade-Offs
+The balance of factors so far suggests that you should _PREFER /generics/ TO
+/trait objects/,_ but there are situations where /trait objects/ are the right
+tool for the job.
+
+- The first is a practical consideration:
+  if _generated code size_ or _compilation time_ is a CONCERN,
+  then /trait objects/ will perform better (as described earlier in this Item).
+
+- A more theoretical aspect that leads toward /trait objects/ is that they
+  fundamentally involve /type erasure/:
+  information about the _CONCRETE type_ is *LOST* in the conversion to a /trait
+  object/.
+
+  This can be a downside (see _Item 19_),
+  BUT it can also be useful because it allows for _collections of heterogeneous
+  objects_ -- BECAUSE the code just relies on the methods of the /trait/, it can
+  invoke and combine the methods of items that have DIFFERENT _concrete types_.
+
+  * The traditional OO example of rendering a list of shapes is one example of this:
+    the same ~render()~ method could be used for squares, circles, ellipses, and
+    stars in the same loop:
+    #+begin_src rust
+      let shapes: Vec<&dyn Shape> = vec![&square, &circle];
+      for shape in shapes {
+          shape.render()
+      }
+    #+end_src
+
+- A much more obscure potential ADVANTAGE for /trait objects/ is when the
+  available types are *NOT known at /compile time/.* If new code is _dynamically
+  loaded at /runtime/ (e.g., via ~dlopen(3)~)_, then items that implement
+  /traits/ in the new code can be invoked only via a /trait object/, because
+  there's no source code to monomorphize over.
 
 ** DONE Item 13: Use default implementations to minimize required trait methods - 103
 CLOSED: [2024-08-27 Tue 00:25]
@@ -198,7 +400,7 @@ CLOSED: [2024-08-27 Tue 00:25]
 - /Trait methods/ can impose /trait bounds/, indicating that a method is ONLY
   available if the types involved implement particular traits.
 
-* 3. Concepts - 105
+* TODO 3. Concepts - 105
 ** Item 14: Understand lifetimes - 106
 *** Introduction to the Stack
 *** Evolution of Lifetimes
@@ -243,25 +445,34 @@ CLOSED: [2024-08-27 Tue 00:25]
 *** References and Smart Pointers
 
 * 4. Dependencies - 175
-** Item 21: Understand what semantic versioning promises - 176
+- It's usually still easier to reuse existing code than to write it yourself,
+  BUT
+  there are potential pitfalls and risks that come along with dependencies on
+  someone else's code. _This chapter of the book will help you be aware of these._
+
+- The focus is specifically on Rust, and with it the use of the _cargo_ tool, but
+  many of the concerns, topics, and issues covered apply equally well to other
+  toolchains (and other languages).
+
+** TODO Item 21: Understand what semantic versioning promises - 176
 *** Semver Essentials
 *** Semver for Crate Authors
 *** Semver for Crate Users
 *** Discussion
 
-** Item 22: Minimize visibility - 181
+** TODO Item 22: Minimize visibility - 181
 *** Visibility Syntax
 *** Visibility Semantics
 
-** Item 23: Avoid wildcard imports - 186
-** Item 24: Re-export dependencies whose types appear in your API - 188
-** Item 25: Manage your dependency graph - 191
+** TODO Item 23: Avoid wildcard imports - 186
+** TODO Item 24: Re-export dependencies whose types appear in your API - 188
+** TODO Item 25: Manage your dependency graph - 191
 *** Version Specification
 *** Solving Problems with Tooling
 *** What to Depend On
 *** Things to Remember
 
-** Item 26: Be wary of feature creep - 197
+** TODO Item 26: Be wary of feature creep - 197
 *** Conditional Compilation
 *** Features
 *** Things to Remember
