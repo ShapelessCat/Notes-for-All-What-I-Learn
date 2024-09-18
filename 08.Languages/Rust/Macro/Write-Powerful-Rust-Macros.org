@@ -1,17 +1,433 @@
 #+TITLE: Write Powerful Rust Macros
 #+AUTHORS: Sam Van Overmeire
-#+STARTUP: overview
+#+YEAR: 2024
 #+STARTUP: entitiespretty
 #+STARTUP: indent
+#+STARTUP: overview
 
-* 1. GOING META
-* 2. DECLARATIVE MACROS
-* 3. A 'HELLO WORLD' PROCEDURAL MACRO
-* 4. MAKING FIELDS PUBLIC WITH ATTRIBUTE MACROS
-* 5. HIDING INFORMATION AND CREATING MINI-DSLS WITH FUNCTION-LIKE MACROS
-* 6. TESTING A BUILDER MACRO
-* 7. FROM PANIC TO RESULT: ERROR HANDLING
-* 8. BUILDER WITH ATTRIBUTES
-* 9. WRITING AN INFRASTRUCTURE DSL
-* 10. MACROS AND THE OUTSIDE WORLD
-* APPENDIX A: EXERCISE SOLUTIONS
+* preface
+* acknowledgments
+* about this book
+* about the author
+* about the cover illustration
+* DONE 1 Going meta
+CLOSED: [2024-09-17 Tue 21:57]
+- This chapter covers
+  * *WHAT* /metaprogramming/ is
+  * /Metaprogramming/ in Rust
+  * *WHEN* to use /macros/
+  * *WHAT* this book will teach you
+
+- When you want to write a macro,
+  * you need knowledge of testing and debugging.
+  * You have to know how to set up a library because you cannot write a /procedural
+    macro/ without creating a library.
+  * Some knowledge about Rust
+    + internals,
+    + compilation,
+    + types,
+    + code organization,
+    + pattern matching, and
+    + parsing also comes in handy.
+
+  Thus, teaching about macros allows me to talk about a variety of other
+  programming topics. We will be learning about Rust macros and using them to
+  explore other subjects.
+
+- Let's take a step back and start from the beginning.
+
+** 1.1 A day in the life of a Rust developer
+- Even when writing the simplest of Rust code, you just _CANNOT STOP_ using /macros/.
+  You are surrounded by the fruits of Rust's metaprogramming.
+
+** 1.2 What is metaprogramming?
+** 1.3 Metaprogramming in Rust
+- /Macros/ are used extensively in Rust, and it hard to imagine Rust code without /macros/.
+
+- /Rust macros/ are
+  * NOT just some /syntactic sugar/
+  * BUT _core functionality_.
+
+- For /Rust declarative macros/, /hygiene/ is part of that safety, avoiding /clashes
+  with names/ used elsewhere in your code.
+
+- /Macros in Rust/ are
+  (a) more localized and
+  (b) run at compile time,
+  allowing for easier inspection and better verification.
+  * This is clearer if compared with Spring's.
+
+*** 1.3.1 Macro galore
+*** 1.3.2 Appropriate use cases
+*** 1.3.3 Unfit for purpose: When not to use macros
+
+** 1.4 Approach of this book
+
+* TODO 2 Declarative macros
+- This chapter covers
+  * *WRITING* /declarative macros/
+
+  * *AVOIDING* boilerplate and duplication,
+    *IMPLEMENTING* /newtypes/,
+    *WRITING* simple /domain specific languages/, and
+    *COMPOSING* functions
+
+  * *UNDERSTANDING* the ~lazy_static~ crate
+
+- /Declarative macros/:
+  these macros have a syntax that will immediately remind you of pattern matching,
+  with a COMBINATION of /matchers/ and /transcribers/.
+  * The /matchers/ contain what you want to match against;
+  * the /transcriber/ has the code you will generate when you find that match.
+  It's just that simple.
+
+** 2.1 Creating vectors
+*** 2.1.1 Syntax basics
+- For both /matcher/ and /transcriber/, you have your choice of brackets:
+  * ~()~
+  * ~{}~
+  * ~[]~
+
+- For both /matcher/ and /transcriber/, you have your choice of brackets:
+
+- Each matcher-transcriber pair should be followed by a semicolon, except the
+  last one, for which the semicolon is optional.
+
+*** 2.1.2 Declaring and exporting declarative macros
+- During /macro invocation/ you can have any bracket you like, as long as it is
+  * normal
+  * curly
+  * square
+
+- All the following are legal:
+  * ~vec![]~
+  * ~vec!()~
+  * ~vec!{}~
+
+*** 2.1.3 The first matcher explained
+*** 2.1.4 Nonemtpy matchers
+- Code snippet, second to the last branch:
+  #+begin_src rust
+    {$x:expr} => {
+        {
+            let mut v = Vec::new();
+            v.push($x);
+            v
+        }
+    };
+  #+end_src
+
+- macro variables :: variables in the ~$name~ pattern that show up in /declarative
+  macro/ /matchers/.
+
+- Besides /expressions/, which are a common target for matching, you can also match
+  * identifiers,
+  * literals,
+  * types,
+  * and so on.
+
+**** Metavariables
+- ~expr~ is called a /metavariable/ in Rust lingo, or /fragment specifier/.
+
+- The _MOST POWERFUL_ of these /metavariables/ is ~tt~ (~TokenTree~), and it will
+  accept almost anything you pass to it.
+  * That's a powerful option,
+    BUT its comprehensiveness can also be a downside!
+
+- =IMPORTANT=
+  The following is a list of all the /fragment specifiers/:
+  * ~block~ -- A block expression; that is, statements between curly braces.
+
+  * ~expr~ -- An expression; a very wide variety of things within Rust.
+
+  * ~ident~ -- An identifier or keyword.
+    + For example,
+      the start of a function declaration (fn hello) has a keyword followed by
+      an identifier, and we can capture them both by using ~ident~ twice.
+
+  * ~item~ -- Things like /structs/, /enums/, /imports/ ("use declarations").
+
+  * ~lifetime~ -- A Rust /lifetime/ (~'a~).
+
+  * ~literal~ -- A /literal/, like a number or a character.
+
+  * ~meta~ -- The content of an /attribute/, so ~Clone~ or ~rename = "true"~.
+    You get a good idea of what an /attribute/ might contain in later chapters.
+
+  * ~pat~ -- A /pattern/. ~1 | 2 | 3~ is one example.
+
+  * ~pat_param~ -- Similar to ~pat~, except it can have ~|~ as a separator.
+    So the rule ~($first:pat_param | $second:ident)~ will work, but ~($first:pat |
+    $second:ident)~ tells you that ~|~ is not allowed after ~pat~.
+    This also means you need to do some extra work to parse ~1 | 2 | 3~ with
+    ~pat_param~ (as it sees three separate tokens instead of one).
+
+  * ~path~ -- A /path/; things like ~::A::B::C~, or ~Self::method~.
+
+  * ~stmt~ -- A /statement/; for example, an assignment (~let foo = "bar"~).
+
+  * ~tt~ -- A ~TokenTree~; see the previous explanation.
+
+  * ~ty~ -- A /type/, for example, ~String~.
+
+  * ~vis~ -- A /visibility modifier/; ~pub~ comes to mind.
+
+- Code snippet, last branch:
+  #+begin_src rust
+    $[($x:expr),+] => (
+        {
+            let mut v = Vec::new();
+            $(
+                v.push($x);
+            )+
+            v
+        }
+    );
+  #+end_src
+  * Like the ~+~ in this example, you may also need ~?~ and ~*~ somewhere.
+    It is easy to guess their meanings, just like in regex.
+
+  * An open bug: https://github.com/rust-lang/rust/issues/61053
+    =from Jian: Keep an eye on this issue!!!=
+    You can use any repetition operator you want within the /transcriber/,
+    *regardless of the one in your /matcher/.*
+    This means code below can expand as the code above
+    #+begin_src rust
+      $[($x:expr),+] => (
+          {
+              let mut v = Vec::new();
+              $(
+                  v.push($x);
+              )?
+              v
+          }
+      );
+    #+end_src
+
+    + If you want to make sure your code won't break because of this in a future
+      version of the language, you can add the ~#![deny(meta_variable_misuse)]~
+      lint to your file, which may, however, trigger false positives.
+      =IMPORTANT=
+
+  * _NOTE_:
+    By now it might be obvious that the _THIRD_ matcher-transcriber pair is
+    covered by this pair. But that additional pair made it easier to explain
+    things step by step.
+
+** 2.2 Use cases - =TODO: NOTE=
+*** 2.2.1 Varargs and default arguments
+*** 2.2.2 More than one way to expand code
+=IMPORTANT=
+
+Both macros (in ~std~) mentioned in this section is unstable in Rust 1.80.1.
+Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~.
+
+- The ~trace_macro~
+  #+begin_src rust
+    #![feature(trace_macros)]     // #1
+
+    use crate::greeting::base_greeting_fn;
+
+    #[macro_use]
+    mod greeting;
+
+    fn main() {
+        trace_macros!(true);      // #2
+        let _greet = greeting!("Sam", "Heya");
+        let _greet_with_default = greeting!("Sam");
+        trace_macros!(false);     // #3
+    }
+  #+end_src
+  * #1 Adds the unstable trace macros feature
+  * #2 Activates the trace macros
+  * #3 Deactivates the trace macros
+
+  Output:
+  #+begin_src text
+    --> ch2-trace-macros/src/main.rs:9:18
+      |
+    9 |     let _greet = greeting!("Sam", "Heya");
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^
+      |
+      = note: expanding `greeting! { "Sam", "Heya" }`
+      = note: to `greeting("Sam", "Heya")`
+
+    --> ch2-trace-macros/src/main.rs:10:31
+       |
+    10 |     let _greet_with_default = greeting!("Sam");
+       |                               ^^^^^^^^^^^^^^^^
+       |
+       = note: expanding `greeting! { "Sam" }`
+       = note: to `greeting("Sam", "Hello")`
+  #+end_src
+
+- The ~log_syntax~
+  #+begin_src rust
+    macro_rules! greeting {
+        ($name:literal) => {
+            base_greeting_fn($name,"Hello")
+        };
+        ($name:literal,$greeting:literal) => {
+            base_greeting_fn($name,$greeting)
+        };
+        (test $name:literal) => {{                              // #1
+            log_syntax!("The name passed to test is ", $name);  // #2
+            println!("Returning default greeting");
+            base_greeting_fn($name,"Hello")
+        }}
+    }
+  #+end_src
+  * #1 Double braces because we want to surround this generated code with ~{ }~,
+       thereby creating just a single expression as our output
+
+  * #2 We are using ~log_syntax!~ to log our input.
+
+  #+begin_src rust
+    #![feature(trace_macros)]
+    #![feature(log_syntax)]                                    // #1
+
+    use crate::greeting::base_greeting_fn;
+    #[macro_use]
+    mod greeting;
+
+    fn main() {
+        trace_macros!(true);
+        let _greet = greeting!("Sam", "Heya");
+        let _greet_with_default = greeting!("Sam");
+        let _greet_with_default_test = greeting!(test "Sam");  // #2
+        trace_macros!(false);
+    }
+  #+end_src
+
+*** 2.2.3 Newtypes - =TODO: one issue to be resolved=
+- =TODO= Listing 2.11 A recursive fumble
+
+*** 2.2.4 DSLs
+- Two simple examples from the standard library are ~println!~ and ~format!~,
+  which offer a special syntax using curly braces to determine how to print
+  specified variables.
+
+*** 2.2.5 Composing is easy
+*** 2.2.6 Currying, on the other hand . . .
+*** 2.2.7 Hygiene is something to consider as well
+
+** TODO 2.3 From the real world
+
+* 3 A “Hello, World” procedural macro
+** 3.1 Basic setup of a procedural macro project
+** 3.2 Analyzing the procedural macro setup
+** 3.3 Generating output
+** 3.4 Experimenting with our code
+** 3.5 cargo expand
+** 3.6 The same macro—without syn and quote
+** 3.7 From the real world
+
+* 4 Making fields public with attribute macros
+** 4.1 Setup of an attribute macro project
+** 4.2 Attribute macros vs. derive macros
+** 4.3 First steps in public visibility
+** 4.4 Getting and using fields
+** 4.5 Possible extensions
+** 4.6 More than one way to parse a stream
+*** 4.6.1 Delegating tasks to a custom struct
+*** 4.6.2 Implementing the Parse trait
+*** 4.6.3 Going low, low, low with cursor
+
+** 4.7 Even more ways to develop and debug
+** 4.8 From the real world
+
+* 5 Hiding information and creating mini-DSLs with function-like macros
+** 5.1 Hiding information
+*** 5.1.1 Setup of the information-hiding macro
+*** 5.1.2 Recreating the struct
+*** 5.1.3 Generating the helper methods
+
+** 5.2 Debugging by writing normal code
+** 5.3 Composing
+** 5.4 Anything you can do, I can do better
+** 5.5 From the real world
+
+* 6 Testing a builder macro
+** 6.1 Builder macro project setup
+** 6.2 Fleshing out the structure of our setup
+** 6.3 Adding white-box unit tests
+** 6.4 Black-box unit tests
+*** 6.4.1 A happy path test
+*** 6.4.2 A happy path test with an actual property
+*** 6.4.3 Testing enables refactoring
+*** 6.4.4 Further improvements and testing
+*** 6.4.5 An alternative approach
+*** 6.4.6 Unhappy path
+
+** 6.5 What kinds of unit tests do I need?
+** 6.6 Beyond unit tests
+** 6.7 From the real world
+
+* 7 From panic to result: Error handling
+** 7.1 Errors and control flow
+** 7.2 Pure and impure functions
+** 7.3 Alternatives to exceptions
+** 7.4 Rust’s Result and panics
+** 7.5 Setup of the panic project
+** 7.6 Mutable or immutable returns
+** 7.7 Getting results
+** 7.8 Don’t panic
+*** 7.8.1 Changing the ~panic~ into a ~Result~
+*** 7.8.2 Debugging observations
+
+** 7.9 Error-handling flavors
+*** 7.9.1 Using syn for error handling
+*** 7.9.2 Using ~proc_macro_error~ for error handling
+*** 7.9.3 Deciding between syn and ~proc_macro_error~
+
+** 7.10 From the real world
+
+* 8 Builder with attributes
+** 8.1 A rename attribute
+*** 8.1.1 Testing the new attribute
+*** 8.1.2 Implementing the attribute’s behavior
+*** 8.1.3 Parsing variations
+
+** 8.2 Alternative naming for attributes
+** 8.3 Sensible defaults
+** 8.4 A better error message for defaults
+** 8.5 Build back better
+*** 8.5.1 Avoiding illegal states and the type state pattern
+*** 8.5.2 Combining the builder pattern with type state
+
+** 8.6 Avoiding scattered conditionals
+** 8.7 Attribute tokens and attributes
+** 8.8 Other attributes
+** 8.9 From the real world
+
+* 9 Writing an infrastructure DSL
+** 9.1 What is IaC? What is AWS?
+** 9.2 How our DSL works
+** 9.3 Parsing our input
+** 9.3.1 Project setup and usage examples
+** 9.3.2 Implementing the Parse trait for our structs
+** 9.4 Two alternative parsing approaches
+*** 9.4.1 Using Punctuated with a custom struct
+*** 9.4.2 Using Punctuated with a custom enum and builder
+
+** 9.5 Actually creating the services
+** 9.6 The two AWS clients
+** 9.7 Errors and declarative macros
+** 9.8 The right kind of testing
+** 9.9 From the real world
+
+* 10 Macros and the outside world
+** 10.1 A function-like configuration macro
+*** 10.1.1 Macro project structure
+*** 10.1.2 Code overview
+*** 10.1.3 Using full paths
+
+** 10.2 Adding another macro
+** 10.3 Features
+** 10.4 Documenting a macro
+** 10.5 Publishing our macro
+** 10.6 From the real world
+** 10.7 Where to go from here
+
+* appendix Exercise solutions
+* index

@@ -415,21 +415,266 @@ This chapter
   • Information about Rust's approach to /reflection/ (Item 19)
   • Advice on balancing optimization against maintainability (Item 20) =IMPORTANT=
 
-** Item 14: Understand lifetimes - 106
+** DONE Item 14: Understand lifetimes - 106 - =TODO: RE-READ, NOTE=
+CLOSED: [2024-09-12 Thu 00:09]
+This Item describes Rust's /lifetime/'s, which are _a more precise formulation of
+a concept_ that existed in previous compiled languages like C and C++ -- in practice
+if not in theory.
+
+- =TODO=
+  /Lifetime/'s are a required input for the /borrow checker/ described in _Item 15_;
+  * taken together, these features form _the heart of Rust's memory safety
+    guarantees._
+
 *** Introduction to the Stack
+- /Lifetime/'s _are FUNDAMENTALLY related to_ the /stack/,
+  so a quick introduction/reminder is in order.
+
+- While a program is running, the /memory/ that it uses is divided up into different
+  chunks, sometimes called /segments/.
+
+  * Some of these chunks are a *fixed size*,
+    such as the ones that hold
+    + the program code or
+    + the program's global data,
+
+  * Two of the chunks -- the /heap/ and the /stack/ -- *change size* as the program
+    runs.
+
+    To allow for this, they are typically arranged at *opposite ends* of the
+    program's /virtual memory space/, so one can grow downward and the other can
+    grow upward (at least until your program runs out of memory and crashes), as
+    summarized in Figure 3-1.
+    + _Figure 3-1. Program memory layout,
+      including /heap/ growing up and /stack/ growing down_
+
+- Of these two dynamically sized chunks, the /stack/ is used to hold _state_
+  related to the currently executing function. This _state_ can include these
+  elements:
+  * The /parameters/ passed to the function
+  * The /local variables/ used in the function
+  * /Temporary values/ calculated within the function
+  * The /return address/ within the code of the function's caller
+
+- When a function is called, ~f()~, a new /stack frame/ is added to the /stack/,
+  beyond where the /stack frame/ for the calling function ends, and the CPU
+  normally updates a register -- the stack pointer -- to point to the new stack
+  frame.
+
 *** Evolution of Lifetimes
 *** Scope of a Lifetime
 *** Algebra of Lifetimes
-*** Lifetime Elision Rules
-*** The ~'static~ Lifetime
+- lifetime elision rules
+
+*** DONE Lifetime Elision Rules
+CLOSED: [2024-09-11 Wed 23:37]
+Here's a summary of the /lifetime elision rules/ for functions:
+
+- One input, one or more outputs:
+  assume outputs have the “same” lifetime as the input:
+  #+begin_src rust
+    fn f(x: &Item) -> (&Item, &Item)
+    // ... is equivalent to ...
+    fn f<'a>(x: &'a Item) -> (&'a Item, &'a Item)
+  #+end_src
+
+- Multiple inputs, no output:
+  assume all the inputs have different lifetimes:
+  #+begin_src rust
+    fn f(x: &Item, y: &Item, z: &Item) -> i32
+    // ... is equivalent to ...
+    fn f<'a, 'b, 'c>(x: &'a Item, y: &'b Item, z: &'c Item) -> i32
+  #+end_src
+
+- Multiple inputs including ~&self~, one or more outputs:
+  assume output lifetime(s) are the "same" as ~&self~'s lifetime:
+  #+begin_src rust
+    fn f(&self, y: &Item, z: &Item) -> &Thing
+    // ... is equivalent to ...
+    fn f(&'a self, y: &'b Item, z: &'c Item) -> &'a Thing
+  #+end_src
+
+*** TODO The ~'static~ Lifetime
+- One case that has not been covered till now:
+  * Q :: What happens if there are no input lifetimes, but the output return value
+         includes a reference anyway?
+
+  * A :: The only allowed possibility is for the returned /reference/ to have a
+    /lifetime/ that's guaranteed to _never go out of scope:_ ~'static~, which is
+    also the only /lifetime/ that has a specific name rather than an arbitrary
+    placeholder name.
+
+- The Rust compiler guarantees that a ~static~ item always
+  * has the *SAME address* for the entire duration of the program and
+  * never moves.
+
+  This means that a /reference/ to a /static/ item has a ~'static~ /lifetime/,
+  logically enough.
+
+- In many cases, a reference to a const item will also be promoted to have a 'static
+  lifetime, but there are a couple of minor complications to be aware of. The first is that
+  this promotion doesn’t happen if the type involved has a destructor or interior
+  mutability
+  =TODO: NOTE=
+
 *** Lifetimes and the Heap
 *** Lifetimes in Data Structures
 *** Anonymous Lifetimes
 *** Things to Remember
 
-** Item 15: Understand the borrow checker - 123
+** TODO Item 15: Understand the borrow checker - 123
+- The borrowing mechanism involves _the CREATION and USE of /references/,_
+  subject to rules policed by the /borrow checker/.
+
+- Under the covers, Rust's /references/ use the _same kind_ of /pointer values/
+  (Item 8) that are so prevalent in C or C++ code but are girded with rules and
+  restrictions to make sure that the sins of C/C++ are avoided. As a quick
+  comparison:
+  * Like a C/C++ pointer, a Rust reference is created with an ampersand: ~&value~.
+
+  * Like a C++ reference, a Rust reference can never be ~nullptr~.
+
+  * Like a C/C++ pointer or reference, a Rust reference can be modified after
+    creation to refer to something different.
+
+  * _UNLIKE_ C++, producing a /reference/ from a value _ALWAYS_ involves an
+    *EXPLICIT* (~&~) conversion --
+    if you see code like ~f(value)~, you know that ~f~ is receiving /ownership/ of
+    the value. (However, it may be /ownership/ of a copy of the item, if the
+    value's type implements ~Copy~ -- see Item 10.)
+
+  * _UNLIKE_ C/C++, the _mutability_ of a newly created /reference/ is _ALWAYS_
+    *EXPLICIT* (~&mut~).
+    If you see code like ~f(&value)~, you know that value won't be modified
+    (i.e., is ~const~ in C/C++ terminology). Only expressions like ~f(&mut value)~
+    have the potential to change the contents of ~value~.
+    + footnote2:
+      Note that all bets are off with expressions like ~m!(value)~ that involve a
+      /macro/ (_Item 28_), BECAUSE that can expand to arbitrary code.
+
+- The MOST IMPORTANT *DIFFERENCE* between _a C/C++ pointer_ and a /Rust reference/
+  is indicated by the term /borrow/:
+  + you CAN take a /reference (pointer)/ to an item,
+    but you CAN'T keep that /reference/ forever.
+    - In particular, you can't keep it longer than the /lifetime/ of the
+      underlying item, as tracked by the compiler and explored in _Item 14_.
+
+- =IMPORTANT=
+  These RESTRICTIONS on the use of /references/
+  * enable Rust to make its _memory safety guarantees_,
+  * BUT they also mean that you have to
+    + accept the _cognitive costs_ of the /borrow rules/, and
+    + accept that it will change how you design your software -- particularly its
+      data structures.
+
+- _This Item_
+  1. starts by describing what Rust /references/ can do, and the /borrow checker/'s
+     rules for using them.
+
+  2. The rest of _the Item_ focuses on dealing with the consequences of those rules:
+     _HOW TO_
+     refactor,
+     rework, and
+     redesign your code
+     _SO THAT_ you can win fights against the /borrow checker/.
+
 *** Access Control
+- There are _THREE_ ways to access the contents of a Rust item: via
+  * the item's /owner/ (~item~),
+  * a /reference/ (~&item~), or
+  * a /mutable reference/ (~&mut item~).
+
+- Each of these ways of accessing the item comes with different powers over the
+  item. Putting things roughly in terms of the CRUD (create/read/update/delete)
+  model for storage (using Rust's /drop/ terminology in place of _delete_):
+  * The /owner/ of an item gets to _create_ it, _read_ from it, _update_ it, and
+    _drop_ it.
+
+  * A /mutable reference/ can be used to _read_ from the underlying item and
+    _update_ it.
+
+  * A (normal) /reference/ can be used only to _read_ from the underlying item.
+
+- There's an important _Rust-specific aspect_ to these _data access rules_:
+  *only the item's /owner/ can /move/ the item.*
+  * This makes sense
+    IF you think of a /move/ as being some combination of
+    1. _CREATING_ (in the new location) and
+    2. _DROPPING_ the item's memory (at the old location).
+
+- This can lead to some _ODDITIES_ for code that has a /mutable reference/ to an
+  item. For example, it's OK to overwrite an ~Option~:
+  #+CANNOT_COMPILE
+  #+begin_src rust
+    /// Some data structure used by the code.
+    #[derive(Debug)]
+    pub struct Item {
+        pub contents: i64,
+    }
+    /// Replace the content of `item` with `val`.
+    pub fn replace(item: &mut Option<Item>, val: Item) {
+        *item = Some(val);
+    }
+  #+end_src
+
+  BUT a modification to also return the previous value falls foul of the move restriction:
+
+  Use the idea from the last note entry:
+  #+CANNOT_COMPILE
+  #+begin_src rust
+    /// Replace the content of `item` with `val`, returning the previous
+    /// contents.
+    pub fn replace(item: &mut Option<Item>, val: Item) -> Option<Item> {
+        let previous = *item; // move out
+        *item = Some(val); // replace
+        previous
+    }
+
+    // error[E0507]: cannot move out of `*item` which is behind a mutable reference
+    //   --> src/main.rs:34:24
+    //    |
+    // 34 | let previous = *item; // move out
+    //    | ^^^^^ move occurs because `*item` has type
+    //    | `Option<inner::Item>`, which does not
+    //    | implement the `Copy` trait
+    //    |
+    // help: consider removing the dereference here
+    //    |
+    // 34 - let previous = *item; // move out
+    // 34 + let previous = item; // move out
+    //    |
+  #+end_src
+
+  1. The error message is not helpful
+
+  2. Although it's VALID to _read_ from a /mutable reference/, this code is attempting
+     to /move/ the value out, just _prior to_ replacing the /moved value/ with a
+     new value -- in an attempt to *avoid making a copy* of the original value.
+
+     The borrow checker has to be conservative and notices that there's a moment
+     between the two lines when the /mutable reference/ isn't referring to a
+     valid value.
+     =from Jian= This is reasonable -- it is the duty of borrow checker.
+
+     _HOWEVER_,
+     As humans, we can see that this combined operation --
+     _extracting the old value_ and _replacing it with a new value_ --
+     is both safe and useful, so the standard library provides the
+     ~std::mem::replace~ function to perform it. Under the covers, ~replace~ uses
+     ~unsafe~ (as per _Item 16_) to perform the ~swap~ in one go:
+     #+begin_src rust
+       /// Replace the content of `item` with `val`, returning the previous
+       /// contents.
+       pub fn replace(item: &mut Option<Item>, val: Item) -> Option<Item> {
+           std::mem::replace(item, Some(val)) // returns previous value
+       }
+     #+end_src
+     For ~Option~, this is a common pattern, therefore ~Option~ actual has a
+     replace /method/: ~pub const fn replace(&mut self, value: T) -> Option<T>~.
+
 *** Borrow Rules
+- Page 126
+
 *** Owner Operations
 *** Winning Fights Against the Borrow Checker
 **** Local code refactoring
@@ -439,8 +684,8 @@ This chapter
 
 *** Things to Remember
 
-** Item 16: Avoid writing ~unsafe~ code - 142
-** Item 17: Be wary of shared-state parallelism - 145
+** TODO Item 16: Avoid writing ~unsafe~ code - 142
+** TODO Item 17: Be wary of shared-state parallelism - 145
 *** Data Races
 **** Data races in C++
 **** Data races in Rust
@@ -449,7 +694,7 @@ This chapter
 *** Deadlocks
 *** Advice
 
-** Item 18: Don't panic - 159
+** TODO Item 18: Don't panic - 159
 The title of this Item would be more accurately described as
 _prefer returning a ~Result~ to using ~panic!~ (but don't panic is much
 catchier)_.
@@ -460,10 +705,10 @@ catchier)_.
 
 - 
   
-** Item 19: Avoid reflection - 162
+** TODO Item 19: Avoid reflection - 162
 *** Upcasting in Future Versions of Rust
 
-** Item 20: Avoid the temptation to over-optimize - 169
+** TODO Item 20: Avoid the temptation to over-optimize - 169
 *** Data Structures and Allocation
 *** Who’s Afraid of the Big Bad Copy?
 *** References and Smart Pointers
