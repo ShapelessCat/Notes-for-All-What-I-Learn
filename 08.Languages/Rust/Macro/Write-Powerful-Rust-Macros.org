@@ -312,17 +312,251 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 *** 2.2.7 Hygiene is something to consider as well
 
 ** TODO 2.3 From the real world
+** Exercises
+1. Solution:
+   #+begin_src rust
+     macro_rules! hello_world {
+         ($something:ty) => {
+             impl $something {
+                 fn hello_world(&self) {
+                     println!("Hello world")
+                 }
+             }
+         };
+     }
 
-* 3 A “Hello, World” procedural macro
+     struct Example {}
+     hello_world!(Example);
+
+     fn main() {
+         let e = Example {};
+         e.hello_world(); // prints "Hello world"
+     }
+   #+end_src
+
+** Summary
+- /Declarative macros/ are the first group of macros that Rust has to offer.
+
+- They consist of one or more pairs of /matchers/ and /transcribers/.
+
+- The /matcher/ has to match the content that was passed into the macro when it
+  was invoked.
+
+- If there is a match, the code inside the /transcriber/ will be written to where
+  the macro was invoked.
+
+- Pieces of input can be captured in the /matcher/ and used in the /transcriber/.
+
+- /Macros/ can _call themselves_ to avoid duplication and to allow for more
+  complex scenarios.
+
+- To use macros outside the file where they were defined, you will need to export
+  them: ~#[macro_export]~
+
+- /Declarative macros/ have /hygiene/, which means local identifiers do not
+  collide with external ones.
+
+- There are several use cases for /declarative macros/:
+  1. avoiding duplication and boilerplate is a major one.
+  2. Another is doing things that are hard, or impossible, to do otherwise, like
+     * default arguments,
+     * varargs, or
+     * DSLs.
+
+- If /declarative macros/ fall short, you still have /procedural macros/ waiting
+  in the corridor to assist you with even more powerful weapons.
+
+* TODO 3 A “Hello, World” procedural macro
+- This chapter covers
+  * *SETTING UP* a /procedural macro/
+  * Getting the name of a ~struct~ by _PARSING a stream of tokens_
+  * Generating hardcoded output
+  * Using /variables/ in generated code
+  * Inspecting generated code with ~cargo expand~
+  * Writing a macro *WITHOUT* help from ~syn~ and ~quote~
+  * _UNDERSTANDING HOW_ /Rust's internal macros/ are *SPECIAL*
+
+- /Declarative macros/ offer a /domain-specific language (DSL)/ that allows you
+  to generate code based on a combination of /matchers/ and /transcribers/.
+
+- /Procedural macros/, on the other hand, deal with _lower-level information_.
+  They receive a _stream of tokens_ containing *every detail* of the code you
+  want to work with.
+
 ** 3.1 Basic setup of a procedural macro project
+_WE START SIMPLE_:
+with a /macro/ that adds a ~"Hello, World"~ printing /method/ to a ~struct~ or
+~enum~ (see figure 3.1 for the project setup).
+
+- Adding new functionality to a ~struct~ is *a good use case* for a /derive macro/.
+
+- =IMPORTANT=
+  1. Figure 3.1 Basic setup of a procedural macro project
+  2. Figure 3.2 Our project structure
+
+- =from Jian=
+  The code in "Listing 3.4 The initial main.rs file from the outer application"
+  *the old style*
+  #+begin_src rust
+    #[macro_use]
+    extern crate hello_world_macro;
+  #+end_src
+
+  can be replaced by
+
+  *the newer (Rust 2018) style*
+  #+begin_src rust
+    use hello_world_macro::Hello;
+  #+end_src
+
+- =IMPORTANT=
+  NOTE:
+  * ~cargo generate~ (https://github.com/cargo-generate/cargo-generate) with a
+    template (https://github.com/waynr/proc-macro-template) for generating macro
+    setups.
+
+  * You can use the =util/create_setup.sh= script in this book code repository
+    (https://github.com/VanOvermeire/rust-macros-book), which automatically sets
+    up projects in the various styles used in this book.
+
 ** 3.2 Analyzing the procedural macro setup
+- *A HIGH-LEVEL OVERVIEW*
+  * There are two steps involved: /lexing/ and /parsing/.
+    + Lexing :: also called /tokenization/, is the first step and is used to
+                _TURN_ your code as a raw text stream
+                _INTO_ a stream of tokens.
+
+    + Example,
+      pass the expression ~1 + 11~ to a /macro/, and the resulting stream will
+      look like this (ignoring /spans/ and /suffixes/ for now):
+      #+begin_src text
+        TokenStream [
+          Literal { kind: Integer, symbol: "1" },
+          Punct { ch: '+', spacing: Alone },
+          Literal { kind: Integer, symbol: "11" }
+        ]
+      #+end_src
+
+    + Parsing :: turns this information into an /Abstract Syntax Tree
+                 (AST; http://mng.bz/5lKZ)/, a tree-like representation of all
+                 relevant data in your program.
+
+  * You can find more information in
+    + The Rust Compiler Development Guide (https://rustc-dev-guide.rust-lang.org/),
+    + The Little Book of Rust Macros (https://veykril.github.io/tlborm/), and
+    + The Rust Reference (https://doc.rust-lang.org/stable/reference/).
+
+- When the macro in =hello-world-macro/lib.rs= generate invalid Rust code
+  #+begin_src rust
+    #[proc_macro_derive(Hello)]
+    pub fn hello(item: TokenStream) -> TokenStream {
+        let add_hello_world = quote! {
+            fn this should not work () {}
+        };
+
+        add_hello_world.into()
+    }
+  #+end_src
+  - Run ~cargo check~ in =hello-world-macro=,
+    since the compiler doesn't know the context of using this macro,
+    event if the code in ~quote! { .. }~ is invalid, it may work in a target
+    context.
+
+  - Run ~cargo check~ in project root,
+    this time ~cargo check~ can check the expanded code, find the invalid code,
+    and report.
+
 ** 3.3 Generating output
 ** 3.4 Experimenting with our code
-** 3.5 cargo expand
-** 3.6 The same macro—without syn and quote
-** 3.7 From the real world
+- NOTE:
+  Though /unions/ are a valid /derive target/, they do _NOT_ feature in this
+  book, mostly because they are much less ubiquitous than structs and enums,
+  existing almost solely for compatibility with C over a foreign function
+  interface (FFI).
 
-* 4 Making fields public with attribute macros
+** 3.5 ~cargo expand~
+- ~cargo install cargo-expand~
+
+- Run ~cargo expand~ in the root of the application directory or the =src= folder.
+  All macro can be expanded,
+  *EXCEPT* that ~format_args!~ was not expanded.
+  =WIP bugfix=
+  That's a Rust problem [https://github.com/dtolnay/cargo-expand/issues/173],
+  and fixing it is a work in progress.
+
+- ~cargo expand~ is a useful tool for a visual inspection of our code, and
+  *it runs even when our output is invalid, making it useful for debugging
+  compilation problems.*
+
+** TODO 3.6 The same macro -- without ~syn~ and ~quote~ - =TAKE NOTE: IMPORTANT=
+** 3.7 From the real world
+1. The developers of Rocket (https://rocket.rs/) are actually kind enough to
+   _TEACH_ you that /macros/ can be imported in two ways (the ones we described
+   in this chapter):
+   #+begin_src rust
+     //! And to import all macros, attributes, and derives via `#[macro_use]`
+     //! in the crate root:
+     //!
+     //! ```rust
+     //! #[macro_use] extern crate rocket;
+     //! # #[get("/")] fn hello() { }
+     //! # fn main() { rocket::build().mount("/", routes![hello]); }
+     //! ```
+     //!
+     //! Or, alternatively, selectively import from the top-level scope:
+     //!
+     //! ```rust
+     //! # extern crate rocket;
+     //!
+     //! use rocket::{get, routes};
+     //! # #[get("/")] fn hello() { }
+     //! # fn main() { rocket::build().mount("/", routes![hello]); }
+     //!
+   #+end_src
+
+2. You may also be wondering
+   * Q :: _HOW_ the /standard library/ _parses_ and _outputs_ /macros/,
+          since it cannot use external libraries like ~syn~ and ~quote~.
+
+   * A :: Instead, the standard library uses built-ins with similar concepts and
+          names.
+
+     + For example,
+       - ~rustc_ast~, the /Rust abstract syntax tree/, is used for *parsing input*.
+       - ~rustc_expand~, *outputting* code is done with it.
+       - ~rustc_span~ contains utilities like ~Ident~ and ~Span~.
+
+     It is both familiar and alien when you are used to working with ~syn~
+     and ~quote~. *But it is not meant for external usage.*
+
+3. SINCE /procedural macros/ have to be placed in a library, in the root of the
+   crate,
+
+   =lib.rs= is a great starting point for exploring other people's /procedural macro/ code.
+
+   You will see what macros they have and can dig in when needed.
+
+** TODO Exercises
+** TODO Summary
+
+* TODO 4 Making fields public with attribute macros - =START!!!=
+- This chapter covers
+  * Understanding the _DIFFERENCES_ between /derive macros/ and /attribute macros/
+
+  * Finding /field/ information in the /abstract syntax tree/
+
+  * Retrieving /fields/ by using matching
+
+  * Retrieving /fields/ with a custom struct =???=
+
+  * Retrieving /fields/ with a custom struct and a ~Parse~ implementation
+
+  * Adding multiple outputs in ~quote~
+
+  * Debugging macros with log statements
+
+  * Understanding the no-panic crate
+
 ** 4.1 Setup of an attribute macro project
 ** 4.2 Attribute macros vs. derive macros
 ** 4.3 First steps in public visibility
@@ -330,24 +564,46 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 ** 4.5 Possible extensions
 ** 4.6 More than one way to parse a stream
 *** 4.6.1 Delegating tasks to a custom struct
-*** 4.6.2 Implementing the Parse trait
+*** 4.6.2 Implementing the ~Parse~ trait
 *** 4.6.3 Going low, low, low with cursor
 
 ** 4.7 Even more ways to develop and debug
 ** 4.8 From the real world
+** Exercises
+** Summary
 
-* 5 Hiding information and creating mini-DSLs with function-like macros
+* TODO 5 Hiding information and creating mini-DSLs with function-like macros
+- This chapter covers
+  * Hiding information to improve code
+  * Using /function-like macros/ to modify and extend code
+  * Using /function-like macros/ to manipulate /structs/ and /functions/
+  * *Debugging* /macros/ by getting the compiler or IDE to help you
+  * Writing DSLs with flexible /function-like macros/
+  * Deciding what /macro/ fits a use case
+
 ** 5.1 Hiding information
 *** 5.1.1 Setup of the information-hiding macro
-*** 5.1.2 Recreating the struct
+*** 5.1.2 Recreating the ~struct~
 *** 5.1.3 Generating the helper methods
 
 ** 5.2 Debugging by writing normal code
 ** 5.3 Composing
 ** 5.4 Anything you can do, I can do better
 ** 5.5 From the real world
+** Exercises
+** Summary
 
-* 6 Testing a builder macro
+* TODO 6 Testing a builder macro
+- This chapter covers
+  * Writing a /derive macro/ that will generate a builder for /structs/
+
+  * Creating /white-box tests/ to verify the behavior of functions within your
+    /macro/
+
+  * Using /black-box tests/ that take an outside view of your code
+
+  * Deciding what types of tests are most useful for your /macro/
+
 ** 6.1 Builder macro project setup
 ** 6.2 Fleshing out the structure of our setup
 ** 6.3 Adding white-box unit tests
@@ -362,8 +618,18 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 ** 6.5 What kinds of unit tests do I need?
 ** 6.6 Beyond unit tests
 ** 6.7 From the real world
+** Exercises
+** Summary
 
-* 7 From panic to result: Error handling
+* TODO 7 From panic to result: Error handling
+- This chapter covers
+  * Understanding the _DIFFERENCE_ between /pure and impure functions/
+  * Understanding the _DOWNSIDES_ of _breaking control flow_
+  * Using ~Result~ for better error handling
+  * Writing macros to manipulate /function signatures/ and /return values/
+  * Mutating the received ~TokenStream~ as an alternative to creating a new one
+  * Creating better error messages with ~syn::Error~ or ~proc_macro_error~
+
 ** 7.1 Errors and control flow
 ** 7.2 Pure and impure functions
 ** 7.3 Alternatives to exceptions
@@ -371,21 +637,30 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 ** 7.5 Setup of the panic project
 ** 7.6 Mutable or immutable returns
 ** 7.7 Getting results
-** 7.8 Don’t panic
+** 7.8 Don't panic
 *** 7.8.1 Changing the ~panic~ into a ~Result~
 *** 7.8.2 Debugging observations
 
 ** 7.9 Error-handling flavors
-*** 7.9.1 Using syn for error handling
+*** 7.9.1 Using ~syn~ for error handling
 *** 7.9.2 Using ~proc_macro_error~ for error handling
-*** 7.9.3 Deciding between syn and ~proc_macro_error~
+*** 7.9.3 Deciding between ~syn~ and ~proc_macro_error~
 
 ** 7.10 From the real world
+** Exercises
+** Summary
 
-* 8 Builder with attributes
+* TODO 8 Builder with attributes
+- This chapter covers
+  * Working with /field-level custom attributes/ to *RENAME* /methods/
+  * Using /root-level custom attributes/ to *DECIDE* on error handling
+  * Making a builder easier to use with /type state/ =???=
+  * Exploring _HOW_ /derive and attribute macros/ DIFFER
+  * Parsing (document) attributes inside /function-like macros/
+
 ** 8.1 A rename attribute
 *** 8.1.1 Testing the new attribute
-*** 8.1.2 Implementing the attribute’s behavior
+*** 8.1.2 Implementing the attribute's behavior
 *** 8.1.3 Parsing variations
 
 ** 8.2 Alternative naming for attributes
@@ -399,24 +674,48 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 ** 8.7 Attribute tokens and attributes
 ** 8.8 Other attributes
 ** 8.9 From the real world
+** Exercises
+** Summary
 
-* 9 Writing an infrastructure DSL
+* TODO 9 Writing an infrastructure DSL
+- This chapter covers
+  * _Grasping_ the ideas behind /Infrastructure as Code/
+
+  * _Parsing_ a custom syntax with /structs/ and keywords
+
+  * Thinking about parsing _tradeoffs_
+
+  * _Avoiding duplication_ by *combining* /procedural and declarative macros/
+
+  * _CALLING_ /asynchronous functions/ in a /macro/ and
+    _CREATING_ cloud resources
+
 ** 9.1 What is IaC? What is AWS?
 ** 9.2 How our DSL works
 ** 9.3 Parsing our input
-** 9.3.1 Project setup and usage examples
-** 9.3.2 Implementing the Parse trait for our structs
+*** 9.3.1 Project setup and usage examples
+*** 9.3.2 Implementing the ~Parse~ trait for our structs
+
 ** 9.4 Two alternative parsing approaches
-*** 9.4.1 Using Punctuated with a custom struct
-*** 9.4.2 Using Punctuated with a custom enum and builder
+*** 9.4.1 Using ~Punctuated~ with a custom ~struct~
+*** 9.4.2 Using ~Punctuated~ with a custom ~enum~ and builder
 
 ** 9.5 Actually creating the services
 ** 9.6 The two AWS clients
 ** 9.7 Errors and declarative macros
 ** 9.8 The right kind of testing
 ** 9.9 From the real world
+** Exercises
+** Summary
 
-* 10 Macros and the outside world
+* TODO 10 Macros and the outside world
+- This chapter covers
+  * Using a single library to expose MULTIPLE /macros/
+  * _ADDING_ or _DISABLING_ functionality with /features/ =TODO: !!!=
+  * Using /attributes/ for control over what code will be generated  =TODO: !!!=
+  * Documenting and publishing a /macro library/
+  * Moving on to explore interesting macro subjects _beyond this book_
+
 ** 10.1 A function-like configuration macro
 *** 10.1.1 Macro project structure
 *** 10.1.2 Code overview
@@ -428,6 +727,18 @@ Need ~rustup default nightly~ or run commands with ~cargo +nightly your-command~
 ** 10.5 Publishing our macro
 ** 10.6 From the real world
 ** 10.7 Where to go from here
+** Exercises
+** Summary
 
-* appendix Exercise solutions
+* TODO appendix Exercise solutions
+** Chapter 2
+** Chapter 3
+** Chapter 4
+** Chapter 5
+** Chapter 6
+** Chapter 7
+** Chapter 8
+** Chapter 9
+** Chapter 10
+
 * index
