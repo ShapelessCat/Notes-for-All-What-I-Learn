@@ -488,7 +488,105 @@ with a /macro/ that adds a ~"Hello, World"~ printing /method/ to a ~struct~ or
   *it runs even when our output is invalid, making it useful for debugging
   compilation problems.*
 
-** TODO 3.6 The same macro -- without ~syn~ and ~quote~ - =TAKE NOTE: IMPORTANT=
+** 3.6 The same macro -- without ~syn~ and ~quote~
+The ~quote~ and ~syn~ libraries are very useful _but not strictly necessary_ for
+writing macros.
+
+- Listing 3.11 Without syn and quote
+  #+begin_src rust
+    use proc_macro::{TokenStream, TokenTree};
+
+    #[proc_macro_derive(Hello)]
+    pub fn hello_alt(item: TokenStream) -> TokenStream {
+        fn ident_name(item: TokenTree) -> String {
+            match item {
+                TokenTree::Ident(i) => i.to_string(),            // #1
+                    _ => panic!("no ident")
+            }
+        }
+        let name = ident_name(item.into_iter().nth(1).unwrap()); // #2
+
+        format!("impl {} {{ fn hello_world(&self) \
+        {{ println!(\"Hello, World\\") }} }} ", name
+            ).parse()
+            .unwrap()                                            // #3
+    }
+  #+end_src
+  * To retrieve the ~name~, we iterate over the incoming stream and take the
+    second element with ~nth(1)~.
+
+    + That ~item~ is a ~TokenTree~ containing the _name of the struct or enum._
+      - The first element, contained in ~nth(0)~, has the type (i.e., ~struct~
+        or ~enum~) and is not relevant in this situation -- so we skip it.
+
+  * DEFINITION:
+    + A ~TokenTree~ sits somewhere between a ~TokenStream~ and simple /tokens/.
+      Basically,
+      a ~TokenStream~ is _a sequence of ~TokenTree~'s,_ which are themselves
+      (recursively) _COMPOSED of_ more /trees/ and/or /tokens/.
+
+      - This is why we can iterate over our stream, pick an element, and assure
+        Rust that the type is ~TokenTree~.
+
+      - The ~tt~ /fragment specifier/ for
+        /declarative macros/, which we encountered in the previous chapter, is
+        also a ~TokenTree~.
+
+  * To generate output,
+    we use the ~format~ macro to _inject_ our ~name~ variable in a string.
+
+  * For the transformation from string to ~TokenStream~, we can use ~parse~.
+    We expect this to work, so we just use an ~unwrap~ on the ~Result~ that our
+    parsing returns.
+
+- Compilation speed is a reason why you might want to *opt out* of using ~syn~.
+  While it is a very powerful library, it is also big and slow to compile.
+
+  * So
+    _IF_ our example was a real macro, and we _ONLY_ needed the _name_ of the
+    struct/enum, our naive example would compile *a lot faster*.
+
+  * Several libraries try to offer a *lightweight alternative* to ~syn~ --
+    ~venial~ (https://github.com/PoignardAzur/venial), for example.
+    =TODO: Other libraries???=
+
+  * Listing 3.12 Using a lightweight parser like ~venial~
+    #+begin_src rust
+      use quote::quote;
+      use proc_macro::TokenStream;
+      use venial::{parse_declaration, Declaration, Struct, Enum};
+
+      #[proc_macro_derive(Hello)]
+      pub fn hello(item: TokenStream) -> TokenStream {
+          let declaration = parse_declaration(item.into()).unwrap();
+
+          let name = match declaration {
+              Declaration::Struct(Struct { name, .. }) => name,
+              Declaration::Enum(Enum { name, .. }) => name,
+              _ => panic!("only implemented for struct and enum")
+          };
+
+          let add_hello_world = quote! {
+              impl #name {
+                  fn hello_world(&self) {
+                      println!("Hello, World")
+                  }
+              }
+          };
+
+          add_hello_world.into()
+      }
+
+    #+end_src
+    + From the AUTHOR:
+      Even in this simple example, build times measured with cargo ~build --timings~
+      *DROP from 3.1 seconds to 1.8 on my machine*.
+
+    + =IMPORTANT=
+      Once you are familiar with how it handles the ~TokenStream~ parsing,
+      switching to a lightweight alternative should not be too hard: many of the
+      parsing concepts are always the same.
+
 ** 3.7 From the real world
 1. The developers of Rocket (https://rocket.rs/) are actually kind enough to
    _TEACH_ you that /macros/ can be imported in two ways (the ones we described
@@ -539,7 +637,7 @@ with a /macro/ that adds a ~"Hello, World"~ printing /method/ to a ~struct~ or
 ** TODO Exercises
 ** TODO Summary
 
-* TODO 4 Making fields public with attribute macros - =START!!!=
+* TODO 4 Making fields public with attribute macros - _CONTINUE!!!_
 - This chapter covers
   * Understanding the _DIFFERENCES_ between /derive macros/ and /attribute macros/
 
@@ -557,20 +655,186 @@ with a /macro/ that adds a ~"Hello, World"~ printing /method/ to a ~struct~ or
 
   * Understanding the no-panic crate
 
+- Chapter target macro:
+  * _BACKGROUND_:
+    Rust likes to hide information.
+    A /function/, /struct/, or /enum/ is _private by default_, and the same goes
+    for the /fields/ of a /struct/.
+
+  * _QUESTION_:
+    "information hiding," a primary reason for keeping /fields/ in a
+    struct/class private, is not applicable when your _ONLY value is exposing
+    the information contained in fields._
+
+    Sometimes, you need to define a /struct/ ONLY as a data wrapper, for
+    example, /Data Transfer Objects (DTOs)/.
+
+  * _PLAN_:
+    1. Make a ~strcut~ _public_.
+    2. Make each field of this ~strcut~ _public_.
+
+- To resolve this chapter target macro, We need to modify what is already there.
+  So /derive macros/ are out, and /attribute macros/ are in.
+
+- Writing the library and code for an /attribute macro/ is _QUITE SIMILAR_ to
+  creating a /derive macro/. But there are DIFFERENCES as well:
+  * an /attribute macro/ also receives a ~TokenStream~ containing additional
+    attributes (if any).
+    + =from Jian= Example
+      #+begin_src rust
+        #[proc_macro_attribute]
+        pub fn name_of_the_attribute(attr: TokenStream, item: TokenStream) -> TokenStream {
+            ...
+        }
+      #+end_src
+
+  * And, more importantly for this chapter, its output tokens will *replace*
+    the input.
+
 ** 4.1 Setup of an attribute macro project
+- Figure 4.1 The signature of an attribute macro
+
 ** 4.2 Attribute macros vs. derive macros
 ** 4.3 First steps in public visibility
 ** 4.4 Getting and using fields
+- The type works because /attribute macro/ and /derive macro/ _SHARE_ some
+  important input targets:
+  * /structs/
+  * /enums/
+  * /unions/
+
+- While /attribute macros/ can also target /traits/ and /functions/,
+  that's _NOT_ currently important to us.
+  * If you prefer a more fitting type, ~syn::ItemStruct~ should be a drop-in
+    replacement, but it does have the downside that it is hidden behind the
+    ~"full"~ feature flag. So we would need to change our ~syn~ import to use
+    it.
+
+- ~DeriveInput~:
+  #+begin_src rust
+    pub struct DeriveInput {
+        pub attrs: Vec<Attribute>,
+        pub vis: Visibility,
+        pub ident: Ident,
+        pub generics: Generics,
+        pub data: Data,
+    }
+  #+end_src
+  * ~Data~
+    #+begin_src rust
+      pub enum Data {
+          Struct(DataStruct),
+          Enum(DataEnum),
+          Union(DataUnion),
+      }
+    #+end_src
+    + ~DataStruct~
+      #+begin_src rust
+        pub struct DataStruct {
+            pub struct_token: Token![struct],
+            pub fields: Fields,
+            pub semi_token: Option<Token![;]>,
+        }
+      #+end_src
+
+- Figure 4.2 Finding the roots of the world tree: from DeriveInput to Fields for
+  our Example struct
+
 ** 4.5 Possible extensions
-** 4.6 More than one way to parse a stream
+- There are lots of ways we could now *EXTEND* our macro to make it _more useful_.
+  For example,
+  * Make our macro work for ~enum~.
+
+    + Do remember that the /variants/ of an /enum/ are *AUTOMATICALLY public*
+      _when the enum itself is public_, meaning it is probably easier to just add
+      ~pub~ to an /enum/ rather than using a custom macro.
+
+  * Handle /unamed fields/ in tuple struct.
+
+  * Handle to structs like ~struct Empty;~.
+
+  * There are a few more potential problems (besides not handling /Unions/).
+    For example, our macro won't make fields of nested structs public. As luck
+    would have it, just adding ~#[public]~ to the nested items is an easy fix.
+    =from Jian= I also think this is the right way: manually do this.
+
+  * The way we use until will strip all other attributes, which is bad.
+    + Try adding a ~#[derive(Debug)]~ below our annotation and running
+      ~cargo expand~. Do you see how the additional annotation vanishes into
+      thin air?
+
+    + *As /macros/ are executed in order, from top to bottom,*
+      =Temporary solution, not a fundamental one:=
+      the simple workaround is adding the derive _ABOVE_ our ~#[public]~.
+      Now everything will work as expected. Except—please do not do this.
+
+      - _INSTEAD_,
+        do things the proper way and
+        1. retrieve and
+        2. reattach
+        all the available attributes
+
+  * Handle the /generics/ in /structs/ and /enums/.
+
+- =from Jian=
+  Use in-place way, most of the above cases can be handled automatically.
+  See my solution in _Exercises_.
+
+** TODO 4.6 More than one way to parse a stream
 *** 4.6.1 Delegating tasks to a custom struct
 *** 4.6.2 Implementing the ~Parse~ trait
 *** 4.6.3 Going low, low, low with cursor
 
 ** 4.7 Even more ways to develop and debug
-** 4.8 From the real world
-** Exercises
-** Summary
+- We learned ~cargo expand~.
+
+- ~syn = { version = "2.0.39", features=["extra-traits"]}~,
+  and then you can do ~eprintln!("{:#?}", &ast);~
+  * =from Jian=
+    You can use the output to debug and learn the structure of your specific
+    token stream.
+
+** TODO 4.8 From the real world
+** DONE Exercises
+CLOSED: [2024-09-20 Fri 23:15]
+- Follow the hints from the author and the code provided by the author is good
+  for study. This is works perfect for both /dervie macro/ and /attribute
+  macro/.
+  _HOWEVER_, since /attribute macro/ need modify existing code, do in-place
+  modification may make the code concise. Here is my solution:
+  #+begin_src rust
+    use quote::quote;
+    use proc_macro::TokenStream;
+    use syn::spanned::Spanned;
+    use syn::token::Pub;
+    use syn::{parse_macro_input, DataStruct, DeriveInput, Visibility};
+    use syn::Data::{Enum, Struct};
+
+    #[proc_macro_attribute]
+    pub fn public(_attr: TokenStream, item: TokenStream) -> TokenStream {
+        let make_pub = |v: &mut Visibility| {
+            *v = Visibility::Public(Pub(v.span()))
+        };
+        let mut ast = parse_macro_input!(item as DeriveInput);
+        // Modify whole item accessibility
+        make_pub(&mut ast.vis);
+        // Modify item struct fields or enum variants accessibility
+        match ast.data {
+            Struct(
+                DataStruct {
+                    ref mut fields, ..
+                }
+            ) => fields.iter_mut().for_each(|f| {
+                make_pub(&mut f.vis);
+            }),
+            Enum(_) => (),
+            _ => unimplemented!("only works for structs with named fields"),
+        }
+        (quote! { #ast }).into()
+    }
+  #+end_src
+
+** TODO Summary
 
 * TODO 5 Hiding information and creating mini-DSLs with function-like macros
 - This chapter covers
