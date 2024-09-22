@@ -637,7 +637,7 @@ writing macros.
 ** TODO Exercises
 ** TODO Summary
 
-* TODO 4 Making fields public with attribute macros - _CONTINUE!!!_
+* TODO 4 Making fields public with attribute macros
 - This chapter covers
   * Understanding the _DIFFERENCES_ between /derive macros/ and /attribute macros/
 
@@ -780,10 +780,241 @@ writing macros.
   Use in-place way, most of the above cases can be handled automatically.
   See my solution in _Exercises_.
 
-** TODO 4.6 More than one way to parse a stream
+** 4.6 More than one way to parse a stream
+A more "struct-focused" approach.
+
 *** 4.6.1 Delegating tasks to a custom struct
-*** 4.6.2 Implementing the ~Parse~ trait
+- Start by adding a dependency to _proc-macro2_, which we will need shortly.
+
+- Listing 4.10 Two familiar dependencies in our library toml file and a new one
+  #+begin_src rust
+    [dependencies]
+    quote = "1.0.33"
+    syn = "2.0.39"
+    proc-macro2 = "1.0.69"
+  #+end_src
+
+- Now take a look at the new implementation. *There are two big changes*:
+  * _INSTEAD OF_ using the primitives from ~syn~ directly,
+    we have our /struct/ *gather/organize* all required information (i.e., name
+    and type).
+    + By convention,
+      1. a /method/ called ~new~ should be used for _creating a struct_, so we
+         create one and call it when iterating over our fields.
+
+      2. ~map(StructField::new)~ is a convenient shorthand -- also known as point-free
+         style -- for ~map(|f| StructField::new(f))~.
+
+- _Listing 4.11 An implementation that uses structs to do most of the gluing_
+  #+begin_src rust
+    use proc_macro::TokenStream;
+    use quote::{quote, ToTokens};
+    // previous imports
+
+    struct StructField {
+        name: Ident,
+        ty: Type,
+    }
+
+    impl StructField {
+        fn new(field: &Field) -> Self {
+            Self {
+                name: field.ident.as_ref().unwrap().clone(),
+                ty: field.ty.clone(),
+            }
+        }
+    }
+
+    impl ToTokens for StructField {
+        fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+            let n = &self.name;
+            let t = &self.ty;
+            quote!(pub #n: #t).to_tokens(tokens)
+        }
+    }
+
+    #[proc_macro_attribute]
+    pub fn public(_attr: TokenStream, item: TokenStream) -> TokenStream {
+        // unchanged: get fields
+        let builder_fields = fields.iter().map(StructField::new);
+        // unchanged: quote for output
+        // ...
+    }
+  #+end_src
+  ~quote~ doesn't automatically know how to transform ~StructField~ into
+  ~TokenStream~, and _this is why we need ~impl ToTokens for StructField~._
+
+- This is more code -- and complexity -- than we had before, but there are positives
+  as well:
+  * There is a _separation of concerns_: we have made a struct responsible for
+    the retrieval and outputting of a field.
+
+  * This can _enable reuse_ and could prove to be _more readable and structured_.
+    + In this basic example, it is probably overengineering, but some structuring
+      of data into structs might prove useful in a bigger procedural macro.
+      =from Jian= This is a book for education, and this a way we need to know.
+
+*** 4.6.2 Implementing the ~Parse~ trait - =TODO: learn more about APIs mentioned in this section=
+- We could go one step further and incorporate an additional built-in from ~syn~,
+  the ~Parse~ /trait/, which is used for changing a ~TokenStream~ into a /struct/
+  or /enum/.
+
+  In the next code listing, we add an implementation of this /trait/ and its
+  /method/ ~parse~, which receives ~syn::parse::ParseStream~ as ~input~. Just
+  think of that as a sort of ~TokenStream~.
+
+- Listing 4.12 Parsing instead of using new
+  #+begin_src rust
+    // imports
+
+    struct StructField {
+        name: Ident,
+        ty: Ident, // #1
+    }
+
+    // ToTokens implementation remains unchanged
+
+    impl Parse for StructField { // #2
+        fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+            let _vis: Result<Visibility, _> = input.parse(); // #3
+            let list = Punctuated::<Ident, Colon>::parse_terminated(input)
+                .unwrap(); // #4
+
+            Ok(StructField {
+                name: list.first().unwrap().clone(), // #5
+                ty: list.last().unwrap().clone(),
+            })
+    }
+
+    #[proc_macro_attribute]
+    pub fn public(_attr: TokenStream, item: TokenStream) -> TokenStream {
+        // unchanged
+        let builder_fields = fields.iter() // #6
+            .map(|f| {
+                syn::parse2::<StructField>(f.to_token_stream())
+                    .unwrap()
+            });
+        // unchanged
+    }
+  #+end_src
+  1. Instead of ~Type~, ~ty~ is now an ~Ident~, because that is what we are
+     receiving from our ~Parse~.
+
+  2. The ~new~ method has been made redundant by ~parse~.
+
+  3. We try to parse the visibility into a variable of type ~Result<Visibility, _>~
+     to get rid of it, _moving the pointer to the next token._
+
+  4. A field without visibility is a kind of ~Punctuated~,
+     so we call ~parse_terminated~ to parse the rest of the field.
+
+  5. The first element should be the name and
+     the type should be last.
+     Because we parsed the field as identifiers separated by a colon, ~ty~ is now
+     ~Ident~.
+
+  6. Iterates over the fields and uses ~parse2~.
+     The ~Result~ might be any number of things, so we have to say that we want
+     a ~StructField~.
+
+- _NOTE_: =IMPORTANT=
+  Perhaps you thought visibility was an optional part of the field definition,
+  which is certainly what I used to think.
+
+  But look back at the AST diagrams and source code:
+  ~ParseStream~ always has a ~Visibility~.
+  * By default, it's just ~Inherited~, which, according to the documentation,
+    "usually means private."
+
+- *CAUTION*:
+  Here the code in Listing 4.12 assume named fields, which is not always true.
+
+- =IMPORTANT=
+  _NOTE_:
+  * Q :: Why ~parse2~?
+  * A ::
+    + ~parse~ also exists and is very similar, but it accepts an _ORDINARY_
+      ~TokenStream~,
+    + whereas ~parse2~ takes the ~proc_macro2~ variant (hence the names).
+
+  * By the way, ~parse_macro_input!~ is just /syntactic sugar/ for ~parse~.
+
+- =TODO: NEXT SECTION=
+  ~.map(|f| parse2::<StructField>(f.to_token_stream())~ is _NOT GREAT_, though.
+  We have some nicely parsed data from ~syn~, and we are turning it back into a
+  ~TokenStream~.
+
+  =IMPORTANT=
+  You could *AVOID* this ugliness by, for example, _parsing all the fields (or
+  the entire input)_ into custom structs instead of parsing every individual
+  field.
+
 *** 4.6.3 Going low, low, low with cursor
+- As a final example, we could also have chosen ~cursor~ for *low-level control*
+  over our parsing:
+  #+begin_src rust
+    impl Parse for StructField {
+        fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+            let first = input.cursor().ident().unwrap();
+
+            let res = if first.0.to_string().contains("pub") {
+                let second = first.1.ident().unwrap();
+                let third = second.1.punct().unwrap().1.ident().unwrap();
+                Ok(StructField {
+                    name: second.0,
+                    ty: third.0,
+                })
+            } else {
+                let second = first.1.punct().unwrap().1.ident().unwrap();
+                Ok(StructField {
+                    name: first.0,
+                    ty: second.0,
+                })
+            };
+
+            let _: Result<proc_macro2::TokenStream, _> = input.parse();
+            res
+        }
+    }
+  #+end_src
+  * The final ~let _: Result<proc_macro2::TokenStream, _> = input.parse();~ is
+    tricky, though.
+
+    ~cursor~ is giving us _IMMUTABLE access_ to the existing stream.
+
+    + This is great, *EXCEPT* that after calling your parsing method, ~parse2~
+      does a check to make sure there's nothing left unhandled inside your stream.
+
+    + And, in our case, we did not -- could not, even -- change anything, so we
+      will get a confusing ~Error("unexpected token")~ error. So we just call
+      ~parse~ and make it give back a ~Result~, which we ignore. This is a bit
+      similar to ignoring the visibility in our previous example (listing 4.12).
+
+- What style should you prefer? It depends.
+
+  * *Functions and matching* are relatively easy and seem ideal for smaller macros
+    or writing a proof of concept.
+
+  * *Structs* can give additional structure to your solution and offer a nice way
+    to *delegate responsibility*:
+    every struct does a bit of the parsing and outputting.
+
+    + They are also very useful when you are passing things into macros that do
+      _not count as proper Rust code, like DSLs._
+
+    + Default parsers are obviously not well equipped to deal with seemingly
+      random input that only has meaning within your particular domain. So
+      instead, you write your own /structs/ and capture relevant information.
+
+  * ~cursor~, meanwhile, gives *low-level control* and a lot of power, but it is
+    _VERBOSE and LESS EASY TO USE_. *It should probably NOT be your FIRST CHOICE.*
+
+- In this book, many chapters focus on _functions as the glue for building macros,_
+  BECAUSE this style is convenient for brief examples.
+
+  _BUT_
+  BECAUSE structs are often used "in the wild," we will also have examples using
+  that style.
 
 ** 4.7 Even more ways to develop and debug
 - We learned ~cargo expand~.
@@ -834,9 +1065,29 @@ CLOSED: [2024-09-20 Fri 23:15]
     }
   #+end_src
 
-** TODO Summary
+** Summary
+- *LIKE* /derive macros/, /attribute macros/ can be used on /enums/, /structs/, and
+  /unions/.
+  ADDITIONALLY, they can be added to /traits/ and /functions/.
 
-* TODO 5 Hiding information and creating mini-DSLs with function-like macros
+- *UNLIKE* /derive macros/, /attribute macros/ *overwrite* their input, making it
+  possible to change existing code.
+
+- /Attribute macros/ get their name from defining a new custom attribute.
+
+- We can use the ~syn~ parsing result (our AST) to retrieve all kinds of information,
+  like the /fields/ of a /struct/.
+
+- ~quote~ allows us to *combine* multiple token streams *into* a single output.
+
+- We can use /matching/ and /functions/ to *glue* together our parsing and outputting.
+
+- For more structure and larger macros,
+  you might consider
+  1. creating custom structs and
+  2. delegating the parsing and outputting to them.
+
+* TODO 5 Hiding information and creating mini-DSLs with function-like macros - _START HERE_
 - This chapter covers
   * Hiding information to improve code
   * Using /function-like macros/ to modify and extend code
@@ -897,7 +1148,7 @@ CLOSED: [2024-09-20 Fri 23:15]
 ** 7.1 Errors and control flow
 ** 7.2 Pure and impure functions
 ** 7.3 Alternatives to exceptions
-** 7.4 Rust’s Result and panics
+** 7.4 Rust's ~Result~ and panics
 ** 7.5 Setup of the panic project
 ** 7.6 Mutable or immutable returns
 ** 7.7 Getting results
