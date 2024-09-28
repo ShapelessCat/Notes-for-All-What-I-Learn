@@ -101,6 +101,8 @@ Any program requires comments, and Rust supports a few different varieties:
       //! Generate library docs for the enclosing item.
     #+end_src
 
+*** See also
+
 ** DONE 1.2. Formatted print
 CLOSED: [2024-09-28 Sat 21:57]
 - Printing is handled by a series of macros defined in ~std::fmt~ some of which
@@ -128,7 +130,8 @@ CLOSED: [2024-09-28 Sat 21:57]
 - In line 43, ~#[allow(dead_code)]~ is an attribute which only applies to the
   /module/ after it.
 
-- *Activities*
+**** Activities
+**** See also
 
 *** 1.2.1. ~Debug~
 - _Automatic implementations_ are ONLY PROVIDED for types such as in the ~std~
@@ -151,11 +154,15 @@ CLOSED: [2024-09-28 Sat 21:57]
 - ~fmt::Binary~ uses the ~{:b}~ marker.
 
 ***** Activity
+***** See also
 
 **** 1.2.2.1. Testcase: List
+***** Activity
+***** See also
 
 *** 1.2.3. Formatting
 **** Activity
+**** See also
 
 * DONE 2. Primitives
 CLOSED: [2024-09-28 Sat 23:14]
@@ -172,6 +179,8 @@ CLOSED: [2024-09-28 Sat 23:14]
 *** Compound Types
 - Arrays like ~[1, 2, 3]~
 - Tuples like ~(1, true)~
+
+*** See also
 
 ** DONE 2.1. Literals and operators
 CLOSED: [2024-09-28 Sat 23:03]
@@ -202,33 +211,179 @@ CLOSED: [2024-09-28 Sat 23:14]
   * /Slices/ can be used to borrow a section of an array and have the /type
     signature/ ~&[T]~.
 
-* TODO 3. Custom Types
-** 3.1. Structures
-** 3.2. Enums
+* DONE 3. Custom Types
+CLOSED: [2024-09-29 Sun 00:21]
+- _Rust custom data types_ are formed mainly through the two keywords:
+  * ~struct~: define a structure
+  * ~enum~: define an enumeration
+
+- /Constants/ can also be created via the ~const~ and ~static~ keywords.
+
+** DONE 3.1. Structures
+CLOSED: [2024-09-29 Sun 00:08]
+- There are *THREE types* of structures ("structs") that can be created using the
+  ~struct~ keyword:
+  * /Tuple structs/, which are, basically, /named tuples/.
+  * The classic C structs
+  * /Unit structs/, which are _field-less_, are useful for generics.
+
+*** Activity
+*** See also =FIXME: some have ":", and some doesn't have ":"=
+
+** DONE 3.2. Enums
+CLOSED: [2024-09-29 Sun 00:14]
+**** Type aliases - =RE-READ=
+- =IMPORTANT=
+  =RE-READ=
+  https://github.com/rust-lang/rust/pull/61682/
+
+**** See also
+
 *** 3.2.1. ~use~
+**** See also
+
 *** 3.2.2. C-like
-*** 3.2.3. Testcase: linked-list
+#+begin_src rust
+  // An attribute to hide warnings for unused code.
+  #![allow(dead_code)]
 
-** 3.3. constants
+  // enum with implicit discriminator (starts at 0)
+  enum Number {
+      Zero,
+      One,
+      Two,
+  }
 
-* TODO 4. Variable Bindings
-** 4.1. Mutability
-** 4.2. Scope and Shadowing
-** 4.3. Declare first
-** 4.4. Freezing
+  // enum with explicit discriminator
+  enum Color {
+      Red = 0xff0000,
+      Green = 0x00ff00,
+      Blue = 0x0000ff,
+  }
+
+  fn main() {
+      // `enums` can be cast as integers.
+      println!("zero is {}", Number::Zero as i32);
+      println!("one is {}", Number::One as i32);
+
+      println!("roses are #{:06x}", Color::Red as i32);
+      println!("violets are #{:06x}", Color::Blue as i32);
+  }
+#+end_src
+
+**** See also
+
+*** 3.2.3. Testcase: linked-list - =RE-READ=
+**** See also
+
+** DONE 3.3. constants
+CLOSED: [2024-09-29 Sun 00:21]
+Rust has _TWO different types of constants_ which *can be declared in any scope
+including global.* Both REQUIRE *explicit type annotation*:
+- ~const~: An _unchangeable_ value (the common case).
+
+- ~static~: A *possibly mutable variable* with ~'static~ /lifetime/.
+  * The /static lifetime/ is inferred and does not have to be specified.
+  * _Accessing or modifying a mutable static variable is *unsafe*._
+
+*** See also
+
+* DONE 4. Variable Bindings
+CLOSED: [2024-09-29 Sun 00:28]
+** DONE 4.1. Mutability
+CLOSED: [2024-09-29 Sun 00:23]
+** DONE 4.2. Scope and Shadowing
+CLOSED: [2024-09-29 Sun 00:23]
+** DONE 4.3. Declare first
+CLOSED: [2024-09-29 Sun 00:26]
+It's possible to
+1. declare variable bindings first, and
+2. initialize them later.
+
+_HOWEVER_, this form is *SELDOM used*, as it may lead to the use of
+/uninitialized variables/.
+
+#+begin_src rust
+  fn main() {
+      // Declare a variable binding
+      let a_binding;
+
+      {
+          let x = 2;
+
+          // Initialize the binding
+          a_binding = x * x;
+      }
+
+      println!("a binding: {}", a_binding);
+
+      let another_binding;
+
+      // Error! Use of uninitialized binding
+      println!("another binding: {}", another_binding);
+      // FIXME ^ Comment out this line
+
+      another_binding = 1;
+
+      println!("another binding: {}", another_binding);
+  }
+#+end_src
+The compiler *FORBIDS* use of /uninitialized variables/, as this would LEAD TO
+/undefined behavior/.
+
+** DONE 4.4. Freezing
+CLOSED: [2024-09-29 Sun 00:28]
+When data _is bound by the SAME NAME IMMUTABLY_, it also *freezes*.
+/Frozen data/ can't be modified until the /immutable binding/ _goes out of_
+/scope/:
+#+begin_src rust
+  fn main() {
+      let mut _mutable_integer = 7i32;
+
+      {
+          // Shadowing by immutable `_mutable_integer`
+          let _mutable_integer = _mutable_integer;
+
+          // Error! `_mutable_integer` is frozen in this scope
+          _mutable_integer = 50;
+          // FIXME ^ Comment out this line
+
+          // `_mutable_integer` goes out of scope
+      }
+
+      // Ok! `_mutable_integer` is not frozen in this scope
+      _mutable_integer = 3;
+  }
+#+end_src
 
 * TODO 5. Types
-** 5.1. Casting
-** 5.2. Literals
-** 5.3. Inference
-** 5.4. Aliasing
+Rust provides several mechanisms to *change* or *define* the /type/ of primitive
+and user defined types. The following sections cover:
+
+- *Casting* between /primitive types/
+- *Specifying* the desired /type/ of /literals/
+- Using /type inference/
+- /Aliasing types/
+
+** TODO 5.1. Casting
+** TODO 5.2. Literals
+** TODO 5.3. Inference
+** TODO 5.4. Aliasing
+*** See also
 
 * TODO 6. Conversion
-** 6.1. ~From~ and ~Into~
-** 6.2. ~TryFrom~ and ~TryInto~
-** 6.3. To and from Strings
+** TODO 6.1. ~From~ and ~Into~
+*** ~From~
+*** ~Into~
+*** ~From~ and ~Into~ are interchangable
 
-* TODO 7. Expressions
+** TODO 6.2. ~TryFrom~ and ~TryInto~
+** TODO 6.3. To and from Strings
+*** Converting to ~String~
+*** Parsing a ~String~
+
+* DONE 7. Expressions
+CLOSED: [2024-09-29 Sun 00:29]
 * TODO 8. Flow Control
 ** 8.1. ~if~ / ~else~
 ** 8.2. ~loop~
@@ -236,33 +391,67 @@ CLOSED: [2024-09-28 Sat 23:14]
 *** 8.2.2. Returning from loops
 
 ** 8.3. ~while~
-** 8.4. ~for~ and ~range~
+** 8.4. ~for~ and ~range~ - =FIXME: for loops=
+*** ~for~ and ~range~
+*** ~for~ and iterators
+*** See also
+
 ** 8.5. ~match~
 *** 8.5.1. Destructuring
 **** 8.5.1.1. tuples
+***** See also
+
 **** 8.5.1.2. arrays/slices
+***** See also
+
 **** 8.5.1.3. enums
+***** See also
+
 **** 8.5.1.4. pointers/ref
+***** See also
+
 **** 8.5.1.5. structs
+***** See also
 
 *** 8.5.2. Guards
+**** See also
+
 *** 8.5.3. Binding
+**** See also
 
 ** 8.6. ~if let~
+*** See also
+
 ** 8.7. let-else
+*** See also
+
 ** 8.8. ~while let~
+*** See also
 
 * TODO 9. Functions
-** 9.1. Methods
+** 9.1. Associated functions & Methods
 ** 9.2. Closures
 *** 9.2.1. Capturing
+**** See also
+
 *** 9.2.2. As input parameters
+**** See also
+
 *** 9.2.3. Type anonymity
+**** See also
+
 *** 9.2.4. Input functions
+**** See also
+
 *** 9.2.5. As output parameters
+**** See also
+
 *** 9.2.6. Examples in ~std~
 **** 9.2.6.1. ~Iterator::any~
+***** See also
+
 **** 9.2.6.2. Searching through iterators
+***** See also
 
 ** 9.3. Higher Order Functions
 ** 9.4. Diverging functions
@@ -270,6 +459,8 @@ CLOSED: [2024-09-28 Sat 23:14]
 * TODO 10. Modules
 ** 10.1. Visibility
 ** 10.2. Struct visibility
+*** See also
+
 ** 10.3. The ~use~ declaration
 ** 10.4. ~super~ and ~self~
 ** 10.5. File hierarchy
@@ -283,62 +474,120 @@ CLOSED: [2024-09-28 Sat 23:14]
 ** 12.2. Conventions
 ** 12.3. Tests
 ** 12.4. Build Scripts
+*** How to use a build script
 
 * TODO 13. Attributes
 ** 13.1. ~dead_code~
 ** 13.2. Crates
 ** 13.3. ~cfg~
+**** See also
+
 *** 13.3.1. Custom
 
 * TODO 14. Generics
 ** 14.1. Functions
+*** See also
+
 ** 14.2. Implementation
+*** See also
+
 ** 14.3. Traits
+*** See also
+
 ** 14.4. Bounds
+**** See also
+
 *** 14.4.1. Testcase: empty bounds
+**** See also
 
 ** 14.5. Multiple bounds
+*** See also
+
 ** 14.6. Where clauses
+*** See also
+
 ** 14.7. New Type Idiom
+*** See also
+
 ** 14.8. Associated items
+**** See also
+
 *** 14.8.1. The Problem
+**** See also
+
 *** 14.8.2. Associated types
 
 ** 14.9. Phantom type parameters
+**** See also
+
 *** 14.9.1. Testcase: unit clarification
+**** See also
 
 * TODO 15. Scoping rules
 ** 15.1. RAII
+*** Destructor
+*** See also
+
 ** 15.2. Ownership and moves
 *** 15.2.1. Mutability
 *** 15.2.2. Partial moves
+**** See also
 
 ** 15.3. Borrowing
 *** 15.3.1. Mutability
+**** See also
+
 *** 15.3.2. Aliasing
 *** 15.3.3. The ~ref~ pattern
 
 ** 15.4. Lifetimes
 *** 15.4.1. Explicit annotation
+**** See also
+
 *** 15.4.2. Functions
+**** See also
+
 *** 15.4.3. Methods
+**** See also
+
 *** 15.4.4. Structs
+**** See also
+
 *** 15.4.5. Traits
+**** See also
+
 *** 15.4.6. Bounds
+**** See also
+
 *** 15.4.7. Coercion
 *** 15.4.8. Static
+**** Reference lifetime
+**** Trait bound
+**** See also
+
 *** 15.4.9. Elision
+**** See also
 
 * TODO 16. Traits
 ** 16.1. Derive
+*** See also
+
 ** 16.2. Returning Traits with ~dyn~
 ** 16.3. Operator Overloading
+*** See also
+
 ** 16.4. ~Drop~
 ** 16.5. Iterators
-** 16.6. ~impl~ Trait
+** 16.6. ~impl Trait~
+*** As an argument type
+*** As a return type
+
 ** 16.7. ~Clone~
 ** 16.8. Supertraits
+*** See also
+
 ** 16.9. Disambiguating overlapping traits
+*** See also
 
 * TODO 17. ~macro_rules!~
 ** 17.1. Syntax
@@ -356,28 +605,55 @@ CLOSED: [2024-09-28 Sat 23:14]
 ** 18.3. ~Option~ & ~unwrap~
 *** 18.3.1. Unpacking options with ~?~
 *** 18.3.2. Combinators: ~map~
+**** See also
+
 *** 18.3.3. Combinators: ~and_then~
-*** 18.3.4. Defaults: ~or~, ~or_else~, ~get_or_insert~, ~get_or_insert_with~
+**** See also
+
+*** 18.3.4. Unpacking options and default - =FIXME=
+**** ~or()~ is chainable, evaluates eagerly, keeps empty value intact
+**** ~or_else()~ is chainable, evaluates lazily, keeps empty value intact
+**** ~get_or_insert()~ evaluates eagerly, modifies empty value in place
+**** ~get_or_insert_with()~ evaluates lazily, modifies empty value in place
+**** See also
 
 ** 18.4. ~Result~
+**** Using ~Result~ in ~main~
+
 *** 18.4.1. ~map~ for ~Result~
 *** 18.4.2. aliases for ~Result~
+**** See also
+
 *** 18.4.3. Early returns
 *** 18.4.4. Introducing ~?~
+**** The ~try!~ macro
 
 ** 18.5. Multiple error types
 *** 18.5.1. Pulling ~Result~'s out of ~Option~'s
 *** 18.5.2. Defining an error type
 *** 18.5.3. Boxing errors
+**** See also
+
 *** 18.5.4. Other uses of ~?~
+**** See also
+
 *** 18.5.5. Wrapping errors
+**** See also
 
 ** 18.6. Iterating over ~Result~'s
+*** Ignore the failed items with ~filter_map()~
+*** Collect the failed items with ~map_err()~ and ~filter_map()~
+*** Fail the entire operation with ~collect()~
+*** Collect all valid values and failures with ~partition()~
 
 * TODO 19. Std library types
+*** See also
+
 ** 19.1. ~Box~, stack and heap
 ** 19.2. Vectors
 ** 19.3. Strings
+*** Literals and escapes
+
 ** 19.4. ~Option~
 ** 19.5. ~Result~
 *** 19.5.1. ~?~
@@ -388,41 +664,91 @@ CLOSED: [2024-09-28 Sat 23:14]
 *** 19.7.2. ~HashSet~
 
 ** 19.8. ~Rc~
+*** See also
+
 ** 19.9. ~Arc~
 
 * TODO 20. Std misc
+*** See also
+
 ** 20.1. Threads
 *** 20.1.1. Testcase: map-reduce
+**** Assignments
+**** See also
 
 ** 20.2. Channels
 ** 20.3. Path
+*** See also
+
 ** 20.4. File I/O
-*** 20.4.1. open
-*** 20.4.2. create
+*** 20.4.1. ~open~
+*** 20.4.2. ~create~
 *** 20.4.3. ~read_lines~
+**** A naive approach
+**** A more efficient approach
 
 ** 20.5. Child processes
 *** 20.5.1. Pipes
 *** 20.5.2. Wait
 
 ** 20.6. Filesystem Operations
+*** See also
+
 ** 20.7. Program arguments
+**** Standard Library
+**** Crates
+
 *** 20.7.1. Argument parsing
 
 ** 20.8. Foreign Function Interface
 
 * TODO 21. Testing
+*** See Also
+
 ** 21.1. Unit testing
+*** Tests and ~?~
+*** Testing panics
+*** Running specific tests
+*** Ignoring tests
+
 ** 21.2. Documentation testing
+*** Motivation behind documentation tests
+*** See Also
+
 ** 21.3. Integration testing
 ** 21.4. Dev-dependencies
+*** See Also
 
 * TODO 22. Unsafe Operations
+*** Raw Pointers
+*** Calling Unsafe Functions
+
 ** 22.1. Inline assembly
+*** Basic usage
+*** Inputs and outputs
+*** Late output operands
+*** Explicit register operands
+*** Clobbered registers
+*** Symbol operands and ABI clobbers
+*** Register template modifiers
+*** Memory address operands
+*** Labels
+*** Options
 
 * TODO 23. Compatibility
 ** 23.1. Raw identifiers
 
 * TODO 24. Meta
 ** 24.1. Documentation
+*** Doc comments
+*** Doc attributes
+**** ~inline~
+**** ~no_inline~
+**** ~hidden~
+
+*** See also
+
 ** 24.2. Playground
+*** Using it with ~mdbook~
+*** Using it with docs
+*** See also
