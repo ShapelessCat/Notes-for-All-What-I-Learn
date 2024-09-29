@@ -356,7 +356,8 @@ When data _is bound by the SAME NAME IMMUTABLY_, it also *freezes*.
   }
 #+end_src
 
-* TODO 5. Types
+* DONE 5. Types
+CLOSED: [2024-09-29 Sun 12:29]
 Rust provides several mechanisms to *change* or *define* the /type/ of primitive
 and user defined types. The following sections cover:
 
@@ -365,35 +366,171 @@ and user defined types. The following sections cover:
 - Using /type inference/
 - /Aliasing types/
 
-** TODO 5.1. Casting
-** TODO 5.2. Literals
-** TODO 5.3. Inference
-** TODO 5.4. Aliasing
+** DONE 5.1. Casting
+CLOSED: [2024-09-29 Sun 12:17]
+- Rust provides *NO* _implicit type conversion (coercion)_ between /primitive types/.
+  But, _explicit type conversion (casting)_ can be performed using the ~as~ keyword.
+
+- Rules for converting between /integral types/ follow C conventions generally,
+  except in cases where C has /undefined behavior/.
+  * *The behavior of _all casts between integral types_ is _well defined_ in Rust.*
+
+- Example:
+  #+begin_src rust
+    // Suppress all warnings from casts which overflow.
+    #![allow(overflowing_literals)]
+
+    fn main() {
+        // ...
+    }
+  #+end_src
+
+  * ~f32::to_int_unchecked~ and ~f64::to_int_unchecked~
+
+** DONE 5.2. Literals
+CLOSED: [2024-09-29 Sun 12:19]
+- ~std::mem::size_of_val~
+
+** DONE 5.3. Inference
+CLOSED: [2024-09-29 Sun 12:26]
+** DONE 5.4. Aliasing
+CLOSED: [2024-09-29 Sun 12:29]
+The ~type~ statement can be used to give a new name to an _existing type_.
+
+- /Types/ must have *UpperCamelCase* names, or the compiler will raise a warning.
+  * The _exception_ to this rule are the /primitive types/: ~usize~, ~f32~, etc.
+
 *** See also
 
-* TODO 6. Conversion
-** TODO 6.1. ~From~ and ~Into~
+* DONE 6. Conversion
+CLOSED: [2024-09-29 Sun 12:58]
+- /Primitive types/ can be _CONVERTED to each other_ through /casting/.
+
+- Rust addresses _conversion between custom types_ (i.e., ~struct~ and ~enum~) by
+  the use of /traits/.
+  * The /generic conversions/ will use the ~From~ and ~Into~ /traits/.
+  * However there are more specific ones for the more common cases, in particular
+    when _converting to and from ~String~'s._
+
+** DONE 6.1. ~From~ and ~Into~
+CLOSED: [2024-09-29 Sun 12:47]
+- The ~From~ and ~Into~ /traits/ are *inherently linked*, and this is actually
+  part of its implementation.
+  * IF you are able to _convert type A from type B_,
+    THEN it should be easy to believe that we should be able to _convert type B
+    to type A_.
+
 *** ~From~
 *** ~Into~
 *** ~From~ and ~Into~ are interchangable
+- ~From~ and ~Into~ are designed to be COMPLEMENTARY.
+  We do NOT need to provide an implementation for BOTH /traits/.
 
-** TODO 6.2. ~TryFrom~ and ~TryInto~
-** TODO 6.3. To and from Strings
+- If you have implemented the ~From~ /trait/ for your type,
+  ~Into~ will call it when necessary.
+  * *The converse is NOT true.*
+
+** DONE 6.2. ~TryFrom~ and ~TryInto~
+CLOSED: [2024-09-29 Sun 12:48]
+** DONE 6.3. To and from Strings
+CLOSED: [2024-09-29 Sun 12:58]
 *** Converting to ~String~
+Implement ~fmt::Display~, which automatically provides ~ToString~
+implementation.
+
 *** Parsing a ~String~
+- It's useful to _convert strings into many types,_ BUT one of the more common
+  string operations is to convert them _from string to number_.
+
+  * The *idiomatic approach* to this is to use the ~parse~ function and
+    + either to arrange for /type inference/
+    + or to specify the type to parse using _the 'turbofish' syntax_.
+
+- This will convert the string into the type specified as long as the ~FromStr~
+  /trait/ is implemented for that type.
+
+  * ~FromStr~ is implemented for numerous types within the standard library.
+
+  * To obtain this functionality on a user defined type simply implement the
+    ~FromStr~ /trait/ for that type.
+
+- Example:
+  #+begin_src rust
+    fn main() {
+        let parsed: i32 = "5".parse().unwrap();
+        let turbo_parsed = "10".parse::<i32>().unwrap();
+
+        let sum = parsed + turbo_parsed;
+        println!("Sum: {:?}", sum);
+    }
+  #+end_src
 
 * DONE 7. Expressions
 CLOSED: [2024-09-29 Sun 00:29]
-* TODO 8. Flow Control
+* DONE 8. Flow Control
+CLOSED: [2024-09-29 Sun 14:17]
 ** 8.1. ~if~ / ~else~
 ** 8.2. ~loop~
+~break~ and ~continue~
+
 *** 8.2.1. Nesting and labels
-*** 8.2.2. Returning from loops
+#+begin_src rust
+  #![allow(unreachable_code, unused_labels)]
+
+  fn main() {
+      'outer: loop {
+          println!("Entered the outer loop");
+
+          'inner: loop {
+              println!("Entered the inner loop");
+
+              // This would break only the inner loop
+              //break;
+
+              // This breaks the outer loop
+              break 'outer;
+          }
+
+          println!("This point will never be reached");
+      }
+
+      println!("Exited the outer loop");
+  }
+#+end_src
+
+*** 8.2.2. Returning from loops - =IMPORTANT: I never used this syntax (2024-09-30), should remember=
+One of the uses of a ~loop~ is to _retry an operation until it succeeds_.
+
+If the operation returns a value though, you might need to pass it to the rest
+of the code: _put it after the ~break~, and it will be returned by the loop
+expression._
+
+#+begin_src rust
+  fn main() {
+      let mut counter = 0;
+
+      let result = loop {
+          counter += 1;
+
+          if counter == 10 {
+              break counter * 2;
+          }
+      };
+
+      assert_eq!(result, 20);
+  }
+#+end_src
 
 ** 8.3. ~while~
 ** 8.4. ~for~ and ~range~ - =FIXME: for loops=
 *** ~for~ and ~range~
 *** ~for~ and iterators
+- See the doc for ~Iterator~ trait, we learn that
+  _BY DEFAULT_ the ~for~ loop will apply the ~into_iter~ function to the
+  collection.
+
+- We can manually call ~into_iter~, ~iter~ or ~iter_mut~ for different purpose.
+
 *** See also
 
 ** 8.5. ~match~
@@ -407,7 +544,14 @@ CLOSED: [2024-09-29 Sun 00:29]
 **** 8.5.1.3. enums
 ***** See also
 
-**** 8.5.1.4. pointers/ref
+**** 8.5.1.4. pointers/ref - =IMPORTANT=
+For /pointers/,
+a *DISTINCTION* needs to be made BETWEEN /destructuring/ and /dereferencing/
+AS they are different concepts which are used differently from languages like
+C/C++.
+- /Dereferencing/ uses ~*~
+- /Destructuring/ uses ~&~, ~ref~, and ~ref mut~
+
 ***** See also
 
 **** 8.5.1.5. structs
@@ -417,24 +561,229 @@ CLOSED: [2024-09-29 Sun 00:29]
 **** See also
 
 *** 8.5.3. Binding
+~@~
+
 **** See also
 
 ** 8.6. ~if let~
+- Another benefit is that ~if let~ allows us to _match /non-parameterized enum
+  variants/._
+
+  * This is true even in cases where the enum doesn't implement or derive ~PartialEq~.
+    In such cases ~if Foo::Bar == a~ would fail to compile, because instances of the
+    enum cannot be equated, however ~if let~ will continue to work.
+    =from Jian=
+    The ~if let pattern = value~ semantics is actuall _if pattern can match value_.
+    It seems ~if let pattern match value~ can be a better design in the point of
+    semantcis.
+
 *** See also
 
 ** 8.7. let-else
+stable since: _rust 1.65_
+you can target specific edition by compiling like this ~rustc --edition=2021 main.rs~
+
+With let-else, a /refutable pattern/ can match and bind variables in the
+surrounding scope like a normal ~let~, or ~else~ diverge (e.g. ~break~,
+~return~, ~panic!~) when the pattern doesn't match.
+#+begin_src rust
+  use std::str::FromStr;
+
+  fn get_count_item(s: &str) -> (u64, &str) {
+      let mut it = s.split(' ');
+      let (Some(count_str), Some(item)) = (it.next(), it.next()) else {
+          panic!("Can't segment count item pair: '{s}'");
+      };
+      let Ok(count) = u64::from_str(count_str) else {
+          panic!("Can't parse integer: '{count_str}'");
+      };
+      (count, item)
+  }
+
+  fn main() {
+      assert_eq!(get_count_item("3 chairs"), (3, "chairs"));
+  }
+#+end_src
+
+_The /scope/ of name bindings is the main thing that makes this different from
+~match~ or ~if let~-~else~ expressions._
+
+You could previously approximate these patterns with an unfortunate bit of
+repetition and an outer ~let~:
+#+begin_src rust
+  let (count_str, item) = match (it.next(), it.next()) {
+      (Some(count_str), Some(item)) => (count_str, item),
+      _ => panic!("Can't segment count item pair: '{s}'"),
+  };
+  let count = if let Ok(count) = u64::from_str(count_str) {
+      count
+  } else {
+      panic!("Can't parse integer: '{count_str}'");
+  };
+
+#+end_src
+
 *** See also
 
 ** 8.8. ~while let~
+Similar to ~if let~, ~while let~ can make awkward ~match~ sequences more
+tolerable. Consider the following sequence that increments i:
+#+begin_src rust
+  // Make `optional` of type `Option<i32>`
+  let mut optional = Some(0);
+
+  // Repeatedly try this test.
+  loop {
+      match optional {
+          // If `optional` destructures, evaluate the block.
+          Some(i) => {
+              if i > 9 {
+                  println!("Greater than 9, quit!");
+                  optional = None;
+              } else {
+                  println!("`i` is `{:?}`. Try again.", i);
+                  optional = Some(i + 1);
+              }
+              // ^ Requires 3 indentations!
+          },
+          // Quit the loop when the destructure fails:
+          _ => { break; }
+          // ^ Why should this be required? There must be a better way!
+      }
+  }
+#+end_src
+
+Using ~while let~ makes this sequence much nicer:
+#+begin_src rust
+  fn main() {
+      // Make `optional` of type `Option<i32>`
+      let mut optional = Some(0);
+
+      // This reads: "while `let` destructures `optional` into
+      // `Some(i)`, evaluate the block (`{}`). Else `break`.
+      while let Some(i) = optional {
+          if i > 9 {
+              println!("Greater than 9, quit!");
+              optional = None;
+          } else {
+              println!("`i` is `{:?}`. Try again.", i);
+              optional = Some(i + 1);
+          }
+          // ^ Less rightward drift and doesn't require
+          // explicitly handling the failing case.
+      }
+      // ^ `if let` had additional optional `else`/`else if`
+      // clauses. `while let` does not have these.
+  }
+#+end_src
+
 *** See also
 
-* TODO 9. Functions
-** 9.1. Associated functions & Methods
+* TODO 9. Fnctions
+** 9.1. Methods
+*Associated functions & Methods*
+
+- Some /functions/ are connected to a particular type.
+  These come in _TWO_ forms: associated functions, and methods.
+
+
+- /Associated function/s are /functions/ that are *defined on a type generally*.
+
+- /Methods/ are /associated functions/ that are called *on a _particular instance_
+  of a type*.
+
 ** 9.2. Closures
+- Closures :: functions that can capture the enclosing environment.
+
 *** 9.2.1. Capturing
+- ~let mut f = closure-body;~
+  If we use ~mut~ to declare a /closure/, it should be able to use the /captured
+  variables/ as /mutable references/. Of course, those /captured variables/
+  *MUST* be declared with ~let ~mut~, even if the code in closure-body doesn't
+  actual modify the /captured variables/.
+
+- Using ~move~ before vertical pipes *forces* /closure/ to *take /ownership/ of
+  /captured variables/:*
+  #+begin_src rust
+    fn main() {
+        // `Vec` has non-copy semantics.
+        let haystack = vec![1, 2, 3];
+
+        let contains = move |needle| haystack.contains(needle);
+
+        println!("{}", contains(&1));
+        println!("{}", contains(&4));
+
+        // println!("There're {} elements in vec", haystack.len());
+        // ^ Uncommenting above line will result in compile-time error
+        // because borrow checker doesn't allow re-using variable after it
+        // has been moved.
+
+        // Removing `move` from closure's signature will cause closure
+        // to borrow _haystack_ variable immutably, hence _haystack_ is still
+        // available and uncommenting above line will not cause an error.
+    }
+  #+end_src
+
 **** See also
 
 *** 9.2.2. As input parameters
+=TODO= NOTE
+
+=FIXME: cargo fmt=
+#+begin_src rust
+  // A function which takes a closure as an argument and calls it.
+  // <F> denotes that F is a "Generic type parameter"
+  fn apply<F>(f: F) where
+      // The closure takes no input and returns nothing.
+      F: FnOnce() {
+      // ^ TODO: Try changing this to `Fn` or `FnMut`.
+
+      f();
+  }
+
+  // A function which takes a closure and returns an `i32`.
+  fn apply_to_3<F>(f: F) -> i32 where
+      // The closure takes an `i32` and returns an `i32`.
+      F: Fn(i32) -> i32 {
+
+      f(3)
+  }
+
+  fn main() {
+      use std::mem;
+
+      let greeting = "hello";
+      // A non-copy type.
+      // `to_owned` creates owned data from borrowed one
+      let mut farewell = "goodbye".to_owned();
+
+      // Capture 2 variables: `greeting` by reference and
+      // `farewell` by value.
+      let diary = || {
+          // `greeting` is by reference: requires `Fn`.
+          println!("I said {}.", greeting);
+
+          // Mutation forces `farewell` to be captured by
+          // mutable reference. Now requires `FnMut`.
+          farewell.push_str("!!!");
+          println!("Then I screamed {}.", farewell);
+          println!("Now I can sleep. zzzzz");
+
+          // Manually calling drop forces `farewell` to
+          // be captured by value. Now requires `FnOnce`.
+          mem::drop(farewell);
+      };
+
+      // Call the function which applies the closure.
+      apply(diary);
+
+      // `double` satisfies `apply_to_3`'s trait bound
+      let double = |x| 2 * x;
+
+      println!("3 doubled: {}", apply_to_3(double));
+  }
+#+end_src
 **** See also
 
 *** 9.2.3. Type anonymity
@@ -454,6 +803,9 @@ CLOSED: [2024-09-29 Sun 00:29]
 ***** See also
 
 ** 9.3. Higher Order Functions
+/Higher Order Functions (HOFs)/ and lazy iterators give Rust its functional
+flavor.
+
 ** 9.4. Diverging functions
 
 * TODO 10. Modules
