@@ -174,7 +174,8 @@ specific aspect of Rust programming.
 **** Iterator features - 58
 
 * TODO PART 2 CORE PATTERNS - 63
-** 4 Introductory patterns - 65
+** DONE 4 Introductory patterns - 65
+CLOSED: [2024-10-04 Fri 21:13]
 - This chapter covers
   * Understanding _resource acquisition_ is _initialization_
   * Passing arguments by value versus reference
@@ -197,32 +198,183 @@ specific aspect of Rust programming.
     functionality, allowing developers to choose the most suitable crate for
     their needs.
 
-*** TODO 4.1 Resource acquisition is initialization - 66
-- Resource acquisition is initialization (RAII)
+*** TODO 4.1 Resource acquisition is initialization - 66 - =NOTE=
+- /Resource acquisition is initialization (RAII)/
 
-**** 4.1.1 Understanding RAII in C and C++ - 66
+- /RAII/ originated with C++ and is arguably one of the most important modern
+  programming idioms.
+
+- /RAII/ is a key feature in Rust:
+  it allows us to confidently implement a variety of other patterns and
+  plays a critical role in Rust’s safety features.
+
+- Q :: WHY RAII is a pattern rather than an idiom?
+- A :: It's a formalized way of handling resources in a program, as opposed to a
+       more informal way of formatting code (an idiom).
+  * Additionally, /RAII/ affects the overall program structure and architecture,
+    which is more in line with a pattern than an /idiom/.
+
+**** TODO 4.1.1 Understanding RAII in C and C++ - 66
 - *Scoping in C*
 
-**** 4.1.2 A tour of RAII in Rust - 70
-**** 4.1.3 Summarizing RAII in Rust - 72
+**** TODO 4.1.2 A tour of RAII in Rust - 70
+**** TODO 4.1.3 Summarizing RAII in Rust - 72
 
-*** TODO 4.2 Passing arguments by value vs. reference - 74
+*** DONE 4.2 Passing arguments by value vs. reference - 74
+CLOSED: [2024-10-02 Wed 15:26]
 **** 4.2.1 Passing by value - 74
 **** 4.2.2 Passing by reference - 75
 - *Why is it impossible to mutate Rust strings in place?*
+  * _In-place string manipulation in Rust isn't easy._
+    + The REASON:
+      /strings/ in Rust are always _valid UTF-8_, which means that characters
+      could span multiple bytes or be composed of /grapheme clusters/ in the
+      Unicode standard.
+
+    + grapheme :: the smallest unit of a writing system,
+      - It could be
+        * an ordinary character (such as the letter a), or
+        * a character that includes an accent such as é or an emoji character.
+
+    + Because /grapheme clusters/ can span multiple Unicode characters and
+      multiple bytes, it's quite complicated to handle them correctly, so the
+      Rust standard library does not support handling them directly.
+
+      * Instead, you need to use a crate such as unicode-segmentation
+        (https://crates.io/crates/unicode-segmentation).
+        =IMPORTANT=
+
+  * If you need to update a string in place by manipulating its bytes, you have
+    two options:
+    1. You can use an ~unsafe~ method, such as ~String::as_mut_vec()~ or
+       ~str::as_bytes_mut()~, which returns /references/ to the _underlying
+       bytes_.
+
+    2. You can use the std::mem::take function to gain access to the underlying
+       bytes of a string and manipulate a buffer directly.
+
+    *The first method is preferred*, as it doesn't require ~unsafe~ code,
+    BUT in either case, you need to consider how to handle UTF-8 characters
+    safely.
 
 **** 4.2.3 When to do what: Passing by value vs. reference - 77
+- *Figure 4.3 Deciding how to handle arguments*
+  =IMPORTANT=
 
-*** TODO 4.3 Constructors - 78
-*** TODO 4.4 Object-member visibility and access - 80
-*** TODO 4.5 Error handling - 82
-*** TODO 4.6 Global state - 85
+*** DONE 4.3 Constructors - 78
+CLOSED: [2024-10-03 Thu 18:04]
+Strictly speaking, Rust does *NOT* have a formal notion of a /constructor/ in
+the same way that languages such as C++, C#, and Java do.
+
+- In Rust, a /constructor/ is merely a /design pattern/ in which you create a
+  /method/, typically called ~new()~, that accepts any number of initialization
+  arguments and returns a new object immediately after creation.
+
+- =NOTE=
+- In Rust, ~new()~ *TYPICALLY* takes _no arguments_ and returns _an empty object_,
+  as is the case with ~Vec::new()~, which returns an empty vector.
+  * =from Jian=
+    It depends. Sometimes, ~#[derive(Default)]~ of ~impl Default for OurType~ is
+    semantically better! However, it is clear that for vector, ~Vec::new()~ is
+    better than ~Vec::default()~ in semantics.
+
+  * There's no rule against including initialization arguments with ~new()~,
+    BUT
+    =IMPORTANT=
+    *it's common to implement the ~From~ trait instead when you want to create a
+    new object from another object.*
+
+  This approach makes sense only when a 1:1 mapping exists (when ~String::from(…)~
+  constructs a new string, for example).
+
+- Because Rust *doesn't permit* /function overloading/, you can create only one
+  method called ~new()~, so think carefully about what you want this function to
+  do.
+  * In most cases, the function should provide the minimally necessary behavior,
+    such as returning a new empty object (as with ~Vec::new()~) with the minimum
+    required arguments.
+
+- *NOTE*
+  If your set of initialization arguments grows in complexity, you probably want
+  to use the /builder pattern/, =TODO= which we'll discuss in chapter 5.
+
+*** DONE 4.4 Object-member visibility and access - 80
+CLOSED: [2024-10-03 Thu 21:07]
+- Rust generally _defaults to private visibility_.
+
+- Optionally, you can make entities public with the ~pub~ keyword.
+
+- Q :: When would you want to make struct field(s) public?
+- A :: Generally, you wouldn't want to do this except when you have data
+       containers with no methods and their only purpose is to contain data.
+  * Most of the time, you want to
+    + control access to members with /accessors/ (methods that _fetch_ private
+      members) and
+    + modify members with /mutators/ (methods that allow you to _mutate_ private
+      members).
+
+- /Accessors/ and /mutators/ are often called _getters_ and _setters_,
+  though in Rust, it's important to distinguish between _setting a value (such
+  as a move)_ and _mutating a value in place_.
+
+- *TIP*:
+  * Create getters and setters for each member through rust-analyzer.
+  * rust-analyzer section in _Code Like a Pro in Rust_.
+
+- ~std::mem::replace~
+  This approach prevents cloning and duplication, which is an excellent little
+  optimization.
+  =IMPORTANT=
+
+*** DONE 4.5 Error handling - 82
+CLOSED: [2024-10-03 Thu 21:27]
+- The standard library also has an _error trait_, ~std::error::Error~,
+  that you can implement for your own error types, but its use is _optional_.
+  * In practice, implementing ~std::error::Error~ for custom error types is
+    *UNCOMMON*.
+
+- Listing 4.11 Reading the nth line from a file
+  #+begin_src rust
+    use std::path::Path;
+
+    #[derive(Debug)]
+    pub enum Error {
+        Io(std::io::Error),
+        BadLineArgument(usize),
+    }
+
+    impl From<std::io::Error> for Error {
+        fn from(error: std::io::Error) -> Self {
+            Self::Io(error)
+        }
+    }
+
+    fn read_nth_line(path: &Path, n: usize) -> Result<String, Error> {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+        let file = File::open(path)?;
+        let mut reader_lines = BufReader::new(file).lines();
+        reader_lines
+            .nth(n - 1)
+            .map(|result| result.map_err(|err| err.into()))
+            .unwrap_or_else(|| Err(Error::BadLineArgument(n)))
+    }
+  #+end_src
+
+- In most cases, you'll want to create an error type for your library or
+  application to encapsulate all the errors it may return, and in many cases,
+  you simply want to return the underlying error unaltered.
+  =IMPORTANT=
+  ~anyhow~???
+
+*** TODO 4.6 Global state - 85 - =NOTE=
 **** 4.6.1 lazy-static.rs - 87
 **** 4.6.2 ~once_cell~ - 88
 **** 4.6.3 ~static_init~ - 89
 **** 4.6.4 ~std::cell::OnceCell~ - 89
 
-** 5 Design patterns: Beyond the basics - 91
+** DONE 5 Design patterns: Beyond the basics - 91
+CLOSED: [2024-10-04 Fri 21:13]
 - This chapter covers
   * Metaprogramming with macros
   * Implementing the builder pattern in Rust
@@ -231,41 +383,102 @@ specific aspect of Rust programming.
   * Understanding the command pattern
   * Exploring the newtype pattern
 
-*** 5.1 Metaprogramming with macros - 92
+*** 5.1 Metaprogramming with macros - 92 - =NOTE=
 **** 5.1.1 A basic declarative macro in Rust - 93
 **** 5.1.2 When to use macros - 94
 **** 5.1.3 Using macros to write mini-DSLs - 99
 **** 5.1.4 Using macros for DRY - 103
 
-*** 5.2 Optional function arguments - 103
+*** 5.2 Optional function arguments - 103 - =NOTE=
 **** 5.2.1 Examining optional arguments in Python - 103
 **** 5.2.2 Examining optional arguments in C++ - 104
 **** 5.2.3 Optional arguments in Rust or the lack thereof - 104
 **** 5.2.4 Emulating optional arguments with traits - 104
 
 *** 5.3 Builder pattern - 107
+=from Jian=
+This section show a builder pattern without fluent interface.
+Next section will add the fluent interface.
+In practice, most builder pattern implementation incorporate fluent interface.
+
 **** 5.3.1 Implementing the builder pattern - 107
 **** 5.3.2 Enhancing our builder with traits - 109
 **** 5.3.3 Enhancing our builder with macros - 110
 
-*** 5.4 Fluent interface pattern - 113
+*** DONE 5.4 Fluent interface pattern - 113
+CLOSED: [2024-10-04 Fri 19:40]
+*Method chaining*
+
+This section modify the builder pattern code in previous section, and make its
+interface fluent.
+
+- One example in Rust: the ~Iterator~
+
 **** 5.4.1 A fluent builder - 114
 - *Initializing structs with the spread syntax*
 
 **** 5.4.2 Test-driving our fluent builder - 117
 
-*** 5.5 Observer pattern - 117
+*** DONE 5.5 Observer pattern - 117 - =NOTE=
+CLOSED: [2024-10-04 Fri 20:47]
+- The /observer pattern/ (along with its variations) is widely used to enable
+  objects to observe changes in other objects.
+
+- Observer is often necessary in systems that perform any kind of event processing
+  or event handling, such as networked services.
+
 **** 5.5.1 Why not callbacks - 117
+- Before we dive deeper into the observer pattern, let’s discuss callbacks. Some
+  languages (notably JavaScript) make heavy use of callbacks, which can lead to
+  a situation known as callback hell, with deeply nested callbacks within
+  callbacks creating difficult-to-understand code. Someone went so far as to
+  create the website http://callbackhell.com to describe this problem and
+  propose some solutions.
+
 **** 5.5.2 Implementing an observer - 118
 
-*** 5.6 Common pattern - 121
+*** TODO 5.6 Command pattern - 121
+- command pattern ::
+  1. stores state or instructions in one structure
+  2. and then applies changes later.
+
 **** 5.6.1 Defining the command pattern - 121
 **** 5.6.2 Implementing the command pattern - 121
 
-*** 5.7 Newtype pattern - 124
-- *Conversion method naming idioms: as_…(), to_…(), and into()*
+*** DONE 5.7 Newtype pattern - 124
+CLOSED: [2024-10-04 Fri 21:08]
+- *NOTE*
+  * =from Jian= Not correct for the origin of /newtype pattern.
+  * =from Jian= It seems the author doesn't have enough modern programming
+                language knowledge/experience before using Rust.
 
-** 6 Designing a library - 128
+- =from Jian=
+  *Defect!!!*
+  Should mention newtype pattern used as a workaround for /orphan rule/.
+
+- *Conversion method naming idioms: as_…(), to_…(), and into()*
+  * Not strict, just a convention, though most libraries adhere to:
+    + ~as_…()~:
+      Low-cost conversions such as ~as_ref()~ from the ~AsRef~ trait.
+
+    + ~to_…()~
+      Higher-cost conversions such as ~to_string()~ from ~ToString~.
+
+    + ~into()~
+      Higher-cost conversions from ~Into~ / ~From~.
+
+  * One notable *EXCEPTION* is the use of ~borrow()~ from the ~Borrow~ trait,
+    which behaves *similarly to* ~as_ref()~ from ~AsRef~ except that it returns
+    a /reference object/ (a pattern we'll discuss in chapter 7 =TODO=) rather than a
+    /plain reference/ (~Ref<', T>~ versus ~&T~).
+    + ~std::cell::RefCell~, for example, provides ~borrow()~ BUT NOT ~as_ref()~
+      because of _the additional OVERHEAD introduced by /run-time borrow
+      checking/._
+
+**** DONE Summary - 127
+CLOSED: [2024-10-04 Fri 21:13]
+
+** TODO 6 Designing a library - 128
 - This chapter covers
   * Thinking about how to design a great library
   * Making beautiful interfaces
@@ -289,45 +502,713 @@ specific aspect of Rust programming.
 **** 6.11.4 Making our library easier for others to debug - 145
 
 * TODO PART 3 ADVANCED PATTERNS - 149
-** 7 Using traits, generics, and structs for specialized tasks - 151
+** DONE 7 Using traits, generics, and structs for specialized tasks - 151
+CLOSED: [2024-10-05 Sat 21:34]
 - This chapter covers
-  * Using const generics
+  * Using /const generics/
   * Applying traits to external crate types
   * Extending types with extension traits
-  * Implementing blanket traits
-  * Using marker traits to mark types with attributes
+  * Implementing /blanket traits/
+  * Using /marker traits/ to mark types with attributes
   * Tagging with structs
-  * Providing access to internal data with reference objects
+  * Providing access to internal data with /reference objects/ =TODO: ???=
 
-*** 7.1 Const generics - 152
-*** 7.2 Implementing traits for external crate types - 154
+*** DONE 7.1 Const generics - 152
+CLOSED: [2024-10-04 Fri 21:28]
+/Const generics/ make it easy to build _CUSTOM array-based types with fixed
+lengths_, which can save a lot of boilerplate.
+
+- If there is no /const generics/, we can't define a type like
+  #+begin_src rust
+    #[derive(Debug)]
+    struct Buffer<T, const LENGTH: usize> {
+        buf: [T; LENGTH],
+    }
+  #+end_src
+  then we have to define several buffer types, and each contains one specific
+  length inner array like
+  #+begin_src rust
+    struct Buffer256<T> {
+        buf: [T; 256]
+    }
+
+    struct Buffer512<T> {
+        buf: [T; 512]
+    }
+  #+end_src
+
+- A useful ~From~ implementation for our ~Buffer~:
+  #+begin_src rust
+    impl<T, const LENGTH: usize> From<[T; LENGTH]> for Buffer<T, LENGTH> {
+        fn from(buf: [T; LENGTH]) -> Self {
+            Buffer { buf }
+        }
+    }
+  #+end_src
+
+*** DONE 7.2 Implementing traits for external crate types - 154
+CLOSED: [2024-10-04 Fri 21:43]
+=from Jian=
+The start 3 paragraphs before 7.2.1 subsection start is *very unclear and
+misleading!!!*
+
+=from Jian=
+Should mention the /orphan rule/. The original text says "you cannot implement
+a trait for types outside your crate", which is confusing! This "cannot"
+is true only when both trait(s) and type(s) are not in yours crate.
+
 **** 7.2.1 Wrapper structs - 154
-**** 7.2.2 Using Deref to unwrap a wrapped struct - 154
+Use newtype pattern, and this time this new type is in your crate, and no matter
+where is the trait, you can implement it for your wrapped type.
 
-*** 7.3 Extension traits - 155
-*** 7.4 Blanket traits - 157
-*** 7.5 Marker traits - 159
+#+begin_src rust
+  // The original type is `Vec<T>`
+  struct WrappedVec<T>(Vec<T>);
+#+end_src
+
+- Not good enough:
+  Even though ~WrappedVec<T>~ is effectively ~Vec<T>~, the methods of ~Vec<T>~
+  can't be called from ~WrappedVec<T>~.
+  * =NEXT Subsection= resolve this issue.
+
+**** 7.2.2 Using ~Deref~ to unwrap a wrapped struct - 154
+#+begin_src rust
+  impl<T> Deref for WrappedVec<T> {
+      type Target = Vec<T>;
+      fn deref(&self) -> &Self::Target {
+          &self.0
+      }
+  }
+#+end_src
+*Some _LIMITATIONS_ exist, however.*
+
+- For one, we can't use methods that take ~self~ by value, such as ~into_iter()~.
+  * Solution:
+    #+begin_src rust
+      impl<T> WrappedVec<T> {
+          fn into_iter(self) -> IntoIter<T> {
+              self.0.into_iter()
+          }
+      }
+    #+end_src
+
+- To call ~Vec~ methods that take ~&mut self~, you need to implement the ~DerefMut~
+  trait.
+
+*** DONE 7.3 Extension traits - 155
+CLOSED: [2024-10-04 Fri 21:51]
+- /Extension traits/ are /traits/ that add functionality to types and traits
+  outside the crate in which they’re defined.
+
+- /Extension traits/ typically follow a *naming convention* that uses the ~Ext~
+  postfix.
+
+- Two ways:
+  * Define your own new extension trait and implement it for _a type_:
+    #+begin_src rust
+      impl<T> ReverseExt<T> for Vec<T>
+      where
+          T: Clone,
+      {
+          fn reversed(&self) -> Vec<T> {
+              self.iter().rev().cloned().collect()
+          }
+      }
+    #+end_src
+    *SIMPLE!*
+
+  * Extend a existing trait and implement it for _a type or type parameter_:
+    =IMPORTANT=
+    #+begin_src rust
+      pub trait DoubleEndedIteratorExt: DoubleEndedIterator {
+          fn to_reversed<'a, T>(self) -> Vec<T>
+          where
+              T: 'a + Clone,
+              Self: Sized + Iterator<Item = &'a T>;
+      }
+
+      impl<I: DoubleEndedIterator> DoubleEndedIteratorExt for I {
+          fn to_reversed<'a, T>(self) -> Vec<T>
+          where
+              T: 'a + Clone,
+              Self: Sized + Iterator<Item = &'a T>,
+          {
+              self.rev().cloned().collect()
+          }
+      }
+    #+end_src
+    *FLEXIBLE and POWERFUL!*
+
+    One nice result of _applying an extension trait to another trait_ (as
+    opposed to a type directly) is that we can use this trait on any type that
+    implements the ~DoubleEndedIterator~ trait, which includes ~Vec~, ~slices~,
+    and ~std::collections::LinkedList~, among others.
+
+*** DONE 7.4 Blanket traits - 157
+CLOSED: [2024-10-04 Fri 22:11]
+/Blanket trait implementation/ is used to quickly and easily implement a trait
+for all types that satisfy our criteria.
+
+- =from Jian=
+  From the target of the /blanket trait implementation/, it is easy to see that
+  the target type should be generic.
+
+- Example from std:
+  #+begin_src rust
+    impl<T: Display> ToString for T {
+        // ...
+    }
+  #+end_src
+
+- A /blanket trait implementation/ for the ~Buffer<T, LENGTH>~ we defined:
+  #+begin_src rust
+    impl<T: Default + Copy, const LENGTH: usize> From<Vec<T>>
+        for Buffer<T, LENGTH>
+    {
+        fn from(v: Vec<T>) -> Self {
+            assert_eq!(LENGTH, v.len());
+            let mut ret = Self {
+                buf: [T::default(); LENGTH],
+            };
+            ret.buf.copy_from_slice(&v);
+            ret
+        }
+    }
+  #+end_src
+
+- _For library authors_,
+  /blanket trait implementations/ improve the usability of a library.
+
+  * We don't need to stress about providing the most generic implementation or
+    every imaginable concrete implementation.
+    _RATHER_, we should focus on handling the most common cases, as we did by
+    providing ~From~ for ~Vec~.
+
+*** DONE 7.5 Marker traits - 159
+CLOSED: [2024-10-05 Sat 00:16]
+- /Marker traits/ are _abstract traits_ that mark or indicate features or
+  attributes about a type in Rust without necessarily providing any behaviors.
+  * /Marker traits/ are often denoted by their absence of methods.
+
+- Example:
+  One form of a /marker trait/ provides _a /blanket implementation/ that
+  COMBINES other /traits/._
+  If we want a shorthand way to indicate that a particular type implements a
+  given set of traits, for example, we can mark it accordingly.
+  #+begin_src rust
+    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    struct KitchenSink;
+
+    trait FullFeatured {}
+
+    impl<T> FullFeatured for T where
+        T: Clone
+            + Copy
+            + std::fmt::Debug
+            + Default
+            + Eq
+            + std::hash::Hash
+            + Ord
+            + PartialEq
+            + PartialOrd
+    {
+    }
+
+    #[derive(Debug)]
+    struct Container<T: FullFeatured> {
+        t: T,
+    }
+
+    fn main() {
+        // TEST
+        let container = Container { t: KitchenSink {} };
+        println!("{:?}", container);
+    }
+  #+end_src
+
+- /Marker traits/ don't have to be empty, _though they often are_.
+  *As a general rule, /marker traits/ should be empty (contain NO /methods/ or
+  /types/).*
+
 - *Supertraits*
+  * =TODO=
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    Find more articles about
+    /supertrait/ vs. /blanket implementations through marker trait/
 
-*** 7.6 Struct tagging - 161
-*** 7.7 Reference objects - 163
+  * supertraits :: traits that composed of other traits.
+    + Example:
+      #+begin_src rust
+        trait CloneAndDebug: Clone + Debug {}
+      #+end_src
 
-** 8 State machines, coroutines, macros, and preludes - 169
+  * /Trait bounds/ can become quite complex, and we can use /supertraits/ to
+    consolidate a list of required traits.
+
+  * The *DIFFERENCE* between using /supertraits/ and _providing blanket
+    implementations with trait bounds (as we did with ~FullFeatured~)_:
+    =IMPORTANT=
+    =from Jian= I don't think the difference below is clear enough. Need a good
+                example!!!
+
+    + /supertraits/ give us slightly _LESS flexibility_ (due to compiler strictness)
+      and a little _MORE convenience_.
+
+    + Using a /blanket implementation/ (through a /mark trait/) instead allows us
+      to make special exceptions for specific types. We can still derive our
+      ~FullFeatured~ trait for any type, but the compiler won't enforce anything
+      as it will with ~supertraits~.
+
+  * When *CHOOSING between* /supertraits/ and explicit implementations using
+    /trait bounds/, as with ~FullFeatured~,
+    + _You should *PREFER* /supertraits/ if all you need is an alias for a set of
+      existing traits._
+      Also, /supertraits/ allow us to provide /default implementations/ for /trait
+      methods/ that use /dependent traits/.
+      =from Jian=
+      We can't do this through blanket implementations and /mark traits/
+      (recommended: no member!).
+
+*** DONE 7.6 Struct tagging - 161
+CLOSED: [2024-10-05 Sat 00:42]
+#+begin_src rust
+  use std::fmt::Debug;
+
+  trait BuildState {}
+
+  #[derive(Default, Debug)]
+  struct LightBulb<State: BulbState> {
+      phantom: PhantomData<T>,
+  }
+
+  #[derive(Default, Debug)]
+  struct On;
+  #[derive(Default, Debug)]
+  struct Off;
+
+  impl BulbState for On {}
+  impl BulbState for Off {}
+
+  impl LightBulb<On> {
+      fn turn_off(self) -> LightBulb<Off> {
+          LightBulb::<Off>::default()
+      }
+
+      fn state(&self) -> &str {
+          "on"
+      }
+  }
+
+  impl LightBulb<Off> {
+      fn turn_on(self) -> LightBulb<On> {
+          LightBulb::<On>::default()
+      }
+
+      fn state(&self) -> &str {
+          "off"
+      }
+  }
+
+  fn main() {
+      let lightbulb = LightBulb::<Off>::default();
+      println!("Bulb is {}", lightbulb.state());
+
+      let lightbulb = lightbulb.turn_on();
+      println!("Bulb is {}", lightbulb.state());
+
+      let lightbulb = lightbulb.turn_off();
+      println!("Bulb is {}", lightbulb.state());
+  }
+#+end_src
+
+- struct tagging :: use /structs/ to _tag or mark generic types_ (those with
+  generic parameters).
+
+- With /struct tagging/, we can use /empty structs/ (also called /unit structs/)
+  to tag a generic type by including the tag as an _UNUSED_ type parameter; the
+  tag itself contains _no state_ and _may never be instantiated_.
+
+- Like /marker traits/, the _structs we use for tagging_ are *typically empty*;
+  _they're used to define *state* within the TYPE SYSTEM itself._
+  * =from Jian=
+    A typelevel programming:
+    1. an abstraction intended to hold state (in this case, a struct),
+       we're *not holding any runtime state* within the struct;
+
+    2. instead, we're enabling the struct to be used as a /generic type parameter/.
+
+- =IMPORTANT=
+  Becaure this way depends on type, not value, compiler can help us a lot and
+  detect error at compile-time.
+
+*** DONE 7.7 Reference objects - 163
+CLOSED: [2024-10-05 Sat 21:29]
+- /Reference objects/ provide a reference to _interior data_.
+  We may want to use a /reference object/ to
+  *PERMIT* _partial borrowing of interior data WITHOUT providing public access._
+
+  * In other words,
+    we can *wrap* the _private interior data_ in a _public reference object_ to
+    *avoid* introducing a leaky abstraction or making the internal data public.
+
+  * /Reference objects/ typically use *the ~Ref~ postfix* in their name, which
+    identifies them as holding references.
+
+- Example:
+  #+begin_src rust
+    #[derive(Debug)]
+    struct Student {
+        name: String,
+        id: u32,
+    }
+
+    impl Student {
+        fn new(name: String, id: u32) -> Self {
+            Self { name, id }
+        }
+        fn name(&self) -> &str {
+            self.name.as_ref()
+        }
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
+    impl<'a> Student {
+        fn to_ref(&'a self) -> StudentRef<'a> {
+            StudentRef::new(self)
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct StudentList {
+        students: Vec<Student>,
+    }
+
+    impl StudentList {
+        pub fn new(students: &[(&str, u32)]) -> Self {
+            Self {
+                students: students
+                    .iter()
+                    .map(|(name, id)| {
+                        Student::new((*name).into(), *id)
+                    })
+                    .collect(),
+            }
+        }
+    }
+
+    impl<'a> StudentList {
+        fn find<F: Fn(&&Student) -> bool>(
+            &'a self,
+            pred: F,
+        ) -> Option<StudentRef<'a>> {
+            self.students.iter()
+                .find(pred)
+                .map(Student::to_ref)
+        }
+        pub fn find_student_by_id(&'a self, id: u32) -> Option<StudentRef<'a>> {
+            self.find(|s| s.id() == id)
+        }
+        pub fn find_student_by_name(
+            &'a self,
+            name: &str,
+        ) -> Option<StudentRef<'a>> {
+            self.find(|s| s.name() == name)
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct StudentRef<'a> {
+        student: &'a Student,
+    }
+
+    impl<'a> StudentRef<'a> {
+        fn new(student: &'a Student) -> Self {
+            Self { student }
+        }
+    }
+
+    impl<'a> PartialEq for StudentRef<'a> {
+        fn eq(&self, other: &Self) -> bool {
+            self.student.id() == other.student.id()
+        }
+    }
+  #+end_src
+
+- It’s possible to create /mutable reference objects/.
+  =as an exercise=
+
+*** DONE Summary
+CLOSED: [2024-10-05 Sat 21:34]
+- /Const generics/ allow us to _use constant values as type parameters_,
+  unlocking features such as fixed-length arrays of arbitrary size.
+
+- It's not possible to implement a trait for types outside our crate, but we can
+  work around this limitation using wrapper structs (newtype pattern) and the
+  ~Deref~ and ~DerefMut~ traits.
+
+- /Extension traits/ extend or alter the behavior of external types or traits,
+  such as the standard library.
+
+- We can implement a trait automatically for any combination of types by using
+  generic implementations, known as /blanket traits/.
+
+- /Marker traits/ let us mark or denote types that have certain features or
+  attributes, such as combining several other traits.
+
+- We can _use empty (or unit) structs to tag generic types_ by using the structs
+  themselves as tags.
+
+- /Reference objects/ provide access to _private interior data_
+  *WITHOUT*
+  transferring ownership or exposing internal private objects.
+
+** TODO 8 State machines, coroutines, macros, and preludes - 169 - =START HERE!!!=
 - This chapter covers
   * Using traits to construct state machines
   * Writing pausable functions with coroutines
   * Implementing procedural macros
   * Providing preludes to improve the usability of your crates
 
-*** 8.1 Trait state machine - 170
-*** 8.2 Coroutines - 173
-- *On the origins of coroutines*
+- State machines are robust ways to model stateful systems, and as we'll see in
+  this chapter, it’s surprisingly easy to build type-safe state machines in Rust.
 
-*** 8.3 Procedural macros - 178
-*** 8.4 Preludes - 182
+- /Rust's coroutines/ is like /Python's generators/.
+
+*** DONE 8.1 Trait state machine - 170 - =TODO: Practice=
+CLOSED: [2024-10-05 Sat 23:00]
+- Now that we've explored /traits/ and /generics/,
+  we can start building some interesting abstractions on top of Rust's type
+  system.
+
+- A /state machine/ usually consists of
+  1. a list of _states_ and
+  2. a set of _transitions between states_.
+
+- Only valid transitions can be performed.
+  Rust's type system enforces those rules.
+  =from Jian= of course, by design and by language features
+
+- =IMPORTANT=
+  Figure 8.1 Modeling a user session with a state machine
+
+- Code:
+  #+begin_src rust
+    pub trait SessionState {}
+
+    #[derive(Debug, Default)]
+    pub struct Session<State: SessionState = Initial> {
+        session_id: Uuid,
+        props: HashMap<String, String>,
+        phantom: PhantomData<State>,
+    }
+
+    #[derive(Debug, Default)]
+    pub struct Initial;
+
+    #[derive(Debug, Default)]
+    pub struct Anonymous;
+
+    #[derive(Debug, Default)]
+    pub struct Authenticated;
+
+    #[derive(Debug, Default)]
+    pub struct LoggedOut;
+
+    impl SessionState for Initial {}
+    impl SessionState for Anonymous {}
+    impl SessionState for Authenticated {}
+    impl SessionState for LoggedOut {}
+
+    #[derive(Debug)]
+    pub enum ResumeResult {
+        Invalid,
+        Anonymous(Session<Anonymous>),
+        Authenticated(Session<Authenticated>),
+    }
+
+    impl Session<Initial> {
+        /// Returns a new session, defaulting to the anonymous state
+        pub fn new() -> Session<Anonymous> {
+            Session::<Anonymous> {
+                session_id: Uuid::new_v4(),
+                props: HashMap::new(),
+                phantom: PhantomData,
+            }
+        }
+
+        /// Returns the result of resuming this session from an existing ID.
+        pub fn resume_from(session_id: Uuid) -> ResumeResult {
+            ResumeResult::Authenticated(
+                Session::<Authenticated> {
+                    session_id,
+                    props: HashMap::new(),
+                    phantom: PhantomData,
+                }
+            )
+        }
+    }
+
+    impl Session<Anonymous> {
+        pub fn authenticate(
+            self,
+            username: &str,
+            password: &str,
+        ) -> Result<Session<Authenticated>,
+                    Session<Anonymous>> {
+            // ...
+            if !username.is_empty()
+                && !password.is_empty() {
+                    Ok(Session::<Authenticated> {
+                        session_id: self.session_id,
+                        props: HashMap::new(),
+                        phantom: PhantomData,
+                    })
+                } else {
+                    Err(self)
+                }
+        }
+    }
+
+    impl Session<Authenticated> {
+        pub fn update_property(
+            &mut self,
+            key: &str,
+            value: &str,
+        ) {
+            if let Some(prop) = self.props.get_mut(key) {
+                *prop = value.to_string();
+            } else {
+                self.props.insert(key.to_string(), value.to_string());
+            }
+            // ...
+        }
+
+        pub fn logout(self) -> Session<LoggedOut> {
+            // ...
+            Session {
+                session_id: Uuid::nil(),
+                props: HashMap::new(),
+                phantom: PhantomData,
+            }
+        }
+    }
+
+    fn main() {
+        let session = Session::new();
+        println!("{:?}", session);
+        if let Ok(mut session) =
+            session.authenticate("username", "password")
+        {
+            session.update_property("key", "value");
+            println!("{:?}", session);
+            let session = session.logout();
+            println!("{:?}", session);
+        }
+    }
+
+    // Session { session_id: f0981fc3-3761-407f-b037-8759535acf87, props: {}, phantom: PhantomData }
+    // Session { session_id: f0981fc3-3761-407f-b037-8759535acf87, props: {"some.preference.bool": "true"}, phantom: PhantomData }
+    // Session { session_id: 00000000-0000-0000-0000-000000000000, props: {}, phantom: PhantomData }
+  #+end_src
+
+*** TODO 8.2 Coroutines - 173 - =RE-READ=
+- *On the origins of coroutines*
+  =TODO= TAKE NOTE!!!
+
+*** DONE 8.3 Procedural macros - 178
+CLOSED: [2024-10-05 Sat 23:13]
+- *TIP*
+  For a real-life example of /procedural macros/ in action, check out the
+  _rocket_ crate, which makes extensive use of /procedural macros/ for its Rust
+  web framework.
+  =from Jian= Learn from _rocket_ codebase.
+
+*** DONE 8.4 Preludes - 182
+CLOSED: [2024-10-06 Sun 00:22]
+- When we're writing libraries, we can provide /preludes/ to make it easy for
+  people to get the most out of our library.
+
+- Some /preludes/, provided by the Rust language itself, are imported
+  automatically, such as the standard library preludes.
+  * _BUT_ I'm going to talk specifically about adding /preludes/ to our crates
+    rather than those from Rust.
+
+- /Preludes/ are implemented by means of *re-exports*,
+  which is a way of *exporting* symbols *from another* /module/ or /crate/.
+
+- When we re-export with a ~pub use ...;~ statement, the symbols imported by that
+  ~use~ can be imported from outside that /module/.
+
+- Many libraries provide an EXPLICIT /prelude/ /module/ (usually named ~prelude~)
+  within their crates, and you would import from it as follows:
+  ~use mylib::prelude::*;~
+
+- Using a _SEPARATE /prelude/ module_ is one way to *avoid polluting* the
+  /namespace/.
+
+- Example:
+  #+begin_src text
+    $ tree
+    .
+    ├── Cargo.lock
+    ├── Cargo.toml
+    └── src
+      ├── a.rs
+      ├── b.rs
+      ├── lib.rs
+      └── prelude.rs
+  #+end_src
+  1. In =lib.rs=:
+     #+begin_src rust
+       pub mod prelude
+     #+end_src
+
+  2. In =prelude.rs=:
+     #+begin_src rust
+       pub use crate::a::InnerA;
+       pub use crate::b::InnerB;
+       pub use crate::TopLevelStruct;
+       // Or
+       // pub use crate::TopLevelStruct as AltStruct;
+     #+end_src
+
+  * Then in other crates, you can
+    #+begin_src rust
+      use mylib::prelude::*;
+    #+end_src
+
+- =IMPORTANT=
+  Authors frequently export dependencies from third-party crates to make their
+  crates easier to use.
+
+- =IMPORTANT=
+  As a general rule of thumb,
+  *you shouldn't need them
+  UNLESS your crate provides lots of traits as part of its core functionality.*
+
+*** TODO Summary - 185
+- Combining what we've learned about /generics/ and /traits/,
+  we can build abstractions such as /state machines/ on top of /Rust's type
+  system/.
+
+- =TODO=
+  Coroutines are an experimental Rust feature, similar to Python’s generators,
+  that provides an alternative way to express pausable functions that can yield
+  data.
+
+- /Procedural macros/ enable language extensions and metaprogramming well
+  beyond what /declarative macros/ can do.
+
+- We can provide /preludes/ for our libraries to make them a little _more
+  userfriendly_ by re-exporting the most useful parts of our library under one
+  module (usually named ~prelude~).
 
 * TODO PART 4 PROBLEM AVOIDANCE - 187
-** 9 Immutability - 189
+** TODO 9 Immutability - 189
 - This chapter covers
   * Understanding the benefits of immutability
   * Thinking in terms of immutable data and how it works in Rust
@@ -345,7 +1226,7 @@ specific aspect of Rust programming.
 **** 9.8.1 Using im - 201
 **** 9.8.2 Using rpds - 202
 
-** 10 Antipatterns - 205
+** TODO 10 Antipatterns - 205
 - This chapter covers
   * Discussing programming antipatterns
   * Reviewing common antipatterns in Rust
@@ -358,11 +1239,32 @@ specific aspect of Rust programming.
 **** 10.2.3 When should you use ~unsafe~? - 211
 **** 10.2.4 Should you worry about ~unsafe~? - 211
 
-*** 10.3 Using ~unwrap()~ - 212
+*** DONE 10.3 Using ~unwrap()~ - 212
+CLOSED: [2024-10-05 Sat 21:54]
+~unwrap()~ isn't always an antipattern, but it’s often a code smell.
+
+- Avoid using ~unwrap()~ relatively easily by replacing it with one or more of
+  the following methods:
+  * ~expect()~
+    + Using ~expect()~ is functionally equivalent to using an assertion, such as
+      ~assert!(value.is_some())~.
+
+  * ~map()~
+
+  * ~and_then()~
+    This method allows you to *chain* ~Option~ or ~Result~ values,
+    *avoiding* deeply nested match or ~if let~ statements.
+
+  * ~unwrap_or()~
+    Provide a default value when the value is ~None~ or ~Err~.
+
+  * ~?~
+
 *** 10.4 Not using ~Vec~ - 212
 - *Rust’s benchmarking tools*
 
-*** 10.5 Too many clones - 216
+*** DONE 10.5 Too many clones - 216
+CLOSED: [2024-10-05 Sat 22:21]
 *** 10.6 Using ~Deref~ to emulate polymorphism - 217
 *** 10.7 Global data and singletons - 221
 *** 10.8 Too many smart pointers - 221
