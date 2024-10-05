@@ -1,48 +1,59 @@
 #+TITLE: Advanced Programming in Scala (PrePrint)
 #+SUBTITLE: A in-depth guide to advanced features - Updated for Scala 3.2
-#+VERSION: 5th, WIP, 2024-06-30
+#+VERSION: 5th, WIP, 2024-08-30
 #+AUTHOR: Martin Odersky, Lex Spoon, Bill Venners
-#+STARTUP: overview
 #+STARTUP: entitiespretty
+#+STARTUP: indent
+#+STARTUP: overview
 
 * Contents - xi
 * List of Figures - xv
 * List of Tables - xvi
 * List of Listings - xvii
-* Acknowledgments - xx
-* TODO 1 Opaque Types - 24
-** 1.2 The performance cost of boxing - 24
-** 1.2 Use cases for zero-overhead types - 26
-** 1.3 The ~AnyVal~ approach - 27
-** 1.4 The opaque type approach - 29
-** 1.5 Extension methods on opaque types - 32
-** 1.6 Bounds on opaque types - 33
-** 1.7 Peaking behind the curtain - 35
-** 1.8 The ~Matchable~ trait - 36
-** 1.9 Conclusion - 41
+* Acknowledgments - xxi
+* TODO 1 Opaque Types - 25
+** 1.2 The performance cost of boxing - 25
+** 1.2 Use cases for zero-overhead types - 27
+** 1.3 The ~AnyVal~ approach - 28
+** 1.4 The opaque type approach - 30
+** 1.5 Extension methods on opaque types - 33
+** 1.6 Bounds on opaque types - 34
+** 1.7 Peaking behind the curtain - 36
+** 1.8 The ~Matchable~ trait - 37
+** 1.9 Conclusion - 42
 
-* TODO 2 Inlining - 42
-** 2.1 Singleton types - 42
-** 2.2 Literal singleton types - 46
-** 2.3 Inlined constants - 47
-** 2.4 Inline methods - 49
-** 2.5 Preserving semantics - 52
-** 2.6 Partial evaluation - 53
-** 2.7 Inline methods and inheritance - 57
-** 2.8 Abstract methods can be inline - 58
-** 2.9 Performance considerations - 60
-** 2.10 Conclusion - 63
+* TODO 2 Inlining - 43
+** 2.1 Singleton types - 43
+** 2.2 Literal singleton types - 47
+** 2.3 Inlined constants - 48
+** 2.4 Inline methods - 50
+** 2.5 Preserving semantics - 53
+** 2.6 Partial evaluation - 54
+** 2.7 Inline methods and inheritance - 58
+** 2.8 Abstract methods can be inline - 59
+** 2.9 Performance considerations - 61
+** 2.10 Conclusion - 64
 
-* TODO 3 Metapgrogramming - 64
-** 3.1 Inline matches - 64
-** 3.2 Transparent inline methods - 68
-** 3.3 Constructor patterns in inline matches - 70
-** 3.4 Compiler errors from inline matches - 72
-** 3.5 Summoning in inline methods - 73
-** 3.6 Converting from type to term - 76
-** 3.7 Conclusion - 79
+* TODO 3 Metapgrogramming - 65
+** 3.1 Inline matches - 65
+** 3.2 Transparent inline methods - 69
+** 3.3 Constructor patterns in inline matches - 71
+** 3.4 Compiler errors from inline matches - 73
+** 3.5 Summoning in inline methods - 74
+** 3.6 Converting from type to term - 77
+** 3.7 Conclusion - 80
 
-* DONE 4 Implementing Lists - 80
+* TODO 4 Type-level functions - 81
+** 4.1 Value-level functions - 81
+** 4.2 Substitution - 83
+** 4.3 Currying - 84
+** 4.4 Overriding - 86
+** 4.5 Polymorphic functions - 87
+** 4.6 Viewing types as sets - 91
+** 4.7 Kinds - 95
+** 4.8 To be continued - 101
+
+* DONE 5 Implementing Lists - 102
   CLOSED: [2018-03-20 Tue 03:47]
   - Chapter 16 showed you how to use lists.
     This chapter “opens up the covers” and explains a bit about how lists are
@@ -61,108 +72,108 @@
       system in general and its genericity concepts in particular.
         So studying class List will deepen your knowledge in these areas.
 
-** DONE 4.1 The ~List~ class in principle - 80
-   CLOSED: [2018-03-20 Tue 02:19]
-   - Scala ~List~'s is NOT built-in.
-     They are defined by an /abstract class/ ~List~ in the ~scala~ package, which
-     comes with two /subclasses/ for ~::~ and ~Nil~.
-     #+BEGIN_SRC scala
-       package scala
+** DONE 5.1 The ~List~ class in principle - 102
+CLOSED: [2018-03-20 Tue 02:19]
+- Scala ~List~'s is NOT built-in.
+  They are defined by an /abstract class/ ~List~ in the ~scala~ package, which
+  comes with two /subclasses/ for ~::~ and ~Nil~.
+  #+BEGIN_SRC scala
+    package scala
 
-       abstract class List[+T] {
-         // ...
-       }
-     #+END_SRC
+    abstract class List[+T] {
+      // ...
+    }
+  #+END_SRC
 
-     + Since it is /abstract/, you cannot ~new~ a ~List~.
-       You can only use the /factory method/!
+  + Since it is /abstract/, you cannot ~new~ a ~List~.
+    You can only use the /factory method/!
 
-   - This section presents a somewhat *simplified* account of the class,
-     compared to its _real implementation_ in the Scala standard library, which
-     is covered in Section 22.3.
+- This section presents a somewhat *simplified* account of the class,
+  compared to its _real implementation_ in the Scala standard library, which
+  is covered in Section 22.3.
 
-   - This chapter will present a somewhat simplified account of ~List~.
+- This chapter will present a somewhat simplified account of ~List~.
 
-   - ~List[T]~ has two subtypes:
-     + the /case object/ ~scala.Nil~
+- ~List[T]~ has two subtypes:
+  + the /case object/ ~scala.Nil~
 
-     + the ~final~ /case class/ ~scala.::[T]~
+  + the ~final~ /case class/ ~scala.::[T]~
 
-   - All list operations can be defined in terms of three basic methods:
-     + ~def isEmpty: Boolean~
+- All list operations can be defined in terms of three basic methods:
+  + ~def isEmpty: Boolean~
 
-     + ~def head: T~
+  + ~def head: T~
 
-     + ~def tail: List[T]~
+  + ~def tail: List[T]~
 
-     They are all /abstract/ in ~List~
+  They are all /abstract/ in ~List~
 
 *** DONE The ~Nil~ object - 64
-    CLOSED: [2018-03-20 Tue 02:10]
-    #+BEGIN_SRC scala
-      // Simplified
-      case object Nil extends List[Nothing] {
-        override def isEmpty = true
+CLOSED: [2018-03-20 Tue 02:10]
+#+BEGIN_SRC scala
+  // Simplified
+  case object Nil extends List[Nothing] {
+    override def isEmpty = true
 
-        override def head: Nothing =
-          throw new NoSuchElementException("head of empty list")
+    override def head: Nothing =
+      throw new NoSuchElementException("head of empty list")
 
-        override def tail: List[Nothing] =
-          throw new NoSuchElementException("tail of empty list")
-      }
-    #+END_SRC
+    override def tail: List[Nothing] =
+      throw new NoSuchElementException("tail of empty list")
+  }
+#+END_SRC
 
-    Here ~Nothing~ is NOT only reasonable but also guarantee the /convariance/.
+Here ~Nothing~ is NOT only reasonable but also guarantee the /convariance/.
 
 *** DONE The ~::~ class - 65
-    CLOSED: [2018-03-20 Tue 02:10]
-    #+BEGIN_SRC scala
-      final case class ::[B](head: B, private[scala] var tail: List[B]) extends List[B] {
-        override def isEmpty: Boolean = false
-      }
+CLOSED: [2018-03-20 Tue 02:10]
+#+BEGIN_SRC scala
+  final case class ::[B](head: B, private[scala] var tail: List[B]) extends List[B] {
+    override def isEmpty: Boolean = false
+  }
 
 
-      /* The implementation in the standard library */
+  /* The implementation in the standard library */
 
-      // final case class ::[B](override val head: B, private[scala] var tl: List[B]) extends List[B] {
-      //   override def tail: List[B] = tl
-      //   override def isEmpty: Boolean = false
-      // }
-    #+END_SRC
+  // final case class ::[B](override val head: B, private[scala] var tl: List[B]) extends List[B] {
+  //   override def tail: List[B] = tl
+  //   override def isEmpty: Boolean = false
+  // }
+#+END_SRC
 
 *** DONE Some more methods - 66
-    CLOSED: [2018-03-20 Tue 02:13]
-    All other List methods can be written using the basic three. For instance:
-    #+BEGIN_SRC scala
+CLOSED: [2018-03-20 Tue 02:13]
+All other List methods can be written using the basic three. For instance:
+#+BEGIN_SRC scala
 
-      def length: Int =
-        if (isEmpty) 0 else 1 + tail.length
+  def length: Int =
+    if (isEmpty) 0 else 1 + tail.length
 
-      // or:
-      def drop(n: Int): List[T] =
-        if (isEmpty) Nil  else
-        if (n <= 0)  this else
-                     tail.drop(n 1)
+  // or:
+  def drop(n: Int): List[T] =
+    if (isEmpty) Nil  else
+    if (n <= 0)  this else
+                 tail.drop(n 1)
 
-      // or:
-      def map[U](f: T => U): List[U] =
-        if (isEmpty) Nil
-        else         f(head) :: tail.map(f)
-    #+END_SRC
+  // or:
+  def map[U](f: T => U): List[U] =
+    if (isEmpty) Nil
+    else         f(head) :: tail.map(f)
+#+END_SRC
 
 *** DONE List construction - 66
-    CLOSED: [2018-03-20 Tue 02:19]
-    The list construction methods ~\colon{}\colon{}~ and ~:::~ are SPECIAL.
-    Because they end in a colon, they are _bound to their right operand_.
-    #+BEGIN_SRC scala
-      def ::[U >: T](x: U): List[U] = new scala.::(x, this)
+CLOSED: [2018-03-20 Tue 02:19]
+The list construction methods ~\colon{}\colon{}~ and ~:::~ are SPECIAL.
+Because they end in a colon, they are _bound to their right operand_.
+#+BEGIN_SRC scala
+  def ::[U >: T](x: U): List[U] = new scala.::(x, this)
 
-      def :::[U >: T](prefix: List[U]): List[U] =
-        if (prefix.isEmpty) this
-        else                prefix.head :: prefix.tail ::: this
-    #+END_SRC
+  def :::[U >: T](prefix: List[U]): List[U] =
+    if (prefix.isEmpty) this
+    else                prefix.head :: prefix.tail ::: this
+#+END_SRC
 
-** DONE 4.2 The ~ListBuffer~ class - 86
+** DONE 5.2 The ~ListBuffer~ class - 108
    CLOSED: [2018-03-20 Tue 02:27]
    - ~List~ is inefficient on adding elements to the end of its tail.
      Try to use ~ListBuffer~.
@@ -188,7 +199,7 @@
      append operation (~+=~) and the ~toList~ operation take (very short)
      constant time.
 
-** DONE 4.3 The ~List~ class in practice - 87
+** DONE 5.3 The ~List~ class in practice - 109
    CLOSED: [2018-03-20 Tue 03:47]
    - The implementations of list methods given in Section 22.1 are concise and
      clear, but _suffer from the same stack overflow problem_ as the /non-tail
@@ -300,7 +311,7 @@
            and then do one ~toList~ operation at the end. In such cases, no
            copying is necessary.
 
-** DONE 4.4 Functional on the outside - 90
+** DONE 5.4 Functional on the outside - 112
    CLOSED: [2018-03-20 Tue 03:16]
    - You saw that ~List~'s are
      + purely functional on the "outside"
@@ -334,7 +345,7 @@
      done in Java's pair of classes ~String~ and ~StringBuffer~ (or since Java
      5, the mostly used ~StringBuilder~) . This is *NOT* coincidence.
 
-** DONE 4.5 Conclusion - 91
+** DONE 5.5 Conclusion - 113
    CLOSED: [2018-03-20 Tue 03:24]
    This chapter talks about the implementation of the ~List~ in Scala.
 
@@ -348,112 +359,110 @@
      Somehow, imperative inside to speed up the common case where a buffer is
      discarded after ~toList~ has been called.
 
-* DONE 5 For Expressions Revisited - 92
-  CLOSED: [2018-03-28 Wed 23:43]
-  - More generally,
-    * ALL ~for~ expressions that ~yield~ a result are _translated_ by the
-      compiler into combinations of invocations of the higher-order methods
-      ~map~, ~flatMap~, and ~withFilter~.
+* DONE 6 For Expressions Revisited - 114
+CLOSED: [2018-03-28 Wed 23:43]
+- More generally,
+  * ALL ~for~ expressions that ~yield~ a result are _translated_ by the
+    compiler into combinations of invocations of the higher-order methods
+    ~map~, ~flatMap~, and ~withFilter~.
 
-    * ALL ~for~ loops WITHOUT ~yield~ are translated into a smaller set of
-      higher-order functions: just ~withFilter~ and ~foreach~.
+  * ALL ~for~ loops WITHOUT ~yield~ are translated into a smaller set of
+    higher-order functions: just ~withFilter~ and ~foreach~.
 
-  - In this chapter, you'll find out
-    1. the precise rules of writing for expressions
-    2. how they can make combinatorial problems easier to solve.
-    3. how ~for~ expressions are translated, and how as a result, ~for~
-       expressions can help you "grow" the Scala language into new application
-       domains.
+- In this chapter, you'll find out
+  1. the precise rules of writing for expressions
+  2. how they can make combinatorial problems easier to solve.
+  3. how ~for~ expressions are translated, and how as a result, ~for~
+     expressions can help you "grow" the Scala language into new application
+     domains.
 
-** DONE 5.1 For expressions - 93
-   CLOSED: [2017-10-21 Sat 21:52]
-   Syntax: ~for ( seq ) yield expr~
+** DONE 6.1 For expressions - 115
+CLOSED: [2017-10-21 Sat 21:52]
+Syntax: ~for ( seq ) yield expr~
 
-   - Here, ~seq~ is a sequence of /generators/, /definitions/, and /filters/,
-     with semicolons between successive elements.
+- Here, ~seq~ is a sequence of /generators/, /definitions/, and /filters/,
+  with semicolons between successive elements.
 
-   - Enclose the ~seq~ in /braces/ instead of /parentheses/. Then the semicolons
-     become _optional_:
-     #+BEGIN_SRC scala
-       for (p <- persons; n = p.name; if (n startsWith "To"))
-       yield n
+- Enclose the ~seq~ in /braces/ instead of /parentheses/. Then the semicolons
+  become _optional_:
+  #+BEGIN_SRC scala
+    for (p <- persons; n = p.name; if (n startsWith "To"))
+    yield n
 
-       // OR
+    // OR
 
-       for {
-         p <- persons             // a generator
-         n = p.name               // a definition
-         if (n startsWith "To")   // a filter
-       } yield n
-     #+END_SRC
+    for {
+      p <- persons             // a generator
+      n = p.name               // a definition
+      if (n startsWith "To")   // a filter
+    } yield n
+  #+END_SRC
 
-     + A /generator/ is of the form: ~pat <- expr~
-       The ~pat~ gets matched one-by-one against all elements. If the match fails
-       the element is simply discarded from the iteration (=From Jian= this will
-       be proved a good feature)
+  + A /generator/ is of the form: ~pat <- expr~
+    The ~pat~ gets matched one-by-one against all elements. If the match fails
+    the element is simply discarded from the iteration (=From Jian= this will
+    be proved a good feature)
 
-       * the most common case: a variable. Then simply iterates over all elements
+    * the most common case: a variable. Then simply iterates over all elements
 
-     + If there are multiple generators, later ones are for inner iterations.
+  + If there are multiple generators, later ones are for inner iterations.
 
-       =From Jian= I don't think write a embeded structure in a flat form is a
-       good idea.
+    =From Jian= I don't think write a embeded structure in a flat form is a
+    good idea.
 
-   -
+** DONE 6.2 The n-queens problem - 95
+CLOSED: [2018-03-28 Wed 23:43]
+- Start numbering cells at one:
+  + upper-left cell of N \times{} N board has coordinate (1, 1)
+  + lower-right cell of N \times{} N board has coordinate (N, N)
 
-** DONE 5.2 The n-queens problem - 95
-   CLOSED: [2018-03-28 Wed 23:43]
-   - Start numbering cells at one:
-     + upper-left cell of N \times{} N board has coordinate (1, 1)
-     + lower-right cell of N \times{} N board has coordinate (N, N)
+- Give up and re-do the search if you *cannot* find a location to a queen
+  anymore!
 
-   - Give up and re-do the search if you *cannot* find a location to a queen
-     anymore!
+- The imperative solution:
+  it would place queens one by one, moving them around on the board.
 
-   - The imperative solution:
-     it would place queens one by one, moving them around on the board.
+    But it looks _difficult to_ come up with a scheme that really _tries all
+  possibilities_.
 
-       But it looks _difficult to_ come up with a scheme that really _tries all
-     possibilities_.
+- A more functional approach *represents a solution directly, as a value*.
+  A solution consists of a list of coordinates, one for each queen placed on
+  the board (you still need to build the solution gradually!).
 
-   - A more functional approach *represents a solution directly, as a value*.
-     A solution consists of a list of coordinates, one for each queen placed on
-     the board (you still need to build the solution gradually!).
+- 0-queuen problem has one solution, and the solution list is ~List(List())~.
 
-   - 0-queuen problem has one solution, and the solution list is ~List(List())~.
+- 2-queuen problem has no solution, and the solution list is ~List()~.
 
-   - 2-queuen problem has no solution, and the solution list is ~List()~.
+- Code (get all solutions -- this can be very slow for large N):
+  #+BEGIN_SRC scala
+    def queens(n: Int): List[List[(Int, Int)]] = {
+      def placeQueens(k: Int): List[List[(Int, Int)]] =
+        if (k == 0)
+          List(List())
+        else
+          for {
+            queens <- placeQueens(k - 1)
+            column <- 1 to n
+            queen = (k, column)
+            if isSafe(queen, queens)
+          } yield queen :: queens
+      placeQueens(n)
+    }
 
-   - Code (get all solutions -- this can be very slow for large N):
-     #+BEGIN_SRC scala
-       def queens(n: Int): List[List[(Int, Int)]] = {
-         def placeQueens(k: Int): List[List[(Int, Int)]] =
-           if (k == 0)
-             List(List())
-           else
-             for {
-               queens <- placeQueens(k - 1)
-               column <- 1 to n
-               queen = (k, column)
-               if isSafe(queen, queens)
-             } yield queen :: queens
-         placeQueens(n)
-       }
+    def isSafe(queen: (Int, Int), queens: List[(Int, Int)]) =
+      queens forall (q => !inCheck(queen, q))
 
-       def isSafe(queen: (Int, Int), queens: List[(Int, Int)]) =
-         queens forall (q => !inCheck(queen, q))
+    def inCheck(q1: (Int, Int), q2: (Int, Int)) =
+      // q1._1 == q2._1 || // same row -- we have already pick queens by row to guarantee this
+      q1._2 == q2._2 || // same column
+       (q1._1 - q2._1).abs == (q1._2 - q2._2).abs // on diagonal
+  #+END_SRC
 
-       def inCheck(q1: (Int, Int), q2: (Int, Int)) =
-         // q1._1 == q2._1 || // same row -- we have already pick queens by row to guarantee this
-         q1._2 == q2._2 || // same column
-          (q1._1 - q2._1).abs == (q1._2 - q2._2).abs // on diagonal
-     #+END_SRC
+** DONE 6.3 Querying with ~for~ expressions - 120
+CLOSED: [2017-10-21 Sat 22:00]
 
-** DONE 5.3 Querying with ~for~ expressions - 98
-   CLOSED: [2017-10-21 Sat 22:00]
-
-** DONE 5.4 Translation of ~for~ expressions - 100 =Re-READ=
-   CLOSED: [2017-10-21 Sat 22:25]
+** DONE 6.4 Translation of ~for~ expressions - 122 =Re-READ=
+CLOSED: [2017-10-21 Sat 22:25]
 *** DONE Translating ~for~ expressions with one generator - 100
     CLOSED: [2017-10-21 Sat 22:10]
     ~for (x <- expr1) yield expr2~  ------->  ~expr1.map(x => expr2)~
@@ -537,168 +546,168 @@
     -------> ~expr1 withFilter (x => expr2) foreach (x =>
                 expr3 foreach (y => body))~
 
-** DONE 5.5 Going the other way - 104
-   CLOSED: [2017-10-21 Sat 22:29]
-   Every application of a ~map~, ~flatMap~, or ~filter~ can be represented as a
-   /for expression/.
+** DONE 6.5 Going the other way - 126
+CLOSED: [2017-10-21 Sat 22:29]
+Every application of a ~map~, ~flatMap~, or ~filter~ can be represented as a
+/for expression/.
 
-   #+BEGIN_SRC scala
-     object Demo {
-       def map[A, B](xs: List[A], f: A => B): List[B] =
-         for (x <- xs) yield f(x)
+#+BEGIN_SRC scala
+  object Demo {
+    def map[A, B](xs: List[A], f: A => B): List[B] =
+      for (x <- xs) yield f(x)
 
-       def flatMap[A, B](xs: List[A], f: A => List[B]): List[B] =
-         for (x <- xs; y <- f(x)) yield y
+    def flatMap[A, B](xs: List[A], f: A => List[B]): List[B] =
+      for (x <- xs; y <- f(x)) yield y
 
-       def filter[A](xs: List[A], p: A => Boolean): List[A] =
-         for (x <- xs if p(x)) yield x
-     }
-   #+END_SRC
+    def filter[A](xs: List[A], p: A => Boolean): List[A] =
+      for (x <- xs if p(x)) yield x
+  }
+#+END_SRC
 
-   Not surprisingly, the body of the above definitions (for expression) will be
-   translated to higher order functions by Scala in the background.
+Not surprisingly, the body of the above definitions (for expression) will be
+translated to higher order functions by Scala in the background.
 
-** DONE 5.6 Generalizing ~for~ - 105 =Re-Read the last some paragraph=
-   CLOSED: [2018-03-28 Wed 22:46]
-   - Because the translation of ~for~ expressions only relies on the presence of
-     methods ~map~, ~flatMap~, and ~withFilter~, it is possible to apply the
-     ~for~ notation to a large class of data types.
+** DONE 6.6 Generalizing ~for~ - 127 =Re-Read the last some paragraph=
+CLOSED: [2018-03-28 Wed 22:46]
+- Because the translation of ~for~ expressions only relies on the presence of
+  methods ~map~, ~flatMap~, and ~withFilter~, it is possible to apply the
+  ~for~ notation to a large class of data types.
 
-   - We have see /for expressions/ over /lists/ and /arrays/.
-     There are supported because they have ~map~, ~flatMap~, and ~withFilter~.
+- We have see /for expressions/ over /lists/ and /arrays/.
+  There are supported because they have ~map~, ~flatMap~, and ~withFilter~.
 
-   - We have see /for loop/ over /lists/ and /arrays/.
-     There are supported because they have ~foreach~.
+- We have see /for loop/ over /lists/ and /arrays/.
+  There are supported because they have ~foreach~.
 
-   - Examples that support /for expressions/ and /for loops/:
-     + /ranges/
-     + /iterators/
-     + /streams/
-     + all implementations of /sets/.
+- Examples that support /for expressions/ and /for loops/:
+  + /ranges/
+  + /iterators/
+  + /streams/
+  + all implementations of /sets/.
 
-   - You can have your own defined /class/ that support /for expressions/ and
-     /for loops/.
+- You can have your own defined /class/ that support /for expressions/ and
+  /for loops/.
 
-     It is also possible to define a _subset_ of these /methods/, and thereby
-     support a _subset_ of all possible /for expressions/ and /for loops/.
+  It is also possible to define a _subset_ of these /methods/, and thereby
+  support a _subset_ of all possible /for expressions/ and /for loops/.
 
-   - Here are the precise rules:
-     + If your type defines just ~map~, it allows /for expressions/ consisting of a
-       *SINGLE generator*.
+- Here are the precise rules:
+  + If your type defines just ~map~, it allows /for expressions/ consisting of a
+    *SINGLE generator*.
 
-     + If it defines ~flatMap~ as well as ~map~, it allows /for expressions/
-       consisting of *SEVERAL generators*.
+  + If it defines ~flatMap~ as well as ~map~, it allows /for expressions/
+    consisting of *SEVERAL generators*.
 
-     + If it defines ~foreach~, it allows /for loops/ (both with *single and
-       multiple generators*).
+  + If it defines ~foreach~, it allows /for loops/ (both with *single and
+    multiple generators*).
 
-     + If it defines ~withFilter~, it allows /for filter expressions/ starting
-       with an ~if~ in the
-       for expression. =From Jian= I think this should work for both /for loops/
-       and /for expressions/.
+  + If it defines ~withFilter~, it allows /for filter expressions/ starting
+    with an ~if~ in the
+    for expression. =From Jian= I think this should work for both /for loops/
+    and /for expressions/.
 
-   - The translation of /for expressions/ happens *before* /type checking/.
-     This allows for maximum _flexibility_ because the _only requirement_ is
-     that the result of expanding a /for expression/ /type checks/.
+- The translation of /for expressions/ happens *before* /type checking/.
+  This allows for maximum _flexibility_ because the _only requirement_ is
+  that the result of expanding a /for expression/ /type checks/.
 
-     Scala defines *NO* /typing rules/ for the /for expressions/ themselves, and
-     does *NOT* require that /methods/ ~map~, ~flatMap~, ~withFilter~, or
-     ~foreach~ have any particular type signatures.
+  Scala defines *NO* /typing rules/ for the /for expressions/ themselves, and
+  does *NOT* require that /methods/ ~map~, ~flatMap~, ~withFilter~, or
+  ~foreach~ have any particular type signatures.
 
-     Nevertheless, there is a *typical setup* that captures the most common
-     intention of the /higher order methods/ to which /for expressions/
-     translate.
-     #+BEGIN_SRC scala
-       abstract class C[A] {
-         def map[B](f: A => B): C[B]
-         def flatMap[B](f: A => C[B]): C[B]
-         def withFilter(p: A => Boolean): C[A]  // Not perfect, same as `filter`
-         def foreach(b: A => Unit): Unit
-       }
-     #+END_SRC
-     + For example, ~List~ has
-       ~def withFilter(p: (A) ⇒ Boolean): FilterMonadic[A, List[A]]~
+  Nevertheless, there is a *typical setup* that captures the most common
+  intention of the /higher order methods/ to which /for expressions/
+  translate.
+  #+BEGIN_SRC scala
+    abstract class C[A] {
+      def map[B](f: A => B): C[B]
+      def flatMap[B](f: A => C[B]): C[B]
+      def withFilter(p: A => Boolean): C[A]  // Not perfect, same as `filter`
+      def foreach(b: A => Unit): Unit
+    }
+  #+END_SRC
+  + For example, ~List~ has
+    ~def withFilter(p: (A) ⇒ Boolean): FilterMonadic[A, List[A]]~
 
-   - TODO =???=
-     Concentrating on just the first three functions of /class/ ~C~, the following
-     facts are noteworthy:
-     In functional programming, there’s a general concept called a /monad/,
-     which can explain a large number of types with computations, ranging from
-     collections, to computations with state and I/O, backtracking computations,
-     and transactions, to name a few.
+- TODO =???=
+  Concentrating on just the first three functions of /class/ ~C~, the following
+  facts are noteworthy:
+  In functional programming, there’s a general concept called a /monad/,
+  which can explain a large number of types with computations, ranging from
+  collections, to computations with state and I/O, backtracking computations,
+  and transactions, to name a few.
 
-     TODO
-       *You can formulate functions ~map~, ~flatMap~, and ~withFilter~ on a
-     /monad/, and, if you do, they end up having exactly the types given here.*
+  TODO
+    *You can formulate functions ~map~, ~flatMap~, and ~withFilter~ on a
+  /monad/, and, if you do, they end up having exactly the types given here.*
 
-   - TODO /monad/ related TODO =Learn More= =!!!=
+- TODO /monad/ related TODO =Learn More= =!!!=
 
-** DONE 5.7 Conclusion - 107
-   CLOSED: [2017-10-21 Sat 22:29]
+** DONE 6.7 Conclusion - 129
+CLOSED: [2017-10-21 Sat 22:29]
 
-* TODO 6 The Architecture of Scala Collections - 108
-  - This chapter describes _the architecture of the Scala collections framework_
-    in detail.
-    * Continuing the theme of Chapter 24,
-      you will find out _more about the internal workings_ of the framework.
+* TODO 7 The Architecture of Scala Collections - 130
+- This chapter describes _the architecture of the Scala collections framework_
+  in detail.
+  * Continuing the theme of Chapter 24,
+    you will find out _more about the internal workings_ of the framework.
 
-    * You will also learn _HOW this architecture helps you define your own
-      collections in a few lines of code_, while reusing the overwhelming part
-      of collection functionality from the framework.
+  * You will also learn _HOW this architecture helps you define your own
+    collections in a few lines of code_, while reusing the overwhelming part
+    of collection functionality from the framework.
 
-  - TODO =SUMMARIZE= TODO
-    Chapter 24 enumerated a large number of collection operations, which
-    exist uniformly on many different collection implementations. Implementing
-    every collection operation anew for every collection type would lead to an
-    enormous amount of code, most of which would be copied from somewhere
-    else. Such code duplication could lead to inconsistencies over time, when an
-    operation is added or modified in one part of the collection library but not
-    in others.
+- TODO =SUMMARIZE= TODO
+  Chapter 24 enumerated a large number of collection operations, which
+  exist uniformly on many different collection implementations. Implementing
+  every collection operation anew for every collection type would lead to an
+  enormous amount of code, most of which would be copied from somewhere
+  else. Such code duplication could lead to inconsistencies over time, when an
+  operation is added or modified in one part of the collection library but not
+  in others.
 
-    The principal design objective of the collections framework is to avoid any
-    duplication, defining every operation in as few places as possible.1
+  The principal design objective of the collections framework is to avoid any
+  duplication, defining every operation in as few places as possible.1
 
-    The approach is to implement most operations in “template traits” that can
-    be mixed into individual collection base and implementation classes. In this
-    chapter, we will examine these templates, and other classes and traits that
-    constitute the building blocks of the framework, as well as the construction
-    principles they support.
+  The approach is to implement most operations in “template traits” that can
+  be mixed into individual collection base and implementation classes. In this
+  chapter, we will examine these templates, and other classes and traits that
+  constitute the building blocks of the framework, as well as the construction
+  principles they support.
 
-** 6.1 Factoring out common operations - 108
-   - The main design objective of the collection library is to provide natural
-     types to users while sharing as much implementation code as possible.
+** 7.1 Factoring out common operations - 108
+- The main design objective of the collection library is to provide natural
+  types to users while sharing as much implementation code as possible.
 
-   - In particular, Scala's collection framework needs to support the following
-     aspects of various concrete collection types:
-     * Some /transformation operations/ return the _SAME concrete collection type_.
-       + For example, ~filter~ on ~List[Int]~ returns ~List[Int]~.
+- In particular, Scala's collection framework needs to support the following
+  aspects of various concrete collection types:
+  * Some /transformation operations/ return the _SAME concrete collection type_.
+    + For example, ~filter~ on ~List[Int]~ returns ~List[Int]~.
 
-     * Some /transformation operations/ return the _SAME concrete collection type_
-       with possibly a _DIFFERENT type of elements_.
-       + For example, ~map~ on ~List[Int]~ can return ~List[String]~.
+  * Some /transformation operations/ return the _SAME concrete collection type_
+    with possibly a _DIFFERENT type of elements_.
+    + For example, ~map~ on ~List[Int]~ can return ~List[String]~.
 
-     * Some collection types, such as ~List[A]~, have a _single_ /type parameter/,
-       whereas others, like ~Map[K, V]~, have _two_.
+  * Some collection types, such as ~List[A]~, have a _single_ /type parameter/,
+    whereas others, like ~Map[K, V]~, have _two_.
 
-     * Some operations on collections return a _DIFFERENT concrete collection
-       DEPENDING ON an element type._
-       + For example, ~map~ on ~Map~ returns
-         - another ~Map~ if the mapping function results in a key-value pair,
-         - but otherwise returns an ~Iterable~.
+  * Some operations on collections return a _DIFFERENT concrete collection
+    DEPENDING ON an element type._
+    + For example, ~map~ on ~Map~ returns
+      - another ~Map~ if the mapping function results in a key-value pair,
+      - but otherwise returns an ~Iterable~.
 
-     * Transformation operations on certain collection types _require additional
-       /implicit parameters/._
-       + For example, map on ~SortedSet~ requires an _implicit_ ~Ordering~.
+  * Transformation operations on certain collection types _require additional
+    /implicit parameters/._
+    + For example, map on ~SortedSet~ requires an _implicit_ ~Ordering~.
 
-     * Lastly,
-       some collections, such as ~List~, are /strict/,
-       while other collections, like ~View~ and ~LazyList~, are /non-strict/.
+  * Lastly,
+    some collections, such as ~List~, are /strict/,
+    while other collections, like ~View~ and ~LazyList~, are /non-strict/.
 
 *** Abstracting over collection types - 110
 *** Handling strictness - 113
 *** When strict evaluation is preferable or unavoidable - 116
 
-** 6.2 Integrating new collections - 117
+** 7.2 Integrating new collections - 139
 *** Capped sequences - 117
 **** Capped collection, first version - 117
 **** Capped collection, second version - 120
@@ -712,346 +721,346 @@
 *** Prefix maps - 133
 *** Summary - 140
 
-** 6.3 Conclusion - 140
+** 7.3 Conclusion - 162
 
-* DONE 7 Extractors - 141
-  CLOSED: [2020-09-27 Sun 04:29]
-  This chapter explains
-  * what /extractors/ are
+* DONE 8 Extractors - 163
+CLOSED: [2020-09-27 Sun 04:29]
+This chapter explains
+- what /extractors/ are
 
-  * how you can use them to define patterns that are _decoupled from_ an object's
-    representation.
-    + =from Jian=
-      if the patterns are _not decoupled from_ an object's representation, the
-      default /extractors/ of /case classes/ are enough.
+- how you can use them to define patterns that are _decoupled from_ an object's
+  representation.
+  * =from Jian=
+    if the patterns are _not decoupled from_ an object's representation, the
+    default /extractors/ of /case classes/ are enough.
 
-** DONE 7.1 An example: extracting email addresses - 141
-   CLOSED: [2020-09-25 Fri 01:01]
-   - Compare
-     + Access function:
-       #+BEGIN_SRC scala
-         def isEMail(s: String): Boolean = ???
-         def domain(s: String): String = ???
-         def user(s: String): String = ???
+** DONE 8.1 An example: extracting email addresses - 163
+CLOSED: [2020-09-25 Fri 01:01]
+- Compare
+  + Access function:
+    #+BEGIN_SRC scala
+      def isEMail(s: String): Boolean = ???
+      def domain(s: String): String = ???
+      def user(s: String): String = ???
 
-         if (isEMail(s)) println(user(s) + " AT " + domain(s))
-         else            println("not an email address")
-       #+END_SRC
+      if (isEMail(s)) println(user(s) + " AT " + domain(s))
+      else            println("not an email address")
+    #+END_SRC
 
-     + Pattern matching:
-       #+BEGIN_SRC scala
-         s match {
-           case EMail(user, domain) => println(user + " AT " + domain)
-           case _                   => println("not an email address")
-         }
-       #+END_SRC
+  + Pattern matching:
+    #+BEGIN_SRC scala
+      s match {
+        case EMail(user, domain) => println(user + " AT " + domain)
+        case _                   => println("not an email address")
+      }
+    #+END_SRC
 
-   - More complicated example - find two successive email addresses with the same
-     user part:
-     + Access function:
-       Assume we have the function given above.
-       #+BEGIN_SRC scala
-         val result: Option[List[String]] = ss.
-           sliding(2).
-           find { case List(e1, e2) =>
-             isEMail(e1) && isEMail(e2) && user(e1) == user(e2)
-           }
+- More complicated example - find two successive email addresses with the same
+  user part:
+  + Access function:
+    Assume we have the function given above.
+    #+BEGIN_SRC scala
+      val result: Option[List[String]] = ss.
+        sliding(2).
+        find { case List(e1, e2) =>
+          isEMail(e1) && isEMail(e2) && user(e1) == user(e2)
+        }
 
-         (result: @unchecked) match {
-           case None   =>
-             println("not successive email addresses with the same user part")
+      (result: @unchecked) match {
+        case None   =>
+          println("not successive email addresses with the same user part")
 
-           case Some(List(e1, e2)) =>
-             println(f"Two successive email addresses with the same user part ${user(e1)}")
-         }
-       #+END_SRC
+        case Some(List(e1, e2)) =>
+          println(f"Two successive email addresses with the same user part ${user(e1)}")
+      }
+    #+END_SRC
 
-     + Pattern matching:
-       #+BEGIN_SRC scala
-         @annotation.tailrec
-         def findSuccessiveSameUser(ss: List[String]): Unit = {
-           ss match {
-             case Nil | _ :: Nil =>
-               println("not successive email addresses with the same user part")
+  + Pattern matching:
+    #+BEGIN_SRC scala
+      @annotation.tailrec
+      def findSuccessiveSameUser(ss: List[String]): Unit = {
+        ss match {
+          case Nil | _ :: Nil =>
+            println("not successive email addresses with the same user part")
 
-             case EMail(u1, d1) :: EMail(u2, d2) :: _ if u1 == u2 =>
-               println(f"Two successive email addresses with the same user part ${u1}")
+          case EMail(u1, d1) :: EMail(u2, d2) :: _ if u1 == u2 =>
+            println(f"Two successive email addresses with the same user part ${u1}")
 
-             case _ :: tl =>
-               findSuccessiveSameUser(tl)
-           }
-         }
+          case _ :: tl =>
+            findSuccessiveSameUser(tl)
+        }
+      }
 
-         findSuccessiveSameUser(ss.sliding(2))
-       #+END_SRC
+      findSuccessiveSameUser(ss.sliding(2))
+    #+END_SRC
 
-   - The pattern matching examples above are expressive!
-     + Q :: However, the problem is that strings are NOT /case classes/.
-             How an we use pattern matching code like above.
+- The pattern matching examples above are expressive!
+  + Q :: However, the problem is that strings are NOT /case classes/.
+          How an we use pattern matching code like above.
 
-     + A :: Scala's /extractors/ let you define new /patterns/ for _pre-existing_
-             /types/, where the /pattern/ need *NOT* follow the internal
-             representation of the /type/.
+  + A :: Scala's /extractors/ let you define new /patterns/ for _pre-existing_
+          /types/, where the /pattern/ need *NOT* follow the internal
+          representation of the /type/.
 
-** DONE 7.2 Extractors - 142
-   CLOSED: [2020-09-26 Sat 14:26]
-   - extractor :: an /object/ that has a /method/ called ~unapply~ as one of its
-                  members.
-     + The purpose of these ~unapply~ /method/ are used to to *match* a value and
-       *take it apart*.
-       * =from Jian=
-         it doesn't do this, this ~unapply~ /method/ is _not a real_ (not satisfy
-         the purpose of the design idea of /extractors/) /extractor/ in concept,
-         even though they are used when compiler searching for a /extractor/.
+** DONE 8.2 Extractors - 164
+CLOSED: [2020-09-26 Sat 14:26]
+- extractor :: an /object/ that has a /method/ called ~unapply~ as one of its
+               members.
+  + The purpose of these ~unapply~ /method/ are used to to *match* a value and
+    *take it apart*.
+    * =from Jian=
+      it doesn't do this, this ~unapply~ /method/ is _not a real_ (not satisfy
+      the purpose of the design idea of /extractors/) /extractor/ in concept,
+      even though they are used when compiler searching for a /extractor/.
 
-   - Often,
-     the /extractor object/ also defines a _dual_ /method/ ~apply~ for *building*
-     values, but *this is _NOT_ required*.
-     + =from Jian=
-       /case classes/ always generate these mutually dual /methods/ ~apply~ and
-       ~unapply~.
+- Often,
+  the /extractor object/ also defines a _dual_ /method/ ~apply~ for *building*
+  values, but *this is _NOT_ required*.
+  + =from Jian=
+    /case classes/ always generate these mutually dual /methods/ ~apply~ and
+    ~unapply~.
 
-   - Listing 26.1
-     #+BEGIN_SRC scala
-       object EMail {
-         // The injection method (optional)
-         def apply(user: String, domain: String) = f"$user@$domain"
+- Listing 26.1
+  #+BEGIN_SRC scala
+    object EMail {
+      // The injection method (optional)
+      def apply(user: String, domain: String) = f"$user@$domain"
 
-         def unapply(str: String): Option[(String, String)] =
-           (str split "@") match {
-             case List(u, d) => Some(u, d)
-             case _          => None
-           }
-       }
-     #+END_SRC
+      def unapply(str: String): Option[(String, String)] =
+        (str split "@") match {
+          case List(u, d) => Some(u, d)
+          case _          => None
+        }
+    }
+  #+END_SRC
 
-   - ~selectorString match { case EMail(user, domain) => ... }~
-     would lead to the call:
-     ~EMail.unapply(selectorString)~. This call will lead to two kinds of return
-     value:
-     + ~Some(user, domain)~
-       If this is the case, then bind and run the expression after ~=>~
+- ~selectorString match { case EMail(user, domain) => ... }~
+  would lead to the call:
+  ~EMail.unapply(selectorString)~. This call will lead to two kinds of return
+  value:
+  + ~Some(user, domain)~
+    If this is the case, then bind and run the expression after ~=>~
 
-     + ~None~
-       If this is the case, then try next pattern or fail (when NO pattern left)
-       with a ~MatchError~ exception.
+  + ~None~
+    If this is the case, then try next pattern or fail (when NO pattern left)
+    with a ~MatchError~ exception.
 
-   - If the being matched value's annotated doesn't conform the parameter type
-     that ~unapply~ require, check if this value can be the required type:
-     + If it is, just cast and proceed.
-     + If not, the pattern fails immediately.
+- If the being matched value's annotated doesn't conform the parameter type
+  that ~unapply~ require, check if this value can be the required type:
+  + If it is, just cast and proceed.
+  + If not, the pattern fails immediately.
 
-   - injection :: ~apply~
+- injection :: ~apply~
 
-   - extraction :: ~unapply~
+- extraction :: ~unapply~
 
-   - Design principle:
-     Dual methods ~apply~ and ~unapply~, it they both exist in a class, should
-     satisfy the requirements:
-     #+BEGIN_SRC scala
-       // #1 - a direction
-       Email.unapply(EMail.apply(user, domain))
-       // SHOULD return `Some(user, domain)`
+- Design principle:
+  Dual methods ~apply~ and ~unapply~, it they both exist in a class, should
+  satisfy the requirements:
+  #+BEGIN_SRC scala
+    // #1 - a direction
+    Email.unapply(EMail.apply(user, domain))
+    // SHOULD return `Some(user, domain)`
 
 
-       // #2 - another redirection
-       EMail.unapply(obj) match {
-         case Some(u,d) => EMail.apply(u, d)
-       }
-       // The generated `EMail` SHOULD be equal to the input `obj`
-     #+END_SRC
+    // #2 - another redirection
+    EMail.unapply(obj) match {
+      case Some(u,d) => EMail.apply(u, d)
+    }
+    // The generated `EMail` SHOULD be equal to the input `obj`
+  #+END_SRC
 
-** DONE 7.3 Patterns with zero or one variables - 145
-   CLOSED: [2020-09-27 Sun 01:06]
-   - Patterns with zero or one variables are special and not covered in the
-     previous section:
-     * Since there is no one-tuple, to return just one pattern element, the
-       ~unapply~ /method/ simply wraps the element itself in a ~Some~.
-       + Example:
-         The /extractor object/ defined for strings that consist of the same
-         substring appearing _twice_ in a row:
-         #+begin_src scala
-           object Twice {
-             def apply(s: String): String = s + s
+** DONE 8.3 Patterns with zero or one variables - 167
+CLOSED: [2020-09-27 Sun 01:06]
+- Patterns with zero or one variables are special and not covered in the
+  previous section:
+  * Since there is no one-tuple, to return just one pattern element, the
+    ~unapply~ /method/ simply wraps the element itself in a ~Some~.
+    + Example:
+      The /extractor object/ defined for strings that consist of the same
+      substring appearing _twice_ in a row:
+      #+begin_src scala
+        object Twice {
+          def apply(s: String): String = s + s
 
-             def unapply(s: String): Option[String] = {
-               val length = s.length / 2
-               val half = s.substring(0, length)
-               if (half == s.substring(length)) Some(half) else None
-             }
-           }
-         #+end_src
+          def unapply(s: String): Option[String] = {
+            val length = s.length / 2
+            val half = s.substring(0, length)
+            if (half == s.substring(length)) Some(half) else None
+          }
+        }
+      #+end_src
 
-     * It's also possible that an extractor pattern does _NOT bind any_ variables.
-       In this case the corresponding ~unapply~ /method/ returns a ~Boolean~.
+  * It's also possible that an extractor pattern does _NOT bind any_ variables.
+    In this case the corresponding ~unapply~ /method/ returns a ~Boolean~.
 
-       Example:
-       #+BEGIN_SRC scala
-         object UpperCase {
-           def unapply(s: String): Boolean = s.toUpperCase == s
-         }
-       #+END_SRC
-       In this case, only ~unapply~, NO ~apply~:
-       it would make NO sense to define an ~apply~, as there's _nothing to
-       construct_.
+    Example:
+    #+BEGIN_SRC scala
+      object UpperCase {
+        def unapply(s: String): Boolean = s.toUpperCase == s
+      }
+    #+END_SRC
+    In this case, only ~unapply~, NO ~apply~:
+    it would make NO sense to define an ~apply~, as there's _nothing to
+    construct_.
 
-   - Apply all the previously defined /extractors/ together in its /pattern
-     matching/ code:
-     #+BEGIN_SRC scala
-       def userTwiceUpper(s: String) = s match {
-         case EMail(Twice(x @ UpperCase()), domain) =>
-           f"match: $x in domain $domain"
+- Apply all the previously defined /extractors/ together in its /pattern
+  matching/ code:
+  #+BEGIN_SRC scala
+    def userTwiceUpper(s: String) = s match {
+      case EMail(Twice(x @ UpperCase()), domain) =>
+        f"match: $x in domain $domain"
 
-         case _ =>
-           "no match"
-       }
-     #+END_SRC
-     You *MUSTN'T omit* the empty parameter list in ~UpperCase()~, otherwise
-     the match would test for equality with /object/ ~UpperCase~!
+      case _ =>
+        "no match"
+    }
+  #+END_SRC
+  You *MUSTN'T omit* the empty parameter list in ~UpperCase()~, otherwise
+  the match would test for equality with /object/ ~UpperCase~!
 
-** DONE 7.4 Optionless extractors - 147
-** DONE 7.5 Variable argument extractors - 150
-   CLOSED: [2020-09-27 Sun 01:25]
-   Sometimes, /extractors/ that extract FIXED NUMBER of element values are not
-   flexible enough, and we also have /extractors/ that can support vararg matching
-   -- ~unapplySeq~.
+** DONE 8.4 Optionless extractors - 169
+** DONE 8.5 Variable argument extractors - 172
+CLOSED: [2020-09-27 Sun 01:25]
+Sometimes, /extractors/ that extract FIXED NUMBER of element values are not
+flexible enough, and we also have /extractors/ that can support vararg matching
+-- ~unapplySeq~.
 
-   - Use ~unapplySeq~ can do something like
-     #+BEGIN_SRC scala
-       dom match {
-         case Domain("org", "acm")         => println("acm.org")
-         case Domain("com", "sun", "java") => println("java.sun.com")
-         case Domain("net", _*)            => println("a .net domain")
-       }
-     #+END_SRC
+- Use ~unapplySeq~ can do something like
+  #+BEGIN_SRC scala
+    dom match {
+      case Domain("org", "acm")         => println("acm.org")
+      case Domain("com", "sun", "java") => println("java.sun.com")
+      case Domain("net", _*)            => println("a .net domain")
+    }
+  #+END_SRC
 
-   - Implementation of ~Domain~:
-     #+BEGIN_SRC scala
-       object Domain {
-         // The injection method (optional)
-         def apply(parts: String*): String =
-           parts.reverse.mkString(".")
+- Implementation of ~Domain~:
+  #+BEGIN_SRC scala
+    object Domain {
+      // The injection method (optional)
+      def apply(parts: String*): String =
+        parts.reverse.mkString(".")
 
-         // The extraction method (mandatory)
-         def unapplySeq(whole: String): Option[Seq[String]] =
-           Some(whole.split("\\.").reverse)
-       }
-     #+END_SRC
+      // The extraction method (mandatory)
+      def unapplySeq(whole: String): Option[Seq[String]] =
+        Some(whole.split("\\.").reverse)
+    }
+  #+END_SRC
 
-   - Example:
-     #+BEGIN_SRC scala
-       def isTomInDotCom(s: String): Boolean = s match {
-         case EMail("tom", Domain("com", _*)) => true
-         case _                               => false
-       }
+- Example:
+  #+BEGIN_SRC scala
+    def isTomInDotCom(s: String): Boolean = s match {
+      case EMail("tom", Domain("com", _*)) => true
+      case _                               => false
+    }
 
-       isTomInDotCom("tom@sun.com")    // true
-       isTomInDotCom("peter@sun.com")  // false
-       isTomInDotCom("tom@acm.org")    // false
-     #+END_SRC
+    isTomInDotCom("tom@sun.com")    // true
+    isTomInDotCom("peter@sun.com")  // false
+    isTomInDotCom("tom@acm.org")    // false
+  #+END_SRC
 
-   - It's also possible to
-     RETURN _some fixed elements_ from an ~unapplySeq~
-     TOGETHER WITH the _variable part_.
+- It's also possible to
+  RETURN _some fixed elements_ from an ~unapplySeq~
+  TOGETHER WITH the _variable part_.
 
-     + *HOWTO*:
-       This is expressed by returning _all elements in a tuple_, where the
-       _variable part_ *comes last*, AS USUAL.
-       * Example:
-         #+begin_src scala
-           object ExpandedEMail {
-             def unapplySeq(email: String): Option[(String, Seq[String])] = {
-               val parts = email split "@"
+  + *HOWTO*:
+    This is expressed by returning _all elements in a tuple_, where the
+    _variable part_ *comes last*, AS USUAL.
+    * Example:
+      #+begin_src scala
+        object ExpandedEMail {
+          def unapplySeq(email: String): Option[(String, Seq[String])] = {
+            val parts = email split "@"
 
-               if (parts.length == 2)
-                 Some(parts(0), parts(1).split("\\.").reverse)
-               else
-                 None
-             }
-           }
+            if (parts.length == 2)
+              Some(parts(0), parts(1).split("\\.").reverse)
+            else
+              None
+          }
+        }
 
-           val s = "tom@support.epfl.ch"
+        val s = "tom@support.epfl.ch"
 
-           val ExpandedEMail(name, topdom, subdoms @ _*) = s
-           // name: String = tom
-           // topdom: String = ch
-           // subdoms: Seq[String] = WrappedArray(epfl, support)
-         #+end_src
+        val ExpandedEMail(name, topdom, subdoms @ _*) = s
+        // name: String = tom
+        // topdom: String = ch
+        // subdoms: Seq[String] = WrappedArray(epfl, support)
+      #+end_src
 
-** DONE 7.6 Optionlees variable argument extractors - 154
-** DONE 7.7 Extractors and sequence patterns - 156
-   CLOSED: [2020-09-27 Sun 01:38]
-   /Sequence patterns/ are all implemented using /extractors/ in the standard
-   Scala library:
-   #+BEGIN_SRC scala
-     package scala
+** DONE 8.6 Optionlees variable argument extractors - 176
+** DONE 8.7 Extractors and sequence patterns - 178
+CLOSED: [2020-09-27 Sun 01:38]
+/Sequence patterns/ are all implemented using /extractors/ in the standard
+Scala library:
+#+BEGIN_SRC scala
+  package scala
 
-     object List {
-       def apply[T](elems: T*) = elems.toList
+  object List {
+    def apply[T](elems: T*) = elems.toList
 
-       def unapplySeq[T](x: List[T]): Option[Seq[T]] = Some(x)
-     }
-   #+END_SRC
-   Similar to ~Array~
+    def unapplySeq[T](x: List[T]): Option[Seq[T]] = Some(x)
+  }
+#+END_SRC
+Similar to ~Array~
 
-** DONE 7.8 Extractors versus case classes - 158
-   CLOSED: [2020-09-27 Sun 02:24]
-   - Even though they are very useful,
-     /case classes/ have one _SHORTCOMING_:
-     they *expose* _the concrete representation of data_.
-     * This means that the _name_ of the /class/ in a /constructor pattern/
-       *corresponds to* the concrete /representation type/ of the /selector object/.
+** DONE 8.8 Extractors versus case classes - 180
+CLOSED: [2020-09-27 Sun 02:24]
+- Even though they are very useful,
+  /case classes/ have one _SHORTCOMING_:
+  they *expose* _the concrete representation of data_.
+  * This means that the _name_ of the /class/ in a /constructor pattern/
+    *corresponds to* the concrete /representation type/ of the /selector object/.
 
-   - /Extractors/ *BREAK* this link between /data representations/ and /patterns/,
-     and it provides /representation independence/, which allows you to change an
-     /implementation type/ used in a set of components WITHOUT affecting clients
-     of these components.
+- /Extractors/ *BREAK* this link between /data representations/ and /patterns/,
+  and it provides /representation independence/, which allows you to change an
+  /implementation type/ used in a set of components WITHOUT affecting clients
+  of these components.
 
-   - */Representation independence/ is an important advantage of /extractors/
-     over /case classes/.*
+- */Representation independence/ is an important advantage of /extractors/
+  over /case classes/.*
 
-   - /Case classes/:
-     * *cons*:
-       Since /case classes/ have *NO* /representation independence/, if your component
-       had _defined and exported_ a set of /case classes/, you'd be stuck with them
-       BECAUSE client code could already contain pattern matches against these /case
-       classes/. Renaming some /case classes/ or changing the /class hierarchy/ would
-       affect client code.
+- /Case classes/:
+  * *cons*:
+    Since /case classes/ have *NO* /representation independence/, if your component
+    had _defined and exported_ a set of /case classes/, you'd be stuck with them
+    BECAUSE client code could already contain pattern matches against these /case
+    classes/. Renaming some /case classes/ or changing the /class hierarchy/ would
+    affect client code.
 
-     * *pros*:
-       + _More concise_
+  * *pros*:
+    + _More concise_
 
-       + Usually _more efficient_ pattern matches than /extractors/.
-         - The Scala compiler can optimize patterns over /case classes/ much better
-           than patterns over /extractors/ -- the mechanisms of /case classes/ are
-           fixed
+    + Usually _more efficient_ pattern matches than /extractors/.
+      - The Scala compiler can optimize patterns over /case classes/ much better
+        than patterns over /extractors/ -- the mechanisms of /case classes/ are
+        fixed
 
-         - whereas an ~unapply~ or ~unapplySeq~ method in an /extractor/ could do
-           almost anything, =from Jian= and this flexibility make it hard to do
-           very specific optimization.
+      - whereas an ~unapply~ or ~unapplySeq~ method in an /extractor/ could do
+        almost anything, =from Jian= and this flexibility make it hard to do
+        very specific optimization.
 
-       + /Exhaustiveness check/ can be applied if a set of /case classes/ inherit
-         from /sealed classes/.
+    + /Exhaustiveness check/ can be applied if a set of /case classes/ inherit
+      from /sealed classes/.
 
-   - Summary: *It depends*
-     * closed application: you usually prefer /case classes/
+- Summary: *It depends*
+  * closed application: you usually prefer /case classes/
 
-     * Expose a type to unknown clients: /extractors/ can help you maintain
-       /representation independence/.
+  * Expose a type to unknown clients: /extractors/ can help you maintain
+    /representation independence/.
 
-   - If it is NOT clear when you start a new project, you can always start from
-     /case classes/, and then, when you think you need /representation
-     independence/, change to (manually coded) /extractors/.
-     * You can do this because the syntax for /pattern matching/ is always the
-       same, NO MATTER there are /extractors/ or /case classes/.
+- If it is NOT clear when you start a new project, you can always start from
+  /case classes/, and then, when you think you need /representation
+  independence/, change to (manually coded) /extractors/.
+  * You can do this because the syntax for /pattern matching/ is always the
+    same, NO MATTER there are /extractors/ or /case classes/.
 
-** DONE 7.9 Regular expressions - 160
-   CLOSED: [2020-09-27 Sun 04:29]
-   One particularly useful application area of /extractors/ are /regular
-   expressions/.
+** DONE 8.9 Regular expressions - 182
+CLOSED: [2020-09-27 Sun 04:29]
+One particularly useful application area of /extractors/ are /regular
+expressions/.
 
-   - Like Java, Scala provides /regular expressions/ through a library,
-     BUT /extractors/ make it *much nicer* to interact with them.
+- Like Java, Scala provides /regular expressions/ through a library,
+  BUT /extractors/ make it *much nicer* to interact with them.
 
 *** DONE Forming regular expressions - 143
     CLOSED: [2020-09-27 Sun 04:17]
@@ -1147,130 +1156,130 @@
     * *CAUTION*: =From Jian=
       An optional group that is not matched will bind ~null~ to the target variable.
 
-** DONE 7.10 Conclusion - 163 - =RE-READ=
-   CLOSED: [2017-12-02 Sat 23:27]
-   In this chapter you saw how to *generalize* /pattern matching/ with /extractors/.
+** DONE 8.10 Conclusion - 185 - =RE-READ=
+CLOSED: [2017-12-02 Sat 23:27]
+In this chapter you saw how to *generalize* /pattern matching/ with /extractors/.
 
-   - /Extractors/ let you define your own kinds of patterns, which *need _NOT_
-     correspond to* the /type/ of the expressions you select on.
-     * This gives you more flexibility in the kinds of patterns you can use for
-       matching.
+- /Extractors/ let you define your own kinds of patterns, which *need _NOT_
+  correspond to* the /type/ of the expressions you select on.
+  * This gives you more flexibility in the kinds of patterns you can use for
+    matching.
 
-     * In effect it's like *having DIFFERENT possible VIEWS on the same data*.
+  * In effect it's like *having DIFFERENT possible VIEWS on the same data*.
 
-     * It also gives you a layer =IMPORTANT=
-       BETWEEN a /type's representation/ and _the way clients view it_.
-       + This lets you do /pattern matching/ WHILE *maintaining representation
-         independence*, a property which is very useful in large software systems.
+  * It also gives you a layer =IMPORTANT=
+    BETWEEN a /type's representation/ and _the way clients view it_.
+    + This lets you do /pattern matching/ WHILE *maintaining representation
+      independence*, a property which is very useful in large software systems.
 
-   - /Extractors/ are one more element in your tool box that let you define
-     flexible library abstractions.
+- /Extractors/ are one more element in your tool box that let you define
+  flexible library abstractions.
 
-* DONE 8 Annotations - 164
-  CLOSED: [2017-10-21 Sat 19:01]
-  - annotations :: structured information added to program source code.
+* DONE 9 Annotations - 186
+CLOSED: [2017-10-21 Sat 19:01]
+- annotations :: structured information added to program source code.
 
-    * Like /comments/,
-      they can be sprinkled throughout a program and attached to any variable,
-      method, expression, or other program element.
+  * Like /comments/,
+    they can be sprinkled throughout a program and attached to any variable,
+    method, expression, or other program element.
 
-    * Unlike /comments/,
-      _they have structure, thus making them easier to machine process._
+  * Unlike /comments/,
+    _they have structure, thus making them easier to machine process._
 
-  - This chapter
-    * shows how to use annotations in Scala,
-    * shows their general syntax and how to use several standard annotations.
+- This chapter
+  * shows how to use annotations in Scala,
+  * shows their general syntax and how to use several standard annotations.
 
-  - This chapter does NOT show how to write new annotation processing tools,
-    because it is _beyond the scope of this book_.
+- This chapter does NOT show how to write new annotation processing tools,
+  because it is _beyond the scope of this book_.
 
-      Chapter 31 shows one technique, but not the only one.
+    Chapter 31 shows one technique, but not the only one.
 
-    _This chapter focuses on how to use annotations._
+  _This chapter focuses on how to use annotations._
 
-** DONE 8.1 Why have annotations? - 164
-   CLOSED: [2017-10-21 Sat 18:59]
-   - There are many things you can do with a program _other than_ compiling and
-     running it. Some examples are:
-     1. Automatic generation of documentation as with *Scaladoc*.
-        TODO
+** DONE 9.1 Why have annotations? - 186
+CLOSED: [2017-10-21 Sat 18:59]
+- There are many things you can do with a program _other than_ compiling and
+  running it. Some examples are:
+  1. Automatic generation of documentation as with *Scaladoc*.
+     TODO
 
-     2. Pretty printing code so that it matches your preferred style.
-        TODO
+  2. Pretty printing code so that it matches your preferred style.
+     TODO
 
-     3. Checking code for common errors such as opening a file but, on some
-        control paths, never closing it.
-        TODO
+  3. Checking code for common errors such as opening a file but, on some
+     control paths, never closing it.
+     TODO
 
-     4. Experimental type checking, for example to manage side effects or ensure
-        ownership properties.
-        TODO
+  4. Experimental type checking, for example to manage side effects or ensure
+     ownership properties.
+     TODO
 
-   - Such tools are called /meta-programming/ tools, because they are programs
-     that take other programs as input.
+- Such tools are called /meta-programming/ tools, because they are programs
+  that take other programs as input.
 
-   - /Annotations/ can improve the previously listed tools as follows:
-     1. A documentation generator could be instructed to document certain methods
-        as _deprecated_.
+- /Annotations/ can improve the previously listed tools as follows:
+  1. A documentation generator could be instructed to document certain methods
+     as _deprecated_.
 
-     2. A pretty printer could be instructed to skip over parts of the program
-        that have been carefully hand formatted.
+  2. A pretty printer could be instructed to skip over parts of the program
+     that have been carefully hand formatted.
 
-     3. A checker for non-closed files could be instructed to ignore a particular
-        file that has been manually verified to be closed.
+  3. A checker for non-closed files could be instructed to ignore a particular
+     file that has been manually verified to be closed.
 
-     4. A side-effects checker could be instructed to verify that a specified
-        method has no side effects.
-        TODO =???=
+  4. A side-effects checker could be instructed to verify that a specified
+     method has no side effects.
+     TODO =???=
 
-** DONE 8.2 Syntax of annotations - 165
-   CLOSED: [2017-10-21 Sat 18:59]
-   - Annotations can also be applied to an expression, as with the ~@unchecked~
-     annotation for pattern matching (see Chapter 15). To do so, place a colon
-     (~:~) after the expression and then write the annotation. Syntactically, it
-     looks like the annotation is being used as a type:
-     #+BEGIN_SRC scala
-       (e: @unchecked) match {
-         // nonexhaustive
-         cases...
-       }
-     #+END_SRC
+** DONE 9.2 Syntax of annotations - 187
+CLOSED: [2017-10-21 Sat 18:59]
+- Annotations can also be applied to an expression, as with the ~@unchecked~
+  annotation for pattern matching (see Chapter 15). To do so, place a colon
+  (~:~) after the expression and then write the annotation. Syntactically, it
+  looks like the annotation is being used as a type:
+  #+BEGIN_SRC scala
+    (e: @unchecked) match {
+      // nonexhaustive
+      cases...
+    }
+  #+END_SRC
 
-   - /Annotations/ have a richer general form: @annot(exp1, exp2, ...)
-     Though much simpler form annotations are often seen.
+- /Annotations/ have a richer general form: @annot(exp1, exp2, ...)
+  Though much simpler form annotations are often seen.
 
-   - Internally,
-     Scala represents an annotation as just a constructor call of an annotation
-     class -- replace the ~@~ by ~new~ and you have a valid instance creation
-     expression.
+- Internally,
+  Scala represents an annotation as just a constructor call of an annotation
+  class -- replace the ~@~ by ~new~ and you have a valid instance creation
+  expression.
 
-   - One slightly tricky bit concerns annotations that conceptually take other
-     annotations as arguments, which are required by some frameworks.
+- One slightly tricky bit concerns annotations that conceptually take other
+  annotations as arguments, which are required by some frameworks.
 
-     You _CANNOT_ write an annotation directly as an argument to an annotation,
-     because _annotations are NOT valid expressions_. In such cases you must use
-     ~new~ instead of ~@~, as illustrated here:
-     #+BEGIN_SRC scala
-       scala> import annotation._
-       // import annotation._
+  You _CANNOT_ write an annotation directly as an argument to an annotation,
+  because _annotations are NOT valid expressions_. In such cases you must use
+  ~new~ instead of ~@~, as illustrated here:
+  #+BEGIN_SRC scala
+    scala> import annotation._
+    // import annotation._
 
-       scala> class strategy(arg: Annotation) extends Annotation
-       // defined class strategy
+    scala> class strategy(arg: Annotation) extends Annotation
+    // defined class strategy
 
-       scala> class delayed extends Annotation
-       // defined class delayed
+    scala> class delayed extends Annotation
+    // defined class delayed
 
-       scala> @strategy(@delayed) def f() = {}
-       // <console>:1: error: illegal start of simple expression
-       //        @strategy(@delayed) def f() = {}
-       //                  ˆ
+    scala> @strategy(@delayed) def f() = {}
+    // <console>:1: error: illegal start of simple expression
+    //        @strategy(@delayed) def f() = {}
+    //                  ˆ
 
-       scala> @strategy(new delayed) def f() = {}
-       // f: ()Unit
-     #+END_SRC
+    scala> @strategy(new delayed) def f() = {}
+    // f: ()Unit
+  #+END_SRC
 
-** DONE 8.3 Standard annotations - 167 - =TODO=
-   CLOSED: [2017-10-21 Sat 18:45]
+** DONE 9.3 Standard annotations - 189 - =TODO=
+CLOSED: [2017-10-21 Sat 18:45]
 *** DONE Deprecation - 167
     CLOSED: [2017-10-21 Sat 18:34]
     ~@deprecated~
@@ -1329,146 +1338,146 @@
 
     TODO =???=
 
-** TODO 8.4 Conclusion - 171
-   =TODO=
-   Chapter 31 gives additional, Java-specific information on annotations. It
-   covers annotations only available when targeting Java, additional meanings of
-   standard annotations when targeting Java, how to interoperate with Java-based
-   annotations, and how to use Java-based mechanisms to define and process
-   annotations in Scala.
+** TODO 9.4 Conclusion - 193
+=TODO=
+Chapter 31 gives additional, Java-specific information on annotations. It
+covers annotations only available when targeting Java, additional meanings of
+standard annotations when targeting Java, how to interoperate with Java-based
+annotations, and how to use Java-based mechanisms to define and process
+annotations in Scala.
 
-* DONE 9 Modular Programming Using Objects - 172 - =Re-READ=
-  CLOSED: [2018-03-19 Mon 19:04]
-  - In this chapter, we’ll discuss how you can use Scala's object-oriented
-    features to *make a program more modular*:
-    1. Show HOW *a simple /singleton object/ can be used as a module*.
+* DONE 10 Modular Programming Using Objects - 194 - =Re-READ=
+CLOSED: [2018-03-19 Mon 19:04]
+- In this chapter, we’ll discuss how you can use Scala's object-oriented
+  features to *make a program more modular*:
+  1. Show HOW *a simple /singleton object/ can be used as a module*.
 
-    2. Explain how you can use /traits/ and /classes/ as abstractions over
-       /modules/.
+  2. Explain how you can use /traits/ and /classes/ as abstractions over
+     /modules/.
 
-       These abstractions can be reconfigured into multiple modules, even
-       multiple times within the same program.
+     These abstractions can be reconfigured into multiple modules, even
+     multiple times within the same program.
 
-    3. Show a pragmatic technique for using /traits/ _to *divide* a /module/
-       across MULTIPLE files_.
+  3. Show a pragmatic technique for using /traits/ _to *divide* a /module/
+     across MULTIPLE files_.
 
-** DONE 9.1 The problem - 173 =Re-Read= =Review=
-   CLOSED: [2018-03-19 Mon 02:19]
-   - As a program grows in size, it becomes increasingly important to organize it
-     in a modular way.
-     1. being able to compile different modules that make up the system separate-
-        ly helps different teams work independently.
+** DONE 10.1 The problem - 195 =Re-Read= =Review=
+CLOSED: [2018-03-19 Mon 02:19]
+- As a program grows in size, it becomes increasingly important to organize it
+  in a modular way.
+  1. being able to compile different modules that make up the system separate-
+     ly helps different teams work independently.
 
-     2. being able to unplug one implementation of a module and plug in another
-        is useful,
-        because it allows different configurations of a system to be used in
-        different contexts, such as unit testing on a developer’s desktop,
-        integration testing, staging, and deployment.
+  2. being able to unplug one implementation of a module and plug in another
+     is useful,
+     because it allows different configurations of a system to be used in
+     different contexts, such as unit testing on a developer’s desktop,
+     integration testing, staging, and deployment.
 
-   - Any technique that aims to facilitate this kind of modularity needs to
-     provide a few essentials.
-     1. there should be a module construct that provides a good separation of
-        interface and implementation.
+- Any technique that aims to facilitate this kind of modularity needs to
+  provide a few essentials.
+  1. there should be a module construct that provides a good separation of
+     interface and implementation.
 
-     2. there should be a way to replace one module with another that has the
-        same interface without changing or recompiling the modules that depend
-        on the replaced one. Lastly, there should be a way to wire modules
-        together.
+  2. there should be a way to replace one module with another that has the
+     same interface without changing or recompiling the modules that depend
+     on the replaced one. Lastly, there should be a way to wire modules
+     together.
 
-        This wiring task can by thought of as configuring the system.
+     This wiring task can by thought of as configuring the system.
 
-   - One solution is /depedency injection/. TODO
-     It is a technique supported on the Java platform by frameworks such as
-     Spring and Guice.
+- One solution is /depedency injection/. TODO
+  It is a technique supported on the Java platform by frameworks such as
+  Spring and Guice.
 
-     We can use this method in Scala.
+  We can use this method in Scala.
 
-   - In the remainder of this chapter,
-     we'll show HOW to _use objects as modules_ to achieve the desired "in the
-     large" modularity *without using an external framework*.
+- In the remainder of this chapter,
+  we'll show HOW to _use objects as modules_ to achieve the desired "in the
+  large" modularity *without using an external framework*.
 
-** TODO 9.2 A recipe application - 174
-** TODO 9.3 Abstraction - 177
-   - Use /abstract classes/
+** TODO 10.2 A recipe application - 196
+** TODO 10.3 Abstraction - 199
+- Use /abstract classes/
 
-** TODO 9.4 Splitting modules into traits - 180
-   - Split /every large abstract class/ to multiple /traits/.
+** TODO 10.4 Splitting modules into traits - 202
+- Split /every large abstract class/ to multiple /traits/.
 
-** TODO 9.5 Runtime linking - 182
-** TODO 9.6 Tracking module instances - 183
-** TODO 9.7 Conclusion - 185
+** TODO 10.5 Runtime linking - 204
+** TODO 10.6 Tracking module instances - 205
+** TODO 10.7 Conclusion - 207
 
-* DONE 10 Object Equality - 187
-  CLOSED: [2018-07-19 Thu 18:27]
-  Define *object equality* is more tricky than it looks at first glance.
+* DONE 11 Object Equality - 209
+CLOSED: [2018-07-19 Thu 18:27]
+Define *object equality* is more tricky than it looks at first glance.
 
-  =From Jian=
-  This complexity comes from /subtyping/.
-  This is NOT a problem of OOP, but a problem of OOP with /inheritance/.
+=From Jian=
+This complexity comes from /subtyping/.
+This is NOT a problem of OOP, but a problem of OOP with /inheritance/.
 
-** DONE 10.1 Equality in Scala - 187
-   CLOSED: [2017-11-25 Sat 00:39]
-   - As mentioned in Section 11.2, the definition of equality is _DIFFERENT_ in
-     Scala and Java. Both of them has *TWO* equality comparison operators, but
-     with _DIFFERENT design choice_.
+** DONE 11.1 Equality in Scala - 209
+CLOSED: [2017-11-25 Sat 00:39]
+- As mentioned in Section 11.2, the definition of equality is _DIFFERENT_ in
+  Scala and Java. Both of them has *TWO* equality comparison operators, but
+  with _DIFFERENT design choice_.
 
-     + Java
-       * ~==~ operator ::
-         - /natural equality check/ for /value types/
-           AND
-         - /object identity/ for /reference types/
+  + Java
+    * ~==~ operator ::
+      - /natural equality check/ for /value types/
+        AND
+      - /object identity/ for /reference types/
 
-       * ~equals~ method :: (user-defined) canonical equality for /reference types/.
+    * ~equals~ method :: (user-defined) canonical equality for /reference types/.
 
-     + Scala
-       * ~==~ operator :: Be reserved for the "natural" equality of each type.
-         - For /value types/, ~==~ is value comparison, just like in Java.
+  + Scala
+    * ~==~ operator :: Be reserved for the "natural" equality of each type.
+      - For /value types/, ~==~ is value comparison, just like in Java.
 
-         - For /reference types/, ~==~ is the same as ~equals~ in Scala, and you
-           can redefine the behavior of ~==~ for new types by overriding the
-           ~equals~ /method/.
+      - For /reference types/, ~==~ is the same as ~equals~ in Scala, and you
+        can redefine the behavior of ~==~ for new types by overriding the
+        ~equals~ /method/.
 
-       * ~eq~ method :: /object identity/, which is NOT used much.
+    * ~eq~ method :: /object identity/, which is NOT used much.
 
-   - Q: Why does Java's design is BAD!?
+- Q: Why does Java's design is BAD!?
 
-     A: The more natural symbol, ~==~, *does NOT* always correspond to the natural
-        notion of equality.
+  A: The more natural symbol, ~==~, *does NOT* always correspond to the natural
+     notion of equality.
 
-   - In Scala ~==~ is value comparison, just like in Java.
+- In Scala ~==~ is value comparison, just like in Java.
 
-     For reference types, ~==~ is the same as ~equals~ in Scala.
-     You can redefine the behavior of ~==~ of new types by overriding the
-     ~equals~ method, which is _always inherited from_ class ~Any~.
+  For reference types, ~==~ is the same as ~equals~ in Scala.
+  You can redefine the behavior of ~==~ of new types by overriding the
+  ~equals~ method, which is _always inherited from_ class ~Any~.
 
-     This inherited ~equals~, which takes effect _unless_ overridden, is /object
-     identity/, as in the case in Java. So ~equals~ (and with it, ~==~) is by
-     default the same as ~eq~, but you can change its behavior by overriding the
-     ~equals~ method in the classes you define.
+  This inherited ~equals~, which takes effect _unless_ overridden, is /object
+  identity/, as in the case in Java. So ~equals~ (and with it, ~==~) is by
+  default the same as ~eq~, but you can change its behavior by overriding the
+  ~equals~ method in the classes you define.
 
-   - It is not possible to override ~==~ directly, as it is defined as a /final
-     method/ in class ~Any~.
-     #+BEGIN_SRC scala
-       // In the class `Any`
-       final def == (that: Any): Boolean =
-         if (null eq this) {null eq that} else {this equals that}
-     #+END_SRC
+- It is not possible to override ~==~ directly, as it is defined as a /final
+  method/ in class ~Any~.
+  #+BEGIN_SRC scala
+    // In the class `Any`
+    final def == (that: Any): Boolean =
+      if (null eq this) {null eq that} else {this equals that}
+  #+END_SRC
 
-** DONE 10.2 Writing an equality method - 188
-   CLOSED: [2018-07-19 Thu 01:19]
-   - footnote:
-     All but the _third_ pitfall are described in the context of Java in the
-     book, Effective Java Second Edition, by Joshua Bloch.
+** DONE 11.2 Writing an equality method - 210
+CLOSED: [2018-07-19 Thu 01:19]
+- footnote:
+  All but the _third_ pitfall are described in the context of Java in the
+  book, Effective Java Second Edition, by Joshua Bloch.
 
-   - Here are four common pitfalls2 that can cause inconsistent behavior when
-     overriding equals:
-     1. Defining equals with the wrong signature.
+- Here are four common pitfalls2 that can cause inconsistent behavior when
+  overriding equals:
+  1. Defining equals with the wrong signature.
 
-     2. Changing equals without also changing hashCode.
+  2. Changing equals without also changing hashCode.
 
-     3. Defining equals in terms of mutable fields.
+  3. Defining equals in terms of mutable fields.
 
-     4. Failing to define equals as an equivalence relation.
+  4. Failing to define equals as an equivalence relation.
 
 *** DONE Pitfall #1: Defining ~equals~ with the wrong signature - 189
     CLOSED: [2017-11-25 Sat 00:54]
@@ -1759,187 +1768,187 @@
         same behavior!
       - TODO =DETAILS=
 
-** DONE 10.3 Defining equality for parameterized types - 200
-   CLOSED: [2017-11-25 Sat 01:50]
-   When /classes/ are parameterized, this scheme needs to be adapted a little
-   bit. *This is special due to /type erasure/.*
+** DONE 11.3 Defining equality for parameterized types - 222
+CLOSED: [2017-11-25 Sat 01:50]
+When /classes/ are parameterized, this scheme needs to be adapted a little
+bit. *This is special due to /type erasure/.*
 
-   - Example code with parameterized types:
-     #+BEGIN_SRC scala
+- Example code with parameterized types:
+  #+BEGIN_SRC scala
 
 
-            trait Tree[+T] {
-         def elem: T
-         def left: Tree[T]
-         def right: Tree[T]
-       }
+         trait Tree[+T] {
+      def elem: T
+      def left: Tree[T]
+      def right: Tree[T]
+    }
 
-       object EmptyTree extends Tree[Nothing] {
-         def elem =
-           throw new NoSuchElementException("EmptyTree.elem")
-         def left =
-           throw new NoSuchElementException("EmptyTree.left")
-         def right =
-           throw new NoSuchElementException("EmptyTree.right")
-       }
+    object EmptyTree extends Tree[Nothing] {
+      def elem =
+        throw new NoSuchElementException("EmptyTree.elem")
+      def left =
+        throw new NoSuchElementException("EmptyTree.left")
+      def right =
+        throw new NoSuchElementException("EmptyTree.right")
+    }
 
-       class Branch[+T](
-         val elem: T,
-         val left: Tree[T],
-         val right: Tree[T]
-       ) extends Tree[T]
-     #+END_SRC
+    class Branch[+T](
+      val elem: T,
+      val left: Tree[T],
+      val right: Tree[T]
+    ) extends Tree[T]
+  #+END_SRC
 
-   - No need to implement ~equals~ for ~Tree~ -- we assume ~equals~'s will be
-     implemented separately for _EACH implementation_ of the /abstract class/.
+- No need to implement ~equals~ for ~Tree~ -- we assume ~equals~'s will be
+  implemented separately for _EACH implementation_ of the /abstract class/.
 
-     + For ~EmptyTree~:
-       No overridden ~equals~, ~hashCode~, and ~canEqual~ is required.
+  + For ~EmptyTree~:
+    No overridden ~equals~, ~hashCode~, and ~canEqual~ is required.
 
-       The default ~equals~ and ~hashCode~ inherited from ~AnyRef~ work just fine.
-         After all, an ~EmptyTree~ is ONLY equal to itself, so equality should be
-       /reference equality/, which is what's inherited from ~AnyRef~.
+    The default ~equals~ and ~hashCode~ inherited from ~AnyRef~ work just fine.
+      After all, an ~EmptyTree~ is ONLY equal to itself, so equality should be
+    /reference equality/, which is what's inherited from ~AnyRef~.
 
-   - Define ~equals~
-     #+BEGIN_SRC scala
-       class Branch[T](
-         val elem: T,
-         val left: Tree[T],
-         val right: Tree[T]
-       ) extends Tree[T] {
-         override def equals(other: Any) = other match {
-           case that: Branch[T] => this.elem == that.elem &&
-               this.left == that.left &&
-               this.right == that.right
-           case _ => false
-         }
-       }
-     #+END_SRC
+- Define ~equals~
+  #+BEGIN_SRC scala
+    class Branch[T](
+      val elem: T,
+      val left: Tree[T],
+      val right: Tree[T]
+    ) extends Tree[T] {
+      override def equals(other: Any) = other match {
+        case that: Branch[T] => this.elem == that.elem &&
+            this.left == that.left &&
+            this.right == that.right
+        case _ => false
+      }
+    }
+  #+END_SRC
 
-     This code will issue an *unchecked warnings*.
-     Use ~fsc -unchecked Tree.scala~ to check, and you'll get a warning message:
-     #+BEGIN_QUOTE
-     Tree.scala
-     Tree.scala:14: warning: non variable typeargument T in type
-     pattern is unchecked since it is eliminated by erasure
-         case that: Branch[T] => this.elem == that.elem &&
-     #+END_QUOTE
+  This code will issue an *unchecked warnings*.
+  Use ~fsc -unchecked Tree.scala~ to check, and you'll get a warning message:
+  #+BEGIN_QUOTE
+  Tree.scala
+  Tree.scala:14: warning: non variable typeargument T in type
+  pattern is unchecked since it is eliminated by erasure
+      case that: Branch[T] => this.elem == that.elem &&
+  #+END_QUOTE
 
-     This is due to /type erasure/.
+  This is due to /type erasure/.
 
-   - How to deal with this *unchecked warning*?
-     + Fix it
+- How to deal with this *unchecked warning*?
+  + Fix it
 
-         ~case that: Branch[T]~ to
-       * ~case that: Branch[t]~ TODO details
-         OR
-       * ~case that: Branch[_]~
+      ~case that: Branch[T]~ to
+    * ~case that: Branch[t]~ TODO details
+      OR
+    * ~case that: Branch[_]~
 
-     + Rationale:
-       You need NOT necessarily check that two ~Branch~'es have the same element
-       types when comparing them -- it's quite possible that two ~Branch~'es with
-       _different element types_ are equal, as long as their fields are the same.
-       #+BEGIN_SRC scala
-         val b1 = new Branch[List[String]](Nil, EmptyTree, EmptyTree)
-         // b1: Branch[List[String]] = Branch@9d5fa4f
+  + Rationale:
+    You need NOT necessarily check that two ~Branch~'es have the same element
+    types when comparing them -- it's quite possible that two ~Branch~'es with
+    _different element types_ are equal, as long as their fields are the same.
+    #+BEGIN_SRC scala
+      val b1 = new Branch[List[String]](Nil, EmptyTree, EmptyTree)
+      // b1: Branch[List[String]] = Branch@9d5fa4f
 
-         val b2 = new Branch[List[Int]](Nil, EmptyTree, EmptyTree)
-         // b2: Branch[List[Int]] = Branch@56cdfc29
+      val b2 = new Branch[List[Int]](Nil, EmptyTree, EmptyTree)
+      // b2: Branch[List[Int]] = Branch@56cdfc29
 
-         b1 == b2
-         // res19: Boolean = true
-       #+END_SRC
+      b1 == b2
+      // res19: Boolean = true
+    #+END_SRC
 
-       * *CONTROVERSY*: Should ~b1 == b2~ _true_ or _false_?
-         - In the /type erasure model/ (JVM - Scala):
-           /type parameters/ are present ONLY at compile-time, and it's natural to
-           consider the two ~Branch~ values ~b1~ and ~b2~ to be equal at run
-           time if all fields are equal.
+    * *CONTROVERSY*: Should ~b1 == b2~ _true_ or _false_?
+      - In the /type erasure model/ (JVM - Scala):
+        /type parameters/ are present ONLY at compile-time, and it's natural to
+        consider the two ~Branch~ values ~b1~ and ~b2~ to be equal at run
+        time if all fields are equal.
 
-         - If in a model that the /type parameters/ are considered form part of
-           an object's value, it's equally natural to consider them different.
+      - If in a model that the /type parameters/ are considered form part of
+        an object's value, it's equally natural to consider them different.
 
-   - Override ~hashCode~ for ~Branch~ as usual
-     ~override def hashCode: Int = (elem, left, right).##~
+- Override ~hashCode~ for ~Branch~ as usual
+  ~override def hashCode: Int = (elem, left, right).##~
 
-   - Override ~canEqual~ for ~Branch~:
-     #+BEGIN_SRC scala
-       def canEqual(other: Any) = other match {
-         case that: Branch[_] => true
-         case _               => false
-       }
+- Override ~canEqual~ for ~Branch~:
+  #+BEGIN_SRC scala
+    def canEqual(other: Any) = other match {
+      case that: Branch[_] => true
+      case _               => false
+    }
 
-       // OR
+    // OR
 
-       def canEqual(other: Any) = otherisInstanceOf[Branch[_]]
-     #+END_SRC
-     How is it possible to leave some parts of it (the ~_~ in the second form
-     above) undefined? TODO TODO TODO The /type parameter/, rather than
-     /type pattern/, ~_~ is explained in the next chapter.
+    def canEqual(other: Any) = otherisInstanceOf[Branch[_]]
+  #+END_SRC
+  How is it possible to leave some parts of it (the ~_~ in the second form
+  above) undefined? TODO TODO TODO The /type parameter/, rather than
+  /type pattern/, ~_~ is explained in the next chapter.
 
-   - The final version:
-     #+BEGIN_SRC scala
-       class Branch[T](
-         val elem: T,
-         val left: Tree[T],
-         val right: Tree[T]
-       ) extends Tree[T] {
-         override def equals(other: Any) = other match {
-           case that: Branch[_] => (that canEqual this) &&
-                                 this.elem == that.elem &&
-                                 this.left == that.left &&
-                                 this.right == that.right
-           case _ => false
-         }
+- The final version:
+  #+BEGIN_SRC scala
+    class Branch[T](
+      val elem: T,
+      val left: Tree[T],
+      val right: Tree[T]
+    ) extends Tree[T] {
+      override def equals(other: Any) = other match {
+        case that: Branch[_] => (that canEqual this) &&
+                              this.elem == that.elem &&
+                              this.left == that.left &&
+                              this.right == that.right
+        case _ => false
+      }
 
-         def canEqual(other: Any) = other.isInstanceOf[Branch[_]]
+      def canEqual(other: Any) = other.isInstanceOf[Branch[_]]
 
-         override def hashCode: Int = (elem, left, right).##
-       }
-     #+END_SRC
+      override def hashCode: Int = (elem, left, right).##
+    }
+  #+END_SRC
 
-** DONE 10.4 Recipes for ~equals~ and ~hashCode~ - 204
-   CLOSED: [2018-07-19 Thu 18:27]
-   In this section, we'll provide *step-by-step recipes for creating ~equals~ and
-   ~hashCode~ /methods/ that should suffice for _most situations_.*
+** DONE 11.4 Recipes for ~equals~ and ~hashCode~ - 226
+CLOSED: [2018-07-19 Thu 18:27]
+In this section, we'll provide *step-by-step recipes for creating ~equals~ and
+~hashCode~ /methods/ that should suffice for _most situations_.*
 
-   As an illustration, we'll use the /methods/ of /class/ ~Rational~, shown in
-   Listing 30.5. This is a *modified version* of Listing 6.5 on page 151:
-   - Remove mathematical operators methods that are not related to this _equality
-     check_ topic.
+As an illustration, we'll use the /methods/ of /class/ ~Rational~, shown in
+Listing 30.5. This is a *modified version* of Listing 6.5 on page 151:
+- Remove mathematical operators methods that are not related to this _equality
+  check_ topic.
 
-   - Enhance the ~toString~ /method/.
+- Enhance the ~toString~ /method/.
 
-   - Code:
-     #+BEGIN_SRC scala
-       class Rational(n: Int, d: Int) {
-         require(d != 0)
+- Code:
+  #+BEGIN_SRC scala
+    class Rational(n: Int, d: Int) {
+      require(d != 0)
 
-         private val g = gcd(n.abs, d.abs)
-         val numer = (if (d < 0) -n else n) / g
-         val denom = d.abs / g
+      private val g = gcd(n.abs, d.abs)
+      val numer = (if (d < 0) -n else n) / g
+      val denom = d.abs / g
 
-         private def gcd(a: Int, b: Int): Int =
-           if (b == 0) a else gcd(b, a % b)
+      private def gcd(a: Int, b: Int): Int =
+        if (b == 0) a else gcd(b, a % b)
 
-         override def equals(other: Any): Boolean =
-           other match {
-             case that: Rational =>
-               (that canEqual this) &&
-                 numer == that.numer &&
-                 denom == that.denom
-             case _ => false
-           }
+      override def equals(other: Any): Boolean =
+        other match {
+          case that: Rational =>
+            (that canEqual this) &&
+              numer == that.numer &&
+              denom == that.denom
+          case _ => false
+        }
 
-         def canEqual(other: Any): Boolean =
-           other.isInstanceOf[Rational]
+      def canEqual(other: Any): Boolean =
+        other.isInstanceOf[Rational]
 
-         override def hashCode: Int = (numer, denom).##
+      override def hashCode: Int = (numer, denom).##
 
-         override def toString =
-           if (denom == 1) numer.toString else numer + "/" + denom
-       }
-     #+END_SRC
+      override def toString =
+        if (denom == 1) numer.toString else numer + "/" + denom
+    }
+  #+END_SRC
 
 *** DONE Recipe for ~equals~ - 693
     CLOSED: [2018-07-19 Thu 13:50]
@@ -2053,48 +2062,48 @@
 
       In this way, you will /override/ ~hashCode~ with a ~val~ instead of a ~def~.
 
-** DONE 10.5 Conclusion - 210
-   CLOSED: [2018-07-19 Thu 00:54]
-   - In retrospect, defining a correct implementation of ~equals~ has been
-     *surprisingly subtle*.
-     * You must be careful about the /type signature/;
+** DONE 11.5 Conclusion - 232
+CLOSED: [2018-07-19 Thu 00:54]
+- In retrospect, defining a correct implementation of ~equals~ has been
+  *surprisingly subtle*.
+  * You must be careful about the /type signature/;
 
-     * you must /override/ ~hashCode~;
+  * you must /override/ ~hashCode~;
 
-     * you should *avoid dependencies* on /mutable state/;
+  * you should *avoid dependencies* on /mutable state/;
 
-     * you should implement and use a ~canEqual~ /method/
-       _if your /class/ is non-~final~._
+  * you should implement and use a ~canEqual~ /method/
+    _if your /class/ is non-~final~._
 
-   - Given how difficult it is to implement a correct equality method,
-     you might prefer to define your classes of comparable objects as /case
-     classes/.
+- Given how difficult it is to implement a correct equality method,
+  you might prefer to define your classes of comparable objects as /case
+  classes/.
 
-     That way, the Scala compiler will add ~equals~ and ~hashCode~ /methods/
-     with the right properties *automatically*.
+  That way, the Scala compiler will add ~equals~ and ~hashCode~ /methods/
+  with the right properties *automatically*.
 
-* DONE 11 Combining Scala and Java - 211
-  CLOSED: [2018-11-25 Sun 15:01]
-  This chapter describes two aspects of combining Java and Scala:
+* DONE 12 Combining Scala and Java - 233
+CLOSED: [2018-11-25 Sun 15:01]
+This chapter describes two aspects of combining Java and Scala:
 
-  - it discusses *how Scala is translated to Java*, which is especially important
-    if you _call Scala code from Java_.
+- it discusses *how Scala is translated to Java*, which is especially important
+  if you _call Scala code from Java_.
 
-  - it discusses *the use of Java annotations in Scala*, an important feature if
-    you want to use Scala with an existing Java framework.
+- it discusses *the use of Java annotations in Scala*, an important feature if
+  you want to use Scala with an existing Java framework.
 
-** DONE 11.1 Using Scala from Java - 211
-   CLOSED: [2018-11-25 Sun 15:00]
-   1. _Most of the time_ you can think of Scala _at the source code level_.
+** DONE 12.1 Using Scala from Java - 233
+CLOSED: [2018-11-25 Sun 15:00]
+1. _Most of the time_ you can think of Scala _at the source code level_.
 
-   2. However,
-      you will have _a richer understanding_ of how the system works if you know
-      something about its *translation*.
+2. However,
+   you will have _a richer understanding_ of how the system works if you know
+   something about its *translation*.
 
-   3. Further,
-      if you call Scala code from Java,
-      you will _need to know_ *what Scala code looks like from a Java point of
-      view*.
+3. Further,
+   if you call Scala code from Java,
+   you will _need to know_ *what Scala code looks like from a Java point of
+   view*.
 
 *** DONE General rules - 211
     CLOSED: [2018-02-06 Tue 22:46]
@@ -2347,11 +2356,11 @@
       translated directly to a /Java interface/ with no other code to worry
       about. You actually _create a /Java interface/ in Scala syntax_.
 
-** DONE 11.2 Annotations - 214
-   CLOSED: [2018-02-06 Tue 22:45]
-   - Scala's general /annotations/ system is discussed in Chapter 27.
+** DONE 12.2 Annotations - 236
+CLOSED: [2018-02-06 Tue 22:45]
+- Scala's general /annotations/ system is discussed in Chapter 27.
 
-   - _This section discusses Java-specific aspects of /annotations/._
+- _This section discusses Java-specific aspects of /annotations/._
 
 *** DONE Additional effects from standard annotations - 214
     CLOSED: [2018-02-06 Tue 21:38]
@@ -2533,159 +2542,159 @@
       /arguments to annotations/. This means ~@serial(1234)~ is legal, but
       ~@serial(x * 2)~ is _NOT legal_.
 
-** DONE 11.3 Wildcard types - 219
-   CLOSED: [2018-02-07 Wed 00:31]
-   *ALL* /Java types/ have a Scala equivalent.
-   This is necessary so that Scala code can access any legal Java class.
+** DONE 12.3 Wildcard types - 241
+CLOSED: [2018-02-07 Wed 00:31]
+*ALL* /Java types/ have a Scala equivalent.
+This is necessary so that Scala code can access any legal Java class.
 
-   - Most of the time the translation is straightforward.
+- Most of the time the translation is straightforward.
 
-   - For some cases, though,
-     the /Scala types/ you have seen so far are not enough.
+- For some cases, though,
+  the /Scala types/ you have seen so far are not enough.
 
-     For /Java wildcard types/ like ~Iterator<?>~ or ~Iterator<? extends
-     Component>~ and /Java raw types/ like ~Iterator~,
-     Scala uses an extra kind of type also called a /wildcard type/.
+  For /Java wildcard types/ like ~Iterator<?>~ or ~Iterator<? extends
+  Component>~ and /Java raw types/ like ~Iterator~,
+  Scala uses an extra kind of type also called a /wildcard type/.
 
-   - /Scala wildcard types/ are *written* using /placeholder syntax/.
-     + ~Iterator[_]~ represents ~Iterator~ where the element type is NOT known.
-     + ~Iterator[_ <: Component]~ represents ~Iterator<? extends Component>~.
+- /Scala wildcard types/ are *written* using /placeholder syntax/.
+  + ~Iterator[_]~ represents ~Iterator~ where the element type is NOT known.
+  + ~Iterator[_ <: Component]~ represents ~Iterator<? extends Component>~.
 
-   - How to *use*:
-     + What you see when you use?
-       Here is an example:
-       #+BEGIN_SRC java
-         // This is a Java class with wildcards
-         public class Wild {
-           public Collection<?> contents() {
-             Collection<String> stuff = new Vector<String>();
-             stuff.add("a");
-             stuff.add("b");
-             stuff.add("see");
-             return stuff;
-           }
-         }
-       #+END_SRC
+- How to *use*:
+  + What you see when you use?
+    Here is an example:
+    #+BEGIN_SRC java
+      // This is a Java class with wildcards
+      public class Wild {
+        public Collection<?> contents() {
+          Collection<String> stuff = new Vector<String>();
+          stuff.add("a");
+          stuff.add("b");
+          stuff.add("see");
+          return stuff;
+        }
+      }
+    #+END_SRC
 
-       #+BEGIN_SRC scala
-         // scala>
-         val contents = (new Wild).contents
-         // contents : java.util.Collection[_] = [a, b, see]
-       #+END_SRC
+    #+BEGIN_SRC scala
+      // scala>
+      val contents = (new Wild).contents
+      // contents : java.util.Collection[_] = [a, b, see]
+    #+END_SRC
 
-     + For simple usage, not type parameter required.
-       #+BEGIN_SRC scala
-         // scala>
-         contents.size
-         res0: Int = 3
-       #+END_SRC
+  + For simple usage, not type parameter required.
+    #+BEGIN_SRC scala
+      // scala>
+      contents.size
+      res0: Int = 3
+    #+END_SRC
 
-     + More complicated cases:
-       #+BEGIN_SRC scala
-         import scala.collection.mutable
-         val iter = (new Wild).contents.iterator
-         val set = mutable.Set.empty[?]  // Illegal code. What type goes here?
-         while (iter.hasMore) {
-           set += iter.next()
-         }
-       #+END_SRC
-       What should be in the ~?~ place?
-       * There is *no way to name the type of elements* in the Java collection,
-         so you *cannot* write down a satisfactory type for set.
+  + More complicated cases:
+    #+BEGIN_SRC scala
+      import scala.collection.mutable
+      val iter = (new Wild).contents.iterator
+      val set = mutable.Set.empty[?]  // Illegal code. What type goes here?
+      while (iter.hasMore) {
+        set += iter.next()
+      }
+    #+END_SRC
+    What should be in the ~?~ place?
+    * There is *no way to name the type of elements* in the Java collection,
+      so you *cannot* write down a satisfactory type for set.
 
-       * Two tricks to work around:
-         1. When *passing a wildcard type* into a /method/,
-            give a /parameter/ to the /method/ for the placeholder.
-            You now have a name for the type that you can use as many times as
-            you like.
+    * Two tricks to work around:
+      1. When *passing a wildcard type* into a /method/,
+         give a /parameter/ to the /method/ for the placeholder.
+         You now have a name for the type that you can use as many times as
+         you like.
 
-         2. About *returning*:
-            INSTEAD OF returning wildcard type from a method,
-            *return an object that has /abstract members/ for each of the
-            placeholder types*.
+      2. About *returning*:
+         INSTEAD OF returning wildcard type from a method,
+         *return an object that has /abstract members/ for each of the
+         placeholder types*.
 
-            TODO =REVIEW=
-            (See Chapter 20 for information on /abstract members/.)
+         TODO =REVIEW=
+         (See Chapter 20 for information on /abstract members/.)
 
-       * The corrected code:
-         #+BEGIN_SRC scala
-           import scala.collection.mutable
-           import java.util.Collection
+    * The corrected code:
+      #+BEGIN_SRC scala
+        import scala.collection.mutable
+        import java.util.Collection
 
-           abstract class SetAndType {
-             type Elem  // abstract members
-             val set: mutable.Set[Elem]
-           }
+        abstract class SetAndType {
+          type Elem  // abstract members
+          val set: mutable.Set[Elem]
+        }
 
-           // give the wildcard type a placeholder name
-           def javaSet2ScalaSet[T](jset: Collection[T]): SetAndType = {
-             val sset = mutable.Set.empty[T]  // now T can be named!
+        // give the wildcard type a placeholder name
+        def javaSet2ScalaSet[T](jset: Collection[T]): SetAndType = {
+          val sset = mutable.Set.empty[T]  // now T can be named!
 
-             val iter = jset.iterator
-             while (iter.hasNext)
-               sset += iter.next()
-             return new SetAndType {
-               type Elem = T
-               val set = sset
-             }
-           }
-         #+END_SRC
+          val iter = jset.iterator
+          while (iter.hasNext)
+            sset += iter.next()
+          return new SetAndType {
+            type Elem = T
+            val set = sset
+          }
+        }
+      #+END_SRC
 
-   - From the _more complicated example above_, we see why Scala code *normally
-     does NOT use /wildcard types/*:
-     To do anything sophisticated with them, you TEND TO *convert them to use
-     /abstract members/.* So you may as well use /abstract members/ to begin
-     with.
+- From the _more complicated example above_, we see why Scala code *normally
+  does NOT use /wildcard types/*:
+  To do anything sophisticated with them, you TEND TO *convert them to use
+  /abstract members/.* So you may as well use /abstract members/ to begin
+  with.
 
-** DONE 11.4 Compiling Scala and Java together - 221
-   CLOSED: [2018-02-06 Tue 23:32]
-   - For the most simplest cases (=From Jian= what I usually meet):
-     Scala code depends on Java code or vise versa.
-     *Compile the dependencies first!*
+** DONE 12.4 Compiling Scala and Java together - 243
+CLOSED: [2018-02-06 Tue 23:32]
+- For the most simplest cases (=From Jian= what I usually meet):
+  Scala code depends on Java code or vise versa.
+  *Compile the dependencies first!*
 
-   - For more complicated cases:
-     Scala code and Java code mutually refer each other.
+- For more complicated cases:
+  Scala code and Java code mutually refer each other.
 
-     To support such builds, Scala allows compiling against /Java source code/
-     as well as /Java class files/. The Scala compiler won't compile those Java
-     (source) files, but it will scan them to see that they contain.
+  To support such builds, Scala allows compiling against /Java source code/
+  as well as /Java class files/. The Scala compiler won't compile those Java
+  (source) files, but it will scan them to see that they contain.
 
-     =Comment from Jian= Scala is created later than Java, and its design ideas
-     include using Java code. The Java design idea dose NOT have any plan about
-     using Scala. Using compiled Scala code in Java is an fact, not a rule it
-     must follow. Therefore, it must be Scala that support this feature, NOT Java
+  =Comment from Jian= Scala is created later than Java, and its design ideas
+  include using Java code. The Java design idea dose NOT have any plan about
+  using Scala. Using compiled Scala code in Java is an fact, not a rule it
+  must follow. Therefore, it must be Scala that support this feature, NOT Java
 
-     The steps:
-     1. _Compile the Scala code_ using /Java source files/;
-     2. _Compile the Java code_ using /Scala class files/.
+  The steps:
+  1. _Compile the Scala code_ using /Java source files/;
+  2. _Compile the Java code_ using /Scala class files/.
 
-   - Example:
-     #+BEGIN_SRC bash
-       #$
-       scalac -d bin InventoryAnalysis.scala InventoryItem.java Inventory.java
+- Example:
+  #+BEGIN_SRC bash
+    #$
+    scalac -d bin InventoryAnalysis.scala InventoryItem.java Inventory.java
 
-       #$
-       javac -cp bin -d bin Inventory.java InventoryItem.java InventoryManagement.java
+    #$
+    javac -cp bin -d bin Inventory.java InventoryItem.java InventoryManagement.java
 
-       #$
-       scala -cp bin InventoryManagement
-       # Most expensive item = sprocket($4.99)
-     #+END_SRC
+    #$
+    scala -cp bin InventoryManagement
+    # Most expensive item = sprocket($4.99)
+  #+END_SRC
 
-** DONE 11.5 Java 8 integration - 222
-   CLOSED: [2018-02-07 Wed 02:10]
-   - Java 8 added a few IMPROVEMENTS to
-     + _the Java language_
-       and
-     + bytecodes
+** DONE 12.5 Java 8 integration - 244
+CLOSED: [2018-02-07 Wed 02:10]
+- Java 8 added a few IMPROVEMENTS to
+  + _the Java language_
+    and
+  + bytecodes
 
-     Scala takes advantage of in its 2.12 release, this version *requires* Java 8
+  Scala takes advantage of in its 2.12 release, this version *requires* Java 8
 
-   - By exploiting new features of Java 8,
-     the Scala 2.12 compiler can
-     + generate *smaller* /class and jar files/
-       and
-     + improve the *binary compatibility* of /traits/.
+- By exploiting new features of Java 8,
+  the Scala 2.12 compiler can
+  + generate *smaller* /class and jar files/
+    and
+  + improve the *binary compatibility* of /traits/.
 
 *** DONE Lambda expressions and "SAM" types - 222
     CLOSED: [2018-02-07 Wed 01:14]
@@ -2842,167 +2851,167 @@
       /default methods/,* a new feature of Java 8.
       As a result, /Scala function types/ appear to Java as /SAMs/.
 
-** DONE 11.6 Conclusion - 225
-   CLOSED: [2018-02-07 Wed 02:10]
+** DONE 11.6 Conclusion - 247
+CLOSED: [2018-02-07 Wed 02:10]
 
-* DONE 12 Futures and Concurrency - 226
-  CLOSED: [2018-04-11 Wed 15:10]
-  - Java provides concurrency support built around /shared memory/ and /locking/.
-      Although this support is sufficient, this approach turns out to be _quite
-    DIFFICULT to get right in practice_.
+* DONE 13 Futures and Concurrency - 248
+CLOSED: [2018-04-11 Wed 15:10]
+- Java provides concurrency support built around /shared memory/ and /locking/.
+    Although this support is sufficient, this approach turns out to be _quite
+  DIFFICULT to get right in practice_.
 
-  - Scala's standard library offers an ALTERNATIVE that avoids these
-    difficulties by focusing on /asynchronous transformations of immutable state/:
-    the ~Future~.
+- Scala's standard library offers an ALTERNATIVE that avoids these
+  difficulties by focusing on /asynchronous transformations of immutable state/:
+  the ~Future~.
 
-  - Java also offers a ~Future~, but it is _very different from Scala's_.
-    TODO =???=
+- Java also offers a ~Future~, but it is _very different from Scala's_.
+  TODO =???=
 
-  - ??????? TODO =???=
+- ??????? TODO =???=
 
-    This allows you to describe /asynchronous computations/ as _a series of
-    transformations of immutable values_, *with no need to reason about shared
-    memory and locks*.
+  This allows you to describe /asynchronous computations/ as _a series of
+  transformations of immutable values_, *with no need to reason about shared
+  memory and locks*.
 
-** DONE 12.1 Trouble in paradise - 226 =Re-Do=
-   CLOSED: [2018-03-06 Tue 14:37]
-   - The Java way:
-     + Model:
-       each object is associated with a logical /monitor/, which can be used to
-       control multi-threaded access to data.
+** DONE 13.1 Trouble in paradise - 248 =Re-Do=
+CLOSED: [2018-03-06 Tue 14:37]
+- The Java way:
+  + Model:
+    each object is associated with a logical /monitor/, which can be used to
+    control multi-threaded access to data.
 
-     + Use this model:
-       Mark the data that will be shared by multiple threads as *synchronized*.
+  + Use this model:
+    Mark the data that will be shared by multiple threads as *synchronized*.
 
-       The Java runtime employs a locking mechanism to *ensure* that *only one*
-       thread at a time enters synchronized sections guarded by the same /lock/.
+    The Java runtime employs a locking mechanism to *ensure* that *only one*
+    thread at a time enters synchronized sections guarded by the same /lock/.
 
-   - For compatibility's sake,
-     Scala provides access to Java's concurrency primitives.
-     The ~wait~, ~notify~, and ~notifyAll~ /methods/ can be called in Scala, and
-     _they have the same meaning as in Java_.
+- For compatibility's sake,
+  Scala provides access to Java's concurrency primitives.
+  The ~wait~, ~notify~, and ~notifyAll~ /methods/ can be called in Scala, and
+  _they have the same meaning as in Java_.
 
-   - Scala
-     + does *NOT* have the ~synchronized~ /keyword/
+- Scala
+  + does *NOT* have the ~synchronized~ /keyword/
 
-     + has a *predefined* ~synchronized~ /method/ that can be called
-       as follows:
-       #+BEGIN_SRC scala
-         var counter = 0
+  + has a *predefined* ~synchronized~ /method/ that can be called
+    as follows:
+    #+BEGIN_SRC scala
+      var counter = 0
 
-         synchronized {
-           // One thread in here at a time
-           counter = counter + 1
-         }
-       #+END_SRC
+      synchronized {
+        // One thread in here at a time
+        counter = counter + 1
+      }
+    #+END_SRC
 
-   - Why is this model hard to be used?
-     + You must reason about
-       * what data you are modifying or accessing that might be modified or
-         accessed by other trheads
+- Why is this model hard to be used?
+  + You must reason about
+    * what data you are modifying or accessing that might be modified or
+      accessed by other trheads
 
-       * what locks are being held.
+    * what locks are being held.
 
-     + At each method call,
-       you must reason about
-       * what locks it will try to hold and convince yourself that it will not
-         /deadlock/ while trying to obtain them.
+  + At each method call,
+    you must reason about
+    * what locks it will try to hold and convince yourself that it will not
+      /deadlock/ while trying to obtain them.
 
-     + Compounding the problem, the locks you reason about are *not fixed at
-       compile time*, _because the program is free to create new locks at run
-       time as it progresses._
+  + Compounding the problem, the locks you reason about are *not fixed at
+    compile time*, _because the program is free to create new locks at run
+    time as it progresses._
 
-     + Making things worse, testing is not reliable with multi-threaded code, which
-       has *non-deterministic* nature.
+  + Making things worse, testing is not reliable with multi-threaded code, which
+    has *non-deterministic* nature.
 
-     + Over-synchronizing also does NOT work!
-       New lock operations may _remove_ POSSIBILITIES for /race condition/, they
-       simutaneously _add_ POSSIBILITIES for /deadlocks/.
+  + Over-synchronizing also does NOT work!
+    New lock operations may _remove_ POSSIBILITIES for /race condition/, they
+    simutaneously _add_ POSSIBILITIES for /deadlocks/.
 
-   - Higher level abstractions: ~java.util.concurrent~
-     It's far less error prone than the low-level synchronization primitives.
+- Higher level abstractions: ~java.util.concurrent~
+  It's far less error prone than the low-level synchronization primitives.
 
-     Nevertheless, it is also based on /the shared data and locks models/, and
-     it does NOT solve the fundamental difficulties of using that model!
+  Nevertheless, it is also based on /the shared data and locks models/, and
+  it does NOT solve the fundamental difficulties of using that model!
 
-** DONE 12.2 Asynchronous execution and ~Try~'s - 228
-   CLOSED: [2018-04-11 Wed 01:19]
-   - Many operations on ~Future~ require an implicit /execution context/ that
-     provides a strategy for executing functions asychronously.
+** DONE 13.2 Asynchronous execution and ~Try~'s - 250
+CLOSED: [2018-04-11 Wed 01:19]
+- Many operations on ~Future~ require an implicit /execution context/ that
+  provides a strategy for executing functions asychronously.
 
-   - Example (lack of /execution context/):
-     #+BEGIN_SRC scala
-       import scala.concurrent.Future
+- Example (lack of /execution context/):
+  #+BEGIN_SRC scala
+    import scala.concurrent.Future
 
-       val fut = Future { Thread.sleep(10000); 21 + 21 }
-       // <console>:11: error: Cannot find an implicit ExecutionContext.
-       //     You might pass an (implicit ec: ExecutionContext)
-       //     parameter to your method or import
-       //     scala.concurrent.ExecutionContext.Implicits.global.
-       //        val fut = Future { Thread.sleep(10000); 21 + 21 }
-     #+END_SRC
+    val fut = Future { Thread.sleep(10000); 21 + 21 }
+    // <console>:11: error: Cannot find an implicit ExecutionContext.
+    //     You might pass an (implicit ec: ExecutionContext)
+    //     parameter to your method or import
+    //     scala.concurrent.ExecutionContext.Implicits.global.
+    //        val fut = Future { Thread.sleep(10000); 21 + 21 }
+  #+END_SRC
 
-   - Example (with /execution context/):
-     #+BEGIN_SRC scala
-       import scala.concurrent.Future
-       import scala.concurrent.ExecutionContext.Implicits.global
+- Example (with /execution context/):
+  #+BEGIN_SRC scala
+    import scala.concurrent.Future
+    import scala.concurrent.ExecutionContext.Implicits.global
 
-       val fut = Future { Thread.sleep(10000); 21 + 21 }
-     #+END_SRC
+    val fut = Future { Thread.sleep(10000); 21 + 21 }
+  #+END_SRC
 
-   - Use the ~isCompleted~ and ~value~ /methods/:
-     #+BEGIN_SRC scala
-       /* BEFORE finish */
-       fut.isCompleted
-       // res0: Boolena = false
+- Use the ~isCompleted~ and ~value~ /methods/:
+  #+BEGIN_SRC scala
+    /* BEFORE finish */
+    fut.isCompleted
+    // res0: Boolena = false
 
-       fut.value
-       // res1: Option[scala.util.Try[Int]] = None
+    fut.value
+    // res1: Option[scala.util.Try[Int]] = None
 
 
 
-       /* AFTER finish */
-       fut.isCompleted
-       // res2: Boolena = true
+    /* AFTER finish */
+    fut.isCompleted
+    // res2: Boolena = true
 
-       fut.value
-       // res3: Option[scala.util.Try[Int]] = Some(Success(42))
-     #+END_SRC
+    fut.value
+    // res3: Option[scala.util.Try[Int]] = Some(Success(42))
+  #+END_SRC
 
-   - ~Try~ has two /subclasses/, and an instance of a ~Failure~ always contains
-     an /exception/.
+- ~Try~ has two /subclasses/, and an instance of a ~Failure~ always contains
+  an /exception/.
 
-   - Why should we have ~Try~?
-     + For *synchronous* computations, you can use ~try/catch~ to ensure that a
-       thread that invokes a /method/ catches and handles /exceptions/ thrown by
-       the /method/.
+- Why should we have ~Try~?
+  + For *synchronous* computations, you can use ~try/catch~ to ensure that a
+    thread that invokes a /method/ catches and handles /exceptions/ thrown by
+    the /method/.
 
-     + For *asynchronous* computations, the thread that initiates the computation
-       often moves on to other tasks.
-         Later if that asynchronous computation fails with an exception, _the
-       *original* thread_ is _no longer_ able to handle the exception in a
-       ~catch~ clause. Thus, we use ~Try~ to handle the /exceptions/.
+  + For *asynchronous* computations, the thread that initiates the computation
+    often moves on to other tasks.
+      Later if that asynchronous computation fails with an exception, _the
+    *original* thread_ is _no longer_ able to handle the exception in a
+    ~catch~ clause. Thus, we use ~Try~ to handle the /exceptions/.
 
-   - Example:
-     #+BEGIN_SRC scala
-       import scala.concurrent.Future
-       import scala.concurrent.ExecutionContext.Implicits.global
+- Example:
+  #+BEGIN_SRC scala
+    import scala.concurrent.Future
+    import scala.concurrent.ExecutionContext.Implicits.global
 
-       val fut = Future { Thread.sleep(10000); 21 / 0 }
-       // fut: scala.concurrent.Future[Int] = ...
+    val fut = Future { Thread.sleep(10000); 21 / 0 }
+    // fut: scala.concurrent.Future[Int] = ...
 
-       /* When the computation complete */
-       fut.value
-       // res4: Option[scala.util.Try[Int]] = None
-       //     Some(Failure(java.lang.ArithmeticException: / by zero))
+    /* When the computation complete */
+    fut.value
+    // res4: Option[scala.util.Try[Int]] = None
+    //     Some(Failure(java.lang.ArithmeticException: / by zero))
 
-     #+END_SRC
+  #+END_SRC
 
-** DONE 12.3 Working with ~Future~'s - 231
-   CLOSED: [2018-04-11 Wed 15:06]
-   Scala's ~Future~ allows you to specify /transformations/ on ~Future~ results
-   and obtain a new /future/ that represents the composition of the _two_ /asynchronous
-   computations/: the original and the transformation.
+** DONE 13.3 Working with ~Future~'s - 253
+CLOSED: [2018-04-11 Wed 15:06]
+Scala's ~Future~ allows you to specify /transformations/ on ~Future~ results
+and obtain a new /future/ that represents the composition of the _two_ /asynchronous
+computations/: the original and the transformation.
 
 *** DONE Transforming ~Futures~ with ~map~ - 231
     CLOSED: [2018-04-11 Wed 02:19]
@@ -3610,227 +3619,227 @@
         ~Try~ in your passed function as in ~transform~, ~transformWith~ allows
         you to yield a /future/.
 
-** DONE 12.4 Testing with ~Future~'s - 208
-   CLOSED: [2018-04-11 Wed 13:34]
-   - Scala does allow you to *block* on a /future/ result when you need to.
-     Scala's ~Await~ /object/ facilitates blocking to wait for future results.
-     Here’s an example:
-     #+BEGIN_SRC scala
-       import scala.concurrent.Await
-       import scala.concurrent.duration._
+** DONE 13.4 Testing with ~Future~'s - 267
+CLOSED: [2018-04-11 Wed 13:34]
+- Scala does allow you to *block* on a /future/ result when you need to.
+  Scala's ~Await~ /object/ facilitates blocking to wait for future results.
+  Here’s an example:
+  #+BEGIN_SRC scala
+    import scala.concurrent.Await
+    import scala.concurrent.duration._
 
 
-       val fut = Future { Thread.sleep(10000); 21 + 21 }
-       // fut: scala.concurrent.Future[Int] = ...
+    val fut = Future { Thread.sleep(10000); 21 + 21 }
+    // fut: scala.concurrent.Future[Int] = ...
 
-       val x = Await.result(fut, 15.seconds) // blocks
-       // x: Int = 42
-     #+END_SRC
-     + ~Await.result~ takes a ~Future~ and a ~Duration~.
+    val x = Await.result(fut, 15.seconds) // blocks
+    // x: Int = 42
+  #+END_SRC
+  + ~Await.result~ takes a ~Future~ and a ~Duration~.
 
-     + If there is NOT enough time, a ~TimeoutException~ will be thrown.
+  + If there is NOT enough time, a ~TimeoutException~ will be thrown.
 
-   - One place where *blocking* has been generally accepted is
-     _in tests of asynchronous code_.
+- One place where *blocking* has been generally accepted is
+  _in tests of asynchronous code_.
 
-     + Use ~Await.result~.
-       #+BEGIN_SRC scala
-         import org.scalatest.Matchers._
-         x should be (42)
-         // res0: org.scalatest.Assertion = Succeeded
-       #+END_SRC
+  + Use ~Await.result~.
+    #+BEGIN_SRC scala
+      import org.scalatest.Matchers._
+      x should be (42)
+      // res0: org.scalatest.Assertion = Succeeded
+    #+END_SRC
 
-     + Extends ~ScalaFutures~ /trait/ as *alternatives*,
-       For example, the ~futureValue~ /method/, implicitly added to ~Future~ by
-       ~ScalaFutures~, *will block until the /future/ completes*.
-       #+BEGIN_SRC scala
-         import org.scalatest.concurrent.ScalaFutures._
+  + Extends ~ScalaFutures~ /trait/ as *alternatives*,
+    For example, the ~futureValue~ /method/, implicitly added to ~Future~ by
+    ~ScalaFutures~, *will block until the /future/ completes*.
+    #+BEGIN_SRC scala
+      import org.scalatest.concurrent.ScalaFutures._
 
 
-         val fut = Future { Thread.sleep(10000); 21 + 21 }
-         // fut: scala.concurrent.Future[Int] = ...
+      val fut = Future { Thread.sleep(10000); 21 + 21 }
+      // fut: scala.concurrent.Future[Int] = ...
 
-         fut.futureValue should be (42)    // futureValue blocks
-         // res1: org.scalatest.Assertion = Succeeded
-       #+END_SRC
+      fut.futureValue should be (42)    // futureValue blocks
+      // res1: org.scalatest.Assertion = Succeeded
+    #+END_SRC
 
-       * ~TestFailedException~ on fails
+    * ~TestFailedException~ on fails
 
-   - While *blocking in tests* is often fine,
-     /ScalaTest 3.0/ adds "async" testing styles that allow you to test
-     /futures/ *without blocking*.
-     #+BEGIN_SRC scala
-       import org.scalatest.AsyncFunSpec
-       import scala.concurrent.Future
+- While *blocking in tests* is often fine,
+  /ScalaTest 3.0/ adds "async" testing styles that allow you to test
+  /futures/ *without blocking*.
+  #+BEGIN_SRC scala
+    import org.scalatest.AsyncFunSpec
+    import scala.concurrent.Future
 
-       class AddSpec extends AsyncFunSpec {
-         def addSoon(addends: Int*): Future[Int] =
-           Future { addends.sum }
+    class AddSpec extends AsyncFunSpec {
+      def addSoon(addends: Int*): Future[Int] =
+        Future { addends.sum }
 
-         describe("addSoon") {
-           it("will eventually compute a sum of passed Ints") {
-             val futureSum: Future[Int] = addSoon(1, 2)
-             // You can map assertions onto a Future, then return
-             // the resulting Future[Assertion] to ScalaTest:
-             futureSum map { sum => assert(sum == 3) }
-           }
-         }
-       }
-     #+END_SRC
+      describe("addSoon") {
+        it("will eventually compute a sum of passed Ints") {
+          val futureSum: Future[Int] = addSoon(1, 2)
+          // You can map assertions onto a Future, then return
+          // the resulting Future[Assertion] to ScalaTest:
+          futureSum map { sum => assert(sum == 3) }
+        }
+      }
+    }
+  #+END_SRC
 
-   - The /async testing/ use case illustrates a *general principle* for working
-     with /futures/: *Once in "future space," try to _stay_ in /future/ space.*
+- The /async testing/ use case illustrates a *general principle* for working
+  with /futures/: *Once in "future space," try to _stay_ in /future/ space.*
 
-   - TODO =???=
-     To *get results out of* /future/ space, register /side effects/ to be
-     _performed asynchronously_ once /futures/ complete. This approach will help
-     you *make _maximum use_ of your /threads/.*
+- TODO =???=
+  To *get results out of* /future/ space, register /side effects/ to be
+  _performed asynchronously_ once /futures/ complete. This approach will help
+  you *make _maximum use_ of your /threads/.*
 
-** DONE 12.5 Conclusion - 210
-   CLOSED: [2018-04-11 Wed 15:10]
-   - Concurrent programming gives you great power.
-     It lets you *simplify* your code and take advantage of multiple processors.
+** DONE 13.5 Conclusion - 269
+CLOSED: [2018-04-11 Wed 15:10]
+- Concurrent programming gives you great power.
+  It lets you *simplify* your code and take advantage of multiple processors.
 
-   - It's *unfortunate* that the most widely used concurrency primitives,
-     /threads/, /locks/, and /monitors/, are such a minefield of /deadlocks/ and
-     /race conditions/.
+- It's *unfortunate* that the most widely used concurrency primitives,
+  /threads/, /locks/, and /monitors/, are such a minefield of /deadlocks/ and
+  /race conditions/.
 
-     ~Futures~ provide a way out of that minefield, letting you write concurrent
-     programs *without* as great a risk of /deadlocks/ and /race conditions/.
+  ~Futures~ provide a way out of that minefield, letting you write concurrent
+  programs *without* as great a risk of /deadlocks/ and /race conditions/.
 
-   - This chapter has introduced several fundamental constructs for working with
-     /futures/ in Scala, including
-     + how to create /futures/, how to *transform* them,
+- This chapter has introduced several fundamental constructs for working with
+  /futures/ in Scala, including
+  + how to create /futures/, how to *transform* them,
 
-     + how to *test* them, among other nuts and bolts.
+  + how to *test* them, among other nuts and bolts.
 
-     It then showed you how to use these constructs as part of a general
-     /futures/ style.
+  It then showed you how to use these constructs as part of a general
+  /futures/ style.
 
-* DONE 13 Combinator Parsing - 249
-  CLOSED: [2018-03-06 Tue 14:03]
-  - These building blocks of /parser combinators/ will map one to one to the
-    constructions of a /context-free grammar/, to make them easy to understand.
+* DONE 14 Combinator Parsing - 271
+CLOSED: [2018-03-06 Tue 14:03]
+- These building blocks of /parser combinators/ will map one to one to the
+  constructions of a /context-free grammar/, to make them easy to understand.
 
-  - The only non-Scala specific prerequisite for understanding this chapter:
-    you know about /regular and context-free grammars/.
+- The only non-Scala specific prerequisite for understanding this chapter:
+  you know about /regular and context-free grammars/.
 
-** DONE 13.1 Example: Arithmetic expressions - 250
-   CLOSED: [2018-03-05 Mon 15:53]
-   - (Context-free) Grammar for arithmetic expressions:
-     #+BEGIN_SRC text
-         expr ::= term {"+" term | "-" term}.
-         term ::= factor {"*" factor | "/" factor}.
-       factor ::= floatingPointNumber | "(" expr ")".
-     #+END_SRC
+** DONE 14.1 Example: Arithmetic expressions - 272
+CLOSED: [2018-03-05 Mon 15:53]
+- (Context-free) Grammar for arithmetic expressions:
+  #+BEGIN_SRC text
+      expr ::= term {"+" term | "-" term}.
+      term ::= factor {"*" factor | "/" factor}.
+    factor ::= floatingPointNumber | "(" expr ")".
+  #+END_SRC
 
-     + ~|~ denotes alternative productions
-     + ~{...}~ denotes repetition (zero or more times)
-     + No use in this example, ~[...]~ denotes an _optional occurrence_.
+  + ~|~ denotes alternative productions
+  + ~{...}~ denotes repetition (zero or more times)
+  + No use in this example, ~[...]~ denotes an _optional occurrence_.
 
-     + This grammar already encodes the /relative precedence/ of operators.
+  + This grammar already encodes the /relative precedence/ of operators.
 
-   - Translate the grammar above to Scala code (with /cominator parser library/):
-     #+BEGIN_SRC scala
-       import scala.util.parsing.combinator._
+- Translate the grammar above to Scala code (with /cominator parser library/):
+  #+BEGIN_SRC scala
+    import scala.util.parsing.combinator._
 
-       class Arith extends JavaTokenParsers {
-         def expr: Parser[Any] = term~rep("+"~term | "-"~term)
-         def term: Parser[Any] = factor~rep("*"~factor | "/"~factor)
-         def factor: Parser[Any] = floatingPointNumber | "("~expr~")"
-       }
-     #+END_SRC
+    class Arith extends JavaTokenParsers {
+      def expr: Parser[Any] = term~rep("+"~term | "-"~term)
+      def term: Parser[Any] = factor~rep("*"~factor | "/"~factor)
+      def factor: Parser[Any] = floatingPointNumber | "("~expr~")"
+    }
+  #+END_SRC
 
-     + The ~floatingPointNumber~ comes from the /trait/ ~JavaTokenParsers~.
+  + The ~floatingPointNumber~ comes from the /trait/ ~JavaTokenParsers~.
 
-     + This /trait/ provides the basic machinery for writing a parser
-       and also provides some _primitive parsers_ that recognize some word classes:
-       * identifiers
-       * string literals
-       * numbers
+  + This /trait/ provides the basic machinery for writing a parser
+    and also provides some _primitive parsers_ that recognize some word classes:
+    * identifiers
+    * string literals
+    * numbers
 
-   - How to convert a /context-free grammar/ to Scala parser combinator code:
-     1. Every production becomes a /method/ -- add ~def~.
+- How to convert a /context-free grammar/ to Scala parser combinator code:
+  1. Every production becomes a /method/ -- add ~def~.
 
-     2. Replace ~::=~ with ~: Parser[Any] =~.
+  2. Replace ~::=~ with ~: Parser[Any] =~.
 
-        TODO Learn what does this type mean and how to make it more precise in
-        this chater later sections.
+     TODO Learn what does this type mean and how to make it more precise in
+     this chater later sections.
 
-     3. The grammar has implict sequential composition, and use ~~~ to make it
-        explicit in the code.
+  3. The grammar has implict sequential composition, and use ~~~ to make it
+     explicit in the code.
 
-     4. Replace ~{...}~ with ~rep(...)~;
-        Replace ~[...]~ with ~opt(...)~;
+  4. Replace ~{...}~ with ~rep(...)~;
+     Replace ~[...]~ with ~opt(...)~;
 
-     5. The period (.) at the end of each production is ommitted in the code.
+  5. The period (.) at the end of each production is ommitted in the code.
 
-** DONE 13.2 Running your parser - 252
-   CLOSED: [2018-03-05 Mon 16:35]
-   - Run the parser:
-     #+BEGIN_SRC scala
-       object ParseExpr extends Arith {
-         def main(args: Array[String]) = {
-           println("input : " + args(0))
-           println(parseAll(expr, args(0)))
-         }
-       }
-     #+END_SRC
+** DONE 14.2 Running your parser - 274
+CLOSED: [2018-03-05 Mon 16:35]
+- Run the parser:
+  #+BEGIN_SRC scala
+    object ParseExpr extends Arith {
+      def main(args: Array[String]) = {
+        println("input : " + args(0))
+        println(parseAll(expr, args(0)))
+      }
+    }
+  #+END_SRC
 
-     + Run
-       #+BEGIN_SRC bash
-         scala ParseExpr "2 * (3 + 7)"
-         # input: 2 * (3 + 7)
-         # [1.12] parsed: ((2~List((*~(((~((3~List())~List((+
-         # ~(7~List())))))~)))))~List())
-       #+END_SRC
+  + Run
+    #+BEGIN_SRC bash
+      scala ParseExpr "2 * (3 + 7)"
+      # input: 2 * (3 + 7)
+      # [1.12] parsed: ((2~List((*~(((~((3~List())~List((+
+      # ~(7~List())))))~)))))~List())
+    #+END_SRC
 
-     + Besides ~parseAll~, there's also a method ~parse~, which allows you to
-       * parse an input prefix
-       * leaving some remainder unread.
+  + Besides ~parseAll~, there's also a method ~parse~, which allows you to
+    * parse an input prefix
+    * leaving some remainder unread.
 
-   - Error messages:
-     #+BEGIN_SRC bash
-       scala ParseExpr "2 * (3 + 7))"
-       # input: 2 * (3 + 7))
-       # [1.12] failure: `-' # expected but `)' found
-       #
-       # 2 * (3 + 7))
-       #            ˆ
-     #+END_SRC
+- Error messages:
+  #+BEGIN_SRC bash
+    scala ParseExpr "2 * (3 + 7))"
+    # input: 2 * (3 + 7))
+    # [1.12] failure: `-' # expected but `)' found
+    #
+    # 2 * (3 + 7))
+    #            ˆ
+  #+END_SRC
 
-** DONE 13.3 Basic regular expression parsers - 253
-   CLOSED: [2018-03-05 Mon 19:35]
-   - ~JavaTokenParsers~ provides some basic parsers for patterns in Java format.
+** DONE 14.3 Basic regular expression parsers - 275
+CLOSED: [2018-03-05 Mon 19:35]
+- ~JavaTokenParsers~ provides some basic parsers for patterns in Java format.
 
-   - Q :: How to parse patterns not like Java? For example, parse /floating
-          numbers/ not in Java format (CANNOT use ~floatingPointNumber~).
+- Q :: How to parse patterns not like Java? For example, parse /floating
+       numbers/ not in Java format (CANNOT use ~floatingPointNumber~).
 
-   - A :: Use /regular expression parser/.
+- A :: Use /regular expression parser/.
 
-   - The idea is that you can use any regular expression as a parser.
-     The regular expression parses all strings that it can match.
-     Its result is the parsed string.
+- The idea is that you can use any regular expression as a parser.
+  The regular expression parses all strings that it can match.
+  Its result is the parsed string.
 
-   - For instance, parse a (subset of) Java identifiers:
-     #+BEGIN_SRC scala
-       object MyParsers extends RegexParsers {
-         val ident: Parser[String] = """[azAZ_]\
-       w*""".r
-       }
-     #+END_SRC
+- For instance, parse a (subset of) Java identifiers:
+  #+BEGIN_SRC scala
+    object MyParsers extends RegexParsers {
+      val ident: Parser[String] = """[azAZ_]\
+    w*""".r
+    }
+  #+END_SRC
 
-** DONE 13.4 Another example: JSON - 254
-   CLOSED: [2018-03-05 Mon 19:35]
-   ~JSON~ parser
+** DONE 14.4 Another example: JSON - 276
+CLOSED: [2018-03-05 Mon 19:35]
+~JSON~ parser
 
-** DONE 13.5 Parser output - 256
-   CLOSED: [2018-03-05 Mon 20:29]
-   - ~stringLiteral~ from ~JavaTokenParsers~
+** DONE 14.5 Parser output - 278
+CLOSED: [2018-03-05 Mon 20:29]
+- ~stringLiteral~ from ~JavaTokenParsers~
 
-   - To produce this _representation_, you need to make use of one more
-     combination form for parsers: ~ˆˆ~: ~P^^f~ returns ~f(P)~
-       For example, ~floatingPointNumber ^^ (_.toDouble)~
+- To produce this _representation_, you need to make use of one more
+  combination form for parsers: ~ˆˆ~: ~P^^f~ returns ~f(P)~
+    For example, ~floatingPointNumber ^^ (_.toDouble)~
 
 *** DONE Symbolic versus alphanumeric names - 756
     CLOSED: [2018-03-05 Mon 20:29]
@@ -3839,25 +3848,25 @@
 
     - pros: do not distract the reader
 
-** DONE 13.6 Implementing combinator parsers - 262
-   CLOSED: [2018-03-06 Tue 10:48]
-   In the rest of this chapter you’ll take a look “under the hood” of the
-   combinator parser library.
+** DONE 14.6 Implementing combinator parsers - 284
+CLOSED: [2018-03-06 Tue 10:48]
+In the rest of this chapter you’ll take a look “under the hood” of the
+combinator parser library.
 
-   - The core of Scala's combinator parsing framework is contained in the /trait/
-     ~scala.util.parsing.combinator.Parsers~.
+- The core of Scala's combinator parsing framework is contained in the /trait/
+  ~scala.util.parsing.combinator.Parsers~.
 
-     This trait defines the ~Parser~ type as well as _all fundamental
-     combinators_. If not being stated explicitly,
+  This trait defines the ~Parser~ type as well as _all fundamental
+  combinators_. If not being stated explicitly,
 
-     (Except where stated explicitly otherwise, the definitions explained in the
-      following two subsections all reside in this trait.)
+  (Except where stated explicitly otherwise, the definitions explained in the
+   following two subsections all reside in this trait.)
 
-   - As a first _approximation_, the type could be written as follows:
-     ~type Parser[T] = Input => ParseResult[T]~
+- As a first _approximation_, the type could be written as follows:
+  ~type Parser[T] = Input => ParseResult[T]~
 
-     =From Jian=
-     Actually, ~abstract class Parser[T] extends (Input => ParseResult[T])~
+  =From Jian=
+  Actually, ~abstract class Parser[T] extends (Input => ParseResult[T])~
 
 *** DONE Parser input - 761
     CLOSED: [2017-11-23 Thu 01:21]
@@ -4068,250 +4077,250 @@
       )
     #+END_SRC
 
-** DONE 13.7 String literals and regular expressions - 271
-   CLOSED: [2018-03-06 Tue 12:02]
-   - The parsers of ~literal~ and ~regex~ come from the trait ~RegexParsers~, a
-     subtrait of ~Parsers~.
+** DONE 14.7 String literals and regular expressions - 293
+CLOSED: [2018-03-06 Tue 12:02]
+- The parsers of ~literal~ and ~regex~ come from the trait ~RegexParsers~, a
+  subtrait of ~Parsers~.
 
-   - In ~RegexParsers~, ~type Elem = Char~.
+- In ~RegexParsers~, ~type Elem = Char~.
 
-   - Definition headers:
-     #+BEGIN_SRC scala
-       implicit def literal(s: String): Parser[String] = ...
-       implicit def regex(s: Regex): Parser[String] = ...
-     #+END_SRC
-     Due to the ~implicit~'s, you can write ~String~ or ~Regex~ in your parser,
-     and they are converted to object of ~Parser[String]~ implicitly.
-       This means, for example,
-       #+BEGIN_SRC scala
-         "("~expr~")"
+- Definition headers:
+  #+BEGIN_SRC scala
+    implicit def literal(s: String): Parser[String] = ...
+    implicit def regex(s: Regex): Parser[String] = ...
+  #+END_SRC
+  Due to the ~implicit~'s, you can write ~String~ or ~Regex~ in your parser,
+  and they are converted to object of ~Parser[String]~ implicitly.
+    This means, for example,
+    #+BEGIN_SRC scala
+      "("~expr~")"
 
-         // will be automatically expanded to
+      // will be automatically expanded to
 
-         literal("(") ~ expr ~ literal(")")
-       #+END_SRC
+      literal("(") ~ expr ~ literal(")")
+    #+END_SRC
 
-   - The ~RegexParsers~ trait also takes care of handling white space between
-     symbols. To do this, it calls a method named ~handleWhiteSpace~ before
-     running a ~literal~ or ~regex~ parser.
+- The ~RegexParsers~ trait also takes care of handling white space between
+  symbols. To do this, it calls a method named ~handleWhiteSpace~ before
+  running a ~literal~ or ~regex~ parser.
 
-     The ~handleWhiteSpace~ /method/ skips the longest input sequence that
-     conforms to the ~whiteSpace~ regular expression, which is defined by default
-     as follows: ~protected val whiteSpace = """\s+""".r~
+  The ~handleWhiteSpace~ /method/ skips the longest input sequence that
+  conforms to the ~whiteSpace~ regular expression, which is defined by default
+  as follows: ~protected val whiteSpace = """\s+""".r~
 
-   - If you want to change the treatment of white space, you can override the
-     ~whiteSpace~ ~val~. For instance, if you want white space not to be skipped
-     at all, ~override val whiteSpace = "".r~
+- If you want to change the treatment of white space, you can override the
+  ~whiteSpace~ ~val~. For instance, if you want white space not to be skipped
+  at all, ~override val whiteSpace = "".r~
 
-** DONE 13.8 Lexing and parsing - 272
-   CLOSED: [2018-03-06 Tue 12:30]
-   - The task of syntax analysis is often split into two phases:
-     1. The /lexer phase/ ::
-          it recognizes *individual* words in the input and *classifies* them
-          into some token classes. This phase is also called /lexical analysis/.
+** DONE 14.8 Lexing and parsing - 294
+CLOSED: [2018-03-06 Tue 12:30]
+- The task of syntax analysis is often split into two phases:
+  1. The /lexer phase/ ::
+       it recognizes *individual* words in the input and *classifies* them
+       into some token classes. This phase is also called /lexical analysis/.
 
-     2. The /syntactical analysis phase/ ::
-          it analyzes *sequences* of tokens.
-          Syntactical analysis is also sometimes just called parsing, even though
-          this is slightly *imprecise*, as /lexical analysis/ can also be
-          regarded as a parsing problem.
+  2. The /syntactical analysis phase/ ::
+       it analyzes *sequences* of tokens.
+       Syntactical analysis is also sometimes just called parsing, even though
+       this is slightly *imprecise*, as /lexical analysis/ can also be
+       regarded as a parsing problem.
 
-   - The ~Parsers~ trait as described in the previous section _can be used for
-     either phase_, *because its input elements are of the _abstract_ type
-     ~Elem~.*
-     + For lexical analysis, ~Elem~ would be instantiated to ~Char~, meaning the
-       individual characters that make up a word are being parsed.
+- The ~Parsers~ trait as described in the previous section _can be used for
+  either phase_, *because its input elements are of the _abstract_ type
+  ~Elem~.*
+  + For lexical analysis, ~Elem~ would be instantiated to ~Char~, meaning the
+    individual characters that make up a word are being parsed.
 
-     + The syntactical analyzer would in turn instantiate ~Elem~ to the type of
-       token returned by the lexer.
+  + The syntactical analyzer would in turn instantiate ~Elem~ to the type of
+    token returned by the lexer.
 
-   - Scala's parsing combinators provide _several utility classes_ for /lexical
-     and syntactic analysis/.
+- Scala's parsing combinators provide _several utility classes_ for /lexical
+  and syntactic analysis/.
 
-     These are contained in two sub-packages, one for each kind of analysis:
-     ~scala.util.parsing.combinator.lexical~
-     ~scala.util.parsing.combinator.syntactical~
+  These are contained in two sub-packages, one for each kind of analysis:
+  ~scala.util.parsing.combinator.lexical~
+  ~scala.util.parsing.combinator.syntactical~
 
-   - TODO
-     If you want to _split your parser into a separate lexer and syntactical
-     analyzer_, you should consult the Scaladoc documentation for these packages.
+- TODO
+  If you want to _split your parser into a separate lexer and syntactical
+  analyzer_, you should consult the Scaladoc documentation for these packages.
 
-     But for simple parsers, the regular expression based approach shown
-     previously in this chapter is usually sufficient.
+  But for simple parsers, the regular expression based approach shown
+  previously in this chapter is usually sufficient.
 
-** DONE 13.9 Error reporting - 272
-   CLOSED: [2018-03-06 Tue 12:47]
-   - Scala's parsing library implements a simple heuristic:
-     among all failures, the one that occurred at the *latest position* in the
-     input is chosen.
+** DONE 14.9 Error reporting - 294
+CLOSED: [2018-03-06 Tue 12:47]
+- Scala's parsing library implements a simple heuristic:
+  among all failures, the one that occurred at the *latest position* in the
+  input is chosen.
 
-     In other words,
-     the parser
-     1. _picks the longest prefix that is still valid_
+  In other words,
+  the parser
+  1. _picks the longest prefix that is still valid_
 
-     2. issues an error message that describes why parsing the prefix could not
-        be continued further.
+  2. issues an error message that describes why parsing the prefix could not
+     be continued further.
 
-   - If there are several failure points at that *latest position*,
-     the one that was *visited last is chosen*.
+- If there are several failure points at that *latest position*,
+  the one that was *visited last is chosen*.
 
-   - The error reporting is useful for experts, but may be quite misleading for
-     non-experts.
+- The error reporting is useful for experts, but may be quite misleading for
+  non-experts.
 
-       A better error message can be engineered by adding a "catch-all" failure
-     point as last alternative of a value production:
-     #+BEGIN_SRC scala
-       def value: Parser[Any] =
-         obj | arr | stringLit | floatingPointNumber | "null" |
-           "true" | "false" | failure("illegal start of value")
-     #+END_SRC
+    A better error message can be engineered by adding a "catch-all" failure
+  point as last alternative of a value production:
+  #+BEGIN_SRC scala
+    def value: Parser[Any] =
+      obj | arr | stringLit | floatingPointNumber | "null" |
+        "true" | "false" | failure("illegal start of value")
+  #+END_SRC
 
-   - The implementation of the “latest possible” scheme of error reporting uses a
-     field named ~lastFailure~ in trait ~Parsers~ to mark the failure that
-     occurred at the latest position in the input:
-     ~var lastFailure: Option[Failure] = None~
+- The implementation of the “latest possible” scheme of error reporting uses a
+  field named ~lastFailure~ in trait ~Parsers~ to mark the failure that
+  occurred at the latest position in the input:
+  ~var lastFailure: Option[Failure] = None~
 
-     + This ~lastFailure~ is a ~var~, and it is initialized to ~None~.
+  + This ~lastFailure~ is a ~var~, and it is initialized to ~None~.
 
-     + It is updated in the constructor of the ~Failure~ class:
-       #+BEGIN_SRC scala
-         case class Failure(msg: String, in: Input)
-             extends ParseResult[Nothing] {
-           if (lastFailure.isDefined &&
-                 lastFailure.get.in.pos <= in.pos)
-             lastFailure = Some(this)
-         }
-       #+END_SRC
+  + It is updated in the constructor of the ~Failure~ class:
+    #+BEGIN_SRC scala
+      case class Failure(msg: String, in: Input)
+          extends ParseResult[Nothing] {
+        if (lastFailure.isDefined &&
+              lastFailure.get.in.pos <= in.pos)
+          lastFailure = Some(this)
+      }
+    #+END_SRC
 
-     + The field is read by the phrase method, which emits the final error
-       message if the parser failed. TODO =???=
-       #+BEGIN_SRC scala
-         def phrase[T](p: Parser[T]) = new Parser[T] {
-           lastFailure = None
-           def apply(in: Input) = p(in) match {
-             case s @ Success(out, in1) =>
-               if (in1.atEnd) s
-               else           Failure("end of input expected", in1)
-             case f : Failure =>
-               lastFailure
-           }
-         }
-       #+END_SRC
+  + The field is read by the phrase method, which emits the final error
+    message if the parser failed. TODO =???=
+    #+BEGIN_SRC scala
+      def phrase[T](p: Parser[T]) = new Parser[T] {
+        lastFailure = None
+        def apply(in: Input) = p(in) match {
+          case s @ Success(out, in1) =>
+            if (in1.atEnd) s
+            else           Failure("end of input expected", in1)
+          case f : Failure =>
+            lastFailure
+        }
+      }
+    #+END_SRC
 
-     + The treatment of ~lastFailure~ is *non-functional*;
-       it is updated as a /side effect/ by the constructor of ~Failure~ and
-       by the ~phrase~ method itself.
+  + The treatment of ~lastFailure~ is *non-functional*;
+    it is updated as a /side effect/ by the constructor of ~Failure~ and
+    by the ~phrase~ method itself.
 
-       TODO =???=
-       A functional version of the same scheme would be possible, but it would
-       require threading the ~lastFailure~ value through every parser result, no
-       matter whether this result is a ~Success~ or a ~Failure~.
+    TODO =???=
+    A functional version of the same scheme would be possible, but it would
+    require threading the ~lastFailure~ value through every parser result, no
+    matter whether this result is a ~Success~ or a ~Failure~.
 
-** DONE 13.10 Backtracking versus LL(1) - 274
-   CLOSED: [2018-03-06 Tue 13:31]
-   - The /parser combinators/ employ /backtracking/ to choose between different
-     parsers in an alternative.
+** DONE 14.10 Backtracking versus LL(1) - 296
+CLOSED: [2018-03-06 Tue 13:31]
+- The /parser combinators/ employ /backtracking/ to choose between different
+  parsers in an alternative.
 
-   - /Backtracking/ imposes only a few *restrictions* on how to formulate a
-     grammar so that it can be parsed.
-       Essentially, you just need to *avoid /leftrecursive productions/.* =IMPORTANT=
-     For example, ~expr ::= expr "+" term | term.~ will always fail because
-     ~expr~ immediately calls itself and thus never progresses any further.
+- /Backtracking/ imposes only a few *restrictions* on how to formulate a
+  grammar so that it can be parsed.
+    Essentially, you just need to *avoid /leftrecursive productions/.* =IMPORTANT=
+  For example, ~expr ::= expr "+" term | term.~ will always fail because
+  ~expr~ immediately calls itself and thus never progresses any further.
 
-     + footnote:
-       There are ways to _avoid stack overflows_ even in the presence of
-       /left-recursion/, but this requires a more refined parsing combinator
-       framework, which to date has not been implemented.
+  + footnote:
+    There are ways to _avoid stack overflows_ even in the presence of
+    /left-recursion/, but this requires a more refined parsing combinator
+    framework, which to date has not been implemented.
 
-   - On the other hand, /backtracking/ is *potentially costly* because _the same
-     input can be parsed SEVERAL times_. Consider for instance the production:
-     ~expr ::= term "+" expr | term.~
+- On the other hand, /backtracking/ is *potentially costly* because _the same
+  input can be parsed SEVERAL times_. Consider for instance the production:
+  ~expr ::= term "+" expr | term.~
 
-   - It is often possible to modify the grammar so that /backtracking/ can be
-     avoided. For instance, re-write the above grammar:
-     + ~expr ::= term ["+" expr].~
-     + ~expr ::= term {"+" term}.~
+- It is often possible to modify the grammar so that /backtracking/ can be
+  avoided. For instance, re-write the above grammar:
+  + ~expr ::= term ["+" expr].~
+  + ~expr ::= term {"+" term}.~
 
-   - Many languages admit so-called /"LL(1)" grammars/.
-       When a /combinator parser/ is formed from such a grammar, *it will never
-     /backtrack/,*
-       For instance, the grammars for _arithmetic expressions_ and _JSON_ terms
-     earlier in this chapter are _BOTH_ LL(1), so the /backtracking/ capabilities
-     of the parser combinator framework are never exercised for inputs from these
-     languages.
+- Many languages admit so-called /"LL(1)" grammars/.
+    When a /combinator parser/ is formed from such a grammar, *it will never
+  /backtrack/,*
+    For instance, the grammars for _arithmetic expressions_ and _JSON_ terms
+  earlier in this chapter are _BOTH_ LL(1), so the /backtracking/ capabilities
+  of the parser combinator framework are never exercised for inputs from these
+  languages.
 
-     (=From Jian= However, the defintion in our code before should be modified a
-     little bit like the definitions below??? OR this can be done by the
-     compiler???)
+  (=From Jian= However, the defintion in our code before should be modified a
+  little bit like the definitions below??? OR this can be done by the
+  compiler???)
 
-   - The combinator parsing framework allows you to express the expectation that
-     a grammar is LL(1) explicitly, using a new operator ~~!~.
+- The combinator parsing framework allows you to express the expectation that
+  a grammar is LL(1) explicitly, using a new operator ~~!~.
 
-     #+BEGIN_SRC text
-       def expr : Parser[Any] =
-         term ~! rep("+" ~! term | "-" ~! term)
+  #+BEGIN_SRC text
+    def expr : Parser[Any] =
+      term ~! rep("+" ~! term | "-" ~! term)
 
-       def term : Parser[Any] =
-         factor ~! rep("*" ~! factor | "/" ~! factor)
+    def term : Parser[Any] =
+      factor ~! rep("*" ~! factor | "/" ~! factor)
 
-       def factor: Parser[Any] =
-         "(" ~! expr ~! ")" | floatingPointNumber
-     #+END_SRC
+    def factor: Parser[Any] =
+      "(" ~! expr ~! ")" | floatingPointNumber
+  #+END_SRC
 
-     You see the definition of ~factor~ changes the order of alternatives!!!
+  You see the definition of ~factor~ changes the order of alternatives!!!
 
-   - One advantage of an LL(1) parser is that it can use a simpler input
-     technique - no need to remember the position before the first alternatives.
+- One advantage of an LL(1) parser is that it can use a simpler input
+  technique - no need to remember the position before the first alternatives.
 
-     Another advantage is it's more efficient!
+  Another advantage is it's more efficient!
 
-** DONE 13.11 Conclusion - 276 =Re-Read=
-   CLOSED: [2018-03-06 Tue 14:01]
-   - One downside of combinator parsers is that they are _not very efficient_, at
-     least not when compared with parsers generated from special purpose tools
-     such as Yacc or Bison.
+** DONE 14.11 Conclusion - 298 =Re-Read=
+CLOSED: [2018-03-06 Tue 14:01]
+- One downside of combinator parsers is that they are _not very efficient_, at
+  least not when compared with parsers generated from special purpose tools
+  such as Yacc or Bison.
 
-     Two reasons:
-     + /backtracking/
-       * Solution: use ~~！~ to make the grammar LL(1).
+  Two reasons:
+  + /backtracking/
+    * Solution: use ~~！~ to make the grammar LL(1).
 
-     + combinator parsers is that they *mix* _parser construction_ and _input
-       analysis_ in the same set of operations.
+  + combinator parsers is that they *mix* _parser construction_ and _input
+    analysis_ in the same set of operations.
 
-       In effect, a parser is generated anew for each input that's parsed.
+    In effect, a parser is generated anew for each input that's parsed.
 
-       * Solution: _Different implementation_ of the parser combinator framework
-         -- a parser should be no longer a function from inputs to parse results.
-         Instead, *it would be represented as a tree, where every construction
-         step was represented as a case class*. For example, /case class/ ~Seq~
-         for sequential composition, ~Alt~ for alternative, and so on.
-           TODO The “outermost” parser method, ~phrase~, could then take this
-         symbolic representation of a parser and convert it to highly efficient
-         /parsing tables/, using standard parser generator algorithms. TODO =???=
+    * Solution: _Different implementation_ of the parser combinator framework
+      -- a parser should be no longer a function from inputs to parse results.
+      Instead, *it would be represented as a tree, where every construction
+      step was represented as a case class*. For example, /case class/ ~Seq~
+      for sequential composition, ~Alt~ for alternative, and so on.
+        TODO The “outermost” parser method, ~phrase~, could then take this
+      symbolic representation of a parser and convert it to highly efficient
+      /parsing tables/, using standard parser generator algorithms. TODO =???=
 
-       * What's nice of this solution is, from the user point of view, they can
-         still write parsers in terms of the old way -- use objects like ~ident~,
-         ~floatingPointNumber~, ~~~, ~|~, and so on.
+    * What's nice of this solution is, from the user point of view, they can
+      still write parsers in terms of the old way -- use objects like ~ident~,
+      ~floatingPointNumber~, ~~~, ~|~, and so on.
 
-       * The advantage of this scheme with respect to performance is _two-fold_:
-         - You can now *factor out* parser construction from input analysis.
-           If you were to write: ~val jsonParser = phrase(value)~ and then apply
-           ~jsonParser~ to several different inputs, the ~jsonParser~ would be
-           *constructed only once, not every time an input is read (like the
-           current framework)*.
+    * The advantage of this scheme with respect to performance is _two-fold_:
+      - You can now *factor out* parser construction from input analysis.
+        If you were to write: ~val jsonParser = phrase(value)~ and then apply
+        ~jsonParser~ to several different inputs, the ~jsonParser~ would be
+        *constructed only once, not every time an input is read (like the
+        current framework)*.
 
-         - The parser generation can _use efficient parsing algorithms such
-           as LALR(1)_. These algorithms usually lead to much faster parsers than
-           parsers that operate with /backtracking/.
+      - The parser generation can _use efficient parsing algorithms such
+        as LALR(1)_. These algorithms usually lead to much faster parsers than
+        parsers that operate with /backtracking/.
 
-   - _HOWEVER_, there are reasons for keeping the current parser combinator
-     framework around:
-     + It is much easier to understand and to adapt than a parser generator
+- _HOWEVER_, there are reasons for keeping the current parser combinator
+  framework around:
+  + It is much easier to understand and to adapt than a parser generator
 
-     + the difference in speed would often not matter in practice, unless you
-       want to parse very large inputs.
+  + the difference in speed would often not matter in practice, unless you
+    want to parse very large inputs.
 
-* Glossary - 278
-* Bibliography - 294
-* About the Authors - 298
-* Index - 299
+* Glossary - 300
+* Bibliography - 316
+* About the Authors - 320
+* Index - 321
