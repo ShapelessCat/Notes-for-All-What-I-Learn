@@ -1,5 +1,5 @@
 #+TITLE: The Rust Programming Language
-#+VERSION: 1.78.0 (released 2024-05-02)
+#+VERSION: 1.79.0 (released 2024-06-13)
 #+AUTHOR: Steve Klabnik and Carol Nichols, with contributions from the Rust Community
 #+STARTUP: entitiespretty
 #+STARTUP: indent
@@ -7,7 +7,7 @@
 
 - Read the https://rust-book.cs.brown.edu/ version.
 
-- This version of the text assumes you’re using Rust _1.78.0 (released 2024-05-02) or later_.
+- This version of the text assumes you're using Rust _1.79.0 (released 2024-06-13) or later_.
 
 - Offline version: Run ~rustup doc --book~ to open
 
@@ -3381,37 +3381,36 @@ handle values that match one pattern and ignore the rest.
 CLOSED: [2023-07-25 Tue 20:25]
 
 * DONE 7. Managing Growing Projects with Packages, Crates, and Modules
-CLOSED: [2023-08-08 Tue 23:55]
+CLOSED: [2024-10-09 Wed 23:00]
 As you write large programs, organizing your code will be important
 BECAUSE
 keeping track of your entire program in your head will become impossible.
 
-- By grouping related functionality and separating code with distinct features,
+- By _grouping related functionality_ and _separating code with distinct features_,
   you'll clarify
-  * where to find code that implements a particular feature and
-  * where to go to change how a feature works.
+  * WHERE to find code that implements a particular feature and
+  * WHERE to go to change how a feature works.
 
 - The programs we've written SO FAR have been _in *one* /module/ in *one* file._
 
   1. As a project grows, you can organize code by splitting it into *multiple*
      /modules/ and then *multiple* /files/.
 
-  2. A /package/ can contain *multiple* /binary crates/ and _OPTIONALLY_ *one*
-     /library crate/.
-     * As a /package/ grows, you can extract parts into SEPARATE /crates/ that
-       become /external dependencies/.
-
-- This chapter covers all these techniques.
+- A /package/ can contain
+  * *multiple* /binary crates/
+  * _OPTIONALLY_ *one* /library crate/.
+  As a /package/ grows, you can extract parts into SEPARATE /crates/ that
+  become /external dependencies/.
 
 - For very large projects of a set of INTERRELATED /packages/ that evolve
   together, Cargo provides /workspaces/, which we'll cover in the “Cargo
   Workspaces” section in Chapter 14. =TODO=
 
 - We'll also discuss *ENCAPSULATING implementation details*.
-  * call your code via its /public interface/ *WITHOUT* having to know how the
-    implementation works
+  * Other code can call your code via its /public interface/
+    *WITHOUT* having to know how the implementation works
 
-  * the way you write code DEFINES
+  * The way you write code DEFINES
     + which parts are /public/ for other code to use and
     + which parts are /private/ implementation details that you reserve the right to change.
 
@@ -3430,7 +3429,7 @@ keeping track of your entire program in your head will become impossible.
   include:
   * Packages :: A Cargo feature that lets you *build*, *test*, and *share* /crates/
   * Crates :: A tree of /modules/ that produces a /library/ or /executable/
-  * Modules AND use :: Let you control the _organization_, /scope/, and _PRIVACY of paths_
+  * Modules AND ~use~ :: Let you control the _organization_, /scope/, and _PRIVACY of paths_
   * Paths :: A way of naming an item, such as a /struct/, /function/, or /module/
 
 - In this chapter, we'll cover all the above features,
@@ -3442,10 +3441,11 @@ keeping track of your entire program in your head will become impossible.
      and be able to work with /scopes/ like a pro!
 
 ** DONE 7.1. Packages and Crates
-CLOSED: [2021-01-07 Thu 15:21]
+CLOSED: [2024-10-09 Wed 13:08]
 The first parts of the /module system/ we'll cover are /packages/ and /crates/.
 
-- A /crate/ is the *SMALLEST* amount of code that the Rust compiler considers at a time.
+- crate :: the *SMALLEST* amount of code that the Rust compiler considers at a time.
+  * Even a single source file you can pass to ~rustc~ is a /crate/.
 
 - /creates/ can contain /modules/, and the /modules/ may be defined in other
   files that get compiled with the /crate/ =NEXT=, as we'll see in the coming
@@ -3459,49 +3459,63 @@ The first parts of the /module system/ we'll cover are /packages/ and /crates/.
                      they define functionality intended to be shared with multiple
                      projects.
     + NO ~main~ function.
-    + Most of the time
-      when Rustaceans say “crate”,
-      they mean /library crate/, and
+    + =IMPORTANT=
+      Most of the time
+      when Rustaceans say “crate”, they mean /library crate/, and
       they use /crate/ _INTERCHANGEABLY_ with the general programming concept of a /library/.
 
-- The /crate root/ is a /source file/ that the Rust compiler _starts from_ and
-  makes up the /root module/ of your /crate/
+- crate root :: a /source file/ that the Rust compiler _starts from_ and makes up
+  the /root module/ of your /crate/
   * =TODO= we'll explain /modules/ in depth in the “Defining Modules to Control
            Scope and Privacy” section.
 
-- A /package/ is a bundle of one or more /crates/ that provide a set of functionality.
+- package :: a bundle of one or more /crates/ that provide a set of functionality.
   * A /package/ contains a =Cargo.toml= file that _describes HOW TO BUILD_ those
     /crates/.
 
 - /Cargo/ is actually a /package/ that contains the /binary crate/ for the command-line
   tool you've been using to build your code.
 
-  * The /Cargo/ /package/ also contains a /library crate/ that the /binary crate/
+  * _The Cargo package_ also contains a /library crate/ that the /binary crate/
     depends on.
 
-  * Other projects can depend on the /Cargo library crate/ to use the same logic
+  * Other projects can depend on the _Cargo library crate_ to use the same logic
     the Cargo command-line tool uses.
 
+- A /crate/ can come in one of two forms:
+  * a binary crate
+  * a library crate.
+
+- A /package/ can contain
+  * as many binary crates as you like,
+  * but at most only one library crate.
+
+- A /package/ must contain *at least one /crate/,* whether that's a library or
+  binary crate.
+
 - Several rules determine what a /package/ can contain:
-  * A /package/ *must* contain zero or one /library crates/, and no more.
+  A /package/ *must* contain _at least one_ /crate/ (either /library/ or
+  /binary/).
 
-  * It can contain as many /binary crates/ as you'd like,
-    but it *must* contain _at least one_ /crate/ (either /library/ or
-    /binary/).
+  * it *must* contain zero or one /library crates/, and no more.
 
-- Let's walk through what happens when we create a /package/.
+  * it can contain as many /binary crates/ as you'd like.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Let's walk through what happens when we create a /package/.
   1. =cargo new my-project=.
      Cargo created a =Cargo.toml= file, giving us a /package/.
 
-     * Looking at the contents of =Cargo.toml=, there's no mention of
-       =src/main.rs= because Cargo follows a convention that =src/main.rs= is
-       the /crate root/ of a /binary crate/ with the *same name* as the
-       /package/.
+     * This =Cargo.toml= doesn't mention =src/main.rs= (if this is a binary
+       package) or =src/lib.rs= (if this is a library crate), because Cargo
+       follows a *convention* for the /crate root/:
+       + =src/main.rs= is the /crate root/ of /binary crates/.
+       + =src/lib.rs= is the /crate root/ of /library crates/
+       with the *same name* as the /package/.
 
-     * Likewise, Cargo knows that if the /package directory/ contains
-       =src/lib.rs=, the /package/ contains a /library crate/ with the *same
-       name* as the /package/, and =src/lib.rs= is its /crate root/. Cargo
-       passes the /crate root/ files to =rustc= to *build* the /library/ or
+     * Cargo passes the /crate root/ files to =rustc= to *build* the /library/ or
        /binary/.
 
      * Here, we have a /package/ that only contains =src/main.rs=, meaning it
@@ -3523,7 +3537,7 @@ The first parts of the /module system/ we'll cover are /packages/ and /crates/.
 - =TODO= Let's move on and talk about the /module system/!
 
 ** DONE 7.2. Defining Modules to Control Scope and Privacy
-CLOSED: [2021-01-08 Fri 15:51]
+CLOSED: [2024-10-09 Wed 18:42]
 - In this section,
   * we'll talk about
     + /modules/
@@ -3537,7 +3551,8 @@ CLOSED: [2021-01-08 Fri 15:51]
     + /external packages/
     + the /glob operator/ =???= =TODO=
 
-*** Modules Cheat Sheet - =TODO: re-org=
+*** Modules Cheat Sheet
+Before we get to the details of /modules/ and /paths/,
 - Here we provide a quick reference on
   * how /modules/, /paths/, the ~use~ keyword, and the ~pub~ keyword work in the compiler, and
   * how most developers organize their code.
@@ -3545,19 +3560,60 @@ CLOSED: [2021-01-08 Fri 15:51]
 - We'll be going through examples of each of these rules throughout this chapter,
   but this is a great place to refer to as a reminder of *how /modules/ work*.
   * *Start from the crate root*
+    =src/lib.rs= or =src/main.rs=
 
   * *Declaring modules*
+    - In the /crate root file/, declare new modules. For example, add ~mod garden~ to =src/main.rs=.
+
+    - The compiler will look for the module's code in these places:
+      * Inline, within curly brackets that replace the semicolon following ~mod garden~.
+        =from Jian=
+        This means, by this rule, rustc automatically detect all the ~mod~ declared
+        in current /crate root/.
+
+      * In the file =src/garden.rs=
+        =from Jian=
+        ??? new style module.
+
+      * In the file =src/garden/mod.rs=
+        ??? traiditional module.
 
   * *Declaring submodules*
+    In any file other than the /crate root/, you can _declare submodules_.
+    For example, you might declare ~mod vegetables;~ in =src/garden.rs=.
+    The compiler will look for the submodule's code *within* the directory named
+    for the parent module in these places:
+    * Inline, directly following ~mod vegetables~, within curly brackets instead
+      of the semicolon.
+
+    * In the file =src/garden/vegetables.rs=.
+
+    * In the file =src/garden/vegetables/mod.rs=.
 
   * *Paths to code in modules*
+    Once a /module/ is part of your /crate/, you can refer to code in that /module/
+    from anywhere else in that *SAME* /crate/, as long as the privacy rules allow,
+    using the path to the code.
+    + For example,
+      an ~Asparagus~ type in _the garden vegetables module_ would be found at
+      =crate::garden::vegetables::Asparagus=.
 
   * *Private vs public*
+    Code *within* a /module/ is private from its /parent modules/ by default.
+    To *make a /module/ public*, declare it with ~pub mod~ instead of ~mod~.
+
+    + To *make items within a /public module/ public* as well,
+      use ~pub~ before their declarations.
 
   * *The ~use~ keyword*
+    Within a scope, the use keyword creates shortcuts to items to reduce
+    repetition of long paths. In any scope that can refer to
+    ~crate::garden::vegetables::Asparagus~, you can create a shortcut with
+    ~use crate::garden::vegetables::Asparagus;~ and from then on you only need to
+    write ~Asparagus~ to make use of that type in the scope.
 
 - Example:
-  Create a binary crate named ~backyard~ that illustrates these rules.
+  Create a /binary crate/ named ~backyard~ that illustrates these rules.
   The crate's directory, also named ~backyard~, contains these files and directories:
   #+begin_src text
     backyard
@@ -3576,7 +3632,7 @@ CLOSED: [2021-01-08 Fri 15:51]
       pub mod garden;
 
       fn main() {
-          let plant = Asparagus {};
+          let plant = Asparagus;
           println!("I'm growing {:?}!", plant);
       }
     #+end_src
@@ -3589,41 +3645,22 @@ CLOSED: [2021-01-08 Fri 15:51]
   * =src/garden/vegetables.rs=
     #+begin_src rust
       #[derive(Debug)]
-      pub struct Asparagus {}
+      pub struct Asparagus;
     #+end_src
 
-*** Grouping Related Code in Modules - =TODO: re-org=
-- /Modules/ let us _organize code within a /crate/ into groups_ for
+*** Grouping Related Code in Modules
+- /Modules/ let us _organize code *WITHIN* a /crate/ into groups_ for
   * readability
-    and
-  * easy reuse.
+  * easy reuse
 
-- /Modules/ also _control the PRIVACY of items_.
+- /Modules/ also *control the PRIVACY* of items.
 
 - As an example,
   let's write a /library crate/ that provides the functionality of a
   restaurant.
 
-  * In the restaurant industry,
-    some parts of a restaurant are referred to as _front of house_ and others
-    as _back of house_.
-
-    + Front of house ::
-      where customers are; this is where
-      - hosts seat customers,
-      - servers take orders and payment, and
-      - bartenders make drinks.
-
-    + Back of house ::
-      where
-      - the chefs and cooks work in the kitchen,
-      - dishwashers clean up, and
-      - managers do administrative work.
-
-  * To structure our /crate/ in the same way that a real restaurant works,
-    we can organize the /functions/ into /nested modules/:
-    Create a new library named restaurant by running
-    =cargo new --lib restaurant=; then put the code in
+  * =cargo new --lib restaurant=; then put the code in
+  * Code:
     #+begin_src rust
       // Listing 7-1:
       // into src/lib.rs to define some modules and function signatures.
@@ -3643,12 +3680,12 @@ CLOSED: [2021-01-08 Fri 15:51]
           }
       }
     #+end_src
+    /modules/ can be nested.
 
-- Earlier, we mentioned that =src/main.rs= and =src/lib.rs= are called /crate
-  roots/.
-    The reason for their name is that the contents of either of these two
-  files form a /module named crate/ at the root of the _crate's module
-  structure_, known as the _module tree_.
+- Earlier, we mentioned that =src/main.rs= and =src/lib.rs= are called
+  *crate roots*. The reason for this name is that the contents of either of
+  these two files form a /module/ named ~crate~ *at the root of* the _crate's
+  module structure_, known as the _module tree_.
   #+begin_src text
     Listing 7-2 shows the module tree for the structure in Listing 7-1.
 
@@ -3662,29 +3699,24 @@ CLOSED: [2021-01-08 Fri 15:51]
              ├── serve_order
              └── take_payment
   #+end_src
-  * This tree shows
-    + how some of the /modules/ *nest inside* one another (for example, =hosting=
-      nests inside =front_of_house=).
+  * In this /module tree/ we can see
+    + parent module
+    + child module
+    + sibling module
 
-    + some /modules/ are *siblings to* each other, meaning they're defined in
-      the *same* /module/ (~hosting~ and ~serving~ are defined within
-      ~front_of_house~).
-      - Notice that the entire /module tree/ is rooted under the _implicit module_
-        named =crate=.
+  * *Notice*: =IMPORTANT=
+    The entire /module tree/ is rooted under the _implicit module_ named
+    =crate=.
 
 ** DONE 7.3. Paths for Referring to an Item in the Module Tree
-CLOSED: [2021-01-09 Sat 01:52]
+CLOSED: [2024-10-09 Wed 21:12]
 To show Rust where to find an item in a /module tree/, we use a /path/ in the
 same way we use a /path/ when navigating a filesystem.
 
-- If we want to call a /function/, we need to know its /path/.
-
 - A /path/ can take *TWO* forms:
-  * An /absolute path/
-    starts from a /crate root/ by using
-    + a _crate name_
-      OR
-    + a literal ~crate~.
+  * absolute path :: the full path starting from a /crate root/.
+    + For code from an external crate, it begins with the _crate name_
+    + For code from the current crate, it starts with the literal ~crate~.
 
   * A /relative path/
     starts from the CURRENT /module/ and uses
@@ -3697,14 +3729,16 @@ same way we use a /path/ when navigating a filesystem.
 
 - Let's return to the example in Listing 7-1.
   * Q :: How do we call the ~add_to_waitlist~ function?
-         This is the same as asking, what's the path of the ~add_to_waitlist~
-         function?
+         This is the same as asking _what's the path of the ~add_to_waitlist~
+         function?_
 
   * A :: We'll show _TWO_ ways to call the ~add_to_waitlist~ /function/ from a
          new function ~eat_at_restaurant~ defined in the /crate root/.
-    *Note*: _this example *won't compile* just yet; =TODO= we'll explain why
+    *Note*: _this example *won't compile* just yet; we'll explain why
             in a bit._
     #+begin_src rust
+      // on purpose not compilable!!!
+
       // In Listing 7-3: we simplified our code a bit by removing some of the
       //                 modules and functions.
       mod front_of_house {
@@ -3724,34 +3758,31 @@ same way we use a /path/ when navigating a filesystem.
     + The ~eat_at_restaurant~ function is part of our /library crate's public
       API/, so we mark it with the ~pub~ keyword.
 
-    + =NEXT= In the ”Exposing Paths with the ~pub~ Keyword” section, we'll go
+    + =NEXT= In the "Exposing Paths with the ~pub~ Keyword" section, we'll go
       into more detail about ~pub~.
       =FIXME= - =open quote use close quote character=.
-
-- The first time we call the ~add_to_waitlist~ function in ~eat_at_restaurant~,
-  we use an absolute path. The ~add_to_waitlist~ function is defined in the same
-  crate as ~eat_at_restaurant~, which means we can use the ~crate~ keyword to
-  start an absolute path.
 
 - Choosing whether to use a /relative or absolute path/ is a decision you'll
   make based on your project. The decision should depend on
   * WHETHER you're more likely to move item /definition/ code *separately* from
-  * OR *together* with
+    OR
+  * *together* with
   the code that uses the item.
 
-- For example,
-  * if we move the ~front_of_house~ /module/ and the ~eat_at_restaurant~
-    /function/ into ~mod customer_experience~,
-    we'd need to *update* the /absolute path/ to ~add_to_waitlist~,
-    BUT the /relative path/ would *still be valid*.
+  * For example,
+    + if we move the ~front_of_house~ /module/ and the ~eat_at_restaurant~
+      /function/ into ~mod customer_experience~,
+      we'd need to *update* the /absolute path/ to ~add_to_waitlist~,
+      BUT the /relative path/ would *still be valid*.
 
-  * However,
-    if we moved the ~eat_at_restaurant~ /function/ *SEPARATELY* into
-    ~mod dining~,
-    the /absolute path/ to the ~add_to_waitlist~ call would *stay the same*,
-    BUT the /relative path/ would need to be *updated*.
+    + However,
+      if we moved the ~eat_at_restaurant~ /function/ *SEPARATELY* into
+      ~mod dining~,
+      the /absolute path/ to the ~add_to_waitlist~ call would *stay the same*,
+      BUT the /relative path/ would need to be *updated*.
 
-  Our preference is to specify /absolute paths/ because it's more likely to
+  =IMPORTANT=
+  *Our preference* is to specify /absolute paths/ because it's more likely to
   move code /definitions/ and item calls *independently* of each other.
 
 - /Modules/ aren't useful only for organizing your code.
@@ -3764,7 +3795,7 @@ same way we use a /path/ when navigating a filesystem.
   * items in /child modules/ can use the items in their /ancestor modules/
 
 *** DONE Exposing Paths with the ~pub~ Keyword
-CLOSED: [2021-01-09 Sat 01:29]
+CLOSED: [2024-10-09 Wed 21:00]
 Add ~pub~ to ~hosting~ and ~add_to_waitlist~.
 #+begin_src rust
   mod front_of_house {
@@ -3782,9 +3813,42 @@ Add ~pub~ to ~hosting~ and ~add_to_waitlist~.
   }
 #+end_src
 
+- If you plan on sharing your library crate so other projects can use your code,
+  check [[https://rust-lang.github.io/api-guidelines/][The Rust API Guidelines]] first.
+
+- *Best Practices for Packages with a Binary and a Library*
+  * We mentioned that a /package/ can contain _BOTH_ a =src/main.rs= /binary
+    crate root/ as well as a =src/lib.rs= /library crate root/, and both /crates/
+    will have the _package name_ BY DEFAULT.
+
+    + Typically, /packages/ with this pattern of containing _BOTH_ a /library
+      crate/ and a /binary crate/ will have just enough code in the /binary
+      crate/ to start an executable that calls code within the /library crate/.
+
+    + This lets other projects benefit from most of the functionality that the
+      /package/ provides because the /library crate/'s code can be shared.
+
+  * The /module tree/ should be defined in =src/lib.rs=. Then, any public items can
+    be used in the /binary crate/ by starting paths with the _package name_.
+    The /binary crate/ becomes a user of the /library crate/
+    _just LIKE a completely /external crate/ would use the /library crate/: it
+    can only use the public API._
+    + This helps you _design a good API_ --
+      *not only are you the author, you're also a client!*
+
+  * =TODO=
+    =NEXT=
+    In Chapter 12, we'll demonstrate this organizational practice with a
+    command-line program that will contain both a /binary crate/ and a /library
+    crate/.
+
 *** DONE Starting Relative Paths with ~super~
-CLOSED: [2021-01-09 Sat 01:32]
-~super~ is like the ~..~ syntax in filesystem.
+CLOSED: [2024-10-09 Wed 21:06]
+- We can construct /relative paths/ that _BEGIN_ in the /parent module/,
+  RATHER than the _current module_ or the /crate root/,
+  *by using ~super~ at the start of the path*.
+
+- ~super~ is like the ~..~ syntax in filesystem.
 
 #+begin_src rust
   fn serve_order() {}
@@ -3809,9 +3873,9 @@ CLOSED: [2021-01-09 Sat 01:32]
     tree/ someday.
 
 *** DONE Making Structs and Enums Public
-CLOSED: [2021-01-09 Sat 01:52]
+CLOSED: [2024-10-09 Wed 21:12]
 We can also use ~pub~ to designate /structs/ and /enums/ as _public_, but
-there are a few extra details.
+there are A FEW EXTRA DETAILS.
 
 - If we use ~pub~ before a /struct definition/,
   we _make the /struct/ public_, but the /struct's fields/ will STILL be _private_.
@@ -3846,9 +3910,8 @@ there are a few extra details.
         // meal.seasonal_fruit = String::from("blueberries");
     }
   #+end_src
-  * If there is no the associated ~summer~ function, we can't construct a
-    an instance of ~Breakfast~ -- ~Breakfast~ has /a private field/.
-
+  * Here, if there is no the associated ~summer~ function, we can't construct an
+    instance of ~Breakfast~ -- ~Breakfast~ has /a private field/.
 
 - In contrast, if we make _an /enum/ PUBLIC_,
   _all of its /variants/ are then PUBLIC._
@@ -3868,15 +3931,15 @@ there are a few extra details.
     }
   #+end_src
 
-- =TODO=
-  There's one more situation involving ~pub~ that we haven't covered, and
-  that is our LAST /module system/ feature: the ~use~ keyword.
-    We'll cover ~use~ by itself first, and then we'll show how to *combine*
-  ~pub~ and ~use~.
+- *Enums aren't very useful _UNLESS_ their variants are public;*
+  *Structs are often useful without their fields being public,*
+  so /struct fields/ follow the general rule of _everything being private by
+  default unless annotated with ~pub~._
 
 ** DONE 7.4. Bringing Paths into Scope with the ~use~ Keyword
-CLOSED: [2021-01-10 Sun 01:08]
+CLOSED: [2024-10-09 Wed 22:43]
 - Use ~use~ and an /absolute path/:
+  #+FILE_NAME: src/lib.rs
   #+begin_src rust
     mod front_of_house {
         pub mod hosting {
@@ -3888,12 +3951,11 @@ CLOSED: [2021-01-10 Sun 01:08]
 
     pub fn eat_at_restaurant() {
         hosting::add_to_waitlist();
-        hosting::add_to_waitlist();
-        hosting::add_to_waitlist();
     }
   #+end_src
 
 - Use ~use~ and a /relative path/:
+  #+FILE_NAME: src/lib.rs
   #+begin_src rust
     // Listing 7-12: Bringing a module into scope with use and a relative path
     mod front_of_house {
@@ -3906,13 +3968,56 @@ CLOSED: [2021-01-10 Sun 01:08]
 
     pub fn eat_at_restaurant() {
         hosting::add_to_waitlist();
-        hosting::add_to_waitlist();
-        hosting::add_to_waitlist();
     }
   #+end_src
 
-*** DONE Creating Idiomatic ~use~ Paths
-CLOSED: [2021-01-10 Sun 00:25]
+- =IMPORTANT=
+  Note that ~use~ only creates the shortcut for the *PARTICULAR* /scope/ in
+  which the ~use~ occurs.
+
+- Notice there's also a warning that the ~use~ is no longer used in its scope!
+  To fix this problem,
+  * move the ~use~ within the ~customer~ module too,
+    #+FILE_NAME: src/lib.rs
+    #+begin_src rust
+      mod front_of_house {
+          pub mod hosting {
+              pub fn add_to_waitlist() {}
+          }
+      }
+
+      mod customer {
+          use super::front_of_house::hosting;
+
+          pub fn eat_at_restaurant() {
+              hosting::add_to_waitlist();
+          }
+      }
+    #+end_src
+
+    OR
+
+  * reference the shortcut in the parent module with ~super::hosting~ within the
+    child ~customer~ module.
+    #+FILE_NAME: src/lib.rs
+    #+begin_src rust
+      mod front_of_house {
+          pub mod hosting {
+              pub fn add_to_waitlist() {}
+          }
+      }
+
+      use crate::front_of_house::hosting;
+
+      mod customer {
+          pub fn eat_at_restaurant() {
+              super::hosting::add_to_waitlist();
+          }
+      }
+    #+end_src
+
+*** DONE Creating Idiomatic ~use~ Paths - =IMPORTANT: CONVENTIONS=
+CLOSED: [2024-10-09 Wed 21:55]
 - _CONVENTION 1_:
   See Listing 7-11 in the last section, which is the idiomatic way to bring
   /functions/ into scope with ~use~:
@@ -3938,6 +4043,11 @@ CLOSED: [2021-01-10 Sun 00:25]
   * There's no strong reason behind this idiom:
     it's just the *convention* that has emerged, and folks have gotten used to
     reading and writing Rust code this way.
+    + =from Jian=
+      For the _CONVENTION 1_, I have some thoughts:
+      /functions/ comes from different paths may have same signature, but
+      different functionalities, call them with right /parent module/ in path
+      can help avoid wrong function call by accident.
 
   * _The *EXCEPTION* to this idiom:_
     if we're bringing two items with the _SAME name_ into /scope/ with ~use~
@@ -3956,7 +4066,7 @@ CLOSED: [2021-01-10 Sun 00:25]
     #+end_src
 
 *** DONE Providing New Names with the ~as~ Keyword
-CLOSED: [2021-01-10 Sun 00:29]
+CLOSED: [2024-10-09 Wed 22:20]
 Alias one of the _SAME name_ to distinguish them:
 #+begin_src rust
   // Listing 7-16: Renaming a type when it’s brought into scope with the `as` keyword
@@ -3973,7 +4083,7 @@ Alias one of the _SAME name_ to distinguish them:
 #+end_src
 
 *** DONE Re-exporting Names with ~pub use~
-CLOSED: [2021-01-10 Sun 00:42]
+CLOSED: [2024-10-09 Wed 22:24]
 Use ~pub use~ to pull names into a /module/ while simultaneously *exposing
 those names outside* of that /module/.
 #+begin_src rust
@@ -3986,8 +4096,6 @@ those names outside* of that /module/.
   pub use crate::front_of_house::hosting;
 
   pub fn eat_at_restaurant() {
-      hosting::add_to_waitlist();
-      hosting::add_to_waitlist();
       hosting::add_to_waitlist();
   }
 #+end_src
@@ -4006,7 +4114,7 @@ those names outside* of that /module/.
       programmers working on the library and programmers calling the library.
 
 *** DONE Using External Packages
-CLOSED: [2021-01-10 Sun 00:53]
+CLOSED: [2024-10-09 Wed 22:28]
 - Members of the Rust community have made many packages available at
   crates.io, and pulling any of them into your package involves these same
   steps:
@@ -4014,7 +4122,7 @@ CLOSED: [2021-01-10 Sun 00:53]
   items _from their /crates/ into /scope/._ For example,
   #+begin_src toml
     [dependencies]
-    rand = "0.5.5"
+    rand = "0.8.5"
   #+end_src
 
 - Note that the /standard library (~std~)/ is also a /crate/ that's external
@@ -4028,7 +4136,7 @@ CLOSED: [2021-01-10 Sun 00:53]
   #+end_src
 
 *** DONE Using Nested Paths to Clean Up Large ~use~ Lists
-CLOSED: [2021-01-10 Sun 01:08]
+CLOSED: [2024-10-09 Wed 22:43]
 If we're using multiple items defined in the same /crate/ or same /module/,
 listing each item on its own line can take up a lot of vertical space in
 our files. We can use /nested paths/ to simplify this:
@@ -4065,31 +4173,31 @@ our files. We can use /nested paths/ to simplify this:
     use std::io::{self, Write};
   #+end_src
 
+- We can use a nested path *at any level in a path,*
+  which is useful when combining two ~use~ statements that share a subpath.
+
 *** DONE The Glob Operator
-CLOSED: [2021-01-10 Sun 01:08]
+CLOSED: [2024-10-09 Wed 22:43]
 Bring *all* /public items/ defined in a path into scope.
 #+begin_src rust
   use std::collections::*;
 #+end_src
 
 - Be careful when using the /glob operator/!
-  /Glob/ can *make it harder to tell*
-  * what names are in scope and
-  * where a name used in your program was defined.
+  =from Jian= Just like other languages.
 
 - When to use /glob operator/
   * It is often used
     WHEN testing to bring everything under _test_ into the /tests module/;
-    =TODO=
+    =NEXT=
     we'll talk about that in the “How to Write Tests” section in Chapter 11.
 
-  * =TODO= =TODO= =TODO=
-    It is also sometimes used as part of the /prelude pattern/:
+  * It is also sometimes used as part of the /prelude pattern/:
     see the standard library documentation for more information on that
     pattern.
 
 ** DONE 7.5. Separating Modules into Different Files
-CLOSED: [2021-01-10 Sun 02:28]
+CLOSED: [2024-10-09 Wed 22:58]
 So far, all the examples in this chapter _defined MULTIPLE /modules/ in ONE
 /file/._
   _When /modules/ get *large*,_ you might want to *MOVE their definitions TO a
@@ -4159,6 +4267,7 @@ _separate file_ to make the code easier to navigate.*
 
 - *Alternate File Paths*
   * Stop using the older style =src/front_of-house/mod.rs= to represent a /module/.
+    =IMPORTANT=
     + The main downside to the style that uses files named =mod.rs=:
       your project can end up with many files named =mod.rs=, which can get
       confusing when you have them open in your editor at the same time.
@@ -4177,27 +4286,24 @@ _separate file_ to make the code easier to navigate.*
   * This technique lets you move modules to new files as they grow in size.
 
 - Note that the ~pub use crate::front_of_house::hosting~ statement in
-  =src/lib.rs= also *HASN'T CHANGED*, nor does use have any impact on what
+  =src/lib.rs= also *HASN'T CHANGED*, nor does ~use~ have any impact on what
   files are compiled as part of the /crate/.
 
 ** DONE Summary
-CLOSED: [2021-01-10 Sun 02:28]
+CLOSED: [2024-10-09 Wed 23:00]
 Rust lets you
 *split* a /package/ *into* _MULTIPLE_ /crates/ and
-        a /crate/ *into* /modules
+        a /crate/ *into* /modules/
 so
 you can refer to items defined in one /module/ from another /module/.
 
 - You can do this by specifying /absolute or relative paths/.
-  These paths can be brought into scope with a ~use~ statement so you can use a
+
+- These /paths/ can be brought into scope with a ~use~ statement so you can use a
   shorter path for multiple ~use~'s of the item in that scope.
 
 - /Module/ code is *private BY DEFAULT*,
   but you can make definitions *public* by adding the ~pub~ keyword.
-
-- =NEXT=
-  In the next chapter, we'll look at some /collection data structures/ in the
-  /standard library/ that you can use in your neatly organized code.
 
 * DONE 8. Common Collections - =TODO: PRACTICE=
 CLOSED: [2021-01-11 Mon 22:26]
@@ -9551,8 +9657,8 @@ CLOSED: [2021-01-16 Sat 23:57]
 
 ** Summary
 
-* TODO 14. More About Cargo and Crates.io - =TODO= =publish=
-In this chapter, we'll discuss some of its other, more advanced features to
+* TODO 14. More About Cargo and Crates.io - =TODO: publishing=
+In this chapter, we'll discuss some of its other, _more advanced features_ to
 show you how to do the following:
 - *Customize* your build through /release profiles/
 - *Publish* libraries *on* crates.io
@@ -9561,13 +9667,14 @@ show you how to do the following:
 - *Extend* Cargo using _custom commands_
 
 ** DONE 14.1. Customizing Builds with Release Profiles
-CLOSED: [2021-01-17 Sun 00:27]
+CLOSED: [2024-10-09 Wed 23:17]
 In Rust, /release profiles/ are *predefined* and *customizable* /profiles/
-with different configurations that allow a programmer to have more control
-over various options for compiling code. Each profile is configured
-independently of the others.
+with different configurations that allow a programmer to _have more control
+over various options for compiling code._
 
-- Cargo has two MAIN /profiles/:
+- Each /profile/ is configured INDEPENDENTLY of the others.
+
+- Cargo has two frequently used /profiles/:
   * ~cargo build~ uses the ~dev~ /profile/
     + The ~dev~ /profile/ is defined with *good defaults for _DEVELOPMENT_.*
 
@@ -9575,10 +9682,18 @@ independently of the others.
     + the ~release~ /profile/ has *good defaults for _RELEASE_ builds.*
 
 - These /profile/ names might be familiar from the OUTPUT of your _builds_:
-  * ~cargo build~: Finished dev [unoptimized + debuginfo] target(s) in 0.0s
-  * ~cargo build --release~: Finished release [optimized] target(s) in 0.0s
+  * ~cargo build~ output:
+    #+begin_src text
+      Finished dev [unoptimized + debuginfo] target(s) in 0.0s
+    #+end_src
 
-- Cargo has *default settings* for each of the /profiles/ that apply
+  * ~cargo build --release~ output:
+    #+begin_src text
+      Finished release [optimized] target(s) in 0.0s
+    #+end_src
+
+- =IMPORTANT=
+  Cargo has *default settings* for each of the /profiles/ that apply
   when there aren't any ~[profile.*]~ sections in the project's =Cargo.toml=
   file.
 
@@ -9597,7 +9712,7 @@ independently of the others.
     + ~opt-level~ controls the _number of optimizations_ Rust will apply to
       your code, with a *range of 0 to 3.*
 
-** TODO 14.2. Publishing a Crate to Crates.io
+** TODO 14.2. Publishing a Crate to Crates.io - =START HERE!!!=
 *** TODO Making Useful Documentation Comments
 **** Commonly Used Sections
 **** Documentation Comments as Tests
@@ -9611,25 +9726,52 @@ independently of the others.
 *** TODO Deprecating Versions from Crate.io with ~cargo yank~
 
 ** DONE 14.3. Cargo Workspaces
-CLOSED: [2021-01-17 Sun 01:27]
-As your project develops, you might find that the /library crate/ continues to
-get bigger and you want to *split up* your /package/ further into _MULTIPLE
-/library crates/._
-  In this situation, Cargo offers a feature called /workspaces/ that can help
-manage _MULTIPLE related packages_ that are developed in tandem.
+CLOSED: [2024-10-10 Thu 00:20]
+- Q :: As your project develops, you might find that the /library crate/
+       continues to get bigger and you want to *split up* your /package/
+       further into _MULTIPLE /library crates/._
+  * =from Jian=
+    Remember? Each /pakcage/ can only have one /library crates/.
+    1. At the beginning, your project many contains only one /package/.
+    2. As your project evolves, a /package/ can only have at most ONE /library
+       crate/ can become a limitation: this only /library crate/ is already
+       complicated and not apply the one-duty best practice.
+    3. Now, its time to find a better solution!
+
+- A :: In this situation, Cargo offers a feature called /workspaces/ that can
+       help _manage MULTIPLE related packages_ that are developed in tandem.
 
 *** DONE Creating a Workspace
-CLOSED: [2021-01-17 Sun 01:27]
-Create a project named as =add=, which includes ONE /binary crate/ and TWO
-/library crates/. The /binary crate/, which will provide the _main
-functionality_, will depend on the TWO /libraries/: one provides a function
-~add_one~, and the other one provides ~add_two~.
+CLOSED: [2024-10-09 Wed 23:52]
+- workspace :: a set of /packages/ that *share the same*
+  * =Cargo.lock=
+  * output directory
 
-- There are multiple ways to structure a workspace; =TODO= =???=
+- Illustration project:
+  Create a project named as =add=, which includes ONE /binary crate/ and TWO
+  /library crates/.
+  =from Jian=
+  You can see this can't be /package/, becuase it has _more than one_ /library
+  crate/.
+
+  * The /binary crate/, which will provide the _main functionality_,
+    will depend on the TWO /library crates/:
+    + one provides a function ~add_one~
+    + the other one provides ~add_two~
+
+- There are multiple ways to structure a workspace;
   we're going to show one common way.
+  =from Jian=
+  We use the way of manually editing the shared =Cargo.toml=.
+  *A cargo plugin _cargo-workspaces_ exists!*
+
   1. ~mkdir add~ and then ~cd add~
 
   2. Add =Cargo.toml=
+     This file *won't have a ~[package]~ section*.
+     Instead, it will *start with a ~[workspace]~ section* that will allow us to
+     add /members/ to the /workspace/ _by specifying the /path/ to the
+     /package/_ with our /binary crate/.
      #+begin_src toml
        [workspace]
 
@@ -9649,6 +9791,9 @@ functionality_, will depend on the TWO /libraries/: one provides a function
        │       └── main.rs
        └── target
      #+end_src
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
      One /workspace/ has one =target= directory at the top level for the
      /compiled artifacts/ to be placed into;
      * EXAMPLE:
@@ -9666,7 +9811,7 @@ functionality_, will depend on the TWO /libraries/: one provides a function
          have the /artifacts/ in its own =target= directory.
 
 *** DONE Creating the Second Package in the Workspace
-CLOSED: [2021-01-17 Sun 01:27]
+CLOSED: [2024-10-10 Thu 00:20]
 Next, create another /member package/ in the /workspace/ and call it =add-one=.
 
 1. Change the top level =Cargo.toml=:
@@ -9735,7 +9880,7 @@ Next, create another /member package/ in the /workspace/ and call it =add-one=.
     * The ~-p~ flag specifies which /package/ in the /workspace/ we want to run.
 
 **** DONE Depending on an External Package in a Workspace
-CLOSED: [2021-01-17 Sun 01:27]
+CLOSED: [2024-10-10 Thu 00:09]
 Add /external packages/ to corresponding =[dependencies]= section of
 corresponding =Cargo.toml=.
 
@@ -9748,66 +9893,35 @@ corresponding =Cargo.toml=.
 
 - Building the =adder= /package/ will *add* ~rand~ to the list of /dependencies/
   for =adder= in =Cargo.lock=, but *no additional copies of =rand= will be
-  downloaded*.
+  downloaded* if this is possible.
 
-  * Cargo has *ensured* that EVERY /crate/ in EVERY /package/ in the /workspace/
-    using the ~rand~ /package/ *will be using the _SAME version_.*
+  * Cargo will *ensure* that EVERY /crate/ in EVERY /package/ in the /workspace/
+    using the ~rand~ /package/ *will be using the _SAME version_ as long as they
+    specify compatible versions of ~rand~.*
     + This
       - *saves space*
       - ensures that the /crates/ in the /workspace/ will be *compatible*
         with each other.
 
+- If /crates/ in the /workspace/ _SPECIFY *incompatible* versions of the same
+  dependency_, Cargo will resolve each of them, but will still try to resolve as
+  *few versions as possible*.
+
 **** DONE Adding a Test to a Workspace
-CLOSED: [2021-01-17 Sun 01:27]
+CLOSED: [2024-10-10 Thu 00:20]
 1. Add a /unit test/ to =add-one/src/lib.rs=.
 
 2. Run ~cargo test~ in the top-level =add= directory, and it will run all tests
    from EACH /crate/. Of course, currently only =add-one= has a /unit test/.
-   #+begin_src text
-        Compiling add-one v0.1.0 (file:///projects/add/add-one)
-        Compiling adder v0.1.0 (file:///projects/add/adder)
-         Finished test [unoptimized + debuginfo] target(s) in 0.27s
-          Running target/debug/deps/add_one-f0253159197f7841
-
-     running 1 test
-     test tests::it_works ... ok
-
-     test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-
-          Running target/debug/deps/adder-49979ff40686fa8e
-
-     running 0 tests
-
-     test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-
-        Doc-tests add-one
-
-     running 0 tests
-
-     test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-   #+end_src
 
    - ~cargo test -p add-one~ can be used to run the ONLY tests for the
      =add-one= /crate/.
-     #+begin_src text
-            Finished test [unoptimized + debuginfo] target(s) in 0.00s
-            Running target/debug/deps/add_one-b3235fea9a156f74
-
-       running 1 test
-       test tests::it_works ... ok
-
-       test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-
-          Doc-tests add-one
-
-       running 0 tests
-
-       test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-     #+end_src
 
 3. If you *publish* the /crates/ in the /workspace/ to crates.io,
    *EACH /crate/ in the /workspace/ will need to be _published SEPARATELY_.*
-   - The ~cargo publish~ does *NOT* have an ~--all~ flag or a ~-p~ flag.
+   - ~cargo publish~ is like ~cargo test~, we can publish a particular /crate/ in
+     our /workspace/ by using the ~-p~ flag and specifying the name of the
+     /crate/ (=from Jian= I think this should be /package/) we want to publish.
 
 4. _SUMMARY:_
    As your project grows, consider using a /workspace/:
@@ -9817,18 +9931,20 @@ CLOSED: [2021-01-17 Sun 01:27]
      between them easier if they are often changed at the same time.*
 
 ** DONE 14.4. Installing Binaries with ~cargo install~
-CLOSED: [2021-01-17 Sun 01:44]
+CLOSED: [2024-10-10 Thu 00:26]
 - The ~cargo install~ command allows you to install and use /binary crates/
   LOCALLY.
-  * This isn’t intended to replace system packages; it’s meant to be a convenient
+  * This isn't intended to replace system packages; it's meant to be a convenient
     way for Rust developers to install tools that others have shared on crates.io.
 
   * NOTE:
     you can *ONLY install* packages that have /binary targets/.
 
-    + binary target :: the runnable program that is created if the /crate/ has
-                        a =src/main.rs= file or another file specified as a
-                        /binary/, as opposed to a /library target/.
+    + binary target :: the runnable program that is created IF
+      * the /crate/ has a =src/main.rs= file
+        OR
+      * another file specified as a /binary/, as opposed to a /library target/.
+        =TODO: HOW-TO???=
 
     + library target :: isn't runnable on its own
                          but is suitable for including within other programs.
@@ -9861,14 +9977,13 @@ CLOSED: [2021-01-17 Sun 01:44]
        Installed package `ripgrep v11.0.2` (executable `rg`)
   #+end_src
   * The _second-to-last line of the output_ shows
-    the _LOCATION_ (=~/.cargo/bin/=)
-    AND
-    the _NAME_ of the installed binary, which in the case of ~ripgrep~ is ~rg~.
+    + the _LOCATION_ (=~/.cargo/bin/=)
+    + the _NAME_ of the installed binary, which in the case of ~ripgrep~ is ~rg~.
 
 ** DONE 14.5. Extending Cargo with Custom Commands
 CLOSED: [2021-01-17 Sun 01:30]
 Cargo is designed so you can _extend it with new subcommands_
-*WITHOUT having to modify* Cargo.
+*WITHOUT having to MODIFY Cargo*.
 
 - If a binary in your ~$PATH~ is named ~cargo-something~,
   you can run it *as if it was a Cargo subcommand* by running ~cargo something~.
@@ -9880,7 +9995,7 @@ Cargo is designed so you can _extend it with new subcommands_
   design!
 
 ** DONE Summary
-CLOSED: [2021-01-17 Sun 01:30]
+CLOSED: [2024-10-10 Thu 00:58]
 
 * TODO 15. Smart Pointers
 - pointer :: A general concept for a variable that contains an address in memory.
@@ -12206,7 +12321,7 @@ CLOSED: [2023-07-24 Mon 10:57]
 *** More Lints with Clippy - 513
 *** IDE Integration Using =rust-analyzer= - 514
 
-** TODO 21.5. Appendix E: Editions
+** TODO 21.5. Appendix E: Editions - =TODO: take notes=
 ** DONE 21.6. Appendix F: Translations of the Book
 CLOSED: [2021-01-06 Wed 14:36]
 
