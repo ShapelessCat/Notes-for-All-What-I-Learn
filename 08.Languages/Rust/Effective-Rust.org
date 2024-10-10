@@ -617,7 +617,8 @@ Here's a summary of the /lifetime elision rules/ for functions:
     }
   #+end_src
 
-  BUT a modification to also return the previous value falls foul of the move restriction:
+  BUT a modification to also return the previous value falls foul of the move
+  restriction:
 
   Use the idea from the last note entry:
   #+CANNOT_COMPILE
@@ -673,7 +674,36 @@ Here's a summary of the /lifetime elision rules/ for functions:
      replace /method/: ~pub const fn replace(&mut self, value: T) -> Option<T>~.
 
 *** Borrow Rules
-- Page 126
+- There are _TWO key rules_ to remember _WHEN borrowing references in Rust_.
+
+  * Rule 1 ::
+    The /scope/ of ANY /reference/ must be smaller than the /lifetime/ of the
+    item that it refers to.
+
+  * Rule 2 ::
+    For /borrowing references/ is that, in addition to the /owner/ of an item,
+    there can be either of the following:
+    + *Any number* of /immutable references/ to the item
+    + *A single* /mutable reference/ to the item
+
+- These borrowing rules allow the compiler to *make better decisions around
+  /aliasing/:*
+  =from Jian= _Here the /aliasing/ is an important concept in compiler theory!!!_
+
+  Tracking when two different pointers may or may not refer to the same
+  underlying item in memory.
+
+  If the compiler can be sure (as in Rust) that the memory location pointed to
+  by a collection of /immutable references/ *cannot be altered via an aliased
+  /mutable reference/,* then it can generate code that has the following
+  advantages:
+  * _It's better optimized_
+    Values can be, for example, cached in registers, secure in the knowledge
+    that the underlying memory contents will not change in the meantime.
+
+  * _It's safer_
+    /Data races/ arising from _unsynchronized access to memory between /threads/
+    (Item 17)_ are *NOT possible*.
 
 *** Owner Operations
 *** Winning Fights Against the Borrow Checker
