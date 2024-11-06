@@ -1,0 +1,200 @@
+#+TITLE: Rust Under the Hood
+#+SUBTITLE: A deep dive into Rust inernals and generated assembly
+#+AUTHOR: Sandeep Ahluwalia, Deepa Ahluwalia
+#+YEAR: 2024
+#+STARTUP: entitiespretty
+#+STARTUP: indent
+#+STARTUP: overview
+
+* Table of Contents - vii
+* Preface - xi
+** Who Should Read This Book? - xi
+** Structure of This Book - xii
+*** Experiments and Exercises - xiii
+
+* Part A Introduction to Assembly and Basic Constructs - 1
+** Chapter 1 Assembly Basics: Integers, Floats, and Tuples - 3
+**** Getting Started with Assembly - 3
+
+*** Incrementing an Integer - 3
+*** Incrementing a Float - 5
+*** Working with Tuples - 6
+**** Experiment: Tuple Element Multiplications - 10
+**** Key Takeaways - 11
+
+** Chapter 2 Fundamentals of x86-64 Assembly - 13
+*** x86-64 Registers - 13
+*** x86-64 Calling Convention - 15
+*** x86-64 Addressing Modes - 16
+*** x86-64 Instruction Set - 17
+
+* Part B Control Structures and Enums in Assembly - 23
+** Chapter 3 Deconstructing Match and If-Else Expressions - 25
+*** Match Expression - 25
+*** Match Expression with Ranges - 29
+*** If-Else Expression - 32
+**** Experiment: Reorder Match Ranges and If-Else vs Match - 34
+**** Key Takeaways - 37
+
+** Chapter 4 Deep Dive into Enums: Layout and Patterns - 39
+*** Pattern Matching an Enum - 39
+*** Using Null Pointers as Discriminators - 43
+*** Discriminator Size in a Small Enum - 46
+**** Experiment: Impact of Enum Size and Type on Discriminator Size - 48
+**** Key Takeaways - 49
+
+* Part C Data Structures and Memory Management - 51
+** Chapter 5 Arguments: Value, Reference, Box, Rc, and Arc - 53
+*** Method Receives Self by Value - 54
+*** Method Receives Self Reference &T - 55
+*** Self Refers to Object on Heap via Box - 57
+*** Method Receives Reference-Counted Smart Pointer Rc to Self - 59
+*** Method Receives Atomic Reference-Counted Shared Reference Arc to Self - 63
+**** Experiment: Cow Parameter, Change Power, and Quaternions - 67
+**** Key Takeaways - 71
+
+** Chapter 6 Structs: Alignment and Patterns - 73
+*** Field Ordering and Alignment - 73
+*** Pattern Matching a Struct - 76
+**** Experiment: Structs, Alignment, and Pattern-Matching - 78
+**** Key Takeaways - 80
+
+** Chapter 7 Arrays, Tuples, Option, and Box Internals - 83
+*** Code Example: Arrays, Tuples, Option, and Box - 83
+*** ~make_quad_coordinates~: Memory Layout and Code Generation - 84
+*** ~cross_lines_from_quad_coordinates~: Inlining and deep optimization - 90
+**** Experiment: Changing the Type of Tuple Elements and Enabling AVX-512 - 93
+**** Key Takeaways - 94
+
+* Part D Iteration and Optimization - 95
+** Chapter 8 Traditional vs. Functional Array Iteration - 97
+*** Iterator and Functional Style - 97
+*** Generated Assembly: Loop Unrolling, Inlining, and Conditional Moves - 97
+**** Experiment: Change Array Size, Loop Code Generation, and Power of x - 100
+**** Key Takeaways - 101
+
+** Chapter 9 Optimizing Array Iteration with SIMD - 103
+*** Functional Style Loop - 103
+*** AVX-512 SIMD Instructions - 103
+*** AVX-512: Vectorized Assembly Overview - 104
+*** Annotated Assembly: SIMD in Array Iteration - 105
+**** Experiment: Impact of Array Size and Power of x on Generated Code - 108
+**** Key Takeaways - 109
+
+** Chapter 10 In-Depth: Array Slices and Pattern Matching - 111
+*** Array Slices - 111
+*** Array Slice Pattern Matching Example - 111
+*** Assembly Flowchart: Array Slice Processing with Pattern Matching - 112
+*** Array Slice Pattern-Matching Assembly Code - 112
+**** Experiment: Array Match Patterns and If-Else Comparisons - 114
+**** Key Takeaways - 117
+
+** Chapter 11 Vector Iteration in Assembly - 119
+*** Vector Memory Layout - 119
+*** Sample Vector Handling Code - 120
+*** Assembly Insights: Optimizations for Varying Vector Lengths - 120
+*** Inlining, Loop Unrolling, and Memory Optimizations - 128
+**** Experiment: Array Length Impact; AVX-512 Optimizations - 130
+**** Key Takeaways - 131
+
+** Chapter 12 Advanced Iterations: Mapping and Folding - 133
+*** Exploring Inner and Outer Loops in Function Application - 133
+*** Example: Applying Functions to an Array of Integers - 134
+*** Optimizing an Array of Functions into a Single Polynomial - 135
+*** Visualizing the Inner Loop Unrolling and Outer Loop SIMD Optimizations - 136
+*** Polynomial Folding and SIMD Instructions - 138
+**** Experiment: Array Size, Type, and Inner Loop Optimizations - 140
+**** Key Takeaways - 143
+
+* Part E Strings, Dispatch, and Recursion - 145
+** Chapter 13 Strings and Slices: Under the Surface - 147
+*** String and String Slice Representation in Memory - 147
+*** Combining Two Strings: String and &str in Action - 148
+*** Builder Pattern: Optimize Away the Builder Struct - 154
+*** Emoji Arithmetic: Overloading the + Operator - 158
+**** Experiment: String Manipulation and Optimization - 165
+**** Key Takeaways - 167
+
+** Chapter 14 Static vs. Dynamic Dispatch - 169
+*** Example: Static vs. Dynamic Dispatch - 169
+*** Static Dispatch: Assembly of Trait-Based Generics and Inlining - 171
+*** Dynamic Dispatch with Trait Objects: Dissecting the Assembly and Vtables - 173
+**** Experiment: Trait Objects in a Box and Optimize Away Dynamic Dispatch - 175
+**** Key Takeaways - 180
+
+** Chapter 15 Traits, Vtables, and Tail Calls - 183
+*** Trait Object Fat Pointer and the Vtable - 184
+*** Dynamic Dispatch and Tail Call Optimization - 184
+*** Vtable Method Dispatch and Tail Calls - 186
+*** Boxed Trait Object Memory Management - 187
+*** Rectangle - A Concrete Type Implementing the Draw Trait - 188
+**** Experiment: Impact of Call Order on TCO; Dynamic Dispatch Inlined - 191
+**** Key Takeaways - 192
+
+** Chapter 16 Optimizing Recursive Functions - 193
+*** Tree Structure - 193
+*** Tree Representation in Memory - 193
+*** Flowchart of Partially Tail Call Optimized sum Function - 195
+*** Annotated Assembly Code for Transforming Recursive Tail Calls into Loops - 196
+**** Experiment: TCO for factorial and fibonacci Functions - 197
+**** Key Takeaways - 198
+
+* Part F Closures and Async/Await - 199
+** Chapter 17 Closures: From Environment to Execution - 201
+*** Rust Closures Traits - Fn, FnMut, and FnOnce - 201
+*** Stack and Heap-Allocated Closures - 203
+*** Return an impl Fn from a Function - 203
+*** Returning a Boxed Closure Box<dyn Fn> from a Function - 205
+*** Passing a Dynamic Closure dyn Fn to a Function - 209
+**** Experiment: Return impl Fn and Box<dyn Fn> with No Capture - 213
+**** Key Takeaways - 214
+
+** Chapter 18 Async/Await: Internal State Machine Dynamics - 215
+*** Async Functions in Rust - 215
+*** Async Function goto: Await Reaches the Target Position - 216
+*** Desugaring the Async Example into a State Machine - 217
+*** Relationship between Closures, Futures, and Async Functions - 219
+*** Visualizing the Generated Assembly Code for the Async State Machine - 223
+*** Generated Assembly Code for the Async State Machine - 224
+**** Experiment: Equivalent Async and Non-Async Functions - 230
+**** Key Takeaways - 232
+
+** Chapter 19 Nested Async/Await: Desugaring to Loops - 233
+*** patrol Function Awaits goto Function in an Infinite Loop - 233
+*** patrol and goto Functions: Nested Async/Await Constructs - 233
+*** Desugaring the Patrol Function into a State Machine - 234
+*** Understanding Async: Closures, State Machines, and Async Runtime - 237
+*** Flowchart of the patrol Async Function State Machine - 241
+*** Understand Nested Async/Await Generated Assembly - 243
+**** Experiment: Executing Async Functions on .await - 251
+**** Key Takeaways - 252
+
+** Chapter 20 Async Executors: Task Scheduling Insights - 253
+*** Async Executor Overview - 253
+*** goto and patrol Functions - 254
+*** Async Executors: Scheduling and Task Management - 255
+*** Scheduling and Execution of goto and patrol Tasks in the Async Executor - 257
+**** Experiment: Spawning Two Async Tasks; Infinite Loops in Async Functions - 262
+**** Key Takeaways - 265
+
+* Part G Transformations and Takeaways - 267
+** Chapter 21 Transforming into String Slice Vector - 269
+*** Example Code: Map a Vector of Bools to a Vector of String Slices 269
+*** Visualizing the Input and Output Vectors 269
+*** Assembly Code Flowchart: Bool Vector to Vector of String Slices 270
+*** Overview of the Assembly Code 271
+*** Annotated Assembly: Bool Vector to a Vector of String Slices 272
+**** Experiment: Try Out Different Vector Transformations 279
+**** Key Takeaways 280
+
+** Chapter 22 Transforming into Owned String Vector - 281
+*** Example Code: Map a Vector of bools to a Vector of Owned Strings 281
+*** String Representation in Rust 281
+*** Visualizing the Input and Output Vectors 282
+*** String Vector Generation Overview 283
+*** Annotated Assembly: Bool Vector to a Vector of Owned Strings 285
+*** Memory Cleanup Code 293
+**** Experiment: Returning a Vec<char> and String Manipulation 296
+**** Key Takeaways 298
+
+** Chapter 23 Key Insights - 301

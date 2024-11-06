@@ -2574,7 +2574,7 @@
 *** Test Your Knowledge: Answers - 1161
 *** Test Your Knowledge: Part VII Exercises - 1161
 
-* Part VIII. Advanced Topics
+* TODO Part VIII. Advanced Topics
 ** 37. Unicode and Byte Strings - 1165
 *** String Changes in 3.X - 1166
 *** String Basics - 1167
@@ -3857,7 +3857,8 @@ CLOSED: [2024-10-29 Tue 12:24]
 
     *This is just the author's outrageous statement.*
 
-*** TODO The Basics - 1273 - =TODO= =CLASS DECORATORS=
+*** DONE The Basics - 1273 - =TODO: Review=
+CLOSED: [2024-10-30 Wed 00:15]
 Let's get started with a _first-pass look_ at _decoration behavior_
 from a _symbolic perspective._
 
@@ -3903,7 +3904,7 @@ CLOSED: [2020-10-31 Sat 03:37]
 
     f = decorator(f)  # Rebind function name to decorator result
 
-    f(99)             # Essentially calls `decorator(F)(99)`
+    f(99)             # Essentially calls `decorator(f)(99)`
   #+end_src
 
 - This *AUTOMATIC name rebinding* works on any ~def~ statement, whether it's for
@@ -3925,113 +3926,37 @@ CLOSED: [2020-10-31 Sat 03:37]
   * ~staticmethod~ and ~property~ are Python /built-in function decorator/.
 
 ***** DONE Implementation - 1274
-CLOSED: [2020-10-31 Sat 20:23]
+CLOSED: [2024-10-29 Tue 21:18]
 - decorator :: a /callable/ that returns a /callable/.
   * The _returned callable_ will be called through the corresponding
     decorated name.
 
-  * Here the /callable/, a _decorator itself_ or the _returned callable_,
-    can be *ANY* /callable/.
-      *ANY COMBINATION* of /functions/ and /classes/ may be used, though
-    some are better suited to certain contexts.
-
-- In general, a /decorator/ is *defined* and *used* in the way like:
-  #+begin_src python
-    def decorator(f):
-        ...
-
-    @decorator
-    def func(): # func = decorator(func)
-        ...
-  #+end_src
-  * Here the /callable/ is a /function/ (other /callable/ also works).
-
-  * Theoretically, a _returned callable_ can be ANY /callable/.
-    In practice, mostly, a _returned callable_ must be an /object/ that uses
-    the _decorated function ~f~._
-
-- The _returned callable_ can be:
-  * EITHER
-    the _ORIGINAL function augmented_ in some way:
-    To tap into the /decoration protocol/ in order to *manage* a /function/
-    just after it is created, we might code a /decorator/ of this form:
-    #+begin_src python
-      def decorator(f):
-          # Process function `f`
-          return f
-          # In general, for decorators, here not always return `f` -- see
-          # the implementation subsection
-
-      @decorator
-      def func():  # func = decorator(func)
-          ...
-    #+end_src
-    + Because the _ORIGINAL decorated function_ is *ASSIGNED BACK* to its name,
-      this simply
-      *adds* _a post-creation step_ *to* /function definition/.
-      - Such a structure might be used to (these usages exploit the run
-        *ONLY once* feature mentioned in the next point below, marked with
-        =from Jian=)
-        * *register* a /function/ *to* an _API_.
-        * *assign* /function attributes/,
-        * and so on.
-
-    + =from Jian=
-      It's easy to notice that the code before th ~return f~ will run
-      *ONLY once* for each decorated by ~decorator~ function *at the
-      decoration time*.
-
-  * OR (*more typical use*)
-    a /wrapper object/ to intercept later calls:
-    To *insert* logic that *intercepts* _later calls_ to a _decorated_
-    /function/, we might code a /decorator/ to return a _DIFFERENT object_
-    than the _original function_ -- a /proxy/ for later calls:
-    #+begin_src python
-      def decorator(f):
-          # Save or use function `f`
-          # Return a different callable: nested `def`, `class` with `__call__`, etc.
-
-      @decorator
-      def func(): # func = decorator(func)
-          ...
-    #+end_src
-    + This /decorator/ is invoked AT DECORATION TIME, and the /callable/ it
-      returns is invoked when the _ORIGINAL function name_ is later called.
-
-    + The /decorator/ itself RECEIVES the /decorated function/;
-
-    + _the /callable/ returned_ receives *whatever arguments are later passed
-      to* _the decorated function's name_.
-
-    + When coded properly, this works the same for /class-level methods/:
-      the implied /instance object/ simply shows up in the _FIRST argument_
-      of the returned /callable/.
-
 - In skeleton terms, here's one common coding pattern that captures this
   idea -- the /decorator/ returns a /wrapper/ that retains the _ORIGINAL
-  function_ in an enclosing scope:
-  #+begin_src python
-    def decorator(f):        # On @ decoration
-        def wrapper(*args):  # On wrapped function call
-            # Use `f` and args
-            # `f(*args)` calls original function
+  function_ in an enclosing scope.
+  * Use /function/
+    #+begin_src python
+      def decorator(f):        # On @ decoration
+          def wrapper(*args):  # On wrapped function call
+              # Use `f` and args
+              # `f(*args)` calls original function
 
-        return wrapper
+          return wrapper
 
-    @decorator       # `func = decorator(func)`
-    def func(x, y):  # `func` is passed to decorator's `f`
-        ...
+      @decorator       # `func = decorator(func)`
+      def func(x, y):  # `func` is passed to decorator's `f`
+          ...
 
-    func(6, 7)  # 6, 7 are passed to wrapper's *args
-  #+end_src
+      func(6, 7)  # 6, 7 are passed to wrapper's *args
+    #+end_src
   * When the name ~func~ is later called, it really invokes the ~wrapper~
     function returned by ~decorator~; the ~wrapper~ function can then run
     the ORIGINAL ~func~ because it is still available in an /enclosing scope/.
-    + When coded this way,
-      _each /decorated function/ produces a *new* /scope/ to *retain* /state/._
+    + When coded this way, =IMPORTANT=
+      *EACH* /decorated function/ produces a *NEW* /scope/ to *retain* /state/.
 
-- To do the same with /classes/, we can overload ~__call__~ and use /instance
-  attributes/ instead of /enclosing scopes/:
+- Use /class/, we can overload ~__call__~ and use /instance attributes/ instead
+  of /enclosing scopes/:
   #+begin_src python
     class decorator:
         def __init__(self, func):  # On @ decoration
@@ -4053,11 +3978,11 @@ CLOSED: [2020-10-31 Sat 20:23]
     run the ORIGINAL ~func~ because it is still available in an /instance
     attribute/.
 
-  * When coded this way,
-    *EACH* /decorated function/ produces a *NEW* /instance/ to *retain
-    state*.
+  * When coded this way, =IMPORTANT=
+    *EACH* /decorated function/ produces a *NEW* /instance/ to *retain*
+    /state/.
 
-***** DONE Supporting method decoration - 1275
+***** DONE Supporting method decoration - 1275 - *TODO: ???*
 CLOSED: [2020-10-31 Sat 20:39]
 One subtle point about the prior class-based coding is that
 it *works* to intercept _simple function calls_,
@@ -4116,12 +4041,12 @@ decorator class/, *instead of* a simple function.
   argument, so it can dispatch to the ORGINAL /method/ and *access state
   information*.
 
-  + Technically, this /nested-function/ version works because
-    * Python creates a /bound method object/ and thus passes the /subject
+  * Technically, this /nested-function/ version works because
+    + Python creates a /bound method object/ and thus passes the /subject
       class instance/ to the ~self~ argument only when a /method attribute/
       references a _simple function_;
 
-    * when it references _an instance of a callable class_ instead, the
+    + when it references _an instance of a callable class_ instead, the
       /callable class's instance/ is passed to ~self~ to give the
       /callable class/ *access* to its own _state information_.
       =TODO=
@@ -4139,7 +4064,8 @@ decorator class/, *instead of* a simple function.
       Though more complex, later in this chapter we'll see how this tool
       can be leveraged in this context as well.
 
-**** TODO Class Decorators - 1277
+**** DONE Class Decorators - 1277
+CLOSED: [2024-10-29 Tue 23:28]
 /Function decorators/ proved so useful that the model was extended to allow
 /class decoration/ as of _Python 2.6 and 3.0_.
 
@@ -4168,7 +4094,7 @@ decorator class/, *instead of* a simple function.
 ***** DONE Usage - 1277
 CLOSED: [2020-11-01 Sun 19:21]
 Syntactically, /class decorators/ appear just before _class definition_, in
-the same way that /function decorators/ appear just before _funciton/method
+the same way that /function decorators/ appear just before _function/method
 definition_.
 
 - In symbolic terms, for a /decorator/ that *MUST be* a /one-argument callable/
@@ -4267,126 +4193,154 @@ CLOSED: [2020-11-01 Sun 19:51]
     + _enclosing scope references_, and
     + _classes in attributes_.
 
-***** TODO Supporting method decoration - 1279
+***** DONE Supporting multiple instances - 1279 - =RE-NOTE=
+CLOSED: [2024-10-29 Tue 23:28]
 As for /function decorators/, some /callable type/ COMBINATIONS work better
-for /class decorators/ than others. Consider the following invalid
-alternative to the /class decorator/ of the prior example:
-#+begin_src python
-  class Decorator:                      # On `@` decoration
-      def __init__(self, C):
-          self.C = C
+for /class decorators/ than others.
 
-      def __call__(self, *args):        # On instance creation
-          self.wrapped = self.C(*args)
-          return self
-
-      def __getattr__(self, attrname):  # On attribute fetch
-          return getattr(self.wrapped, attrname)
-
-
-  @Decorator
-  class C:     # `C = Decorator(C)`
-      ...
-
-  x = C()
-  y = C()      # Overwrites `x`!
-#+end_src
-
-- This code handles MULTIPLE /decorated classes/ (each makes a new ~Decorator~
-  instance) and will *intercept* _instance creation calls_ (each runs ~__call__~).
-
-- UNLIKE the prior version, however, this version *FAILS to* handle _MULTIPLE
-  instances_ of a given /class/ -- each _instance creation call_ *overwrites*
-  the prior saved /instance/.
-    The original version does support multiple instances, because each
-  _instance creation call_ makes a new *independent wrapper object*. More
-  generally, either of the following patterns supports multiple wrapped
-  instances:
+- *INVALID!!!*
+  Consider the following *INVALID* alternative to the /class decorator/ of the
+  prior example:
   #+begin_src python
-    def decorator(C):                    # On @ decoration
-        class Wrapper:
-            def __init__(self, *args):   # On instance creation: new Wrapper
-                self.wrapped = C(*args)  # Embed instance in instance
+    class Decorator:                      # On `@` decoration
+        def __init__(self, C):
+            self.C = C
 
-        return Wrapper
+        def __call__(self, *args):        # On instance creation
+            self.wrapped = self.C(*args)
+            return self
+
+        def __getattr__(self, attrname):  # On attribute fetch
+            return getattr(self.wrapped, attrname)
 
 
-    class Wrapper:
+    @Decorator
+    class C:     # `C = Decorator(C)`
         ...
-
-
-    def decorator(C):                 # On `@` decoration
-        def onCall(*args):            # On instance creation: new `Wrapper`
-            return Wrapper(C(*args))  # Embed instance in instance
-
-        return onCall
-  #+end_src
-
-- We'll study this phenomenon in a more realistic context later in the chapter
-  too; in practice, though, we must be careful to combine callable types properly
-  to support our intent, and choose state policies wisely.
-
-**** DONE Decorator Nesting - 1279
-CLOSED: [2021-03-16 Tue 03:22]
-Sometimes ONE /decorator/ isn't enough.
-A combination of multiple /decorators/ is required.
-
-- _Decorator syntax_ allows you to add multiple layers of wrapper logic to a
-  decorated function or method.
-  * When this feature is used,
-    *EACH /decorator/ must appear on a line of its own*:
-    #+begin_src python
-      @A
-      @B
-      @C
-      def f(...):
-          ...
-    #+end_src
-
-    runs the same as the following:
-
-    #+begin_src python
-      def f(...):
-          ...
-
-
-      f = A(B(C(f)))
-    #+end_src
-    The last decorator listed is the first applied
-
-- Just as for functions, multiple class decorators result in multiple nested
-  function calls, and possibly multiple levels and steps of wrapper logic
-  around _instance creation calls_. For example,
-  #+begin_src python
-    @spam
-    @eggs
-    class C:
-        ...
-
 
     x = C()
+    y = C()      # Overwrites `x`!
   #+end_src
 
-  runs the same as the following:
+  * This code handles MULTIPLE /decorated classes/ (each makes a new ~Decorator~
+    instance) and will *intercept* _instance creation calls_ (each runs ~__call__~).
 
+  * UNLIKE the prior version, however, this version *FAILS to* handle _MULTIPLE
+    instances_ of a given /class/ -- each _instance creation call_ *overwrites*
+    the prior saved /instance/ -- =from Jian= because they use same instance,
+    and several ~__call__~'s from it.
+    + The original version does support multiple instances, because each
+      _instance creation call_ makes a new *independent wrapper object*. More
+      generally, either of the following patterns supports multiple wrapped
+      instances:
+      #+begin_src python
+        def decorator(C):                    # On @ decoration
+            class Wrapper:
+                def __init__(self, *args):   # On instance creation: new Wrapper
+                    self.wrapped = C(*args)  # Embed instance in instance
+
+            return Wrapper
+
+
+        class Wrapper:
+            ...
+
+
+        def decorator(C):                 # On `@` decoration
+            def onCall(*args):            # On instance creation: new `Wrapper`
+                return Wrapper(C(*args))  # Embed instance in instance
+
+            return onCall
+      #+end_src
+
+  * We'll study this phenomenon in a more realistic context later in the chapter
+    too; in practice, though, we must be careful to
+    1. combine /callable types/ properly to support our intent, and
+    2. *choose /state/ policies wisely*.
+
+- x
   #+begin_src python
-    def f(...):
-        ...
+    class Decorator:
+        def __init__(self, C):
+            self.C = C
+        def __call__(self, *args):
+            self.wrapped = self.C(*args)
+            return self
+        def __getattr__(self, attrname):
+            return getattr(self.wrapped, attrname)
 
-    f = A(B(C(f)))
+
+    @Decorator
+    class C:
+        def __init__(self, x):
+            self.x = x
+
+
+    x = C(3)
+    y = C(4)
+
+    x.x  # 4
+    y.x  # 4
+
+
+    class B:
+        def __init__(self, b):
+            self.b = b
+
+
+    # Different from decorator when it is implemented with the above `Decorator`
+    # pattern.
+    b0 = Decorator(B)(3)
+    b1 = Decorator(B)(4)
+
+    b0.b  # 3
+    b1.b  # 4
+
+    b0.wrapped  # <__main__.B at 0x7f88be655880>
+    b1.wrapped  # <__main__.B at 0x7f88be398440>
+
+    # Identical to decorator
+    B = Decorator(B)
+
+    k0 = B(3)
+    k1 = B(4)
+
+    k0.b  # 4
+    k1.b  # 4
+
+    k0.wrapped  # <__main__.B at 0x7f88be339c70>
+    k1.wrapped  # <__main__.B at 0x7f88be339c70>
   #+end_src
+
+**** DONE Decorator Nesting - 1279
+CLOSED: [2024-10-29 Tue 23:54]
+A combination of multiple /decorators/ is legal.
+
+The last decorator listed is the first applied, and is the most deeply nested
+when the original function name is later called
 
 - =From Jian=
   The order of decorators can be import in many cases,
   though NOT ALWAYS!
 
 **** DONE Decorator Arguments - 1281
-CLOSED: [2021-03-16 Tue 03:49]
+CLOSED: [2024-10-30 Wed 00:02]
 =from Jian= Actually, I think we can all this section "Decorator Generator
 Arguments" -- the objects that accept arguments are *not* themselves
 /decorators/, in my opinion -- they should be called /decorator generator/.
 
 - By nature, this usually sets up _multiple levels of state retention_.
+
+- It's usually in this form:
+  #+begin_src python
+    def decorator(A, B):
+        # Save or use A, B
+        def actualDecorator(F):
+            # Save or use function F
+            # Return a callable: nested def, class with __call__, etc.
+            return callable
+        return actualDecorator
+  #+end_src
 
 - In other words,
   /decorator arguments/ often imply *THREE _levels_ of /callables/:*
@@ -4394,8 +4348,8 @@ Arguments" -- the objects that accept arguments are *not* themselves
   which returns a /callable/ (2) to serve as /decorator/,
   which returns a /callable/ (3) to handle calls to the _ORIGINAL
   /function/ or /class/._
-    Each of the *THREE levels* may be a /function/ or /class/ and
-  may *retain* /state/ in the form of /scopes/ or /class attributes/.
+  * Each of the *THREE levels* may be a /function/ or /class/ and may *retain*
+    /state/ in the form of /scopes/ or /class attributes/.
 
 - /Decorator arguments/ can be used to provide
   =from Jian= =TODO= Find examples for the entries listed below!!! =!!!=
@@ -4407,6 +4361,10 @@ Arguments" -- the objects that accept arguments are *not* themselves
 
 **** DONE Decorators Manage Functions and Classes, Too - 1282
 CLOSED: [2021-03-16 Tue 03:53]
+It's hard to understand what this section is about.
+The example code is too simple and abstract!
+=TODO= Need examples
+
 - =TODO= =???=
   As long as we return the original decorated object this way instead of a
   proxy, we can manage functions and classes themselves, not just later
@@ -4417,29 +4375,171 @@ CLOSED: [2021-03-16 Tue 03:53]
   * *register* /callable objects/ to an API with decoration and
   * *assign* /attributes/ to /functions/ when they are created.
 
-*** TODO Coding Function Decorators - 1283
-- PLAN =TODO= =NOTE=
+*** DONE Coding Function Decorators - 1283 - =NOTE=
+CLOSED: [2024-10-30 Wed 20:43]
+In the rest of this chapter, we are going to study working examples that
+demonstrate the decorator concepts we just explored.
 
-**** DONE Tracing Calls - 1283 - =TODO= =NOTE=
+This section
+1. presents a handful of /function decorators/ at work, and
+2. the next shows /class decorators/ in action.
+3. Following that, we'll close out with some larger case studies of /class and
+   function decorator/ usage:
+   complete implementations of _class privacy_ and _argument range tests_.
+
+**** DONE Tracing Calls - 1283
 CLOSED: [2021-03-16 Tue 04:02]
 
-**** DONE Decorator State Retention Options - 1285 - =TODO= =NOTE=
+**** DONE Decorator State Retention Options - 1285
 CLOSED: [2021-03-16 Tue 04:12]
-***** Class instance attributes - 1285
-***** Enclosing scopes and globals - 1286
-***** Enclosing scopes and nonlocals - 1287
-***** Function attributes - 1288
+***** DONE Class instance attributes - 1285
+CLOSED: [2024-10-30 Wed 17:02]
+Also support keyword arguments, the ~**~ syntax.
 
-**** TODO Class Blunders I: Decorating Methods - 1289
+#+begin_src python
+  class tracer:                             # State via instance attributes
+      def __init__(self, func):             # On @ decorator
+          self.calls = 0                    # Save func for later call
+          self.func = func
+
+      def __call__(self, *args, **kwargs):  # On call to original function
+          self.calls += 1
+          print('call %s to %s' % (self.calls, self.func.__name__))
+          return self.func(*args, **kwargs)
+
+  @tracer
+  def spam(a, b, c):                        # Same as: spam = tracer(spam)
+      print(a + b + c)                      # Triggers tracer.__init__
+
+  @tracer
+  def eggs(x, y):                           # Same as: eggs = tracer(eggs)
+      print(x ** y)                         # Wraps eggs in a tracer object
+
+  spam(1, 2, 3)                             # Really calls tracer instance: runs tracer.__call__
+  spam(a=4, b=5, c=6)                       # spam is an instance attribute
+
+  eggs(2, 16)                               # Really calls tracer instance, self.func is eggs
+  eggs(4, y=4)                              # self.calls is per-decoration here
+#+end_src
+
+***** DONE Enclosing scopes and ~global~'s - 1286
+CLOSED: [2024-10-30 Wed 17:02]
+Show why use function-decorator encoding, combined with ~global~ and /closure/
+is not enough.
+
+#+NAME: incorrect example
+#+begin_src python
+  calls = 0
+
+  def tracer(func): # State via enclosing scope and global
+      def wrapper(*args, **kwargs): # Instead of class attributes
+          global calls # calls is global, not per-function
+          calls += 1
+          print('call %s to %s' % (calls, func.__name__))
+          return func(*args, **kwargs)
+      return wrapper
+#+end_src
+The counter ~calls~ is shared by all decorated by ~tracer~ objects, which is not
+what we want.
+
+=from Jian=
+1. This kind of state retention might be good in some scenarios.
+2. However, even though, we may not want a ~calls = 0~ at global level.
+
+***** DONE Enclosing scopes and ~nonlocal~'s - 1287
+CLOSED: [2024-10-30 Wed 17:04]
+~nonlocal~ only exists in Python 3.X.
+
+#+begin_src python
+  def tracer(func):                # State via enclosing scope and nonlocal
+    calls = 0                      # Instead of class attrs or global
+    def wrapper(*args, **kwargs):  # calls is per-function, not global
+      nonlocal calls
+      calls += 1
+      print('call %s to %s' % (calls, func.__name__))
+      return func(*args, **kwargs)
+    return wrapper
+#+end_src
+
+***** DONE Function attributes - 1288
+CLOSED: [2024-10-30 Wed 17:52]
+In *all Pythons since 2.1*,
+we can assign arbitrary attributes to /functions/ to attach them, with
+~func.attr=value~.
+
+Because a /factory function/ _makes a NEW function on each call_, its attributes
+become *per-call state*.
+
+#+begin_src python
+  def tracer(func):                  # State via enclosing scope and func attr
+      def wrapper(*args, **kwargs):  # calls is per-function, not global
+          wrapper.calls += 1
+          print('call %s to %s' % (wrapper.calls, func.__name__))
+          return func(*args, **kwargs)
+      wrapper.calls = 0
+      return wrapper
+#+end_src
+
+- This scheme may be more obscure than ~nonlocal~ in 3.X and might be better
+  saved for cases where other schemes don’t help.
+  * However, /function attributes/ also have *substantial advantages*:
+    1. /function attributes/ have wider visibility, and they allow access to the
+       saved state from _outside the decorator's code_;
+
+       ~nonlocal~'s can only be seen _inside the nested function itself_.
+
+    2. /function attributes/ are far *more portable*;
+       this scheme also works in 2.X.
+
+- =IMPORTANT=
+  _Because /decorators/ often imply *multiple levels* of /callables/,_
+
+  =from Jian= *This is why decorator can be complicated -- you need to make a
+  choice which you want to use?*
+
+  you can *COMBINE*
+  * /functions/ with /enclosing scopes/,
+  * /classes/ with /attributes/, and
+  * /function attributes/
+  to achieve a variety of coding structures.
+
+  As we'll see later, though, this sometimes may be subtler than you expect:
+  * each /decorated function/ should have its own /state/, and
+  * each /decorated class/ may require /state/ both _for itself_ and _for each
+    generated instance_.
+
+- =NEXT=
+  In fact, as the next section will explain in more detail, if we want to apply
+  /function decorators/ to /class-level methods/, too,
+
+  we also have to be careful about the distinction Python makes between
+  _decorators coded as callable class instance objects_ and
+  _decorators coded as functions_.
+
+**** TODO Class Blunders I: Decorating Methods - 1289 - =NOTE=
 ***** Using nested functions to decorate methods - 1291
 ***** Using descriptors to decorate methods - 1292
 
-**** TODO Timing Calls - 1295
+**** TODO Timing Calls - 1295 - =NOTE=
+Not yet workable for /methods/.
+Code in this section just for function.
+
 ***** Decorators versus per-call timing - 1297
 ***** Testing subtleties - 1297
 
-**** TODO Adding Decorator Arguments - 1298
+**** TODO Adding Decorator Arguments - 1298 - =NOTE=
+The timer decorator of the prior section works, but it would be nice if it were
+more configurable -- providing an output label and turning trace messages on and
+off, for instance, might be useful in a general-purpose tool like this.
+
+/Decorator arguments/ come in handy here: when they're coded properly, we can
+use them to specify configuration options that can vary for each /decorated
+function/. A label, for instance, might be added as follows:
+
 ***** Timing with decorator arguments - 1299
+- =TODO=
+
+- *Supporting methods:*
 
 *** TODO Coding Class Decorators - 1301
 **** TODO Singleton Classes - 1301
@@ -4453,7 +4553,68 @@ CLOSED: [2021-03-16 Tue 04:12]
 **** TODO Decorators Versus Manager Functions - 1309
 **** TODO Why Decorators? (Revisited) - 1310
 
-*** TODO Managing Functions and Classes Directly - 1312
+*** DONE Managing Functions and Classes Directly - 1312
+CLOSED: [2024-10-30 Wed 21:04]
+Another way to use /decorators/: return decorated function or class instance
+creation calls directly, but add some extra info, like register them or add
+attributes to them.
+
+- Example 1: Registry for functions or classes
+  #+begin_src python
+    registry = {}
+
+    def register(obj):                # Both class and func decorator
+        registry[obj.__name__] = obj  # Add to registry
+        return obj                    # Return `obj` itself, not a wrapper
+
+    @register
+    def spam(x):
+        return(x ** 2)
+
+    @register
+    def ham(x):
+        return(x ** 3)
+
+    @register
+    class Eggs:
+        def __init__(self, x):
+            self.data = x ** 4
+
+        def __str__(self):
+            return str(self.data)
+  #+end_src
+
+- Example 2: Add attributes to functions or classes
+  #+begin_src python
+    def decorate(func):
+        func.marked = True
+        return func
+
+    @decorate
+    def spam(a, b):
+        return a + b
+
+    spam.marked  # True
+  #+end_src
+
+  #+begin_src python
+    def annotate(text): # Same, but value is decorator argument
+        def decorate(func):
+            func.label = text
+            return func
+        return decorate
+
+    @annotate('spam data')
+    def spam(a, b):
+        return a + b
+
+    spam(1, 2), spam.label  # (3, 'spam data')
+  #+end_src
+
+- We’ll see more examples of class decorations managing classes directly in the
+next chapter, because this turns out to encroach on the domain of metaclasses; for the
+remainder of this chapter, let’s turn to two larger case studies of decorators at work.
+
 *** TODO Example: "Private" and "Public" Attributes - 1314
 **** TODO Implementing Private Attributes - 1314
 **** TODO Implementation Details I - 1317
@@ -4508,7 +4669,8 @@ CLOSED: [2021-03-16 Tue 04:12]
     *intercept and augment*
     /function calls/ and /class instance creation calls/.
 
-  * In a similar spirit, /metaclasses/ allow us to *intercept and augment*
+  * In a similar spirit, /metaclasses/ allow us to
+    *intercept and augment*
     _class creation_ -- they provide an API for inserting extra logic to be
     run at the conclusion of a class statement, albeit _in different ways than
     /decorators/._
@@ -4686,47 +4848,88 @@ _tool building_ THAN with _application-programming domains_.
 
 **** TODO Metaclasses Versus Class Decorators: Round 1 - 1361
 
-*** TODO The Metaclass Model - 1364
+*** TODO The Metaclass Model - 1364 - =START=
 Pre-knowledge of understanding /metaclasses/:
 - Python's type model
 - What happens at the end of a ~class~ statement
 
-**** TODO Classes Are Instances of type - 1364
-     - As we've seen, /instances/ of /classes/
-       + have some _state information attributes_ of their own,
-       + but they also _inherit behavioral attributes_ from the /classes/ from
-         which they are made.
+As we'll see here, the two are intimately related.
 
-     - While we can get a lot done with such /instance objects/, /Python's type
-       model/ turns out to be a bit richer than I've formally described.
+**** DONE Classes Are Instances of type - 1364
+CLOSED: [2024-10-31 Thu 15:34]
+- As we've seen, /instances/ of /classes/
+  * have some _state information attributes_ of their own,
+  * but they also _inherit behavioral attributes_ from the /classes/ from
+    which they are made.
 
-       + Really, there's a hole in the model we've seen thus far:
-         * Q :: if /instances/ are created from /classes/, what is it that creates
-           our /classes/?
+- While we can get a lot done with such /instance objects/, /Python's type
+  model/ turns out to be a bit richer than I've formally described.
 
-         * A :: It turns out that /classes/ are /instances/ of something, too:
-           - In Python 3.X,
-             /user-defined class objects/ are /instances/ of the object named ~type~,
-             which is itself a /class/.
+  * Really, there's a hole in the model we've seen thus far:
+    + Q :: if /instances/ are created from /classes/, what is it that creates
+      our /classes/?
 
-           - In Python 2.X,
-             * /new-style classes/ inherit from ~object~, which is a /subclass/ of ~type~;
+    + A :: It turns out that /classes/ are /instances/ of something, too:
+      - In Python 3.X,
+        /user-defined class objects/ are /instances/ of the object named ~type~,
+        which is itself a /class/.
 
-             * /classic classes/
-               + are /instances/ of ~type~ and
-               + are NOT created from a /class/.
+      - In Python 2.X,
+        * /new-style classes/ inherit from ~object~, which is a /subclass/ of ~type~;
 
-     - =TODO=
-     - =TODO=
-     - =TODO=
-     - =TODO=
-     - =TODO=
-     - =TODO=
-     - =TODO=
-     - =TODO=
+        * /classic classes/
+          + are /instances/ of ~type~ and
+          + are NOT created from a /class/.
 
-**** TODO Metaclasses Are Subclasses of Type - 1366
+- =BEFORE=
+  We explored
+  1. the notion of /types/ in _Chapter 9_ and
+  2. the relationship of classes to types in _Chapter 32_,
+  but let's *REVIEW* the basics here so we can see how they apply to
+  /metaclasses/.
+  =TODO= NOTE
+
+- In fact, /classes/ are _NOT really a SEPARATE concept_ at all:
+  they are simply /user-defined types/, and ~type~ itself is defined by a
+  /class/.
+
+- =from Jian= Ignore notes for Python 2.X.
+
+**** DONE Metaclasses Are Subclasses of Type - 1366
+CLOSED: [2024-10-31 Thu 16:02]
+- Because the notion of type is the same as class today, we can subclass type
+  with normal object-oriented techniques and class syntax to customize it.
+
+- =IMPORTANT=
+  To control _the way classes are created_ and _augment their behavior,_ all we
+  need to do is specify that a /user-defined class/
+  *be created from*
+  /a user-defined metaclass/
+  *instead of*
+  the normal ~type~ class.
+
+- Notice that _this /type instance/ relationship_ is *NOT quite the SAME as*
+  /normal inheritance/.
+
+  * /User-defined classes/ may also have /superclasses/ from which they and
+    their instances inherit attributes as usual.
+      As we've seen, /inheritance superclasses/ are listed in parentheses in the
+    class statement and show up in a _class's ~__bases__~ tuple._
+
+  * The ~type~ from which a /class/ is created,
+    though, and of which it is an /instance/, is a *DIFFERENT relationship*:
+    /Inheritance/ searches _/instance/ and /class/ namespace dictionaries,_
+    BUT
+    /classes/ may also acquire behavior from their ~type~ that is *NOT exposed
+    to* the _NORMAL inheritance search._
+
+- To lay the groundwork for understanding this distinction,
+  =NEXT= the next section describes the procedure Python follows to implement
+  this instance-of type relationship
+
 **** TODO Class Statement Protocol - 1367
+- xxx
+- xxx
 
 *** TODO Declaring Metaclasses - 1368
 **** Declaration in 3.X - 1369
@@ -4737,6 +4940,9 @@ Pre-knowledge of understanding /metaclasses/:
 **** A Basic Metaclass - 1371
 **** Customizing Construction and Initialization - 1372
 **** Other Metaclass Coding Techniques - 1373
+***** Using simple factory functions
+***** Overloading class creation calls with normal classes
+***** Overloading class creation calls with metaclasses
 
 *** TODO Inheritance and Instance - 1378
 **** Metaclass Versus Superclass - 1381
