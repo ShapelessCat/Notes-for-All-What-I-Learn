@@ -477,22 +477,144 @@ CLOSED: [2024-10-27 Sun 21:31]
   Use =setup.cfg= or =pyproject.toml=.
 
 * TODO PART 2 CREATING A VIABLE PACKAGE - 39
+- Q :: WHY are you building a package?
+
+- A :: You may want to
+  * share some code, mostly as a library, with your team to use in multiple
+    projects.
+
+  * create a command-line interface that others can install and run.
+
+  * abstract performant code in a low-level language like C with an easy-to-use
+    layer of interaction in Python.
+
 ** TODO 4 Handling package dependencies, entry points, and extensions - 41
-*** 4.1 A package for calculating vehicle drift - 41
-*** 4.2 Creating a C extension for Python - 44
-**** Creating C extension source code - 44
-**** Integrating Cython into a Python package build - 45
-**** Installing and profiling your C extension - 47
-**** Build targets for binary wheel distributions - 48
-**** Specifying required Python versions - 50
+- This chapter covers
+  * Defining dependencies for your package
+  * Making functionality available as command-line tools
+  * Packaging extensions written in C
 
-*** 4.3 Offering command-line tools from a Python package - 50
-**** Creating commands with Setuptools entry points - 50
+*** DONE 4.1 A package for calculating vehicle drift - 41
+CLOSED: [2024-11-09 Sat 00:40]
+- *Harmonic mean*
+  =TODO=
 
-*** 4.4 Specifying dependencies for Python packages - 53
-*** 4.5 Answer to exercises - 54
+- Exercise 4.1
+  In your project, create a =harmonic_mean.py= module, which should contains a
+  ~harmonic_mean~ function that accepts accepts an arbitrarily long list of
+  floatingpoint numbers and returns their harmonic mean.
 
-** 5 Building and maintaining a test suite - 56
+- Use built-in ~timeit~ to measure its performance.
+  If you do this in command line, you can type
+  #+begin_src shell
+    python -m timeit \
+      --setup 'from harmonic_mean import harmonic_mean' \
+      --setup 'from random import randint' \
+      --setup 'nums = [randint(1, 1_000_000) for _ in range(1_000_000)]' \
+      'harmonic_mean(nums)'
+  #+end_src
+  * The _setup code_ will run *only once* and will *not be counted* toward the
+    measurement of your code.
+
+  * Output is in this form: _5 loops, best of 5: 52.8 msec per loop_
+
+*** DONE 4.2 Creating a C extension for Python - 44 - =NOTE= =PRACTICE=
+CLOSED: [2024-11-09 Sat 01:30]
+- Because the reference Python interpreter is written in the C programming
+  language, C is a common choice for these extensions,
+  BUT people also write extensions in
+  * C++ (http://mng.bz/M0om),
+  * Rust (http://mng.bz/aPwY), and
+  * even Fortran (http://mng.bz/gRgn).
+
+**** DONE 4.2.1 Creating C extension source code - 44
+CLOSED: [2024-11-09 Sat 00:52]
+- Cython :: a compiler and language for creating _Python C extensions_.
+
+- The _Cython compiler_ converts _Cython source code_ to _optimized C code_,
+  which will then be compiled *DURING a package's build process* (see figure
+  4.1)
+
+- The file name extenion of Cython source files is .pyx
+
+- =IMPORTANT=
+  Because _the Cython language is a *superset* of Python_,
+  *a valid Python program is also a valid Cython program.*
+
+  * RENAME your =harmonic_mean.py= module to =harmonic_mean.pyx= and
+    MOVE it into the =src/imppkg/= directory (=from Jian= Here =imppkg= is just
+    a package name the author chose, nothing special).
+    Now that you have a Cython source code file, you need to _integrate Cython
+    into your /package's build process/._
+
+- *Figure 4.1 Extensions are compiled into shared libraries that are included in
+  binary wheel distributions.*
+
+**** TODO 4.2.2 Integrating Cython into a Python package build - 45 - =NOTE=
+**** TODO 4.2.3 Installing and profiling your C extension - 47 - =NOTE=
+**** DONE 4.2.4 Build targets for binary wheel distributions - 48
+CLOSED: [2024-11-09 Sat 01:30]
+- =IMPORTANT!!!=
+  *Figure 4.2 The anatomy of a binary wheel distribution filename*
+  #+begin_src text
+    a_cool_package-5.4.7-4-cp310-cp310-macosx_11_0_x86_64.whl
+  #+end_src
+  * Normalized package name: ~a_cool_python~
+  * Package version: ~5.4.7~
+  * Optional build number: ~4~
+  * Python implementation and C ABI: ~cp310-cp310~
+  * Platform (OS and CPU): ~macosx_11_0_x86_64.whl~
+
+- _When you install packages_,
+  your PACKAGE MANAGER will determine which binary wheel distributions are
+  available and use these tags to identify which of those it should download for
+  your system.
+
+- The *NUMBER of binary wheel distributions* you need to build is roughly the
+  following:
+  N_PythonImplementations x N_OSs x N_CPUArchs
+
+- For example,
+  _Numpy_ supports CPython 3.7, 3.8, and 3.9 as well as PyPy 3.7.
+  Each release of NumPy makes 27 wheels available.
+
+- 
+**** DONE 4.2.5 Specifying required Python versions - 50
+CLOSED: [2024-11-09 Sat 01:18]
+=from Jian=
+This section setup Python version requirement in =setup.cfg=.
+
+This is an old way. We can do it in =pyproject.toml=. Different tools use
+different option name. Please check the manual of the tool you want to use.
+
+*** TODO 4.3 Offering command-line tools from a Python package - 50 - =NOTE=
+**** 4.3.1 Creating commands with Setuptools entry points - 50
+
+*** TODO 4.4 Specifying dependencies for Python packages - 53 - =START=
+*** TODO 4.5 Answer to exercises - 54
+*** DONE Summary
+CLOSED: [2024-11-09 Sat 01:38]
+- Explore _non-Python extensions_ by first using a high-level translation layer
+  like *Cython*.
+
+- Providing a _non-Python extension_
+  GAINS runtime performance
+  BUT ADDS BUILD TIME COMPLEXITY, either for you or your consumer.
+
+- /Entry points/ into your package offer more ways of interacting with its
+  behavior than just importing the code.
+
+- Leverage the power of package management systems to handle dependency
+  resolution for you.
+
+** TODO 5 Building and maintaining a test suite - 56 - =START HERE=
+- This chapter covers
+  * Running unit tests with *pytest*
+  * Creating test coverage reports with *pytest-cov*
+  * Reducing duplicated test code with parameterization
+  * Automating packaging for testing using *tox*
+  * Creating a /test matrix/
+
 *** 5.1 Integrating a testing setup - 57
 **** The pytest testing framework - 57
 **** Adding test coverage measurement - 59
@@ -506,7 +628,7 @@ CLOSED: [2024-10-27 Sun 21:31]
 
 *** 5.3 Answers to exercises - 80
 
-** 6 Automating code quality tooling - 82
+** TODO 6 Automating code quality tooling - 82
 *** 6.1 The true power of tox environments - 83
 **** Creating nondefault tox environments - 83
 **** Managing dependencies across tox environments - 85

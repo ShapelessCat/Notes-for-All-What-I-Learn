@@ -14,38 +14,320 @@ Let's get started by
 2. learning how to write raw WebAssembly code
 
 ** 1. WebAssembly Fundamentals - 3
-*** Introducing WebAssembly - 3
-*** Understanding WebAssembly Architecture - 8
-*** Building a WebAssembly Application - 12
-*** Wrapping Up - 16
+- With WebAssembly, there is a symbiotic relationship between the compiled
+  WebAssembly binary (called a module) and the host responsible for interpreting
+  it. This relationship is at the heart of everything that you can do with this
+  new technology, and understanding where the boundaries are between module
+  and host is key to being able to build effective WebAssembly applications.
 
-** 2. Building WebAssembly Checkers - 19
+- WebAssembly can be viewed at _two different levels_:
+  * the raw, foundational level and
+  * at the higher level of other programming languages using WebAssembly as a
+    target.
+
+- _BEFORE_
+  you can understand and appreciate what languages like Rust are doing when they
+  produce /WebAssembly modules/,
+
+  you'll need to know
+  1. what WebAssembly can do,
+  2. what it can't, and
+  3. how to use language-independent tools.
+
+- This chapter gets you started at the foundation level,
+  1. giving you an overview of what WebAssembly is,
+  2. how it works, and
+  3. how other features can be built upon this foundation.
+
+- _By the end of this chapter,_
+  you'll be able to create and build your own /WebAssembly modules/ using
+  cross-platform language tools and your favorite code editor.
+
+- While what you learn in these first few chapters may not be things you do on a
+  daily basis, the context they provide will be invaluable as you build real
+  applications with WebAssembly.
+
+*** TODO Introducing WebAssembly - 3 - =NOTE=
+- If the modern programmable web is merely a toy store, then WebAssembly is a
+  toy warehouse filled with toys as far as the eye can see.
+  =from Jian: ???=
+
+- Front end Developers often LONG FOR
+  some of the features, testability, and constraints prevalent in the world of
+  servers and services.
+
+  Back end developers often LONG FOR
+  the fluid, expressive, blank canvas world the front end represents.
+
+  =???=
+  People who work in _both worlds_ are KEENLY AWARE OF the
+  paradigm differences between the two and why the grass isn't always greener on
+  the other side.
+
+- Q :: What if "sides" or "front" or "back" didn't matter anymore?
+
+- Q :: What if there was a new way of doing things, where you could write
+       loosely coupled business logic that flows between servers, services,
+       clients, and browsers without any shenanigans?
+
+- Q :: What if you could have the best parts of the front- and backend worlds
+       and still choose the most appropriate language for your problems?
+
+- A :: By the time you reach the end of this book, you'll have learned enough
+       about WebAssembly development that these propositions won’t sound like
+       they came from a snake-oil salesman. They’ll ring true and hopefully
+       inspire you to start building amazing new WebAssembly applications.
+
+**** What Is WebAssembly?
+**** What WebAssembly Is Not
+**** Try It Out
+
+*** TODO Understanding WebAssembly Architecture - 8
+In this section,
+you'll get a good look inside the engine that makes WebAssembly
+work. Its unique architecture makes it incredibly powerful, portable, and
+efficient—though this power comes with some limitations.
+
+**** Stack Machines
+- Register Machine :: xxx
+- Stack Machine :: yyy
+
+**** DONE Data Types
+CLOSED: [2024-11-12 Tue 10:43]
+_WebAssembly 1.0_ has exactly *FOUR* data types:
+
+| Type | Description                  |
+|------+------------------------------|
+| i32  | 32-Bit Integer               |
+| i64  | 64-Bit Integer               |
+| f32  | 32-Bit Floating-Point Number |
+| f64  | 64-Bit Floating-Point Number |
+
+- One aspect of this relatively limited set of data types is that WebAssembly
+  *DOESN'T* assign any _intrinsic signed-ness_ to numbers as they're stored.
+
+  The assumption of whether a number is signed or unsigned *is ONLY performed at
+  the time of an operation.*
+  For example, while there's only one ~i32~ data type, there are *signed and
+  unsigned versions of that type's arithmetic operators*, e.g. ~i32.add~ and
+  ~i32.add_u~.
+
+  * When you're _using a high-level language that compiles to WebAssembly_ on
+    your behalf, you shouldn't have to worry about this subtlety. But when
+    you're writing _raw Wasm_ in the text format by hand, it could trip you up
+    in unexpected ways.
+
+**** DONE Control Flow
+CLOSED: [2024-11-12 Tue 13:12]
+- WebAssembly's handling of control flow is a little different than other, less
+  portable assembly languages:
+  WebAssembly goes to great lengths to ensure that
+  its control flow
+  * can't invalidate type safety, and
+  * can't be hijacked by attackers even with a "heap corruption"-style attack in
+    /linear memory/.
+    + =TODO= footnote 4
+
+- For example,
+  many assembly languages allow easily exploited *blind ~jump~ instructions*,
+  while *WebAssembly does not*.
+
+  This additional layer of safety pairs well with the safety-first philosophy of
+  Rust.
+
+- =IMPORTANT=
+  _Wasm control flow_ is accomplished the same way everything else is within a
+  stack machine -- by pushing things onto, and popping things off of, the stack.
+
+- WebAssembly has the following control flow instructions available:
+  | Instruction | Description                                                                    |
+  |-------------+--------------------------------------------------------------------------------|
+  | ~if~        | Marks the beginning of an ~if~ branching instruction.                          |
+  |             |                                                                                |
+  | ~else~      | Marks the else block of an ~if~ instruction                                    |
+  |             |                                                                                |
+  | ~loop~      | A labeled block used to create loops                                           |
+  |             |                                                                                |
+  | ~block~     | A sequence of instructions, often used within expressions                      |
+  |             |                                                                                |
+  | ~br~        | Branch to the given label in a containing instruction or block                 |
+  |             |                                                                                |
+  | ~br_if~     | Identical to a branch, but with a prerequisite condition                       |
+  |             |                                                                                |
+  | ~br_table~  | Branches, but instead of to a label it jumps to a function index in a table    |
+  |             |                                                                                |
+  | ~return~    | Returns a value from the instruction (1.0 only supports one return value)      |
+  |             |                                                                                |
+  | ~end~       | Marks the end of a ~block~, ~loop~, ~if~, or a /function/                      |
+  |             |                                                                                |
+  | ~nop~       | No self-respecting assembly language is without an operation that does nothing |
+
+**** TODO Linear Memory - =NOTE=
+- xxx
+
+- *Direct DOM Access Is an Illusion*
+
+*** TODO Building a WebAssembly Application - 12 - =NOTE=
+**** Installing the WebAssembly Binary Toolkit
+**** Coding in the WebAssembly Text Format
+**** Using the Binary Toolkit
+- *WebAssembly Source Maps*
+
+*** TODO Wrapping Up - 16
+
+** TODO 2. Building WebAssembly Checkers - 19
+In this chapter, you'll be creating a /module/ that can be used to run a game
+of checkers (also called _draughts_ depending on which part of the world you
+are from).
+
+- You'll build this /module/ by creating a series of small functions that, once
+  complete, will work together to provide the fundamentals of a working checkers
+  game.
+
+- Need a trade-off between the complexity of a real application and the need to
+  keep an example simple enough to be used as a learning tool,
+  _so we cut a few corners on evaluating some game rules and edge cases, but the
+  code will be playable when you’re done._
+
 *** Playing Checkers, the Board Game - 19
 *** Coping with Data Structure Constraints - 20
+- project name:
+  =wasmcheckers=
+  * source file: =checkers.wat=
+
+- Define an empty module in =checkers.wat=
+  #+begin_src lisp
+    (module
+       (memory $mem 1)
+    )
+  #+end_src
+  The ~1~ in the memory declaration indicates that the memory named ~$mem~ must
+  have at least _one 64KB page of memory_ allocated to it.
+
+  Memory can grow at the request of either the /Wasm module/ or the _host_.
+
+- We can convert it to =.wasm= file, and then
+  ~wasm-objdump checkers.wasm -x~ to see its content:
+  #+begin_src text
+    checkers.wasm: file format wasm 0x1
+    Section Details:
+    Memory:
+     - memory[0] pages: initial=1
+  #+end_src
+
+**** TODO Managing Game Board State
+- WebAssembly doesn't have
+  * arrays -- single dimension or otherwise.
+  * other complex types, so you can't create a struct or a tuple or even a hash
+    map called _GamePiece_.
+
+- One thing that WebAssembly *does have* is /linear memory/.
+  As we discussed in the preceding chapter,
+  WebAssembly can have
+  _named, contiguous blocks of memory that it can write to, read from, import, or
+  export._
+
+- Q :: So if you're going to use a /linear memory block/, how do you represent a
+       two-dimensional array in that space?
+
+- A :: The solution is to linearize the two-dimensional array.
+  * Many of your favorite programming languages most likely already do this
+    linearization for efficiency without you noticing.
+
+- WebAssembly's memory isn't indexed like an array.
+  *It's indexed by byte.*
+
+**** TODO Fun with Bit Flags
+- *Bitwise versus Regular Math*
+
+**** TODO Manipulating the Board
+- *Bounds Checking Blunders*
+
+**** TODO Keeping Track of the Current Turn
+
 *** Implementing Game Rules - 34
 *** Moving Players - 35
 *** Testing Wasm Checkers - 38
 *** Wrapping Up - 41
 
 * Part II — Interacting with JavaScript
-** 3. Wading into WebAssembly with Rust - 45
+** TODO 3. Wading into WebAssembly with Rust - 45
+- _REVIEW_:
+  The first part of this book (the previous part) introduced you to the world of
+  WebAssembly.
+  * You learned about
+    + its _internals_
+    + its _architecture_,
+    + what /stack machines/ are, and
+    + where WebAssembly fits within the larger world of web applications.
+
+  * You even built a mostly functioning checkers /module/ entirely in /wast/,
+    _the text representation of WebAssembly instructions._
+
+- In this part of the book, you will _FOCUS_
+  * _NOT ONLY_ on increasing your ability to interweave WebAssembly and
+    JavaScript functionality,
+  * _BUT ALSO_ go through an introduction to Rust and you will see how you can
+    use it to add /strong types/, /memory safety/, and /elegant/, /expressive
+    code/ to your WebAssembly modules.
+
+- In this chapter, you'll
+  1. get an introduction to Rust and
+  2. get your workstation tooling set up to target WebAssembly from Rust.
+
+  By the end of this chapter,
+  you'll _build a new version of the checkers module entirely in Rust._
+
 *** Introducing Rust - 45
 *** Installing Rust - 47
-*** Building Hello WebAssembly in Rust - 47
-*** Creating Rusty Checkers - 50
-*** Coding the Rusty Checkers WebAssembly InterfaceContents - 60
-*** Playing Rusty Checkers in JavaScript - 64
-*** Wrapping Up - 65
+*** DONE Building Hello WebAssembly in Rust - 47
+CLOSED: [2024-11-13 Wed 18:29]
+- Rust's tools intrinsically support the notion of multiple targets.
+  * You *CAN* compile for different targets *WITHOUT* having to run the
+    compilation on that target machine.
 
-** 4. Integrating WebAssembly with JavaScript - 67
+- As of Rust version 1.30, MOST of the _WebAssembly tools and libraries_ you'll
+  encounter in this book should build just fine on /the stable toolchain/.
+
+**** Installing the WebAssembly Target
+~rustup target add wasm32-unknown-unknown~
+
+*** TODO Creating Rusty Checkers - 50
+**** Setting Up the Board - 51
+**** Writing the Engine Rules - 55
+**** Computing Legal Moves - 58
+
+*** TODO Coding the Rusty Checkers WebAssembly InterfaceContents - 60
+*** TODO Playing Rusty Checkers in JavaScript - 64
+*** TODO Wrapping Up - 65
+
+** TODO 4. Integrating WebAssembly with JavaScript - 67
 *** Creating a Better "Hello, World" - 67
+**** Installing the New Tools - 68
+**** Creating a New Rust WebAssembly Project - 68
+**** Integrating with JavaScript and npm - 71
+
 *** Building the Rogue WebAssembly Game - 73
+**** Getting Started with Rot.js - 74
+**** Creating the Game Engine - 76
+**** Adding Players, Enemies, and Treasure - 81
+
 *** Experimenting Further - 87
+**** Using the ~js_sys~ Crate - 87
+
 *** Wrapping Up - 88
 
-** 5. Advanced JavaScript Integration with Yew - 89
+** TODO 5. Advanced JavaScript Integration with Yew - 89
 *** Getting Started with Yew - 89
+**** What Is Yew?
+**** Why Yew?
+**** Building Your First Yew Application
+
 *** Building a Live Chat Application - 99
+**** Creating a Pubnub Account and Keys
+**** Building a Yew Service for Pubnub
+**** Creating the Yew Chat UI
+
 *** Wrapping Up - 113
 
 * Part III — Working with Non-Web Hosts
@@ -53,22 +335,56 @@ Let's get started by
 *** How to Be a Good Host - 117
 *** Interpreting WebAssembly Modules with Rust - 119
 *** Building a Console Host Checkers Player - 122
+**** Resolving Imports - 120
+**** Satisfying Externals with a Runtime - 122
+**** Creating the Checkers Game API - 124
+**** Playing Checkers - 128
+
 *** Wrapping Up - 131
 
 ** 7. Exploring the Internet of WebAssembly Things - 133
 *** Overview of the Generic Indicator Module - 134
+**** Designing the Module Contract
+
 *** Creating Indicator Modules - 137
+**** Creating the Battery Indicator
+**** Testing the Battery Indicator
+**** Creating the Pulsing Indicator
+
 *** Building Rust Applications for ARM Devices - 142
 *** Hosting Indicator Modules on a Raspberry Pi - 144
+**** Creating a Raspberry Pi Application
+**** Watching for New Modules
+**** Creating the Module Runner Thread
+**** Creating the WebAssembly Module Runtime
+**** Running the Application
+
 *** Hardware Shopping List - 153
+**** Running the Application on a Raspberry Pi
+
 *** Endless Possibilities - 154
 *** Wrapping Up - 156
 
-** 8. Building WARoS—The WebAssembly Robot System - 157
-*** An Homage to Crobots - 158
-*** Designing the WARoS API - 159
+** 8. Building WARoS -- The WebAssembly Robot System - 157
+*** An Homage to Crobots - 156
+**** The Rules of Crobots - 156
+
+*** Designing the WARoS API - 157
+**** Converting the Crobots Intrinsic Functions into a Rust API - 158
+
 *** Building the WARoS Match Engine - 164
+**** Threading, Time Slicing, and the Game Loop - 162
+**** Entities, Components, and Systems - 164
+**** Creating the Runtime Host - 166
+**** Implementing the Game Loop - 178
+**** Building the Components and Systems - 182
+**** Supporting Match Playback - 185
+
 *** Creating WebAssembly Robots - 188
+**** Creating the Rook - 187
+**** Cry Havoc, and Let Slip the Robots of War! - 189
+**** Room for Improvement - 190
+
 *** Robots in the Cloud - 193
 *** Wrapping Up - 194
 *** Conclusion - 194
