@@ -1590,25 +1590,535 @@ CLOSED: [2024-10-06 Sun 00:22]
   module (usually named ~prelude~).
 
 * TODO PART 4 PROBLEM AVOIDANCE - 187
-** TODO 9 Immutability - 189
+- In the last part of the book, we FOCUS
+  * _less on_ which patterns to USE and
+  * _more on_ which patterns to *avoid.*
+
+- Sometimes, it's worth sacrificing a little performance or memory use to build
+  software that optimizes _correctness_, _maintainability_, and _readability_.
+
+  FORTUNATELY,
+  with Rust we don't have to sacrifice performance in most cases. Some people
+  may argue that Rust has no real competitors in terms of safety and
+  performance, so we're rarely sacrificing much when we dial down the speed a
+  little in favor of correctness.
+
+- You may have found that the most challenging code to debug (and often the
+  source of bugs) is code that is _TOO CLEVER for its own good._
+  * FOR THIS REASON, this part focuses on *avoiding patterns* that are too
+    _clever_, _complex_, or _difficult_ to understand.
+
+** DONE 9 Immutability - 189
+CLOSED: [2024-11-23 Sat 02:09]
 - This chapter covers
-  * Understanding the benefits of /immutability/
-  * Thinking in terms of /immutable/ data and how it works in Rust
-  * Using traits to make _nearly anything_ /immutable/
-  * Exploring /crates/ that provide /immutable/ data structures
+  * Understanding the benefits of /IMMUTABILITY/
 
-*** 9.1 The benefits of immutability - 190
-*** 9.2 Why immutability is not a magic bullet - 192
-*** 9.3 How to think about immutable data - 192
-*** 9.4 Understanding immutability in Rust - 193
-*** 9.5 Reviewing the basics of immutability in Rust - 194
-*** 9.6 Using traits to make (almost) anything immutable - 197
-*** 9.7 Using Cow for immutability - 198
-*** 9.8 Using crates for immutable data structures - 201
-**** 9.8.1 Using im - 201
-**** 9.8.2 Using rpds - 202
+  * Thinking in terms of /IMMUTABLE data/ and
+    HOW it works in Rust
 
-** TODO 10 Antipatterns - 205
+  * Using /traits/ to make _nearly anything_ /immutable/
+
+  * Exploring /crates/ that provide /IMMUTABLE data structures/
+
+- Immutability is an important design pattern.
+  I'll leave you with a great starting point to explore the topic further.
+
+- In this chapter, I'll discuss
+  * the benefits you derive from *AVOIDING* _mutable data_,
+  * look at some of the gotchas of trying to _USE data structures immutably,_
+  * review Rust's approach to _mutability_ and _immutability_, and
+  * show _how to use Rust's features to make just about any ordinary data immutable_.
+  * Finally, I'll
+    DESCRIBE some /crates/ that PROVIDE _immutable data structures_,
+    INCLUDING some _optimizations_.
+
+*** DONE 9.1 The benefits of immutability - 190
+CLOSED: [2024-11-22 Fri 22:04]
+- To help you make sense of immutability, I'll discuss the classes of problems
+  that immutability can solve and how it solves them. Most software bugs fit
+  into one or more of the following (nonexhaustive) classes:
+  * _Logic errors_
+
+  * _Race conditions_
+    Bugs that occur when shared data is not synchronized properly.
+
+    This situation can lead to data corruption, deadlocks, and other problems,
+
+  * _Unexpected side effects_
+
+  * _Memory safety problems_
+    Bugs that occur when a program tries to access memory that it shouldn't.
+
+    These bugs can lead to crashes, data corruption, and (most concerning)
+    security vulnerabilities.
+
+- Immutability can help solve all these problems in many cases.
+
+*** DONE 9.2 Why immutability is not a magic bullet - 192
+CLOSED: [2024-11-22 Fri 22:10]
+Immutability isn't free; it comes at a cost.
+- Often need to duplicate data when changing it, which can be expensive in terms
+  of memory and CPU time and can make our code more complex.
+
+- Often need spend more time up front thinking about how to structure our data
+  and programs.
+
+*** DONE 9.3 How to think about immutable data - 192
+CLOSED: [2024-11-22 Fri 23:58]
+- Nearly all computers are designed to handle *mutable* data and are based on
+  the /von Neumann architecture/.
+  _Figure 9.1 The von Neumann architecture_
+
+- The /von Neumann architecture/ consists of a CPU that stores _data_ and
+  _program instructions_ in the SAME /memory/.
+  =IMPORTANT=
+  * One implication is that the /memory/ in which data is stored for
+    *FAST access* is *FINITE and fundamentally MUTABLE*.
+
+- Thus, /immutability/ _in the context of programming_ is merely an abstraction
+  that exists only at a relatively high level.
+  * It *is not* built into the _hardware architecture_ or the _operating system_.
+  * It *is* a concept that's *enforced by*
+    + the programming language and
+    + the libraries and
+    + frameworks
+    that we use.
+
+- Any immutable by design program must eventually interact with the outside
+  world, and the outside world is *mutable*, *finite*, and *stateful*.
+
+- *Immutability is not an all-or-nothing proposition.*
+  Find a balance!
+
+*** DONE 9.4 Understanding immutability in Rust - 193
+CLOSED: [2024-11-23 Sat 02:08]
+- inherited mutability ::
+  the cascades way that data stored within an immutable structure is also
+  immutable, and vice versa.
+
+- An *EXCEPTION* to /Rust's mutability rule/ applies when we use Rust's
+  shareable mutable containers ~Cell~, ~RefCell~, and ~OnceCell~.
+  These containers enable /interior mutability/.
+
+  * interior mutability ::
+    allows you to mutate the data inside an _immutable container_.
+
+  * This feature has some important implications and enables some powerful patterns,
+    but understanding the tradeoffs is important:
+    The problem with _shareable mutable containers_ is that
+    *they allow HIDDEN mutability in some circumstances,*
+    =from Jian= Hide mutability from checking from borrow checker (compile time).
+    which may not always be desirable but isn't a problem in most situations.
+
+- The only practical *difference between* /inherited and interior mutability/ is
+  that
+  the former is *enforced by the compiler*, and
+  the latter is *enforced at run time*.
+
+  As a general rule, you can consider values inside a ~Cell~, ~RefCell~, or
+  ~OnceCell~ to be *OPTIONALLY mutable,* even if _the container itself is
+  immutable_.
+
+  In other words,
+  these containers provide the option to mutate the data inside them but don't
+  require mutation.
+
+- ~Cell~, ~RefCell~, ~OnceCell~
+  * ~Cell~ is _slightly LESS devious_ than ~RefCell~ and ~OnceCell~
+    BECAUSE
+    it allows mutability *ONLY BY way of _replacement_ --
+    you can't mutate the value inside a ~Cell~ directly, but you can replace the
+    value with a new one.
+
+    + This distinction is subtle but important, and it's one of the reasons why
+      ~Cell~ is considered to be a somewhat *safer* way to achieve /interior
+      mutability/.
+
+  * ~RefCell~ and ~OnceCell~ allow you to obtain a /mutable reference/ to the
+    data they hold.
+
+- /Rust's standard library/
+  *doesn't provide*
+  data structures that are designed for immutability.
+
+  Instead, Rust's data structures are generally what you'd expect of traditional
+  /mutable data structures/.
+
+- Given _Rust's focus on performance_,
+  it's often more efficient to work with mutable data structures.
+
+- =IMPORTANT=
+  The *basic pattern for implementing immutability*
+  _IN a language such as Rust that doesn't offer immutability as a core feature_
+  involves two steps:
+  * AFTER
+    a value is declared and assigned,
+    _it *should NOT* be modified in place_.
+
+  * If _you want to modify a value_,
+    you copy/clone it and then modify the copy (which, confusingly, is still a
+    mutation, but it's a mutation of a new value, not the original value).
+
+- For languages that provide immutability as a core feature, the language itself
+  abstracts this process of copying and modifying, but fundamentally, the
+  operation is still the same.
+
+- =NEXT=
+  We can use abstractions to hide the details of this process, and
+  we'll explore some of these abstractions in sections 9.6, 9.7, and 9.8.
+
+*** DONE 9.5 Reviewing the basics of immutability in Rust - 194
+CLOSED: [2024-11-23 Sat 01:09]
+- It's important to note that /Rust's mutability semantics/ also apply across
+  function calls, *with one minor difference*:
+  /Owned values/ *can be switched* from _immutable_ to _mutable_ *when they are
+  /moved/,* but the caller of a function has no say in this process.
+  =from Jian=
+  This is reasonable. The possible mutation operations are applied on the
+  variables own them, the parameters of the callee function.
+  *This is why this pattern isn't likely to be dangerous.*
+  #+begin_src rust
+    fn mutability(
+        a: i32, // immutable
+        mut b: i32, // mutable
+    ) {
+        // a += 1; // error: cannot assign twice to immutable variable `a`
+        b += 1;
+        dbg!(a);
+        dbg!(b);
+    }
+
+    let a = 1;
+    let b = 2;
+    mutability(a, b);
+    eprintln!("original b (outside of the `mutability` function):");
+    dbg!(b);
+    // [src/main.rs:8] a = 1
+    // [src/main.rs:9] b = 3
+    // Original b, outsite the function call:
+    // [src/main.rs:18:5] b = 2
+  #+end_src
+
+- We can also use ~RefCell~ to achieve /interior mutability/.
+  *Listing 9.3 Using RefCell for interior mutability*
+  #+begin_src rust
+    let immutable_string = String::from("This string cannot be changed");
+    // immutable_string.push_str("... or can it?");
+    // error: cannot borrow `immutable_string` as mutable, as it is not declared as mutable
+    dbg!(&immutable_string);
+
+    let not_so_immutable_string = RefCell::from(immutable_string);
+    not_so_immutable_string
+        .borrow_mut()
+        .push_str("... or can it?");
+    dbg!(&not_so_immutable_string);
+  #+end_src
+  * As you can see, Rust's shared mutable containers provide *a bypass for the
+    mutability rules*.
+
+  * It's important to remember that the ~RefCell~ *owns* its data.
+    In the preceding example, we moved the string into the ~RefCell~,
+    =from Jian= I don't quite understand the following sentence!
+    which involves a plain old function call that allows us to alter the
+    mutability of any owned value.
+
+  * =from Jian=
+    The ~RefCell::from(immutable_string)~ call uses the
+    ~from(t: T) -> UnsafeCell<T>~ method from the ~From<T>~ trait.
+    The mutability doesn't comes from the ~from~ method, because the parameter
+    is ~t: T~, NOT ~mut t: T~!
+
+*** DONE 9.6 Using traits to make (almost) anything immutable - 197
+CLOSED: [2024-11-23 Sat 01:19]
+In this section, we'll discuss the ~std::borrow::ToOwned~ trait, which gives us
+the basis for _a pattern that we can use to *make just about anything
+immutable*._
+
+#+begin_src rust
+  pub trait ToOwned {
+      type Owned: Borrow<Self>;
+
+      // Required method
+      fn to_owned(&self) -> Self::Owned;
+
+      // Provided method
+      fn clone_into(&self, target: &mut Self::Owned) {
+          *target = self.to_owned();
+      }
+  }
+#+end_src
+
+There is a blanket implementation for any ~T~ that implements ~Clone~.
+#+begin_src rust
+  impl<T> ToOwned for T
+  where
+      T: Clone,
+  {
+      type Owned = T;
+
+      fn to_owned(&self) -> T {
+          self.clone()
+      }
+
+      fn clone_into(&self, target: &mut T) {
+          target.clone_from(self);
+      }
+  }
+#+end_src
+
+- =IMPORTANT=
+  In other words, we can think about ~ToOwned~ as being *a generalization of*
+  ~Clone~ for /references or slices/.
+  The implementation of ~ToOwned::to_owned()~ simply calls ~Clone::clone()~, and
+  for ~[T]~, it returns a ~Vec~ with each item cloned.
+
+- =NEXT=
+  With the knowledge of ~ToOwned~, we can
+  _use the ~Cow~ type to make it more ergonomic._
+
+*** DONE 9.7 Using ~Cow~ for immutability - 198
+CLOSED: [2024-11-22 Fri 23:16]
+- The ~Cow~ type is a /smart pointer/ that implements a *clone-on-write*
+  pattern.
+
+- ~Cow~ follow the *clone-on-write* pattern by *deferring* the cost of cloning
+  until it's necessary.
+
+- =IMPORTANT=
+  We can use ~Cow~ as a container for data that we want to
+  _treat as immutable by mutating only cloned data, never the source data._
+
+  * If we're being nitpicky, this approach doesn't strictly prevent mutability,
+    but it prevents us from having to mutate the source data or use any mutable
+    references. The following listing shows the definition of ~Cow~.
+
+- Listing 9.5 Definition of ~Cow~ from Rust's standard library
+  #+begin_src rust
+    pub enum Cow<'a, B>
+    where
+        B: 'a + ToOwned + ?Sized,
+    {
+        Borrowed(&'a B),
+        Owned(<B as ToOwned>::Owned),
+    }
+  #+end_src
+  =IMPORTANT=
+  Notice a couple of things about ~Cow~:
+  * The ~Cow~ type is /generic/ over a /lifetime/ ~'a~ and a type ~B~, which
+    must implement the ~ToOwned~ /trait/.
+
+  * The ~Cow~ type is an ~enum~ with two variants: ~Borrowed~ and ~Owned~.
+    It's similar to an ~Option~ _BUT more specialized_.
+
+  * We can
+    1. use ~Cow~ to wrap any /reference/ for a type that implements ~Clone~ (and
+       thereby ~ToOwned~) and
+    2. then obtain an owned value WHEN we need to mutate it.
+
+  * ~Cow~ implements the ~Deref~ trait, which allows us to treat it as a
+    /reference/ to the data it contains.
+
+- First ~clone()~, and then ~to_mut()~ (to obtain a mutable reference.), finally
+  operate it. The source ~Cow~ data is still immutable.
+
+- If we're using ~Cow~, we don't necessarily want to leak that implementation
+  detail in a public API, so we'd likely want to wrap our data with a ~struct~.
+  We can
+  1. put a ~Cow~ inside a struct and
+  2. provide a /method/ to mutate the INTERNAL data _WITHOUT_ exposing the ~Cow~
+     itself.
+
+  #+begin_src rust
+    #[derive(Debug, Clone)]
+    struct CowList<'a> {
+        cows: Cow<'a, [String]>,
+    }
+
+    impl<'a> CowList<'a> {
+        fn add_cow(&self, cow: &str) -> Self {
+            let mut new_cows = self.clone();
+            new_cows.cows.to_mut().push(cow.to_string());
+            new_cows
+        }
+    }
+
+    impl Default for CowList<'_> {
+        fn default() -> Self {
+            CowList {
+                cows: Cow::from(vec![]),
+            }
+        }
+    }
+
+    let list_of_cows = CowList::default()
+        .add_cow("Bessie")
+        .add_cow("Daisy")
+        .add_cow("Moo");
+    dbg!(&list_of_cows);
+    // [src/main.rs:49:5] &list_of_cows = CowList {
+    //     cows: [
+    //         "Bessie",
+    //         "Daisy",
+    //         "Moo",
+    //     ],
+    // }
+
+    let list_of_cows_plus_one = list_of_cows.add_cow("Penelope");
+    dbg!(&list_of_cows);
+    // [src/main.rs:52:5] &list_of_cows = CowList {
+    //     cows: [
+    //         "Bessie",
+    //         "Daisy",
+    //         "Moo",
+    //     ],
+    // }
+
+    dbg!(&list_of_cows_plus_one);
+    // [src/main.rs:53:5] &list_of_cows_plus_one = CowList {
+    //     cows: [
+    //         "Bessie",
+    //         "Daisy",
+    //         "Moo",
+    //         "Penelope",
+    //     ],
+    // }
+  #+end_src
+
+- As an ALTERNATIVE IMPLEMENTATION, we can place each ~Cow~ inside a ~Vec~:
+  #+begin_src rust
+    #[derive(Debug, Clone)]
+    struct CowVec<'a> {
+        cows: Vec<Cow<'a, str>>,
+    }
+  #+end_src
+  =IMPORTANT=
+  One advantage of using this method (as opposed to using a ~Vec~ within a
+  ~Cow~):
+  _each item in the vector can be cloned lazily_, which is known as /structural
+  sharing/.
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  This approach can be more efficient when you have many copies of the same
+  elements, especially if the individual elements are large.
+
+- =IMPORTANT=
+  ~Cow~ isn't complicated,
+  BUT we can _hide it from a public API_ to *make our API a little EASIER TO
+  USE.*
+
+*** DONE 9.8 Using crates for immutable data structures - 201
+CLOSED: [2024-11-23 Sat 01:48]
+In this section, we'll _explore some crates_ that provide _immutable data
+structures_, which can be a relatively easy way to reap the benefits of
+immutability without building custom solutions.
+
+- The crates we'll discuss are
+  * ~im~ (https://crates.io/crates/im), which provides
+    + /lists/
+    + /sets/
+    + /maps/
+
+  * /Rust Persistent Data Structures (~rpds~)/ (https://crates.io/crates/rpds),
+    which provides
+    + /lists/
+    + /sets/
+    + /queues/
+    + /maps/
+
+- Both crates provide structures *optimized for* use in programs and libraries
+  that follow the principles of *immutability*,
+  _BUT_ *neither strictly enforces immutability through their APIs*.
+
+  You can use the data structures in these crates in a mutable way,
+  _BUT_ *they are optimized for immutability*.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Try to use these two, and learn when to use them!!!
+
+**** DONE 9.8.1 Using im - 201
+CLOSED: [2024-11-23 Sat 01:44]
+- Tuned for immutability, but NO immutable APIs -- ~im~ is intended to be used
+  as the underlying immutable data structure _WITHOUT enforcing immutability_. .
+  * Need manually call ~clone()~.
+
+- Listing 9.9 Using ~im~ to create a ~Vector~
+  #+begin_src rust
+    use im::vector;
+
+    let shopping_list = vector!["milk", "bread", "butter", "cheese", "eggs"];
+    let mut updated_shopping_list = shopping_list.clone(); // explicitly clone
+    updated_shopping_list.push_back("grapes");
+    dbg!(&shopping_list);
+    dbg!(&updated_shopping_list); // With `"grapes"`
+  #+end_src
+
+- _In addition to_ /data structures/ such as /sets/ and /maps/,
+  ~im~ provides /features/ such as
+  - rayon-based iterators (for parallel iterating),
+  - Serde support, and
+  - _proptest_ and _quickcheck_ support for /property-based testing/.
+
+**** DONE 9.8.2 Using rpds - 202
+CLOSED: [2024-11-23 Sat 01:48]
+The ~rpds~ crate is similar to ~im~
+BUT provides a few _ADDITIONAL_ data structures,
+such as /queues/ and /stacks/.
+
+- ~rpds~, unlike ~im~, provides an _immutable API_ DIRECTLY --
+  methods that return a new structure.
+  =from Jian= implicitly clone
+
+- Listing 9.10 Using rpds to create a Vector
+  #+begin_src rust
+    use rpds::Vector;
+
+    let streets = Vector::new()
+        .push_back("Elm Street")
+        .push_back("Maple Street")
+        .push_back("Oak Street");
+
+    let updated_streets = streets.push_back("Pine Street");
+
+    dbg!(&streets);
+    dbg!(&updated_streets); // With `"Pine Street"`
+  #+end_src
+
+- ~rpds~ also provides
+  * Serde support
+  * macros for initialization data structures
+
+*** DONE Summary - 203
+CLOSED: [2024-11-23 Sat 01:39]
+- /Immutability/ is a *powerful abstraction* for writing reliable software.
+
+- /Immutability/ can help PREVENT problems like
+  * logic errors
+  * race conditions
+  * unwanted side effects
+  * memory safety
+
+- We can COMBINE /immutability/ WITH /functional programming patterns/,
+  such as /pure functions/ and /referential transparency/,
+  to make our code MORE _reliable_, _easy to test_, and _easier to reason
+  about_.
+
+- Rust always distinguishes between /mutable/ and /immutable/ values,
+  _enforced by the /borrow checker/,_
+  which makes it easy to determine whether a value is mutable thanks to
+  /inherited mutability/.
+
+- Rust provides a few tools to help us work with immutable data, such as the
+  ~ToOwned~ trait and the ~Cow~ type.
+
+- The ~im~ and ~rpds~ crates provide data structures *optimized for
+  immutability*, which can be used as a building block for programs and
+  libraries that use immutable data.
+
+** TODO 10 Antipatterns - 205 - =...ing=
 - This chapter covers
   * Discussing programming antipatterns
   * Reviewing common antipatterns in Rust
@@ -1634,10 +2144,10 @@ CLOSED: [2024-10-06 Sun 23:36]
 - =en= weasel word, pejoratively
 
 - Forget about some very personal opinion, we should only talk about practices
-  that are *OBJECTIVELY bad*, such as when it's unsafe, inefficient, or difficult
-  to maintain.
+  that are *OBJECTIVELY bad*, such as when it's _unsafe_, _inefficient_, or
+  _difficult to maintain_.
 
-*** 10.2 Using ~unsafe~ - 207
+*** TODO 10.2 Using ~unsafe~ - 207
 **** 10.2.1 What does ~unsafe~ do? - 208
 **** 10.2.2 Where can you use ~unsafe~? - 209
 **** 10.2.3 When should you use ~unsafe~? - 211
@@ -1788,8 +2298,8 @@ or linked lists.
 
 *** DONE 10.5 Too many clones - 216
 CLOSED: [2024-10-05 Sat 22:21]
-*** 10.6 Using ~Deref~ to emulate polymorphism - 217
-*** 10.7 Global data and singletons - 221
+*** TODO 10.6 Using ~Deref~ to emulate polymorphism - 217
+*** TODO 10.7 Global data and singletons - 221
 *** DONE 10.8 Too many smart pointers - 221
 CLOSED: [2024-10-07 Mon 13:42]
 - Rust provides the following core smart-pointer types:
@@ -1826,8 +2336,8 @@ CLOSED: [2024-10-07 Mon 13:42]
   * A good rule of thumb is to try to write code without smart pointers and add
     them as required.
 
-*** 10.9 Where to go from here - 223
-*** Summary - 223
+*** TODO 10.9 Where to go from here - 223
+*** TODO Summary - 223
 
 ** DONE appendix - Installing Rust - 225
 CLOSED: [2024-10-02 Wed 00:39]
