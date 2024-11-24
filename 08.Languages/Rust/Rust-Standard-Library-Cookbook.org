@@ -6,7 +6,7 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
-* Preface
+* TODO Preface
 ** Who this book is for
 ** What this book covers
 ** To get the most out of this book
@@ -841,531 +841,563 @@
   - Using a slab
 
 ** DONE Introduction
-   CLOSED: [2018-06-26 Tue 17:48]
-** DONE Using A Vector
-   CLOSED: [2018-06-26 Tue 19:05]
+CLOSED: [2024-11-24 Sun 19:54]
+- A big part of this chapter forcuses on /iterators/.
+
+** DONE Using a vector
+CLOSED: [2024-11-24 Sun 20:48]
 *** DONE How to do it
-    CLOSED: [2018-06-26 Tue 18:57]
+CLOSED: [2024-11-24 Sun 20:23]
+- ~vector.swap(idx_of_a, idx_of_b)~
+
+- ~vector.get(1)~ with boundary checking
+- ~vector[1]~ without boundary checking
+
+- ~vector.remove(1)~
+
+- ~vector.retain(|name| name.starts_with('A'))~
+
+- ~vector.dedup()~
+  Mostly, you call this method from a *sorted* vector.
+
+- ~vector.sort()~
+
+- ~vector.reverse()~
+
+- ~vector.drain(..2)~ returns an iterator
+
+- ~vector.clear()~
+
+- ~split_off~ and ~append~:
+  #+begin_src rust
+    let mut colors = vec!["red", "green", "blue", "organge", "yellow"];
+    let half = colors.len() / 2;
+    let second_half = colors.split_off(half);
+    println!("colors after splitting: {:?}", colors); // ["red", "green"]
+    println!("second_half: {:?}", second_half); // ["blue", "organge", "yellow"]
+
+    colors.append(&mut second_half);
+    println!("colors after appending: {:?}", colors); // ["red", "green", "blue", "organge", "yellow"]
+    println!("second_half after appending: {:?}", second_half); // []
+  #+end_src
+
+- ~splice~:
+  #+begin_src rust
+    let mut stuff = vec!["1", "2", "3", "4", "5"];
+    let stuff_to_insert = vec!["a", "b", "c"];
+    let removed_stuff: Vec<_> = stuff.splice(1..4, stuff_to_insert).collect();
+    println!("Spliced stuff: {:?}", stuff); // ["1", "a", "b", "c", "5"]
+    println!("Removed stuff: {:?}", removed_stuff); // ["2", "3", "4"]
+  #+end_src
+
+- ~vector.swap_remove(idx)~
+
 *** DONE How it works
-    CLOSED: [2018-06-26 Tue 18:56]
-    - Many of its core principles, like /preallocation/, apply to other collections
-      as well.
+CLOSED: [2024-11-24 Sun 20:43]
+- Many of its core principles, like /preallocation/, apply to other collections
+  as well.
 
-    - ~splice~ does _three_ things:
-      + It takes a /range/.
-        This /range/ will be _removed from_ the vector.
+- The important 3rd-party library: ~maplit~.
 
-      + It takes an /iterator/.
-        This /iterator/ will be inserted into the space _left_ open by the
-        removal from the last step.
+- The ~get_mut~ method of ~Vec~.
 
-      + It returns the _removed_ elements as an /iterator/.
+- ~splice~ does _three_ things:
+  * It takes a /range/.
+    This /range/ will be _removed from_ the vector.
 
-*** DONE There's more
-    CLOSED: [2018-06-26 Tue 19:05]
-    - Internally, ~Vec~ is implemented as a *continuous* chunk of memory stored
-      on the /heap/.
+  * It takes an /iterator/.
+    This /iterator/ will be inserted into the space _left_ open by the
+    removal from the last step.
 
-    - The extra /capacity/ _doesn't go away_ when *shortening* the /vector/ --
-      ~.clear()~ won't change the /capacity/.
-
-      However, ~.shrink_to_fit()~ change the /capacity/.
-      This will bring the /capacity/ *as close as possible* to the /length/,
-      BUT it _is allowed to still leave_ a little bit of preallocated space ready.
-
-    - 
-
-** DONE Using A String
-   CLOSED: [2018-06-26 Tue 19:46]
-*** DONE How to do it
-    CLOSED: [2018-06-26 Tue 19:31]
-    Create =string.rs= in the folder =src/bin=, paste the code below, and then run
-    =cargo run --bin string=
-
-    #+BEGIN_SRC rust
-      fn main() {
-          // As a String is a kind of vector,
-          // you can construct them the same way
-          let mut s = String::new();
-          s.push('H');
-          s.push('i');
-          println!("s: {}", s);
-
-          // The String however can also be constructed
-          // from a string slice (&str)
-          // The next two ways of doing to are equivalent
-          let s = "Hello".to_string();
-          println!("s: {}", s);
-          let s = String::from("Hello");
-          println!("s: {}", s);
-
-          // A String in Rust will always be valid UTF-8
-          let s = " Þjóðhildur  ".to_string();
-          println!("s: {}", s);
-
-          // Append strings to each other
-          let mut s = "Hello ".to_string();
-          s.push_str("World");
-
-          // Iterate over the character
-          // A "character" is defined here as a
-          // Unicode Scalar Value
-          for ch in "Tubular".chars() {
-              print!("{}.", ch);
-          }
-          println!();
-          // Be careful though, a "character" might not
-          // always be what you expect
-          for ch in "y̆".chars() {
-              // This does NOT print y̆
-              print!("{} ", ch);
-          }
-          println!();
-
-          println!("------------------------------------------------------------------------");
-          println!("------- Use the following code to split a string in various ways: ------");
-          println!("------------------------------------------------------------------------");
-          // Split a string slice into two halves
-          let (first, second) = "HelloThere".split_at(5);
-          println!("first: {}, second: {}", first, second);
-
-          // Split on individual lines
-          let haiku = "\
-                       she watches\n\
-                       satisfied after love\n\
-                       he lies\n\
-                       looking up at nothing\n\
-                       ";
-          for line in haiku.lines() {
-              println!("\t{}.", line);
-          }
-          // Split on substrings
-          for s in "Never;Give;Up".split(';') {
-              println!("{}", s);
-          }
-          // When the splitted string is at the beginning or end,
-          // it will result in the empty string
-          let s: Vec<_> = "::Hi::There::".split("::").collect();
-          println!("{:?}", s);
-
-          // If you can eliminate the empty strings at the end
-          // by using split_termitor
-          let s: Vec<_> = "Mr. T.".split_terminator('.').collect();
-          println!("{:?}", s);
-
-          // char has a few method's that you can use to split on
-          for s in "I'm2fast4you".split(char::is_numeric) {
-              println!("{}", s);
-          }
-
-          // Split only a certain amount of times
-          for s in "It's not your fault, it's mine".splitn(3, char::is_whitespace) {
-              println!("{}", s);
-          }
-
-          // Get only the substrings that match a pattern
-          // This is the opposite of splitting
-          for c in "The Dark Knight rises".matches(char::is_uppercase) {
-              println!("{}", c);
-          }
-
-          // Check if a string starts with something
-          let saying = "The early bird gets the worm";
-          let starts_with_the = saying.starts_with("The");
-          println!(
-              "Does \"{}\" start with \"The\"?: {}",
-              saying,
-              starts_with_the
-          );
-          let starts_with_bird = saying.starts_with("bird");
-          println!(
-              "Does \"{}\" start with \"bird\"?: {}",
-              saying,
-              starts_with_bird
-          );
-
-          // Check if a string ends with something
-          let ends_with_worm = saying.ends_with("worm");
-          println!("Does \"{}\" end with \"worm\"?: {}", saying,
-                   ends_with_worm);
-
-          // Check if the string contains something somewhere
-          let contains_bird = saying.contains("bird");
-          println!("Does \"{}\" contain \"bird\"?: {}", saying,
-                   contains_bird);
-
-          println!("--------------------------------");
-          println!("------ Remove whitespace: ------");
-          println!("--------------------------------");
-          // Splitting on whitespace might not result in what you expect
-          let a_lot_of_whitespace = "    I   love spaaace     ";
-          let s: Vec<_> = a_lot_of_whitespace.split(' ').collect();
-          println!("{:?}", s);
-          // Use split_whitespace instead
-          let s: Vec<_> = a_lot_of_whitespace.split_whitespace().collect();
-          println!("{:?}", s);
-
-          // Remove leading and trailing whitespace
-          let username = "   P3ngu1n\n".trim();
-          println!("{}", username);
-          // Remove only leading whitespace
-          let username = "   P3ngu1n\n".trim_left();
-          println!("{}", username);
-          // Remove only trailing whitespace
-          let username = "   P3ngu1n\n".trim_right();
-          println!("{}", username);
-
-
-          // Parse a string into another data type
-          // This requires type annotation
-          let num = "12".parse::<i32>();
-          if let Ok(num) = num {
-              println!("{} * {} = {}", num, num, num * num);
-          }
-
-          println!("--------------------------------");
-          println!("------ Modify the string: ------");
-          println!("--------------------------------");
-          // Replace all occurrences of a pattern
-          let s = "My dad is the best dad";
-          let new_s = s.replace("dad", "mom");
-          println!("new_s: {}", new_s);
-
-          // Replace all characters with their lowercase
-          let lowercase = s.to_lowercase();
-          println!("lowercase: {}", lowercase);
-
-          // Replace all characters with their uppercase
-          let uppercase = s.to_uppercase();
-          println!("uppercase: {}", uppercase);
-
-          // These also work with other languages
-          let greek = "ὈΔΥΣΣΕΎΣ";
-          println!("lowercase greek: {}", greek.to_lowercase());
-
-          // Repeat a string
-          let hello = "Hello! ";
-          println!("Three times hello: {}", hello.repeat(3));
-      }
-    #+END_SRC
-*** DONE How it works..
-    CLOSED: [2018-06-26 Tue 19:46]
-    - Essentially, being a kind of /vector/, a /string/ can be created the same way
-      by combining ~new~ and ~push~;
-        HOWEVER, because this is really inconvenient, a /string/, which is an
-      owned chunk of memory, can be created from a /string slice (~&str~)/, which
-      is either a /borrowed string/ or a /literal/. Both of the ways to do it,
-      that are shown in this recipe, are equivalent:
-      #+BEGIN_SRC rust
-        let s = "Hello".to_string();
-        // let s = "Hello".to_owned();
-        println!("s: {}", s);
-        let s = String::from("Hello");
-        println!("s: {}", s);
-      #+END_SRC
-
-    - Out of pure personal preference, we will use the first variant.
-      #+BEGIN_QUOTE
-      Before Rust 1.9, ~to_owned()~ _WAS the fastest way_ to create a string.
-
-      Now, ~to_string()~ is equally performant and should be preferred,
-
-      because it *offers more clarity over what is done*. We mention this
-      because many old tutorials and guides have not been updated since then,
-      and still use ~to_owned()~.
-      #+END_QUOTE
-
-      =From Jian= I prefer the ~to_owned()~, which offers more clarity in /type/
-      and /ownership/.
-
-    - Use the ~.chars()~ /method/, you may get surprised sometimes -- a grapheme
-      can look like a character, but NOT must be.
-        You can get around this by using the Unicode-segmentation /crate/, which
-      supports *iteration over graphemes*: https://crates.io/crates/unicode-segmentation.
-
-    - The ~.split~, ~.split_whitespace~, and ~.split_terminator~ /methods/.
+  * It returns the _removed_ elements as an /iterator/.
 
 *** DONE There's more
-    CLOSED: [2018-06-26 Tue 19:32]
-    The implementation of ~String~ should not be much of a surprise -- it's just
-    a kind of /vector/.
+CLOSED: [2024-11-24 Sun 20:48]
+- Internally, ~Vec~ is implemented as a *continuous* chunk of memory stored
+  on the /heap/.
 
-** DONE Accessing Collections As Iterators
-   CLOSED: [2018-06-26 Tue 20:40]
-   - If you come from C#, you will already be familiar with /iterators/ because
-     of /Linq/. Rust's /iterators/ are kind of _similar_, but come with a more
-     functional approach to things.
+- The extra /capacity/ _doesn't go away_ when *shortening* the /vector/ --
+  ~.clear()~ won't change the /capacity/.
 
+  However, ~.shrink_to_fit()~ change the /capacity/.
+  This will bring the /capacity/ *as close as possible* to the /length/,
+  BUT it _is allowed to still leave_ a little bit of preallocated space ready.
+
+** DONE Using a string
+CLOSED: [2018-06-26 Tue 19:46]
 *** DONE How to do it
-    CLOSED: [2018-06-26 Tue 20:30]
-    Create =iterator.rs= in the folder =src/bin=, paste the code below, and then run
-    =cargo run --bin iterator=
+CLOSED: [2018-06-26 Tue 19:31]
+Create =string.rs= in the folder =src/bin=, paste the code below, and then run
+~cargo run --bin string~
 
-    #+BEGIN_SRC rust
-      fn main() {
-          let names = vec!["Joe", "Miranda", "Alice"];
-          // Iterators can be accessed in many ways.
-          // Nearly all collections implement .iter() for this purpose
-          let mut iter = names.iter();
-          // A string itself is not iterable, but its characters are
-          let mut alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-          // Ranges are also (limited) iterators
-          let nums = 0..10;
-          // You can even create infinite iterators!
-          let all_nums = 0..;
+#+BEGIN_SRC rust
+  fn main() {
+      // As a String is a kind of vector,
+      // you can construct them the same way
+      let mut s = String::new();
+      s.push('H');
+      s.push('i');
+      println!("s: {}", s);
 
-          // As the name says, you can iterate over iterators
-          // This will consume the iterator
-          for num in nums {
-              print!("{} ", num);
-          }
-          // nums is no longer usable
-          println!();
-
-          // Get the index of the current item
-          for (index, letter) in "abc".chars().enumerate() {
-              println!("#{}. letter in the alphabet: {}",
-                       index + 1,
-                       letter);
-          }
-
-
-          println!("--------------------------------------------------------------");
-          println!("----------------- 3. Access individual items: ----------------");
-          println!("--------------------------------------------------------------");
-          // going through an iterator, step by step
-          if let Some(name) = iter.next() {
-              println!("First name: {}", name);
-          }
-          if let Some(name) = iter.next() {
-              println!("Second name: {}", name);
-          }
-          if let Some(name) = iter.next() {
-              println!("Third name: {}", name);
-          }
-          if iter.next().is_none() {
-              println!("No names left");
-          }
-
-          // Arbitrary access to an item in the iterator
-          if let Some(letter) = alphabet.nth(3) {
-              println!("the fourth letter in the alphabet is: {}", letter);
-          }
-
-          // This works by consuming all items up to a point
-          if let Some(current_first) = alphabet.nth(0) {
-              // This will NOT print 'A'
-              println!("The first item in the iterator is currently: {}", current_first);
-          }
-
-          if let Some(current_first) = alphabet.nth(0) {
-              println!("The first item in the iterator is currently: {}", current_first);
-          }
-
-          // Accessing the last item; This will consume the entire iterator
-          if let Some(last_letter) = alphabet.last() {
-              println!("The last letter of the alphabet is: {}",
-                       last_letter);
-          }
-
-
-          println!("------------------------------------------------------------------------");
-          println!("--------------- 4. Collect the iterator into a collection: -------------");
-          println!("------------------------------------------------------------------------");
-          // This requires an annotation of which collection we want
-          // The following two are equivalent:
-          let nums: Vec<_> = (1..10).collect();
-          println!("nums: {:?}", nums);
-          let nums = (1..10).collect::<Vec<_>>();
-          println!("nums: {:?}", nums);
-
-
-          println!("------------------------------------------------------------------------");
-          println!("------------- 5. Change which items are being iterated over: -----------");
-          println!("------------------------------------------------------------------------");
-          // Taking only the first n items This is often used to make an infinite iterator finite
-          let nums: Vec<_> = all_nums.take(5).collect();
-          println!("The first five numbers are: {:?}", nums);
-
-          // Skip the first few items
-          let nums: Vec<_> = (0..11).skip(2).collect();
-          println!("The last 8 letters in a range from zero to 10: {:?}", nums);
-
-          // take and skip accept predicates in the form of `take_while` and skip_while
-          let nums: Vec<_> = (0..).take_while(|x| x * x < 50).collect();
-          println!("All positive numbers that are less than 50 when squared: {:?}", nums);
-
-          // This is useful to filter an already sorted vector
-          let names = ["Alfred", "Andy", "Jose", "Luke"];
-          let names: Vec<_> = names.iter()
-              .skip_while(|x| x.starts_with('A'))
-              .collect();
-          println!("Names that don't start with 'A': {:?}", names);
-
-          // Filtering iterators
-          let countries = [
-              "U.S.A.",
-              "Germany",
-              "France",
-              "Italy",
-              "India",
-              "Pakistan",
-              "Burma",
-          ];
-
-          let countries_with_i: Vec<_> = countries
-              .iter()
-              .filter(|country| country.contains('i'))
-              .collect();
-
-          println!(
-              "Countries containing the letter 'i': {:?}",
-              countries_with_i
-          );
-
-
-          println!("------------------------------------------------------------------------");
-          println!("-------------- 6. Check if an iterator contains an element: ------------");
-          println!("------------------------------------------------------------------------");
-          // Find the first element that satisfies a condition
-          if let Some(country) = countries.iter().find(|country|
-                                                       country.starts_with('I')) {
-              println!("First country starting with the letter 'I': {}", country);
-          }
-
-          // Don't get the searched item but rather its index
-          if let Some(pos) = countries
-              .iter()
-              .position(|country| country.starts_with('I'))
-          {
-              println!("It's index is: {}", pos);
-          }
-
-          // Check if at least one item satisfies a condition
-          let are_any = countries.iter().any(|country| country.len() == 5);
-          println!("Is there at least one country that has exactly five letters? {}", are_any);
-
-          // Check if ALL items satisfy a condition
-          let are_all = countries.iter().all(|country| country.len() == 5);
-          println!("Do all countries have exactly five letters? {}", are_all);
-
-
-          println!("------------------------------------------------------------------------");
-          println!("---------------- 7. Useful operations for numeric items: ---------------");
-          println!("------------------------------------------------------------------------");
-          let sum: i32 = (1..11).sum();
-          let product: i32 = (1..11).product();
-          println!("When operating on the first ten positive numbers\n\
-                    their sum is {} and\n\
-                    their product is {}.",
-                   sum, product);
-
-          if let Some(max) = (1..11).max() {
-              println!("They have a highest number, and it is {}", max);
-          }
-
-          if let Some(min) = (1..11).min() {
-              println!("They have a smallest number, and it is {}", min);
-          }
-
-
-          println!("------------------------------------------------------------------------");
-          println!("------------------------- 8. Combine iterators: ------------------------");
-          println!("------------------------------------------------------------------------");
-          // Combine an iterator with itself, making it infinite
-          // When it reaches its end, it starts again
-          let some_numbers: Vec<_> = (1..4).cycle().take(10).collect();
-          // Reader exercise: Try to guess what this will print
-          println!("some_numbers: {:?}", some_numbers);
-
-          // Combine two iterators by putting them after another
-          let some_numbers: Vec<_> = (1..4).chain(10..14).collect();
-          println!("some_numbers: {:?}", some_numbers);
-
-          // Zip two iterators together by grouping their first items
-          // together, their second items together, etc.
-          let swiss_post_codes = [8957, 5000, 5034];
-          let swiss_towns = ["Spreitenbach", "Aarau", "Suhr"];
-          let zipped: Vec<_> =
-              swiss_post_codes.iter().zip(swiss_towns.iter()).collect();
-          println!("zipped: {:?}", zipped);
-
-          // Because zip is lazy, you can use two infine ranges
-          let zipped: Vec<_> = (b'A'..)
-              .zip(1..)
-              .take(10)
-              .map(|(ch, num)| (ch as char, num))
-              .collect();
-          println!("zipped: {:?}", zipped);
-
-
-          println!("-------------------------------------------------------------------------");
-          println!("-------------------- 9. Apply functions to all items: -------------------");
-          println!("-------------------------------------------------------------------------");
-          // Change the items' types
-          let numbers_as_strings: Vec<_> = (1..11).map(|x| x.to_string()).collect();
-          println!("numbers_as_strings: {:?}", numbers_as_strings);
-
-          // Access all items
-          println!("First ten squares:");
-          (1..11).for_each(|x| print!("{} ", x));
-          println!();
-
-          // filter and map items at the same time!
-          let squares: Vec<_> = (1..50)
-              .filter_map(|x| if x % 3 == 0 { Some(x * x) } else { None })
-              .collect();
-          println!("Squares of all numbers under 50 that are divisible by 3: {:?}", squares);
-
-
-          println!("-------------------------------------------------------------------------");
-          println!("----- 10. The real strength of iterators comes from combining them: -----");
-          println!("-------------------------------------------------------------------------");
-          // Retrieve the entire alphabet in lower and uppercase:
-          let alphabet: Vec<_> = (b'A' ..= b'z') // Start as u8
-              .map(|c| c as char) // Convert all to chars
-              .filter(|c| c.is_alphabetic()) // Filter only alphabetic chars
-              .collect(); // Collect as Vec<char>
-          println!("alphabet: {:?}", alphabet);
+      // Iterate over the character
+      // A "character" is defined here as a
+      // Unicode Scalar Value
+      for ch in "Tubular".chars() {
+          print!("{}.", ch);
       }
-    #+END_SRC
+
+      // Be careful though, a "character" might not
+      // always be what you expect
+      for ch in "y̆".chars() {
+          // This does NOT print y̆
+          print!("{} ", ch);
+      }
+
+      println!("------------------------------------------------------------------------");
+      println!("------- Use the following code to split a string in various ways: ------");
+      println!("------------------------------------------------------------------------");
+      // Split a string slice into two halves
+      let (first, second) = "HelloThere".split_at(5);
+      println!("first: {}, second: {}", first, second);
+
+      // Split on individual lines
+      let haiku = "\
+                   she watches\n\
+                   satisfied after love\n\
+                   he lies\n\
+                   looking up at nothing\n\
+                   ";
+      for line in haiku.lines() {
+          println!("\t{}.", line);
+      }
+      // Split on substrings
+      for s in "Never;Give;Up".split(';') {
+          println!("{}", s);
+      }
+      // When the splitted string is at the beginning or end,
+      // it will result in the empty string
+      let s: Vec<_> = "::Hi::There::".split("::").collect();
+      println!("{:?}", s);
+
+      // If you can eliminate the empty strings at the end
+      // by using split_terminator
+      let s: Vec<_> = "Mr. T.".split_terminator('.').collect();
+      println!("{:?}", s);
+
+      // char has a few method's that you can use to split on
+      for s in "I'm2fast4you".split(char::is_numeric) {
+          println!("{}", s);
+      }
+
+      // Split only a certain amount of times
+      for s in "It's not your fault, it's mine".splitn(3, char::is_whitespace) {
+          println!("{}", s);
+      }
+
+      // Get only the substrings that match a pattern
+      // This is the opposite of splitting
+      for c in "The Dark Knight rises".matches(char::is_uppercase) {
+          println!("{}", c);
+      }
+
+      // Check if a string starts with something
+      let saying = "The early bird gets the worm";
+      let starts_with_the = saying.starts_with("The");
+      println!(
+          "Does \"{}\" start with \"The\"?: {}",
+          saying,
+          starts_with_the
+      );
+      let starts_with_bird = saying.starts_with("bird");
+      println!(
+          "Does \"{}\" start with \"bird\"?: {}",
+          saying,
+          starts_with_bird
+      );
+
+      // Check if a string ends with something
+      let ends_with_worm = saying.ends_with("worm");
+      println!("Does \"{}\" end with \"worm\"?: {}", saying,
+               ends_with_worm);
+
+      // Check if the string contains something somewhere
+      let contains_bird = saying.contains("bird");
+      println!("Does \"{}\" contain \"bird\"?: {}", saying,
+               contains_bird);
+
+      println!("--------------------------------");
+      println!("------ Remove whitespace: ------");
+      println!("--------------------------------");
+      // Splitting on whitespace might not result in what you expect
+      let a_lot_of_whitespace = "    I   love spaaace     ";
+      let s: Vec<_> = a_lot_of_whitespace.split(' ').collect();
+      println!("{:?}", s);
+      // Use split_whitespace instead
+      let s: Vec<_> = a_lot_of_whitespace.split_whitespace().collect();
+      println!("{:?}", s);
+
+      // Remove leading and trailing whitespace
+      let username = "   P3ngu1n\n".trim();
+      println!("{}", username);
+      // Remove only leading whitespace
+      let username = "   P3ngu1n\n".trim_left();
+      println!("{}", username);
+      // Remove only trailing whitespace
+      let username = "   P3ngu1n\n".trim_right();
+      println!("{}", username);
+
+
+      // Parse a string into another data type
+      // This requires type annotation
+      let num = "12".parse::<i32>();
+      if let Ok(num) = num {
+          println!("{} * {} = {}", num, num, num * num);
+      }
+
+      println!("--------------------------------");
+      println!("------ Modify the string: ------");
+      println!("--------------------------------");
+      // Replace all occurrences of a pattern
+      let s = "My dad is the best dad";
+      let new_s = s.replace("dad", "mom");
+      println!("new_s: {}", new_s);
+
+      // Replace all characters with their lowercase
+      let lowercase = s.to_lowercase();
+      println!("lowercase: {}", lowercase);
+
+      // Replace all characters with their uppercase
+      let uppercase = s.to_uppercase();
+      println!("uppercase: {}", uppercase);
+
+      // These also work with other languages
+      let greek = "ὈΔΥΣΣΕΎΣ";
+      println!("lowercase greek: {}", greek.to_lowercase());
+
+      // Repeat a string
+      let hello = "Hello! ";
+      println!("Three times hello: {}", hello.repeat(3));
+  }
+#+END_SRC
 
 *** DONE How it works..
-    CLOSED: [2018-06-26 Tue 20:38]
-    - I mention that /ranges/ are *limited*.
-      BECAUSE, in order to be /iterable/, the range-type has to implement ~Step~.
-      ~char~ does *NOT*, so you wouldn't be able to use ~'A'..'D'~.
+CLOSED: [2018-06-26 Tue 19:46]
+- Essentially, being a kind of /vector/, a /string/ can be created the same way
+  by combining ~new~ and ~push~;
+    HOWEVER, because this is really inconvenient, a /string/, which is an
+  owned chunk of memory, can be created from a /string slice (~&str~)/, which
+  is either a /borrowed string/ or a /literal/. Both of the ways to do it,
+  that are shown in this recipe, are equivalent:
+  #+BEGIN_SRC rust
+    let s = "Hello".to_string();
+    // let s = "Hello".to_owned();
+    println!("s: {}", s);
+    let s = String::from("Hello");
+    println!("s: {}", s);
+  #+END_SRC
+
+- Out of pure personal preference, we will use the first variant.
+  #+BEGIN_QUOTE
+  Before Rust 1.9, ~to_owned()~ _WAS the fastest way_ to create a string.
+
+  Now, ~to_string()~ is equally performant and should be preferred,
+
+  because it *offers more clarity over what is done*. We mention this
+  because many old tutorials and guides have not been updated since then,
+  and still use ~to_owned()~.
+  #+END_QUOTE
+
+  =From Jian= I prefer the ~to_owned()~, which offers more clarity in /type/
+  and /ownership/.
+
+- Use the ~.chars()~ /method/, you may get surprised sometimes -- a grapheme
+  can look like a character, but NOT must be.
+    You can get around this by using the Unicode-segmentation /crate/, which
+  supports *iteration over graphemes*: https://crates.io/crates/unicode-segmentation.
+
+- The ~.split~, ~.split_whitespace~, and ~.split_terminator~ /methods/.
+
+*** DONE There's more
+CLOSED: [2018-06-26 Tue 19:32]
+The implementation of ~String~ should not be much of a surprise -- it's just
+a kind of /vector/.
+
+** DONE Accessing collections as iterators
+CLOSED: [2018-06-26 Tue 20:40]
+- If you come from C#, you will already be familiar with /iterators/ because
+  of /Linq/. Rust's /iterators/ are kind of _similar_, but come with a more
+  functional approach to things.
+
+*** DONE How to do it
+CLOSED: [2018-06-26 Tue 20:30]
+Create =iterator.rs= in the folder =src/bin=, paste the code below, and then run
+=cargo run --bin iterator=
+
+#+BEGIN_SRC rust
+  fn main() {
+      let names = vec!["Joe", "Miranda", "Alice"];
+      // Iterators can be accessed in many ways.
+      // Nearly all collections implement .iter() for this purpose
+      let mut iter = names.iter();
+      // A string itself is not iterable, but its characters are
+      let mut alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+      // Ranges are also (limited) iterators
+      let nums = 0..10;
+      // You can even create infinite iterators!
+      let all_nums = 0..;
+
+      // As the name says, you can iterate over iterators
+      // This will consume the iterator
+      for num in nums {
+          print!("{} ", num);
+      }
+      // nums is no longer usable
+      println!();
+
+      // Get the index of the current item
+      for (index, letter) in "abc".chars().enumerate() {
+          println!("#{}. letter in the alphabet: {}",
+                   index + 1,
+                   letter);
+      }
+
+
+      println!("--------------------------------------------------------------");
+      println!("----------------- 3. Access individual items: ----------------");
+      println!("--------------------------------------------------------------");
+      // going through an iterator, step by step
+      if let Some(name) = iter.next() {
+          println!("First name: {}", name);
+      }
+      if let Some(name) = iter.next() {
+          println!("Second name: {}", name);
+      }
+      if let Some(name) = iter.next() {
+          println!("Third name: {}", name);
+      }
+      if iter.next().is_none() {
+          println!("No names left");
+      }
+
+      // Arbitrary access to an item in the iterator
+      if let Some(letter) = alphabet.nth(3) {
+          println!("the fourth letter in the alphabet is: {}", letter);
+      }
+
+      // This works by consuming all items up to a point
+      if let Some(current_first) = alphabet.nth(0) {
+          // This will NOT print 'A'
+          println!("The first item in the iterator is currently: {}", current_first);
+      }
+
+      if let Some(current_first) = alphabet.nth(0) {
+          println!("The first item in the iterator is currently: {}", current_first);
+      }
+
+      // Accessing the last item; This will consume the entire iterator
+      if let Some(last_letter) = alphabet.last() {
+          println!("The last letter of the alphabet is: {}",
+                   last_letter);
+      }
+
+
+      println!("------------------------------------------------------------------------");
+      println!("--------------- 4. Collect the iterator into a collection: -------------");
+      println!("------------------------------------------------------------------------");
+      // This requires an annotation of which collection we want
+      // The following two are equivalent:
+      let nums: Vec<_> = (1..10).collect();
+      println!("nums: {:?}", nums);
+      let nums = (1..10).collect::<Vec<_>>();
+      println!("nums: {:?}", nums);
+
+
+      println!("------------------------------------------------------------------------");
+      println!("------------- 5. Change which items are being iterated over: -----------");
+      println!("------------------------------------------------------------------------");
+      // Taking only the first n items This is often used to make an infinite iterator finite
+      let nums: Vec<_> = all_nums.take(5).collect();
+      println!("The first five numbers are: {:?}", nums);
+
+      // Skip the first few items
+      let nums: Vec<_> = (0..11).skip(2).collect();
+      println!("The last 8 letters in a range from zero to 10: {:?}", nums);
+
+      // take and skip accept predicates in the form of `take_while` and skip_while
+      let nums: Vec<_> = (0..).take_while(|x| x * x < 50).collect();
+      println!("All positive numbers that are less than 50 when squared: {:?}", nums);
+
+      // This is useful to filter an already sorted vector
+      let names = ["Alfred", "Andy", "Jose", "Luke"];
+      let names: Vec<_> = names.iter()
+          .skip_while(|x| x.starts_with('A'))
+          .collect();
+      println!("Names that don't start with 'A': {:?}", names);
+
+      // Filtering iterators
+      let countries = [
+          "U.S.A.",
+          "Germany",
+          "France",
+          "Italy",
+          "India",
+          "Pakistan",
+          "Burma",
+      ];
+
+      let countries_with_i: Vec<_> = countries
+          .iter()
+          .filter(|country| country.contains('i'))
+          .collect();
+
+      println!(
+          "Countries containing the letter 'i': {:?}",
+          countries_with_i
+      );
+
+
+      println!("------------------------------------------------------------------------");
+      println!("-------------- 6. Check if an iterator contains an element: ------------");
+      println!("------------------------------------------------------------------------");
+      // Find the first element that satisfies a condition
+      if let Some(country) = countries.iter().find(|country|
+                                                   country.starts_with('I')) {
+          println!("First country starting with the letter 'I': {}", country);
+      }
+
+      // Don't get the searched item but rather its index
+      if let Some(pos) = countries
+          .iter()
+          .position(|country| country.starts_with('I'))
+      {
+          println!("It's index is: {}", pos);
+      }
+
+      // Check if at least one item satisfies a condition
+      let are_any = countries.iter().any(|country| country.len() == 5);
+      println!("Is there at least one country that has exactly five letters? {}", are_any);
+
+      // Check if ALL items satisfy a condition
+      let are_all = countries.iter().all(|country| country.len() == 5);
+      println!("Do all countries have exactly five letters? {}", are_all);
+
+
+      println!("------------------------------------------------------------------------");
+      println!("---------------- 7. Useful operations for numeric items: ---------------");
+      println!("------------------------------------------------------------------------");
+      let sum: i32 = (1..11).sum();
+      let product: i32 = (1..11).product();
+      println!("When operating on the first ten positive numbers\n\
+                their sum is {} and\n\
+                their product is {}.",
+               sum, product);
+
+      if let Some(max) = (1..11).max() {
+          println!("They have a highest number, and it is {}", max);
+      }
+
+      if let Some(min) = (1..11).min() {
+          println!("They have a smallest number, and it is {}", min);
+      }
+
+
+      println!("------------------------------------------------------------------------");
+      println!("------------------------- 8. Combine iterators: ------------------------");
+      println!("------------------------------------------------------------------------");
+      // Combine an iterator with itself, making it infinite
+      // When it reaches its end, it starts again
+      let some_numbers: Vec<_> = (1..4).cycle().take(10).collect();
+      // Reader exercise: Try to guess what this will print
+      println!("some_numbers: {:?}", some_numbers);
+
+      // Combine two iterators by putting them after another
+      let some_numbers: Vec<_> = (1..4).chain(10..14).collect();
+      println!("some_numbers: {:?}", some_numbers);
+
+      // Zip two iterators together by grouping their first items
+      // together, their second items together, etc.
+      let swiss_post_codes = [8957, 5000, 5034];
+      let swiss_towns = ["Spreitenbach", "Aarau", "Suhr"];
+      let zipped: Vec<_> =
+          swiss_post_codes.iter().zip(swiss_towns.iter()).collect();
+      println!("zipped: {:?}", zipped);
+
+      // Because zip is lazy, you can use two infine ranges
+      let zipped: Vec<_> = (b'A'..)
+          .zip(1..)
+          .take(10)
+          .map(|(ch, num)| (ch as char, num))
+          .collect();
+      println!("zipped: {:?}", zipped);
+
+
+      println!("-------------------------------------------------------------------------");
+      println!("-------------------- 9. Apply functions to all items: -------------------");
+      println!("-------------------------------------------------------------------------");
+      // Change the items' types
+      let numbers_as_strings: Vec<_> = (1..11).map(|x| x.to_string()).collect();
+      println!("numbers_as_strings: {:?}", numbers_as_strings);
+
+      // Access all items
+      println!("First ten squares:");
+      (1..11).for_each(|x| print!("{} ", x));
+      println!();
+
+      // filter and map items at the same time!
+      let squares: Vec<_> = (1..50)
+          .filter_map(|x| if x % 3 == 0 { Some(x * x) } else { None })
+          .collect();
+      println!("Squares of all numbers under 50 that are divisible by 3: {:?}", squares);
+
+
+      println!("-------------------------------------------------------------------------");
+      println!("----- 10. The real strength of iterators comes from combining them: -----");
+      println!("-------------------------------------------------------------------------");
+      // Retrieve the entire alphabet in lower and uppercase:
+      let alphabet: Vec<_> = (b'A' ..= b'z') // Start as u8
+          .map(|c| c as char) // Convert all to chars
+          .filter(|c| c.is_alphabetic()) // Filter only alphabetic chars
+          .collect(); // Collect as Vec<char>
+      println!("alphabet: {:?}", alphabet);
+  }
+#+END_SRC
+
+*** DONE How it works..
+CLOSED: [2018-06-26 Tue 20:38]
+- I mention that /ranges/ are *limited*.
+  BECAUSE, in order to be /iterable/, the range-type has to implement ~Step~.
+  ~char~ does *NOT*, so you wouldn't be able to use ~'A'..'D'~.
 
 *** DONE There's more..
-    CLOSED: [2018-06-26 Tue 20:38]
-    - ~iter()~ creates an /iterator/ that *borrows* items.
+CLOSED: [2018-06-26 Tue 20:38]
+- ~iter()~ creates an /iterator/ that *borrows* items.
 
-      ~into_iter()~ creates an /iterator/ that can be used to consume /items/
-      with /ownership/ by *moving* them.
+  ~into_iter()~ creates an /iterator/ that can be used to consume /items/
+  with /ownership/ by *moving* them.
 
 *** TODO See also
 
-** TODO Using A ~VecDeque~
+** TODO Using a ~VecDeque~
 *** How to do it..
 *** How it works..
 *** There's more..
 
-** TODO Using A ~HashMap~
+** TODO Using a ~HashMap~
 *** How to do it..
 *** How it works..
 *** There's more..
 
-** TODO Using A ~HashSet~
+** TODO Using a ~HashSet~
 *** How to do it..
 *** How it works..
 *** There's more..
 
-** TODO Creating An Own ~iterator~
+** TODO Creating an own ~iterator~
 *** How to do it..
 *** How it works..
 *** There's more..
 
-** TODO Using A slab
+** TODO Using a slab
 *** How to do it..
 *** How it works..
 *** There's more..

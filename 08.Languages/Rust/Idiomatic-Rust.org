@@ -1589,7 +1589,8 @@ CLOSED: [2024-10-06 Sun 00:22]
   userfriendly_ by re-exporting the most useful parts of our library under one
   module (usually named ~prelude~).
 
-* TODO PART 4 PROBLEM AVOIDANCE - 187
+* DONE PART 4 PROBLEM AVOIDANCE - 187
+CLOSED: [2024-11-23 Sat 18:48]
 - In the last part of the book, we FOCUS
   * _less on_ which patterns to USE and
   * _more on_ which patterns to *avoid.*
@@ -2118,7 +2119,8 @@ CLOSED: [2024-11-23 Sat 01:39]
   immutability*, which can be used as a building block for programs and
   libraries that use immutable data.
 
-** TODO 10 Antipatterns - 205 - =...ing=
+** DONE 10 Antipatterns - 205
+CLOSED: [2024-11-23 Sat 18:48]
 - This chapter covers
   * Discussing programming antipatterns
   * Reviewing common antipatterns in Rust
@@ -2147,11 +2149,236 @@ CLOSED: [2024-10-06 Sun 23:36]
   that are *OBJECTIVELY bad*, such as when it's _unsafe_, _inefficient_, or
   _difficult to maintain_.
 
-*** TODO 10.2 Using ~unsafe~ - 207
-**** 10.2.1 What does ~unsafe~ do? - 208
-**** 10.2.2 Where can you use ~unsafe~? - 209
-**** 10.2.3 When should you use ~unsafe~? - 211
-**** 10.2.4 Should you worry about ~unsafe~? - 211
+*** DONE 10.2 Using ~unsafe~ - 207 - =REVIEW=
+CLOSED: [2024-11-23 Sat 18:40]
+- You can think of ~unsafe~ as _an escape hatch_ that allows you to perform
+  operations that _violate Rust's language rules_, such as
+  * working with /raw pointers/
+  * calling C functions
+  * accessing or modifying resources _OUTSIDE_ a program's allocated memory space
+
+- =IMPORTANT=
+  Listing 10.1 ~Vec::insert()~ from the Rust standard library
+  =TODO= Read the code again!!!
+
+**** DONE 10.2.1 What does ~unsafe~ do? - 208
+CLOSED: [2024-11-23 Sat 18:14]
+- The ~unsafe~ keyword in Rust has the following *EFFECTS*:
+  It allows you to
+  * *dereference* /raw pointers/.
+  * *call* /unsafe functions or methods/.
+  * *access or modify* /mutable static variables/.
+  * *implement* /unsafe traits/.
+  * *access* fields of /union types/, which are provided for C compatibility.
+
+- In practice, you'll need to use ~unsafe~ most frequently when you're working
+  with _C libraries_ or _other FFI-based code_.
+
+- If you want to integrate with a Python library, for example, you must use
+  ~unsafe~ to call _the Python C API_.
+
+  _BUT_ you'd likely be better off using a framework such as PyO3
+  (https://github.com/PyO3/pyo3) that provides the necessary bindings.
+
+- C libraries in particular are known for their use of
+  * /raw pointers/,
+  * MANUAL memory allocation and deallocation, and
+  * other no-nos in Rust.
+
+- You need to use C libraries when you're working with /system calls/, which you
+  must do to interact with the OS:
+  * reading and writing files
+  * creating and managing processes
+  * accessing peripherals
+  * and so on
+
+- /The Rust standard library/ provides many _safe abstractions_, so you don't
+  need to write /unsafe code/ yourself, but you should be aware that you're
+  using /unsafe code/ when you use these abstractions.
+
+  * The ~std::ffi~ module, for example, provides _safe abstractions_ over /FFI/,
+    such as
+    + ~CString~
+    + ~CStr~
+    + ~OsStr~
+    + ~OsString~
+
+  * The ~std::fs~ module provides _safe abstractions_ over _file I/O_, such as
+    + ~File~
+    + ~DirEntry~
+    + ~Metadata~
+
+  * The ~std::process~ module provides safe abstractions over _process
+    management_, such as
+    + ~Command~
+    + ~ExitStatus~
+    + ~Stdio~.
+
+- For /pointer arithmetic/, the ~std::ptr~ module provides abstractions that
+  allow you to work with /pointers/. *Most of the key /methods/ are ~unsafe~,*
+  however, thus requiring the use of ~unsafe~ blocks.
+
+- /Memory allocation and deallocation/ are also *unsafe operations*, and /the
+  standard library/ provides _safe abstractions_ over these operations, such as
+  * ~Box~
+  * ~Vec~
+  * ~String~
+
+- Under the hood, ~Box~, ~Vec~, and ~String~ use Rust's ~Allocator~ trait, which
+  wraps ~malloc()~ and ~free()~ in UNIX-like systems and ~HeapAlloc()~ and
+  ~HeapFree()~ in Windows.
+
+  * The _allocator API_ is a set of /unsafe functions/ that are part of the
+    unsafe ~Allocator~ trait, which allows you to allocate and deallocate
+    memory, and the standard library uses it to provide safe abstractions over
+    memory allocation and deallocation.
+
+    + The _allocator API_ is *still experimental* and available only in nightly
+      Rust.
+
+**** DONE 10.2.2 Where can you use ~unsafe~? - 209
+CLOSED: [2024-11-23 Sat 18:38]
+- You can use ~unsafe~ in the following ways:
+  * Define _an ~unsafe~ code block_, such as ~unsafe { ... }~.
+    The block is evaluated as an expression.
+
+  * Define _an ~unsafe~ function_, such as ~unsafe fn foo() { ... }~.
+    You can call an /unsafe function/ only from within an /unsafe block/ or
+    another /unsafe function/.
+
+  * Define _an ~unsafe~ trait_, such as ~unsafe trait Foo { ... }~.
+    _An /unsafe trait/ can contain safe and unsafe methods,_ BUT you can call an
+    /unsafe method/ only from within an /unsafe block or function/.
+    + Any trait _with *one or more* unsafe methods_ is considered *unsafe*.
+
+- Listing 10.2 Defining an unsafe function to call ~printf()~
+  #+begin_src rust
+    unsafe fn unsafe_function() {
+        libc::printf(
+            "calling C's printf() within unsafe_function()\n\0".as_ptr()
+                as *const i8,
+        );
+    }
+
+    // Test
+    unsafe {
+        unsafe_function();
+    }
+
+    // Output:
+    // calling C's printf() within unsafe_function()
+  #+end_src
+
+- Listing 10.4 Defining an ~unsafe~ trait
+  #+begin_src rust
+    unsafe trait UnsafeTrait {
+        fn safe_method(&self);
+        unsafe fn unsafe_method(&self);
+    }
+
+    struct MyStruct;
+
+    unsafe impl UnsafeTrait for MyStruct {
+        fn safe_method(&self) {
+            println!("calling println!() within UnsafeTrait::safe_method()");
+        }
+
+        unsafe fn unsafe_method(&self) {
+            libc::printf(
+                "calling C's printf() within UnsafeTrait::unsafe_method()\n\0"
+                    .as_ptr() as *const i8,
+            );
+        }
+    }
+
+    // Test
+    let my_struct = MyStruct;
+    my_struct.safe_method();
+    unsafe {
+        my_struct.unsafe_method();
+    }
+
+    // calling println!() within UnsafeTrait::safe_method()
+    // calling C's printf() within UnsafeTrait::unsafe_method()
+  #+end_src
+
+- You can use the ~#![forbid(unsafe_code)]~ attribute to ensure that your crate
+  doesn't contain unsafe code,
+  _BUT_
+  the attribute doesn't apply to crates you include as dependencies or to the
+  Rust standard library.
+
+  * Listing 10.6 Using ~#![forbid(unsafe_code)]~
+    #+begin_src rust
+      #![forbid(unsafe_code)]
+      fn main() {
+          //// Uncommenting this line will cause a compilation error.
+          ////
+          // unsafe {
+          // libc::printf("Hello, world!\n".as_ptr() as *const _);
+          // }
+
+          let mut fruits = vec!["apple", "banana", "cherry"];
+          // This line will not cause a compilation error even though it calls
+          // Vec::insert(), which contains unsafe code.
+          fruits.insert(0, "orange");
+      }
+    #+end_src
+
+- =IMPORTANT=
+  *NOTE*
+  At the time of this writing, Rust doesn't provide a way to ensure that
+  dependencies are free of unsafe code,
+  _BUT_
+  the *cargo-geiger* crate (https://crates.io/crates/cargo-geiger) can be used
+  to analyze the amount of unsafe code in a crate and its dependencies.
+
+**** DONE 10.2.3 When should you use ~unsafe~? - 211
+CLOSED: [2024-11-23 Sat 16:50]
+- The main use cases for *unsafe code* are as follows:
+  * Working with C libraries or other FFI-based code
+
+  * Making system calls that don't have safe abstractions in the standard
+    library
+
+  * Implementing safe abstractions over unsafe code
+
+  * Writing low-level optimizations that can't be expressed safely
+
+- When using unsafe code is unavoidable, you can reduce the likelihood of
+  introducing critical bugs by using robust tools such as:
+  * /property testing/
+  * /fuzz testing/
+  * /static analysis tools/
+
+- =IMPORTANT=
+  The Rust community has developed a set of guidelines for unsafe use, which
+  you can find at https://rust-lang.github.io/unsafe-code-guidelines.
+
+**** DONE 10.2.4 Should you worry about ~unsafe~? - 211
+CLOSED: [2024-11-23 Sat 16:35]
+- The standard library is well tested and well maintained.
+  Mostly, there is no need to worry about the ~unsafe~ it used.
+
+- The author has encountered cases in which the use of ~unsafe~ code was
+  necessary, such as working with OS-level abstractions that are *not fully
+  covered by* the standard library:
+
+  One downside to the standard library's abstractions is that they're designed
+  to be cross-platform, and they generally represent the lowest common
+  denominator of what's possible on all platforms.
+
+  _AS A RESULT_, you may need to *use ~unsafe~ code to access*
+  _platform-specific features_ such as the Windows API or to *take advantage of
+  platform-specific optimizations*.
+
+- ~unsafe~ code isn't as scary as it’s made out to be
+  IF you have a good grasp of Rust, the borrow checker, and best practices for
+  managing resources in Rust, such as using resource acquisition is
+  initialization (RAII) and smart pointers.
+  * =from Jian=
+    ~unsafe~ turn off some checks, and it you understand those check, you know
+    how to write SAFE ~unsafe~ code.
 
 *** DONE 10.3 Using ~unwrap()~ - 212
 CLOSED: [2024-10-05 Sat 21:54]
@@ -2298,9 +2525,211 @@ or linked lists.
 
 *** DONE 10.5 Too many clones - 216
 CLOSED: [2024-10-05 Sat 22:21]
-*** TODO 10.6 Using ~Deref~ to emulate polymorphism - 217
-*** TODO 10.7 Global data and singletons - 221
-*** DONE 10.8 Too many smart pointers - 221
+*** DONE 10.6 Using ~Deref~ to emulate polymorphism - 217 - =REVIEW=
+CLOSED: [2024-11-23 Sat 15:47]
+/Polymorphism/ is a technique that allows you to treat objects of different
+types as though they're the same type.
+
+- Object-oriented languages encourage the use of /polymorphism/ through
+  /subtyping/ or /inheritance/, _which are notably *absent* from Rust._
+  * =from Jian=
+    + You should step back and think your design again when you want to simulate
+      /subtyping polymorphism/.
+
+    + Rust support /ad hoc polymorphism/ through /traits/, mostly you should use
+      it!
+
+- Sometimes, we use the ~Deref~ trait to make it easier to work with objects by
+  letting the compiler infer the methods we want to call by using ~Deref~
+  coercion.
+  * This approach _isn't necessarily bad_,
+    =IMPORTANT=
+    _BUT_ it can be a sign that we're *NOT* thinking about our design in a way
+    that's idiomatic to Rust.
+
+- =from Jian= _Mostly, ~DeRef~ is implemented for smart pointers._
+
+- Bad design: by using ~Deref~, use the ~Person~ as its first field, a ~String~
+  value.
+  #+begin_src rust
+    use std::ops::Deref;
+
+    struct Person(String, String, u32);
+
+    impl Deref for Person {
+        type Target = String;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    fn main() {
+        let ferris = Person("Ferris".to_string(), "Bueller".to_string(), 17);
+        println!("Hello, {}!", *ferris);
+        println!("The length of a person is {}", ferris.len());
+    }
+  #+end_src
+  A method called ~first_name~ can be much straightforward and clear.
+
+- Emulating /subtyping polymorphism/ with /trait objects/ is a good practice.
+  Emulating /subtyping polymorphism/ with ~Deref~ is an antipattern.
+  =from Jian=
+  Of course, emulating /subtyping polymorphism/ in Rust shouldn't be necessary
+  in many cases. Overuse this is also an antipattern in Rust!
+
+  * Use /trait objects/
+    #+begin_src rust
+      trait Animal {
+          fn speak(&self) -> &str;
+          fn name(&self) -> &str;
+      }
+
+      // Dog
+      struct Dog {
+          name: String,
+      }
+
+      impl Dog {
+          fn new(name: &str) -> Self {
+              Self {
+                  name: name.to_string(),
+              }
+          }
+      }
+
+      impl Animal for Dog {
+          fn speak(&self) -> &str {
+              "Woof!"
+          }
+          fn name(&self) -> &str {
+              &self.name
+          }
+      }
+
+      // Cat
+      struct Cat {
+          name: String,
+      }
+
+      impl Cat {
+          fn new(name: &str) -> Self {
+              Self {
+                  name: name.to_string(),
+              }
+          }
+      }
+
+      impl Animal for Cat {
+          fn speak(&self) -> &str {
+              "Meow!"
+          }
+          fn name(&self) -> &str {
+              &self.name
+          }
+      }
+
+      fn main() {
+          let dog = Box::new(Dog::new("Rusty"));
+          let cat = Box::new(Cat::new("Misty"));
+          let animals: Vec<Box<dyn Animal>> = vec![dog, cat];
+          for animal in animals {
+              println!("{} says {}", animal.name(), animal.speak());
+          }
+      }
+    #+end_src
+
+  * Use ~Deref~ - *ANTIPATTERN*
+    #+begin_src rust
+      use std::ops::Deref;
+
+      struct Animal {
+          name: String,
+      }
+
+      impl Animal {
+          fn new(name: &str) -> Animal {
+              Animal { name: name.to_string() }
+          }
+          fn name(&self) -> &str {
+              &self.name
+          }
+      }
+
+      // Dog
+      struct Dog(Animal);
+
+      impl Dog {
+          fn new(name: &str) -> Self {
+              Self(Animal::new(name))
+          }
+          fn speak(&self) -> &str {
+              "Woof!"
+          }
+      }
+
+      impl Deref for Dog {
+          type Target = Animal;
+          fn deref(&self) -> &Self::Target {
+              &self.0
+          }
+      }
+
+      // Cat
+      struct Cat(Animal);
+
+      impl Cat {
+          fn new(name: &str) -> Self {
+              Self(Animal::new(name))
+          }
+          fn speak(&self) -> &str {
+              "Meow!"
+          }
+      }
+
+      impl Deref for Cat {
+          type Target = Animal;
+          fn deref(&self) -> &Self::Target {
+              &self.0
+          }
+      }
+
+      fn main() {
+          let dog = Dog::new("Rusty");
+          let cat = Cat::new("Misty");
+          println!("{} says: {}", dog.name(), dog.speak());
+          println!("{} says: {}", cat.name(), cat.speak());
+      }
+    #+end_src
+
+*** DONE 10.7 Global data and singletons - 221 - =REVIEW=
+CLOSED: [2024-11-23 Sat 16:09]
+- Rust doesn't have a built-in concept of global data or singletons, and
+  implementing these concepts requires some work.
+
+- The ~lazy_static~ crate
+  * Think twice before doing so.
+
+  * In many cases, you can *AVOID* /global data/ or /singletons/ by using
+    /dependency injection/ or _passing data around as arguments to functions_.
+
+- Global data and singletons can be problematic:
+  * they make it difficult to reason about the behavior of the library
+  * they can lead to unexpected behavior when the library is used in different contexts
+  * global data can become a bottleneck or a source of deadlocks in multithreaded programs
+  * it can lead to memory leaks and other resource management problems.
+
+- ~std::cell::OnceCell~ and ~std::sync::OnceLock~
+
+- The Rust way:
+  Rust provides ~std::cell::OnceCell~ and its thread-safe counterpart
+  ~std::sync::OnceLock~, which give you a safe way to create /singletons/.
+
+  As an alternative, your library can provide a function that initializes the
+  singleton, and you can decide how to manage the singleton. This approach is a
+  good way to provide flexibility and avoid the problems associated with global
+  data and singletons.
+
+*** DONE 10.8 Too many smart pointers - 221 - =REVIEW=
 CLOSED: [2024-10-07 Mon 13:42]
 - Rust provides the following core smart-pointer types:
   * ~Box~ - A smart pointer that
@@ -2336,8 +2765,41 @@ CLOSED: [2024-10-07 Mon 13:42]
   * A good rule of thumb is to try to write code without smart pointers and add
     them as required.
 
-*** TODO 10.9 Where to go from here - 223
-*** TODO Summary - 223
+*** DONE 10.9 Where to go from here - 223
+CLOSED: [2024-11-23 Sat 16:22]
+- Code Like a Pro in Rust
+  (https://www.manning.com/books/code-like-a-pro-in-rust).
+
+- Rust subreddit at https://reddit.com/r/rust
+  the Rust Discord server at https://discord.gg/rust-lang
+  the Rust user forums at https://users.rust-lang.org
+
+- =IMPORTANT=
+  *TIP*
+  David Tolnay's Rust Quiz, which is a fun way to hone skills and learn about
+  some of Rust's more esoteric syntax and features. You can find the quiz at
+  https://dtolnay.github.io/rust-quiz.
+
+*** DONE Summary - 223
+CLOSED: [2024-11-23 Sat 18:47]
+- The ~Deref~ trait is sometimes used to emulate polymorphism, which can be
+  confusing in Rust.
+  INSTEAD, you should rely on
+  * /traits/
+    or
+  * /generics/
+    or
+  * simply provide a method that returns the inner value as required.
+
+- Global data and singletons are often considered antipatterns in programming.
+  They can lead to a variety of problems, such as tight coupling, poor
+  testability, and difficulty in reasoning about code. In Rust, you can use
+  crates such as ~lazy_static~ to create global data or singletons, but always
+  think twice before doing so.
+
+- /Smart pointers/ are incredibly useful, but it’s possible to overuse them or
+  use the wrong smart pointer for the job. If you use /smart pointers/ as an
+  escape hatch to _avoid_ the /borrow checker/, think about your design.
 
 ** DONE appendix - Installing Rust - 225
 CLOSED: [2024-10-02 Wed 00:39]
