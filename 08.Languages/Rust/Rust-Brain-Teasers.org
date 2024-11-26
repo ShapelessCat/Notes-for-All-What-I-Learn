@@ -1,0 +1,471 @@
+#+TITLE: Rust Brain Teasers
+#+SUBTITLE: Exercise Your Mind
+#+AUTHOR: Herbert Wolverson, edited by Tammy Coron
+#+STARTUP: entitiespretty
+#+STARTUP: indent
+#+STARTUP: overview
+
+* Preface - vii
+- Rust is a very consistent language.
+  _HOWEVER_, the Rust language has a few quirks. Sometimes they creep in at the cracks
+  between systems, and sometimes they're a conscious design choice to avoid
+  doing something worse.
+
+- In this book, you'll review a series of self-contained Rust programs that
+  explore these quirks. Each program, known as a brain teaser, teaches an aspect
+  of Rust that is designed to surprise you.
+
+  * As you read each brain teaser, try to guess the program’s output correctly.
+    The possible answers are:
+    + The program won't compile.
+    + The program produces some unexpected output (for example, "Arithmetic
+      still works!").
+    + The program panics and terminates with an error message.
+
+** TODO About the Author
+
+* DONE Puzzle 1. Three and a Bit
+CLOSED: [2024-11-25 Mon 20:30]
+
+- IEEE-754 standard:
+  _Formula_: sign(-1 or 1) * 2^(exponent - 127) * 1.mantissa
+
+  * ~f32~: 1 bit Sign, 8 bits Exponent, 23 bits Mantissa
+  * ~f64~: 1 bit Sign, 11 bits Exponent, 52 bits Mantissa
+
+- =from Jian= Need practice and implementation
+
+* DONE Puzzle 2. Non-standard Input
+CLOSED: [2024-11-25 Mon 20:31]
+* DONE Puzzle 3. Type Conversion
+CLOSED: [2024-11-25 Mon 22:28]
+** Discussion
+- If you do plan to use the ~as~ keyword to convert between types -- as most of
+  the time Rust will perform the conversion just fine -- _keep the following
+  points in mind_:
+  * It is safe to convert a smaller type into a larger type.
+
+  * Numbers that are guaranteed to fit in both types, you won't lose any data.
+    HOWEVER,
+    be careful with user submitted data or the result of calculations.
+
+  * BE CAREFUL with _floating-point to integer conversions_
+    BECAUSE
+    *Rust ALWAYS _rounds down_.*
+    + With that in mind, it's better to indicate the desired behavior with the
+      methods ~floor~ to _round down_, ~ceil~ to _round up_, or ~round~ to
+      perform _normal numerical rounding_.
+
+    *Perform the rounding _BEFORE_ you use ~as~.*
+
+** Protecting Yourself Against Precision Loss
+- Use ~into~ or ~try_into~.
+  * ~Into<u64> for u32~ exists, while there is _NO_ impl for the opposite
+    direction.
+
+  * ~TryInto<u32> for u64~ exists.
+
+** Finding Type Conversion Errors with Clippy
+- By default _Clippy_ won't report any potential issues for conversion.
+  * Of course, it can always report error for literal value type conversion,
+    which can be detected at compile time.
+
+  * Ask _Clippy~ to report potential conversion issues with
+     ~#[warn(clippy::pedantic)]~.
+
+     =IMPORTANT= =from Jian= I need it when write numerical programs.
+
+* TODO Puzzle 4. Byte-Sized Chunks - =TODO: NOTE=
+* DONE Puzzle 5. How Long Is a String?
+CLOSED: [2024-11-25 Mon 22:55]
+- You may want ~a_string.chars().count()~ instead of ~a_string.len()~.
+  * The former is for number of glyphs.
+  * The latter is for the number of bytes.
+
+- If you're writing a program for _a memory constrained system_,
+  parsing /Unicode string character/ by /character/ can consume a lot more
+  memory than you expected.
+
+* DONE Puzzle 6. Please Reboot the Universe
+CLOSED: [2024-11-25 Mon 23:04]
+- _Clippy_ can detect the *float_cmp* error.
+  It suggests
+  #+begin_src rust
+    if (0.1f32 + 0.2f32 - 0.3f32).abs() < std::f32::EPSILON {
+        println!("Arithmetic works");
+    }
+  #+end_src
+  ~EPSILON~ is built-in to _EACH_ of Rust's floating-point types.
+
+- Comparison with ~EPSILON~ can be unwieldy.
+  _The ~float_cmp~ crate_ provides a convenient interface for calculating
+  approximate equality with the ~approx_eq!~ macro.
+
+- *Beware of External Libraries* - =from Jian= _Review this later_
+  Be especially careful when you're interacting with floating-point results from
+  external libraries.
+
+  If they were compiled with _the C ~fastmath~ extension_, they might be even
+  *MORE INACCURATE than you expected*.
+
+* DONE Puzzle 7. There and Back Again
+CLOSED: [2024-11-25 Mon 23:09]
+* DONE Puzzle 8. Walks Like a Duck, Quacks Like a Duck
+CLOSED: [2024-11-25 Mon 23:18]
+- You can pass a parameter with the syntax ~x as _~ if you want to do type
+  conversion. _No need to write the target type explicitly._
+
+- Underscores can be used with functions that return a value marked with
+  ~#[must_use]~. For example, ~let _ = my_important_function()~ will ignore the
+  result of the function, _SUPPRESSING errors or warnings_ that you’re not using
+  the result.
+
+* DONE Puzzle 9. Out of Order
+CLOSED: [2024-11-25 Mon 23:34]
+- Floating number types doesn't derive ~Ord~ (as well as ~Eq~),
+  because values in floating types are not always numbers.
+  I mean, ~NaN~ and ~Infinity~.
+
+- =IMPORTANT=
+  The tangent of 90 degrees is unfortunately not ~NaN~.
+  *It has a number value!*
+  This is because the *inaccuracies*.
+
+- Floating number types do derive ~PartialOrd~ and ~PartialEq~, and the
+  accompanying ~partial_cmp~.
+  * This works:
+    #+begin_src rust
+      let mut floats = vec![3.1, 1.2, 4.5, 0.3];
+      floats.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    #+end_src
+
+  * If your code might encounter an _invalid value_, you can use ~unwrap_or~ to
+    provide a default sort order for invalid numbers:
+    #+begin_src rust
+      use std::cmp::Ordering::Less;
+      let mut floats = vec![
+          3.1, 1.2, 4.5, 0.3, std::f32::INFINITY, std::f32::NAN
+      ];
+      floats.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Less));
+    #+end_src
+
+- Rust uses this design guideline:
+  _you need to write longer code to describe the operation that may includes
+  quirks_.
+
+- You may keep this function in your toolbox:
+  #+begin_src rust
+    fn float_sort<T : PartialOrd>(data: &mut [T]) {
+        use std::cmp::Ordering::Less;
+        data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Less));
+    }
+  #+end_src
+
+* DONE Puzzle 10. X Marks the Spot
+CLOSED: [2024-11-25 Mon 23:43]
+- Unicode allows for /homoglyphs/.
+  You need to pay attention, and don't trust you eyes.
+
+- Example:
+  In some fonts, like Windows _Consolas_, Latin X ~0x58~ is indistinguishable
+  with Greek capital letter Chi ~0xCE~ and ~0xA7~.
+
+- /Homoglyphs/ are popular in *phishing attacks*.
+
+- *Homoglyph Help Is on the Way* - =IMPORTANT=
+  - *WIP*
+    A Rust compiler warning is currently in development to help you identify
+    when you're using confusingly similar characters in your code. It isn't
+    perfect, but when this compiler feature is complete, it'll generate a
+    warning when you compile your code.
+
+  - You can also use the ~Nettfiske~ crate to detect likely obfuscations in text.
+
+** Multi-Glyph Homoglyphs
+The *unicode-reverse* crate can help with this particular case, but you need to
+be extra careful when editing UTF-8 strings because of this problem.
+
+- When working with unicode text with multi-glyph homoglyphs,
+  the *reverse operation* is not simple. You may need the help of
+  *unicode-reverse*.
+
+* TODO Puzzle 11. Stacking Boxes - =NOTE=
+* DONE Puzzle 12. Amnesia
+CLOSED: [2024-11-26 Tue 17:35]
+~std::mem::forget(...)~
+
+** Memory Leaks Are Safe?
+Deliberately leak memory operations, like ~std::mem::forget(...)~ and
+~Box::leak~, is *safe*.
+
+- Huon Wilson (Rust Core Team Alumni) summarizes Rust's philosophy on memory
+  leaks as follows:
+  #+begin_quote
+  Put simply: memory unsafety is doing something with invalid data, a memory
+  leak is not doing something with valid data.
+  #+end_quote
+
+- The Rust documentation adds to this statement:
+  #+begin_quote
+  ~forget~ is not marked as ~unsafe~, because Rust's safety guarantees do not
+  include a guarantee that destructors will always run. For example, a program
+  can create a reference cycle using ~Rc~, or call ~process::exit~ to exit
+  without running destructors. Thus, allowing ~mem::forget~ from safe code does
+  not fundamentally change Rust's safety guarantees.
+  #+end_quote
+
+- Rust provides TWO ways to stop using a variable:
+  * ~std::mem::drop~ and ~Drop~
+  * ~std::mem::forget~
+
+** Sometimes You Need to Forget
+*There are times that you need to forget a variable.*
+
+- One example,
+  you might be passing control over an area of memory or control handle to
+  another program and require that Rust not delete it.
+
+  * For example, if you've opened a file handle (with ~File::open~) and
+    immediately pass that handle to another application, you need to _forget the
+    handle_ so that your program doesn't close the handle, invalidating the
+    second program's access.
+
+- Another example,
+  interoperability with another program.
+
+  You might allocate an area of memory -- possibly in a specific location for
+  interprocess memory sharing -- and then you want to hand control of that
+  memory over to another program. You don't want Rust to clean the memory for
+  you, because it's now the responsibility of the recipient program. The other
+  program may not even be written in Rust --
+  =IMPORTANT=
+  ~forget~ is often found in C interoperability code for this reason.
+
+* DONE Puzzle 13. Reverse the Polarity of the Neutron Flow
+CLOSED: [2024-11-26 Tue 17:53]
+- *Detecting Shadowing with Clippy*
+  * ~shadow_same~ can detect when you rebind a variable to itself,
+    for example, ~let mut x = &mut x~.
+
+  * ~shadow_reuse~
+
+  * ~shadow_unrelated~ will warn you
+    WHEN you shadow a variable without ever using the original variable of that
+    name.
+
+  * Add the macro ~#[warn(clippy::rule_name)]~ to the top of a file in a module
+    applies to that module only.
+
+    Add an exclamation for the whole _crate_: ~#![warn(clippy::rule_name)]~
+
+* TODO Puzzle 14. Structure Sizing - =NOTE=
+- xxx
+
+** TODO Further Reading
+
+* DONE Puzzle 15. To Infinity
+CLOSED: [2024-11-26 Tue 18:07]
+* DONE Puzzle 16. Double or Nothing
+CLOSED: [2024-11-26 Tue 19:54]
+Can't compile.
+Error message:
+~error[E0428]: the name "double_it" is defined multiple times~
+#+begin_src rust
+  fn double_it(n: i32) -> i32 {
+      n * 2
+  }
+
+  fn double_it(n: f32) -> f32 {
+      n * 2.0
+  }
+
+  fn main() {
+      println!("2 * 4 = {}", double_it(2));
+  }
+#+end_src
+
+- /Function overloading/
+  works in C++ and
+  *NOT* in Rust
+  BECAUSE of the different ways they do /name mangling/:
+
+  When a function is compiled, a compiler-specific name for the function is
+  created and used by the /linker/ to connect function calls to actual
+  memory addresses.
+
+  * In C++, /mangled names/ INCLUDE
+    *both*
+    + the function name
+    + the types of the parameter
+
+    ~double_it(float)~ and ~double_it(int)~ are different functions.
+
+  * Rust *ONLY* mangles on the function name,
+    so even with different parameter lists, you can't have two functions in the
+    same namespace bearing the same name.
+    + Rust do similar thing with /generics/:
+      #+begin_src rust
+        fn double_it<T>(n: T) -> T
+            where T: std::ops::Mul<Output = T> + From<i32>
+        {
+            n * 2.into()
+        }
+
+        fn main() {
+            println!("2 + 2 = {}", double_it(2));
+        }
+      #+end_src
+
+- *Rust/C++ Interoperability*
+  * On the Rust side,
+    declare a new function for each parameter type,
+    for example,
+    * ~fn new(name: &str)~
+    * ~fn new_with_age(name: &str, age: u16)~
+
+  * On the C++_ side,
+    you may need to create a "shim" library to map overloaded functions to
+    different function names for Rust.
+
+* DONE Puzzle 17. How Long Is a Vector?
+CLOSED: [2024-11-26 Tue 20:06]
+- You can create a /vector/ with a /capacity/ of 0 using ~new~.
+
+- /Rust's vector growth strategy/ *isn't guaranteed* in the language standard
+  and may change. At the time of this writing, Rust uses a “growth factor” of 2.
+
+** Vector Tips
+When working with vectors, keep a few things in mind:
+
+- If you have a rough idea of how much data you might need to store, use
+  ~Vec::with_capacity~ to reserve an appropriate amount of space ahead of time.
+
+- If you're adding lots of data, try using ~Vec::extend~ so that Rust can see
+  the size of the data you're adding and reallocate only once.
+
+  * ~extend~ ONLY avoids allocation when collecting data from a source *with a
+    known length*.
+
+    Copying from one vector to another allows Rust to allocate exactly the space
+    it needs for the new vector because the length is known.
+
+    =IMPORTANT=
+    Likewise, ANY /iterator/ that implements ~ExactSizeIterator~ benefits from this
+    optimization.
+
+    An arbitrarily sized iterator may repeatedly allocate because the size of
+    the data you're copying isn't known ahead of time.
+
+- Add elements to the end of your vectors using ~push~, if this is possbile in
+  your context, rather than at a specific slot using ~insert~.
+  * If you need to insert an element at the front, the ~VecDeque~ structure is a
+    better choice.
+
+* DONE Puzzle 18. Mutable Immutables
+CLOSED: [2024-11-26 Tue 20:15]
+#+begin_src rust
+  fn main() {
+      let life_the_universe = &mut 41;
+      *life_the_universe += 1;
+      println!("Life, the Universe and Everything: {}", life_the_universe);
+  }
+
+  // Life, the Universe and Everything: 42
+#+end_src
+
+- Notice a few tricks in play here:
+  * *You can declare _a reference to a literal_.*
+    When you do, _Rust creates a temporary area of memory containing the desired
+    value_, and because the literal is mutable, you can change it.
+
+  * The ~life_the_universe~ reference itself remains immutable -- once you
+    define the reference, it forever points to the same area of memory, and you
+    can't change it.
+
+  * You can *de-reference* your /immutable reference/ using the ~*~ operator,
+    which gives you _mutable access_ to its contents.
+
+- The code can be written in this way, and it is a little clearer:
+  #+begin_src rust
+    let mut life = 40;
+    let the_universe = &mut life;
+    ,*the_universe += 2;
+    println!("{}", the_universe);
+  #+end_src
+
+* TODO Puzzle 19. Sleepless in Tokio
+* DONE Puzzle 20. Hello, Bonjour
+CLOSED: [2024-11-26 Tue 21:37]
+/closures/ obey /variable/ rather than /function/ *shadowing rules*.
+
+- RATHER THAN creating a closure and immediately replacing it,
+  you probably want to select one to run.
+
+  You can perform this selection
+  * at compilation time with /static dispatch/, or
+  * at runtime with /dynamic dispatch/
+
+** Static Dispatch
+- Two major approaches:
+  * conditional compilation
+  * constant functions
+
+*** Feature Flags and Conditional Compilation
+#+begin_src toml
+  [package]
+  name = "hello_bonjour_static"
+  version = "0.1.0"
+  edition = "2018"
+
+  [features]
+  english = []
+  french = []
+#+end_src
+
+#+begin_src rust
+  fn main() {
+      #[cfg(feature = "english")]
+      let hello = || println!("Hello World");
+      #[cfg(feature = "french")]
+      let hello = || println!("Bonjour le monde");
+      hello();
+  }
+#+end_src
+~cargo run~ will fail to compile because no ~hello~ function is defined.
+Use ~cargo run --features english~ or ~cargo run --features french~
+
+- *CAUTION*:
+  Real world localization isn't implemented in this way. This is just an
+  example.
+
+*** Constant Functions
+#+begin_src rust
+  enum Language { English, French }
+
+  const fn hello(language: Language) -> &'static str {
+      match language {
+          Language::English => "Hello World",
+          Language::French => "Bonjour le monde",
+      }
+  }
+
+  fn main() {
+      println!("{}", hello(Language::English));
+  }
+#+end_src
+
+The ~const fn hello~ can be executed entirely at compile time.
+
+** Dynamic Dispatch
+** TODO When Should I Use Dynamic vs. Static Dispatch?
+- *Localization*
+
+** TODO Further Reading
+- Features
+- Const Functions
+- Closures
+
+* TODO Puzzle 21. Typing a Gordian Knot - =NOTE=
+* TODO Puzzle 22. Waiting for Godot
+* TODO Puzzle 23. Constant Loops - =NOTE=
+* TODO Puzzle 24. Home on the Range
