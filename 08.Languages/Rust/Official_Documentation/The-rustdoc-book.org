@@ -3,7 +3,8 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
-* TODO 1. What is rustdoc?
+* DONE 1. What is rustdoc?
+CLOSED: [2024-11-30 Sat 21:31]
 - _The standard Rust distribution_ ships with a tool called *rustdoc*.
 
 - rustdoc's job: *GENERATE documentation for Rust projects.*
@@ -35,25 +36,110 @@
 3. Run ~rustdoc src/lib.rs~, and it creates
    - a new directory, =doc=, with a website inside!
      * The main page is located in =doc/lib/index.html=.
+       You can see "Crate lib" at the top.
+
        =TODO= =NEXT=
        We can see the document website layout, but no contents.
+       This will be explained in the following subsection.
 
 ** Configuring rustdoc
+- Q :: Why does it think that our crate is named "lib"?
+  * You can see this name is the name of the folder that contains the
+    =index.html= file, =doc/lib/index.html=.
+
+  * You can see this name at the top of the =index.html= page.
+
+- A :: _rustdoc_ trying to be helpful, and it assumes that our crate's name is
+       the name of the file for the crate root.
+  * To fix this, pass in a command-line flag:
+    #+begin_src shell
+      rustdoc src/lib.rs --crate-name docs
+    #+end_src
+    The new path: =doc/docs/index.html=, and the page says "Crate docs."
+
+- Q :: Why does it not have any contents?
+- A :: _rustdoc_ DEFAULTS to generating documentation for only /public
+       functions/.
+  1. You can declare the ~foo~ function as ~pub~.
+
+  2. ~rustdoc src/lib.rs --crate-name docs~
+
+  3. You can see
+     * =docs/docs/index.html=
+     * =docs/docs/fn.foo.html=
+
 ** Using rustdoc with Cargo
+~cargo doc~
+~cargo doc --open~
+
+- Internally, ~cargo doc~ calls out to ~rustdoc~ like this:
+  #+begin_src shell
+    rustdoc --crate-name docs src/lib.rs -o <path>/docs/target/doc -L dependency=<path>/docs/target/debug/deps
+  #+end_src
+  * You can see this with ~cargo doc --verbose~.
+
+  * ~o~ controls the output of our docs.
+
+  * ~L~ helps rustdoc find the dependencies your code relies on.
+    If our project used dependencies, we would get documentation for them as well!
+
 ** Outer and inner documentation
+- The ~///~ syntax is used to document the item _present after it_.
+  That's why it is called an /outer documentation/.
+
+- The ~//!~ syntax is used to document the item it is _present inside_.
+  It is called an /inner documentation/.
+
+  * It is often used when documenting the entire crate, because nothing comes
+    before it: it is the root of the crate. So in order to document an entire
+    crate, you need to use ~//!~ syntax.
+    + For example:
+      #+begin_src rust
+        //! This is my first rust crate
+      #+end_src
+
+    + When used in the crate root, it documents the item it is inside, which is
+      the crate itself.
+
+- For more information about the ~//!~ syntax, see *the Book*.
+
 ** Using standalone Markdown files
+_rustdoc_ can also generate HTML FROM _standalone Markdown files_.
+
+- ~rustdoc README.md~
+  and you can see it in the path: =docs/doc/README.html=
+
+- Till now, ~cargo~ does *NOT* understand standalone Markdown files.
+
 ** Summary
+1. This covers the simplest use-cases of _rustdoc_.
+2. The rest of this book will explain
+   * all of the options that _rustdoc_ has, and
+   * how to use them.
 
 * TODO 2. Command-line arguments
 *** ~-h/--help~: help
 *** ~-V/--version~: version information
 *** ~-v/--verbose~: more verbose output
+- Example:
+  ~rustdoc --verbose --version~
+  #+begin_src text
+    rustdoc 1.17.0 (56124baa9 2017-04-24)
+    binary: rustdoc
+    commit-hash: hash
+    commit-date: date
+    host: host-triple
+    release: 1.17.0
+    LLVM version: 3.9
+  #+end_src
+
 *** ~o/--out-dir~: output directory path
 *** ~-crate-name~: controlling the name of the crate
 *** ~-document-private-items~: Show items that are not public
-*** ~L/--library-path~: where to look for dependencies
-*** ~-cfg~: passing configuration flags
-*** ~-extern~: specify a dependency's location
+*** TODO ~L/--library-path~: where to look for dependencies
+*** TODO ~-cfg~: passing configuration flags
+*** TODO ~-check-cfg~: check configuration flags
+*** TODO ~-extern~: specify a dependency's location
 *** ~C/--codegen~: pass codegen options to rustc
 *** ~-test~: run code examples as tests
 *** ~-test-args~: pass options to test runner
@@ -61,7 +147,7 @@
 *** ~-target~: generate documentation for the specified target triple
 *** ~-default-theme~: set the default theme
 *** ~-markdown-css~: include more CSS files when rendering markdown
-*** ~-html-in-header~: include more HTML in
+*** ~-html-in-header~: include more HTML in ~<head>~
 *** ~-html-before-content~: include more HTML before the content
 *** ~-html-after-content~: include more HTML after the content
 *** ~-markdown-playground-url~: control the location of the playground
@@ -72,22 +158,26 @@
 *** ~-theme~: add a theme to the documentation output
 *** ~-check-theme~: verify custom themes against the default theme
 *** ~-crate-version~: control the crate version
+*** ~-~: load source code from the standard input
 *** ~@path~: load command-line flags from a path
-*** DONE --passes: add more rustdoc passes
+*** DONE ~--passes~: add more rustdoc passes
 CLOSED: [2023-07-29 Sat 18:16]
 _This flag is *deprecated*._
 
-*** DONE --no-defaults: don't run default passes
+*** DONE ~--no-defaults~: don't run default passes
 CLOSED: [2023-07-29 Sat 18:16]
 _This flag is *deprecated*._
 
-*** DONE -r/--input-format: input format
+*** DONE ~-r~ / ~--input-format~: input format
 CLOSED: [2023-07-29 Sat 18:15]
 _This flag is *deprecated* and has *no effect*._
 
 - Rustdoc *ONLY supports* _Rust source code_ and _Markdown input formats_.
   * If the file ends in =.md= or =.markdown=, rustdoc treats it as a Markdown file.
   * Otherwise, it assumes that the input file is _Rust_.
+
+*** TODO ~--test-builder~: rustc-like program to build tests
+*** TODO ~--test-builder-wrapper~: wrap calls to the test builder
 
 * TODO 3. How to read rustdoc output
 *** Structure
@@ -126,6 +216,7 @@ matching
 
 *** Searching By Type Signature for functions
 **** How type-based search works
+**** Primitive with Special Syntax
 **** Limitations and quirks of type-based search
 
 *** Item filtering
@@ -267,6 +358,7 @@ taking a look at their website to see what's possible:
 **** TODO Tables
 **** TODO Task lists
 **** TODO Smart punctuation
+**** TODO Adding a warning block
 
 ** 4.1. What to include (and exclude)
 - Q :: It is easy to say everything must be documented in a project and often times
@@ -311,7 +403,7 @@ its job.
 **** ~html_playground_url~
 **** ~issue_tracker_base_url~
 **** ~html_root_url~
-**** ~html_no_sourxcce~
+**** ~html_no_source~
 **** ~test(no_crate_inject)~
 **** ~test(attr(...))~
 
@@ -331,6 +423,7 @@ its job.
 *** Valid links
 *** Namespaces and Disambiguators
 *** Warnings, re-exports, and scoping
+*** What happens in case an intra-doc link cannot be generated
 
 ** 4.5. Documentation tests
 *** Passing or failing a doctest
@@ -340,6 +433,8 @@ its job.
 *** Showing warnings in doctests
 *** Documenting macros
 *** Attributes
+**** Custom CSS classes for code blocks
+
 *** Syntax reference
 **** Include items only when collecting doctests
 
@@ -371,13 +466,14 @@ its job.
 
 ** Add aliases for an item in documentation search
 ** Custom search engines
+** ~#[repr(transparent)]~: Documenting the transparent representation
 
 * TODO 8. Unstable features
 ** Nightly-gated functionality
 *** Error numbers for ~compile-fail~ doctests
 *** ~missing_doc_code_examples~ lint
 
-** Extensions to the #[doc] attribute
+** Extensions to the ~#[doc]~ attribute
 *** ~#[doc(cfg)]~: Recording what platforms or features are required for code to be present
 *** ~doc_auto_cfg~: Automatically generate ~#[doc(cfg)]~
 *** Adding your trait to the "Notable traits" dialog
@@ -409,10 +505,7 @@ its job.
 *** ~-enable-per-target-ignores~: allow ~ignore-foo~ style filters for doctests
 *** ~-runtool, --runtool-arg~: program to run tests with; args to pass to it
 *** ~-with-examples~: include examples of uses of items as documentation
-*** ~-check-cfg~: check configuration flags
 *** ~-generate-link-to-definition~: Generate links on types in source code
-
-** Custom CSS classes for code blocks
 
 * TODO 9. Deprecated features
 *** Passes
