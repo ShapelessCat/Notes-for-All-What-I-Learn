@@ -4,19 +4,173 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
-* Preface - v
-* 1. Types - 1
-** Item 1: Use the type system to express your data structures - 2
-** Item 2: Use the type system to express common behavior - 10
-** Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
-** Item 4: Prefer idiomatic ~Error~ types - 25
-** Item 5: Understand type conversions - 34
-** Item 6: Embrace the newtype pattern - 40
-** Item 7: Use builders for complex types - 45
-** Item 8: Familiarize yourself with reference and pointer types - 51
-** Item 9: Consider using iterator transforms instead of explicit loops - 64
+* DONE Preface - v
+CLOSED: [2024-12-09 Mon 17:42]
+** Rust Version - vi
+2018 and 2021
 
-* 2. Traits - 77
+* TODO 1. Types - 1
+This first chapter of this book covers advice that revolves around Rust's type
+system.
+
+- One core part of this is /Rust's ~enum~ type/ allows for /algebraic data types/.
+
+- The Items in this chapter cover
+  1. the fundamental types that the language provides and
+  2. how to combine them into data structures that precisely express the
+     semantics of your program.
+
+- This chapter also describes some of the ubiquitous data structures that are
+  provided by Rust's standard library:
+  * ~Option~
+  * ~Result~
+  * ~Error~
+  * ~Iterator~
+
+- Note that Items that involve Rust /traits/ are covered in the following
+  chapter, but there is necessarily a degree of overlap with the Items in this
+  chapter, because _/traits/ describe the behavior of /types/._
+
+** DONE Item 1: Use the type system to express your data structures - 2
+CLOSED: [2024-12-15 Sun 16:27]
+*** Fundamental Types - 2
+*** Aggregate Types - 4
+- Arrays
+- Tuples
+- Structs
+
+*** ~enum~'s - 5
+#+begin_src rust
+  enum HttpResultCode {
+      Ok = 200,
+      NotFound = 404,
+      Teapot = 418,
+  }
+#+end_src
+
+- Use it to improve readability and maintainability:
+  Improve
+  ~print_page(/* both_sides = */ true, /* color */ false);~
+  by introducing enums:
+  #+begin_src rust
+    pub enum Sides {
+        Both,
+        Single,
+    }
+
+    pub enum Output {
+        BlackAndWhite,
+        Color,
+    }
+
+    pub fn print_page(sides: Sides, color: Output) {
+        // ...
+    }
+  #+end_src
+
+  * Using the ~newtype pattern~ - see Item 6 - to wrap a ~bool~ also achieves
+    type safety and maintainability; it's generally best to use the /newtype
+    pattern/ if the semantics will always be _Boolean_, and to use an enum if
+    there's a chance that a new alternative—e.g.,
+    ~Sides::BothAlternateOrientation~ - could arise in the future.
+
+- Footnote 3:
+  =TODO=: Item 21 - ~non_exhaustive~ enum.
+
+*** ~enum~'s with Fields - 7
+_The true power of Rust's enum feature_
+comes from
+the fact that _each /variant/ can have data that comes along with it,_ making it
+an /aggregate type/ that acts as /an algebraic data type (ADT)/.
+
+- Use _enum with fields_ to *make invalid states inexpressible in your types*.
+
+  * Undesired behavior
+    #+begin_src rust
+      pub struct DisplayProps {
+          pub x: u32,
+          pub y: u32,
+          pub monochrome: bool,
+          // `fg_color` must be (0, 0, 0) if `monochrome` is true.
+          pub fg_color: RgbColor,
+      }
+    #+end_src
+
+  * Fixed
+    #+begin_src rust
+      pub enum Color {
+          Monochrome,
+          Foreground(RgbColor),
+      }
+      pub struct DisplayProps {
+          pub x: u32,
+          pub y: u32,
+          pub color: Color,
+      }
+    #+end_src
+
+  =from Jian=:
+  I think many famous Rust libraries like ~syn~ doesn't do this!!!
+
+*** Ubiquitous ~enum~ Types - 8
+**** ~Option<T>~ - 9
+Use this type and never fall back to using sentinel values like ~-1~ or
+~nullptr~ in C++.
+
+**** ~Result<T, E>~ - 9
+- Q :: If a function fails, how should that failure be reported?
+- A :: Historically, special sentinel values (e.g., -errno return values from
+       Linux system calls) or global variables (~errno~ for POSIX systems) were
+       used.
+
+** TODO Item 2: Use the type system to express common behavior - 10
+*** Functions and Methods - 10
+*** Function Pointers - 12
+*** Closures - 13
+*** Traits - 17
+**** Trait bounds - 18
+**** Trait objects - 19
+
+** TODO Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
+*** Things to Remember - 25
+
+** TODO Item 4: Prefer idiomatic ~Error~ types - 25
+*** The Error Trait - 26
+*** Minimal Errors - 26
+*** Nested Errors - 29
+*** Trait Objects - 31
+*** Libraries Versus Applications - 33
+*** Things to Remember - 33
+
+** TODO Item 5: Understand type conversions - 34
+*** User-Defined Type Conversions - 34
+*** Casts - 38
+*** Coercion - 39
+
+** TODO Item 6: Embrace the newtype pattern - 40
+*** Bypassing the Orphan Rule for Traits - 43
+*** Newtype Limitations - 18
+
+** TODO Item 7: Use builders for complex types - 45
+** TODO Item 8: Familiarize yourself with reference and pointer types - 51
+*** Rust References - 52
+*** Pointer Traits - 54
+*** Fat Pointer Types - 56
+**** Slices - 56
+**** Trait objects - 58
+
+*** More Pointer Traits - 59
+*** Smart Pointer Types - 60
+
+** TODO Item 9: Consider using iterator transforms instead of explicit loops - 64
+*** Iterator Traits - 66
+*** Iterator Transforms - 68
+*** Iterator Consumers - 70
+*** Building Collections from ~Result~ Values - 73
+*** Loop Transformation - 74
+*** When Explicit Is Better - 76
+
+* TODO 2. Traits - 77
 ** Item 10: Familiarize yourself with standard traits - 77
 Rust encodes key behavioral aspects of its type system in the type system
 itself, through a collection of fine-grained standard traits that describe those
@@ -743,7 +897,7 @@ catchier)_.
 *** Who’s Afraid of the Big Bad Copy?
 *** References and Smart Pointers
 
-* 4. Dependencies - 175
+* TODO 4. Dependencies - 175
 - It's usually still easier to reuse existing code than to write it yourself,
   BUT
   there are potential pitfalls and risks that come along with dependencies on
@@ -804,7 +958,7 @@ In theory, theory is the same as practice. In practice, it's not.
 *** Features
 *** Things to Remember
 
-* 5. Tooling - 203
+* TODO 5. Tooling - 203
 ** Item 27: Document public interfaces - 203
 *** Tooling
 *** Additional Documentation Locations
@@ -842,7 +996,7 @@ In theory, theory is the same as practice. In practice, it's not.
 *** CI Principles
 *** Public CI Systems
 
-* 6. Beyond Standard Rust - 243
+* TODO 6. Beyond Standard Rust - 243
 ** Item 33: Consider making library code ~no_std~ compatible - 243
 *** ~core~
 *** ~alloc~
