@@ -124,12 +124,203 @@ Use this type and never fall back to using sentinel values like ~-1~ or
        used.
 
 ** TODO Item 2: Use the type system to express common behavior - 10
-*** Functions and Methods - 10
-*** Function Pointers - 12
-*** Closures - 13
-*** Traits - 17
+_Item 1_ discussed *how to express data structures in the /type system/;*
+_this Item_ moves on to discuss *the encoding of _behavior_ in Rust's type
+system*.
+
+- The mechanisms described in this Item will generally feel familiar, as they all
+  have direct analogs in other languages:
+
+  * /Functions/
+
+  * /Methods/
+
+  * /Function pointers/ =???=
+    Supported by most languages in the C family, including C++ and Go, as a
+    mechanism that allows an extra level of indirection when invoking other code.
+
+  * /Closures/
+
+  * /Traits/
+
+  Of course, all of these mechanisms have Rust-specific details that this Item
+  will cover.
+
+- Of the preceding list, /traits/ have the most significance for this book.
+  _Chapter 2_ focuses on Items that give advice on _designing and implementing
+  traits_, but their pervasiveness means that they crop up frequently in the
+  other Items in this chapter too.
+
+*** DONE Functions and Methods - 10
+CLOSED: [2024-12-15 Sun 21:17]
+*** DONE Function Pointers - 12 - =TODO: Read the book corresponding section=
+CLOSED: [2024-12-15 Sun 22:35]
+- /Functions/ and /methods/ have their names, but they can't vary at runtime.
+
+- To satisfy the requirement of varying at runtime, /function pointer/ is a
+  solution.
+
+- Function Pointer :: a pointer to (just) some code, with a type that reflects
+  the signature of the function.
+  * Example 1:
+    #+begin_src rust
+      fn sum(x: i32, y: i32) -> i32 {
+          x + y
+      }
+
+      fn sub(x: i32, y: i32) -> i32 {
+          x - y
+      }
+      // Explicit coercion to `fn` type is required...
+      let mut op: fn(i32, i32) -> i32 = sum;
+      // ...
+      op = if condition {
+          sum
+      } else {
+          sub
+      }
+      // ...
+    #+end_src
+
+  * Example 2:
+    #+begin_src rust
+      // `fn` types implement `Copy`
+      let op1 = op;
+      let op2 = op;
+
+      // `fn` types implement `Eq`, this compile, but the compiler will warning you.
+      // It suggests to use the std::ptr::fn_addr_eq function.
+      assert!(op1 == op2);
+
+      // `fn` implements `std::fmt::Pointer`, used by the {:p} format specifier.
+      println!("op = {:p}", op);
+      // Example output: "op = 0x101e9aeb0"
+    #+end_src
+
+- =IMPORTANT=
+  One technical detail to _WATCH OUT FOR_:
+  *explicit coercion to a ~fn~ type is needed*,
+  because just using the name of a function doesn't give you something of ~fn~
+  type:
+  =DOES NOT COMPILE!!!=
+  #+begin_src rust
+    let op1 = sum;
+    let op2 = sum;
+
+    // Both op1 and op2 are of a type that cannot be named in user code,
+    // and this internal type does not implement `Eq`.
+    assert!(std::ptr::fn_addr_eq(op1, op2));
+  #+end_src
+  Instead, the _compiler error_ indicates that the type is something like
+  ~fn(i32, i32) -> i32 {main::sum}~, *a type that's entirely internal to the
+  compiler (i.e., could not be written in user code)* and that identifies the
+  specific function as well as its signature.
+
+  To put it another way, the type of ~sum~ encodes both
+  * _the function's signature_ and
+  * its _location_
+  *for optimization reasons*; this type can be AUTOMATICALLY coerced (Item 5) to
+  a ~fn~ type.
+  
+*** DONE Closures - 13
+CLOSED: [2024-12-15 Sun 23:26]
+- The bare /function pointers/ are limiting,
+  BECAUSE the _only inputs_ available to the invoked function are those that are
+  _explicitly passed as parameter values_.
+  * Example:
+    #+begin_src rust
+      // In real code, an `Iterator` method would be more appropriate.
+      pub fn modify_all(data: &mut [u32], mutator: fn(u32) -> u32) {
+          for value in data {
+              *value = mutator(*value);
+          }
+      }
+
+      fn add2(v: u32) -> u32 {
+          v + 2
+      }
+
+      let mut data = vec![1, 2, 3];
+      modify_all(&mut data, add2);
+      assert_eq!(data, vec![3, 4, 5]);
+    #+end_src
+
+  However, a /function pointer/ can't rely on any addtional state from the
+  environment.
+
+  =DOES NOT COMPILE=
+  #+begin_src rust
+    let amount_to_add = 3;
+
+    fn add_n(v: u32) -> u32 {
+        v + amount_to_add
+    }
+
+    let mut data = vec![1, 2, 3];
+    modify_all(&mut data, add_n);
+    assert_eq!(data, vec![3, 4, 5]);
+  #+end_src
+  The compilation error tells you you can use /closure/.
+
+- A /closure/ can capture parts of the environment around it.
+
+- A /closure/ can't be used where a /function pointer/ is explicitly expected.
+  Use generics and the right bound can make your function accept both /closure/
+  and /function pointer/.
+  * Example:
+    #+begin_src rust
+      pub fn modify_all<F>(data: &mut [u32], mut mutator: F)
+      where
+          F: FnMut(u32) -> u32,
+      {
+          for value in data {
+              ,*value = mutator(*value);
+          }
+      }
+    #+end_src
+
+- Rust has three different traits, which between them express some distinctions
+  around this environment-cpaturing behavior:
+  * ~FnOnce~, often combined with ~move~
+  * ~FnMut~
+  * ~Fn~
+
+  The compiler *AUTOMATICALLY implements* the appropriate subset of these ~Fn*~
+  traits for any lambda expression in the code; *it's NOT possible* to manually
+  implement any of these traits (unlike C++'s ~operator()~ overload).
+  * footnote4
+    At least not in stable Rust at the time of writing.
+    =from Jian: Keep an eye on this=
+    The ~unboxed_closures~ and ~fn_traits~ experimental features may change this
+    in the future.
+
+- Any (not-~unsafe~) ~fn~ type automatically implements _ALL of the Fn* traits_,
+  because it borrows nothing from the environment.
+
+- As a result, when writing code that accepts /closures/, _use the most general
+  Fn* trait that works_, to allow the greatest flexibility for callers.
+
+*** TODO Traits - 17
+- The ~Fn*~ traits are more flexible than BARE /function pointers/,
+  BUT
+  they can still describe only the behavior of a single function, and even then
+  only in terms of the function’s signature.
+
+- =TODO=
+  xxx
+
 **** Trait bounds - 18
-**** Trait objects - 19
+- The /trait bounds/ check happens at compile time, when the /generic/ is
+  /monomorphized/.
+
+- =IMPORTANT=
+  The advice here is to use /trait bounds/ to express requirements on the types
+  used in generics
+
+  This is an easy advice to follow - the compiler will force you to comply with
+  it regardless.
+
+**** TODO Trait objects - 19
 
 ** TODO Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
 *** Things to Remember - 25
