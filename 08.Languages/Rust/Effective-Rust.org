@@ -123,7 +123,8 @@ Use this type and never fall back to using sentinel values like ~-1~ or
        Linux system calls) or global variables (~errno~ for POSIX systems) were
        used.
 
-** TODO Item 2: Use the type system to express common behavior - 10
+** DONE Item 2: Use the type system to express common behavior - 10
+CLOSED: [2024-12-16 Mon 22:23]
 _Item 1_ discussed *how to express data structures in the /type system/;*
 _this Item_ moves on to discuss *the encoding of _behavior_ in Rust's type
 system*.
@@ -300,14 +301,49 @@ CLOSED: [2024-12-15 Sun 23:26]
 - As a result, when writing code that accepts /closures/, _use the most general
   Fn* trait that works_, to allow the greatest flexibility for callers.
 
-*** TODO Traits - 17
+*** DONE Traits - 17
+CLOSED: [2024-12-16 Mon 22:23]
 - The ~Fn*~ traits are more flexible than BARE /function pointers/,
   BUT
   they can still describe only the behavior of a single function, and even then
-  only in terms of the function’s signature.
+  only in terms of the function's signature.
 
-- =TODO=
-  xxx
+- This section will talk about /traits/ in general.
+
+- Prefer accepting /trait/ types over /concrete types/ if future flexibility is
+  anticipated.
+
+- =Important=
+  _Use /marker traits/ to distinguish behaviors that cannot be expressed in the
+  trait function signatures._
+
+  * A /mark trait/ acts as a promise from the implementer.
+
+  * For example,
+    assume there is a ~Sort~ trait for sorting collections; an implementation
+    might be *stable* (elements that compare the same will appear in the same
+    order before and after the sort), but *there's no way to express this in the
+    sort method arguments*.
+
+    Define a /mark trait/, and then the implementer should use it. It is the
+    implementer's duty to guarantee this.
+    #+begin_src rust
+      pub trait Sort {
+          /// Rearrange contents into sorted order.
+          fn sort(&mut self);
+      }
+
+      // Marker trait to indicate that a [`Sort`] sorts stably.
+      pub trait StableSort: Sort {}
+    #+end_src
+
+- Once behavior has been encapsulated into Rust's type system as a trait, it can
+  be used in _TWO ways_:
+  * trait bound :: constrains what types are acceptable for a generic
+    data type or function *at compile time*
+
+  * trait object :: constrains what types can be stored or passed to a
+    function *at runtime*
 
 **** Trait bounds - 18
 - The /trait bounds/ check happens at compile time, when the /generic/ is
@@ -320,21 +356,118 @@ CLOSED: [2024-12-15 Sun 23:26]
   This is an easy advice to follow - the compiler will force you to comply with
   it regardless.
 
-**** TODO Trait objects - 19
+**** Trait objects - 19
+- A /trait object/ is the other way to make use of the encapsulation defined by
+  a trait, but here, different possible implementations of the trait are chosen
+  _at /runtime/ rather than /compile time/._
 
-** TODO Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
+  * This /dynamic dispatch/ is analogous to using /virtual functions/ in C++,
+    and under the covers, Rust has “vtable” objects that are roughly analogous
+    to those in C++.
+
+- This _dynamic aspect_ of /trait objects/ also means that they always have to
+  *be handled indirectly*, via
+  * a /reference/ (e.g., ~&dyn Trait~) or
+  * a pointer (e.g., ~Box<dyn Trait>~) of some kind.
+
+  _REASON_:
+  the *size* of _the object implementing the trait_ *isn't known at compile
+  time* - it could be a giant struct or a tiny enum - so _there's *no way* to
+  allocate the right amount of space for a bare /trait object/._
+
+- =IMPORTANT=
+- object safety ::
+  Because of _Not knowing the size of the concrete object_, two contraints
+  exists for /trait objects/
+  * no use of ~Self~ in return type or arguments
+    + _REASON_:
+      the compiled-in-advance code that uses the /trait object/ would have no idea
+      how big that ~Self~ might be.
+
+  * no generic functions
+    + _REASON_:
+      A trait that has a /generic function/ ~fn some_fn<T>(t:T)~ allows for the
+      possibility of an *infinite number of implemented functions*, for all of the
+      different types ~T~ that might exist.
+
+      This is fine for a trait used as a /trait bound/ because of
+      /monomorphization/ _at compile time_, but this is not fine for /trait
+      object/: the code available at compile time has to cope with all possible
+      ~T~'s that might arrive _at runtime_.
+
+** DONE Item 3: Prefer ~Option~ and ~Result~ transforms over explicit ~match~ expressions - 20
+CLOSED: [2024-12-17 Tue 00:38]
+- ~Result~ also has a ~#[must_use]~ attribute to nudge library users in the
+  right direction. This means use
+  #+begin_src rust
+    let _ = ...
+  #+end_src
+  to bind a ~Result~ value but not using it triggers a _compilation warning_.
+
+- ~.map_err()~
+  or
+  simply error type conversion with ~From~ if it has been implemented.
+
+- =IMPORTANT=
+  Figure 1-1. Option and Result transformations
+
+- ~as_ref()~ method on ~Option~.
+  * footnote8:
+    Note that this method is separate from the ~AsRef~ trait, even though the
+    method name is the same.
+
 *** Things to Remember - 25
 
-** TODO Item 4: Prefer idiomatic ~Error~ types - 25
+** TODO Item 4: Prefer idiomatic ~Error~ types - 25 - =TODO: take notes=
+The last Item stopped short of discussing
+_HOW BEST TO HANDLE the variety of different error types ~E~ that arise as the
+second type argument of a ~Result<T, E>~;_
+that's the subject of this Item
+
+*This is relevant only when there are a variety of _DIFFERENT error types_ in
+play.*
+
 *** The Error Trait - 26
 *** Minimal Errors - 26
 *** Nested Errors - 29
+Library ~thiserror~
+
 *** Trait Objects - 31
+Library ~anyhow~
+
 *** Libraries Versus Applications - 33
 *** Things to Remember - 33
 
 ** TODO Item 5: Understand type conversions - 34
+- /Rust type conversions/ fall into THREE categories:
+  * _Manual_: User-defined type conversions provided by implementing the ~From~
+    and ~Into~ traits
+
+  * _Semi-automatic_: Explicit casts between values using the ~as~ keyword
+
+  * _Automatic_: Implicit coercion into a new type
+
+- The majority of this Item _FOCUSES ON the *first* of these_, manual
+  conversions of types,
+  BECAUSE
+  the latter two mostly don't apply to conversions of user-defined types.
+
+  * There are a couple of _EXCEPTIONS_ to this, so sections at the end of the
+    Item discuss /casting/ and /coercion/ - INCLUDING
+    _how they can apply to a user-defined type_.
+
+- Note that in contrast to many older languages,
+  _Rust does *NOT* perform AUTOMATIC conversion between /numeric types/._
+
 *** User-Defined Type Conversions - 34
+xxx
+
+- For relevant traits:
+  * ~From<T>~
+  * ~TryFrom<T>~
+  * ~Into<T>~
+  * ~TryInto<T>~
+
 *** Casts - 38
 *** Coercion - 39
 
@@ -1098,7 +1231,8 @@ catchier)_.
   many of the concerns, topics, and issues covered apply equally well to other
   toolchains (and other languages).
 
-** TODO Item 21: Understand what semantic versioning promises - 176
+** DONE Item 21: Understand what semantic versioning promises - 176
+CLOSED: [2024-12-17 Tue 16:26]
 - Most commonly used variants:
   * 1.2.3  :=  >=1.2.3, <2.0.0
 
@@ -1116,12 +1250,16 @@ CLOSED: [2024-08-29 Thu 14:27]
   4. Major version zero (0.y.z) is for initial development. Anything MAY change
      at any time. The public API SHOULD NOT be considered stable.
   #+end_quote
+
+  =IMPORTANT=
+  =Cargo's own modified semver rule=
   Cargo adapts this last rule slightly, “left-shifting” the earlier rules so that
   changes in the leftmost non-zero component indicate incompatible changes. This
   means that 0.2.3 to 0.3.0 can include an incompatible API change, as can 0.0.4
   to 0.0.5.
 
-*** TODO Semver for Crate Authors
+*** DONE Semver for Crate Authors
+CLOSED: [2024-12-17 Tue 13:40]
 #+begin_quote
 In theory, theory is the same as practice. In practice, it's not.
 #+end_quote
@@ -1129,11 +1267,119 @@ In theory, theory is the same as practice. In practice, it's not.
 - As a crate author, the first of these rules is easy to comply with, in theory:
   if you touch anything, you need a new release.
 
-*** TODO Semver for Crate Users
-*** TODO Discussion
+- The crates.io registry will *REJECT* a second attempt to publish the same
+  crate version.
+
+- The semver specification covers API compatibility, so if you make a minor change to
+  behavior that _doesn't alter the API_, then a /patch version/ update should be
+  all that's needed.
+  * However, if your crate is widely depended on, then in practice you may need
+    to be aware of *Hyrum's Law*:
+    #+begin_quote
+    Regardless of how minor a change you make to the code, someone out there is
+    likely to depend on the old behavior—even if the API is unchanged.
+    #+end_quote
+
+- _The Cargo book_ goes into considerable detail as to what is and is not back
+  compatible. There are a few areas worth highlighting:
+  =TODO: NOTE=
+
+- An obvious corollary of the rules is this:
+  the fewer public items a crate has, the fewer things there are that can induce
+  an incompatible change (_Item 22_).
+
+- Hopefully (_Item 31_) tooliing will arrive to make the process easier:
+  * _footnote3_:
+    cargo-semver-checks is a tool that attemps to do something along the cargo
+    rules for backward compatibility.
+
+- Follow these steps to make an incompatible major version change:
+  1. Release a minor version update that includes the new version of the API and
+     that marks the older variant as ~deprecated~, including an indication of how
+     to migrate.
+
+  2. Release a major version update that removes the deprecated parts of the API.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  A more subtle point is _make breaking changes breaking_.
+
+  If your crate is changing its behavior in a way that's actually incompatible
+  for existing users but that could reuse the same API: *don't*.
+  Force a change in /types/ (and a major version bump) to ensure that users
+  can't inadvertently use the new version incorrectly.
+
+- =TODO=
+  For the less tangible parts of your API - such as the MSRV or the license -
+  consider setting up a CI check (Item 32) that detects changes, using tooling
+  (e.g., cargo-deny; see Item 25) as needed
+
+- =IMPORTANT=
+  Finally, don't be afraid of version 1.0.0
+  BECAUSE
+  it's a commitment that your API is now fixed.
+  * Lots of crates fall into the trap of staying at version 0.x forever,
+    BUT
+    that *REDUCES* the already-limited expressivity of semver _FROM_ three
+    categories (major/ minor/patch) _TO_ two (effective-major/effective-minor).
+
+*** DONE Semver for Crate Users
+CLOSED: [2024-12-17 Tue 16:26]
+- Avoid wildcard dependency version like ~"*"~ or ~"0.*"~.
+
+- As a result, you need to either accept the risks of being stuck on an old
+  version or eventually follow major version upgrades to your dependencies.
+  * Tools such as ~cargo update~ or _Dependabot (Item 31)_ can let you know when
+    updates are available; you can then schedule the upgrade for a time that's
+    convenient for you.
+    =TODO=
+
+*** DONE Discussion
+CLOSED: [2024-12-17 Tue 16:20]
+- *Semantic versioning has a cost*:
+  every change to a crate has to be assessed against its criteria, to decide the
+  appropriate type of version bump.
+
+  * Semantic versioning is also a blunt tool:
+    *AT BEST*, it reflects a crate owner's guess as to which of three categories
+    the current release falls into.
+    + NOT everyone gets it right,
+      NOT everything is clear-cut about exactly what “right” means, and
+
+    + even if you get it right, there's always a chance you may fall foul of
+      /Hyrum's Law/.
+
+- However, /semver/ is the only game in town for anyone who doesn't have the luxury of
+  working in an environment like Google's highly tested gigantic internal monorepo.
+
+  =IMPORTANT=
+  As such, _understanding its concepts and limitations is necessary for managing
+  dependencies._
 
 ** TODO Item 22: Minimize visibility - 181
 *** Visibility Syntax
+- _Rust's basic unit of visibility is the /module/._
+  BY DEFAULT, a module's items (types, methods, constants) are *private* and
+  accessible only to code in the _same module_ and _its submodules_.
+
+- The most common visibility marker is the _BARE_ ~pub~ keyword, which makes the
+  item visible to anything that's able to see the /module/ it's in.
+  * That last detail is important:
+    if a ~somecrate::somemodule~ /module/ isn't visible to other code in the
+    first place, anything that's ~pub~ inside it _is still *NOT* visible_.
+
+- However, there are also some more-specific variants of pub that allow the
+  scope of the visibility to be constrained. In descending order of usefulness,
+  these are as follows:
+  * ~pub(crate)~
+
+  * ~pub(super)~
+
+  * ~pub(in <path>)~
+
+  * ~pub(self)~
+
 *** Visibility Semantics
 
 ** TODO Item 23: Avoid wildcard imports - 186
