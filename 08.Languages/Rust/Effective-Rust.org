@@ -1357,11 +1357,15 @@ CLOSED: [2024-12-17 Tue 16:20]
   As such, _understanding its concepts and limitations is necessary for managing
   dependencies._
 
-** TODO Item 22: Minimize visibility - 181
+** DONE Item 22: Minimize visibility - 181
+CLOSED: [2024-12-23 Mon 16:19]
 *** Visibility Syntax
 - _Rust's basic unit of visibility is the /module/._
-  BY DEFAULT, a module's items (types, methods, constants) are *private* and
+  _BY DEFAULT_, a module's items (types, methods, constants) are *private* and
   accessible only to code in the _same module_ and _its submodules_.
+  * Exceptions exist:
+    + ~enum~ auto make its variants public.
+    + a trait public auto makes the trait's methods public.
 
 - The most common visibility marker is the _BARE_ ~pub~ keyword, which makes the
   item visible to anything that's able to see the /module/ it's in.
@@ -1375,20 +1379,103 @@ CLOSED: [2024-12-17 Tue 16:20]
   * ~pub(crate)~
 
   * ~pub(super)~
+    Accessible to the parent module of the current module and its submodules.
+    + Occasionally useful for selectively increasing visibility in a crate that
+      has a *DEEP* module structure.
+
+    + It's also the effective visibility level for /modules/:
+      a plain ~mod mymodule~ is visible to
+      its parent
+      - module or
+      - crate and
+      - the corresponding submodules
 
   * ~pub(in <path>)~
+    Accessible to code in ~<path>~, which has to be a description of some
+    _ANCESTOR module_ of the _CURRENT module_.
+
+    =TODO= =???=
+    This can occasionally be useful for organizing source code, because it
+    allows subsets of functionality to be moved into submod‐ ules that aren't
+    necessarily visible in the public API.
+
+    =TODO= =???=
+    EXAMPLE
 
   * ~pub(self)~
+    Equivalent to ~pub(in self)~, which is equivalent to _NOT being ~pub~._ Uses
+    for this are very obscure, such as reducing the number of special cases
+    needed *in codegeneration macros*.
 
 *** Visibility Semantics
+- No guarantee can be given to
+  make a public item private WITHOUT breaking any code that uses the crate.
 
-** TODO Item 23: Avoid wildcard imports - 186
+- Prefer privacy is that it keeps your options open - the more things that are
+  exposed, the more things there are that need to stay fixed for the future
+  (absent an incompatible change).
+
+- Of course,
+  this is a concern only for _library_ code that potentially has multiple users
+  and a long lifespan.
+
+** DONE Item 23: Avoid wildcard imports - 186
+CLOSED: [2024-12-23 Mon 22:13]
+This advice is common for almost every language, if not all.
+
+Here we talk about some aspects of this in Rust that may not exist in other
+languages:
+
+- The names in from a /wildcard import/ are treated as being *lower priority*,
+  so any matching names that are in your code take precedence:
+  #+begin_src rust
+    use bytes::*;
+
+    // Local `Bytes` type does not clash with `bytes::Bytes`.
+    struct Bytes(Vec<u8>);
+  #+end_src
+
+- If you add a new method to your trait and implement it for a type, your
+  exiting code may break, becuase the that type may have same name method from
+  other trait(s).
+
+- EXECPTIONS:
+  - If *you do control the source of the wildcard import,* then the previously
+    mentioned concerns disappear.
+    * For example,
+      + It's common for a ~test~~ module to do ~use super::*;~.
+
+      + It's also possible for crates that use /modules/ primarily as a way of
+        dividing up code to have a wildcard import from an /internal module/:
+        #+begin_src rust
+          mod thing;
+
+          pub use thing::*;
+        #+end_src
+
+  - The prelude module pattern:
+    Some crates have a convention that common items for the crate are
+    re-exported from a /prelude/ module, which is explicitly intended to be
+    wildcard imported:
+    #+begin_src rust
+      use thing::prelude::*;
+    #+end_src
+    Although _in theory_ the same concerns apply in this case,
+    _in practice_ such a /prelude/ module is likely to be carefully curated, and
+    higher convenience may outweigh a small risk of future problems.
+
+- If, for some reason, you don't follow the advice in this Item,
+  _consider pinning dependencies that you wildcard import to a precise version_
+
 ** TODO Item 24: Re-export dependencies whose types appear in your API - 188
+The title of this Item is a little convoluted, but working through an example
+will make things clearer.
+
 ** TODO Item 25: Manage your dependency graph - 191
-*** Version Specification
-*** Solving Problems with Tooling
-*** What to Depend On
-*** Things to Remember
+*** Version Specification - 193
+*** Solving Problems with Tooling - 194
+*** What to Depend On - 195
+*** Things to Remember - 196
 
 ** TODO Item 26: Be wary of feature creep - 197
 *** Conditional Compilation
