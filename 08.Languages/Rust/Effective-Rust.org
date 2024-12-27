@@ -438,7 +438,8 @@ Library ~anyhow~
 *** Libraries Versus Applications - 33
 *** Things to Remember - 33
 
-** TODO Item 5: Understand type conversions - 34
+** DONE Item 5: Understand type conversions - 34
+CLOSED: [2024-12-26 Thu 16:02]
 - /Rust type conversions/ fall into THREE categories:
   * _Manual_: User-defined type conversions provided by implementing the ~From~
     and ~Into~ traits
@@ -459,37 +460,632 @@ Library ~anyhow~
 - Note that in contrast to many older languages,
   _Rust does *NOT* perform AUTOMATIC conversion between /numeric types/._
 
-*** User-Defined Type Conversions - 34
-xxx
+*** DONE User-Defined Type Conversions - 34
+CLOSED: [2024-12-26 Thu 15:45]
+As with other features of the language (Item 10),
+_the ability to PERFORM CONVERSIONS between values of different user-defined
+types is encapsulated as a set of related /generic traits/._
 
-- For relevant traits:
+- For 4 relevant traits:
   * ~From<T>~
   * ~TryFrom<T>~
   * ~Into<T>~
   * ~TryInto<T>~
 
-*** Casts - 38
-*** Coercion - 39
+- If it's possible for a conversion to fail,
+  1. the ~Try...~-prefixed traits are the first choice,
+  2. ignore the possibility of error (e.g., with ~.unwrap()~) is an alternative,
+     but that needs to be deliberate choice, and in most cases it's best to leave
+     that choice to the caller.
 
-** TODO Item 6: Embrace the newtype pattern - 40
-*** Bypassing the Orphan Rule for Traits - 43
-*** Newtype Limitations - 18
+- Symmetry:
+  ~T~ can implement ~Into<U>~ <===> ~U~ can implement ~From<T>~.
+  * Advice for ~impl~: implement the ~From~ trait for conversions.
+  * Rust can automatically provide ~Into~ if a corresponding ~From~ is provided.
+  * Advice for using as /bounds/:
+    If you're consuming one of these two traits, as a trait bound on a new
+    generic of your own, then the advice is reversed: _use the ~Into~ trait for
+    trait bounds._
+    + Rationale:
+      That way, the /bound/ will be satisfied both by things that directly
+      implement ~Into~ and by things that only directly implement ~From~.
+      - =from Jian=
+        This is also because the existence of the /blanket implementation/:
+        #+begin_src rust
+          impl<T, U> Into<U> for T
+          where
+              U: From<T>,
+          {
+              fn into(self) -> U {
+                  U::from(self)
+              }
+          }
+        #+end_src
+
+        Since ~impl<T> From<T> for T~ exists, the ~U~ above can be ~T~.
+
+- /Blanket implementation/ for ~TryFrom~ but infallible if ~Into~ in the
+  opposite direction exists:
+  #+begin_src rust
+    impl<T, U> TryFrom<U> for T
+    where
+        U: Into<T>,
+    {
+        type Error = Infallible;
+
+        #[inline]
+        fn try_from(value: U) -> Result<Self, Self::Error> {
+            Ok(U::into(value))
+        }
+    }
+  #+end_src
+  * footnote 13:
+    For now - this is likely to be replaced with the ~!~ "never" type in a
+    future version of Rust.
+
+- How to make a /newtype/ behave likes its inner type:
+  #+begin_src rust
+    #[derive(Clone, Copy, Debug)]
+    pub struct IanaAllocated(pub u64);
+
+    impl From<u64> for IanaAllocated {
+        fn from(v: u64) -> Self {
+            Self(v)
+        }
+    }
+
+    pub fn is_iana_reserved<T>(s: T) -> bool
+    where
+        T: Into<IanaAllocated>,
+    {
+        let s = s.into();
+        s.0 == 0 || s.0 == 65535
+    }
+
+    let s = IanaAllocated(1);
+    println!("{:?} reserved? {}", s, is_iana_reserved(s));
+  #+end_src
+
+- Rust code sometimes appears to be doing /implicit casts/ between types:
+  the combination of ~From<T>~ implementations and ~Into<T>~ trait /bounds/
+  leads to code that appears to magically convert at the call site (but is still
+  doing *safe, explicit*, conversions under the covers).
+
+*** DONE Casts - 38
+CLOSED: [2024-12-26 Thu 15:54]
+For _consistency and safety_, you should prefer ~from~ / ~into~ conversions over
+~as~ casts, unless you understand and need the precise /casting semantics/ (e.g.,
+for _C interoperability_).
+
+=TODO= This advice can be reinforced by Clippy (Item 29),
+which includes several lints about as conversions; however, these lints are
+disabled by default.
+
+- The ~as~ also allow /lossy conversions/, but ~Into~ and ~From~ doesn't.
+  Only ~TryInto~ and ~TryFrom~ can be implemented for /lossy conversions/.
+
+*** DONE Coercion - 39
+CLOSED: [2024-12-26 Thu 16:02]
+- The /explicit ~as~ casts/ described in the previous section are a *superset*
+  of the /implicit coercions/ that the compiler will silently perform:
+  _any coercion can be forced with an explicit ~as~, but the converse is not
+  true._
+
+- _MOST_ /coercions/ involve _SILENT conversions_ of /pointer/ and /reference/
+  types in ways that are sensible and convenient for the programmer, such as
+  converting the following:
+  * A /mutable reference/ to an /immutable reference/ (so you can use a ~&mut T~
+    as the argument to a function that takes a ~&T~)
+
+  * A /reference/ to a /raw pointer/ (this *isn't* ~unsafe~ - the unsafety
+    happens at the point where you're foolish enough to /dereference/ a raw
+    /pointer/)
+
+  * A /closure/ that happens to _NOT capture_ any variables into a bare /function
+    pointer/ (Item 2)
+
+  * An /array/ to a /slice/
+
+  * A _concrete item_ to a /trait object/, for a ~trait~ that the concrete item
+    implements
+
+  * An item /lifetime/ to a "SHORTER" one (Item 14)
+    + footnote 15:
+      Rust refers to these conversions as "subtyping," but it's _quite different_
+      from the definition of "subtyping" used in object-oriented languages.
+
+** DONE Item 6: Embrace the newtype pattern - 40
+CLOSED: [2024-12-27 Fri 15:10]
+- Newtype pattern :: tuple structs that have only one no name field that holds
+  exactly the same range of values as the enclosed type.
+  * The simplest use of the /newtype pattern/ is to indicate additional
+    semantics for a type.
+
+- /Type aliases/ are effectively just documentation; they're a stronger hint
+  than the doc comments of the previous version, but nothing stops misusing it
+  -- /type aliases/ are for developer and documentation, not for Rust compiler,
+  which can't help to check the additional semantics.
+
+- Example:
+  #+begin_src rust
+    /// Units for force.
+    pub struct PoundForceSeconds(pub f64);
+
+    /// Fire the thrusters. Returns generated impulse.
+    pub fn thruster_impulse(direction: Direction) -> PoundForceSeconds {
+        // ...
+        return PoundForceSeconds(42.0);
+    }
+
+    /// Units for force.
+    pub struct NewtonSeconds(pub f64);
+
+    /// Update trajectory model for impulse.
+    pub fn update_trajectory(force: NewtonSeconds) {
+        // ...
+    }
+
+    impl From<PoundForceSeconds> for NewtonSeconds {
+        fn from(val: PoundForceSeconds) -> NewtonSeconds {
+            NewtonSeconds(4.448222 * val.0)
+        }
+    }
+
+    let thruster_force: PoundForceSeconds = thruster_impulse(direction);
+    let new_direction = update_trajectory(thruster_force.into());
+  #+end_src
+
+- If *size efficiency* or *binary compatibility* is a concern, then the
+  ~#[repr(transparent)]~ attribute ensures that a newtype has _the same
+  representation in memory as the inner type._
+
+*** DONE Bypassing the Orphan Rule for Traits - 43
+CLOSED: [2024-12-27 Fri 14:32]
+- The reason for the orphan rule restriction is due to the risk of ambiguity:
+  if two different crates in the dependency graph (Item 25) were both to (say)
+  ~impl std::fmt::Display~ for ~rand::rngs::StdRng~, then the compiler/linker
+  has no way to choose between them.
+
+- The orphan rule restriction can frequently lead to frustration:
+  for example, if you're trying to _serialize data that includes a type from
+  another crate_, the /orphan rule/ prevents you from writing
+  ~impl serde::Serialize for somecrate::SomeType~.
+  * Use /newtype pattern/ to achieve this:
+    #+begin_src rust
+      struct MyRng(rand::rngs::StdRng);
+
+      impl fmt::Display for MyRng {
+          fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+              write!(f, "<MyRng instance>")
+          }
+      }
+    #+end_src
+
+*** DONE Newtype Limitations - 18
+CLOSED: [2024-12-27 Fri 15:10]
+- The /newtype pattern/ solves these _TWO classes of problems_ -
+  * preventing unit conversions
+  * bypassing the orphan rule
+
+  but it does come with some awkwardness:
+  _every operation that involves the /newtype/ needs to *forward to* the /inner
+  type/._
+
+- Need to call methods on ~newtype.0~.
+  * If you just refactor you code and use /newtype pattern/, the compiler can
+    tell you where to use ~newtype.0~ rather than ~newtype~ itself.
+
+- The more significant awkwardness is that _any trait implementations on the
+  /inner type/ are lost_.
+  * For /derivable traits/, newtype declaration ends up with lots of ~derive~'s.
+
+  * For more sophisticated traits, some forwarding boilerplate is needed to
+    recover the /inner type/'s implementation.
+    + Implement a trait, and use ~newtype.0~ that implemented the same trait is
+      a simple case.
 
 ** TODO Item 7: Use builders for complex types - 45
-** TODO Item 8: Familiarize yourself with reference and pointer types - 51
-*** Rust References - 52
-*** Pointer Traits - 54
-*** Fat Pointer Types - 56
+** TODO Item 8: Familiarize yourself with reference and pointer types - 51 - =Only Partial Note=
+- _For programming in general_,
+  a /reference/ is a way to indirectly access some data structure, separately
+  from whatever variable owns that data structure.
+
+  * _In practice_,
+    this is usually implemented as a /pointer/: a number whose value is the
+    _address in memory_ of the data structure.
+
+- A modern CPU will typically police a few constraints on /pointers/ -
+  the _memory address_
+  * should be in a *VALID range of memory (whether virtual or physical)* and
+  * *MAY* need to be *aligned* (e.g., a 4-byte integer value might be accessible
+    _only if_ its address is a multiple of 4).
+
+- However, _higher-level programming languages_ usually *encode more information
+  about /pointers/ in their _type systems_.*
+
+  * In C-derived languages, including Rust, /pointers/ have a /type/ that indicates
+    + what kind of data structure is expected to be present at the pointed-to
+      memory address.
+
+    This allows the code to INTERPRET
+    the CONTENTS of memory _at that address_ and _in the memory following that
+    address_.
+
+- This *BASIC* level of /pointer/ information -
+  _putative memory location_ and
+  _expected data structure layout_ - is represented in Rust as a /raw pointer/.
+
+  However, _safe Rust_ code does *NOT use* /raw pointers/, because Rust provides
+  richer reference and pointer types that provide additional safety guarantees
+  and constraints.
+
+- This Item discusses the /reference and pointer types/ used in _safe Rust_.
+  * =TODO= /raw pointers/ are relegated to _Item 16_ (which discusses unsafe code).
+
+*** DONE Rust References - 52
+CLOSED: [2024-12-26 Thu 23:06]
+- The most ubiquitous _pointer-like type_ in Rust is the /reference/, with a
+  type that is written as ~&T~ for some type ~T~. Although this is *a pointer
+  value under the covers*, the compiler _ENSURES that various rules around its
+  use are observed_:
+  * it MUST ALWAYS point to a _valid_, _correctly aligned_ instance of the
+    relevant type ~T~,
+    whose /lifetime/ (_Item 14_) extends beyond its use, and
+    it must satisfy the /borrow checking rules/ (_Item 15_).
+
+    + These additional constraints are always implied by the term /reference/ in
+      Rust, and so the bare term pointer is generally rare.
+
+    + /C++'s reference/ is similar, but no /lifetimes/.
+      #+Comment: Undesired behavior
+      #+begin_src cpp
+        // C++
+        const int& dangle() {
+          int x = 32; // on the stack, overwritten later
+          return x; // return reference to stack variable!
+        }
+      #+end_src
+
+      #+Comment: Does NOT Compile
+      #+begin_src rust
+        fn dangle() -> &'static i64 {
+            let x: i64 = 32; // on the stack
+            &x
+        }
+      #+end_src
+
+- The compiler
+  CONVERTS Rust code that uses /references/
+  INTO machine code that uses simple /pointers/, which are _eight bytes in size
+  on a 64-bit platform (which this Item assumes throughout)_.
+
+- A /Rust reference/ CAN refer to items that are located either on the /stack/
+  or on the /heap/.
+
+  * Rust allocates items _on the stack BY DEFAULT,_
+    BUT the ~Box<T>~ pointer type (roughly equivalent to C++'s
+    ~std::unique_ptr<T>~) FORCES /allocation/ to occur on the /heap/, which in
+    turn means that _the allocated item can *outlive* the scope of the current
+    block._
+
+    _Under the covers_, ~Box<T>~ is also _a simple eight-byte pointer value_:
+    #+begin_src rust
+      let box_pt = Box::new(Point { x: 10, y: 20 });
+    #+end_src
+
+*** TODO Pointer Traits - 54
+- ~DeRef~
+- ~AsRef~ and ~AsMut~
+
+*** TODO Fat Pointer Types - 56
+Rust has _TWO_ *built-in* /fat pointer types/:
+/slices/ and /trait objects/.
+
+These are types that *ACT AS* /pointers/
+BUT _HOLD *ADDITIONAL* information_ about the thing they are pointing to.
+
 **** Slices - 56
 **** Trait objects - 58
 
-*** More Pointer Traits - 59
-*** Smart Pointer Types - 60
+*** DONE More Pointer Traits - 59
+CLOSED: [2024-12-26 Thu 23:40]
+- ~Pointer~ which formats a /pointer/ value for output.
+  It is helpful for low-level debugging.
+  Formater specifier ~{:p}~.
+
+- ~Borrow~ has a method ~borrow~, and ~BorrowMut~ has a method ~borrow_mut~.
+  Same signature as the equivalent ~AsRef~ / ~AsMut~ /trait methods/.
+
+  * The *key difference in intents* between these traits is visible via the
+    /blanket implementations/ that the standard library provides.
+
+    + Given an arbitrary
+      - /Rust reference/ ~&T~, there's a /blanket implementation/ of both
+        ~AsRef~ and ~Borrow~;
+
+      - /Rust mutable reference/ ~&mut T~, there's a /blanket implementation/ of
+        both ~AsMut~ and ~BorrowMut~.
+
+    However, ~Borrow~ also has a /blanket implementation/ for /non-reference
+    types/: ~impl<T> Borrow<T> for T~.
+
+    *This means that a /method/ accepting the ~Borrow~ trait _CAN_ cope equally
+    with instances of ~T~ as well as references-to-~T~*. For example,
+    #+begin_src rust
+      fn add_four<T: std::borrow::Borrow<i32>>(v: T) -> i32 {
+          v.borrow() + 4
+      }
+      assert_eq!(add_four(&2), 6);
+      assert_eq!(add_four(2), 6);
+    #+end_src
+
+- _The standard library's container types_ have more realistic uses of ~Borrow~.
+  * Example, ~HashMap::get~.
+
+- The ~ToOwned~ trait _builds on_ the ~Borrow~ trait, adding a ~to_owned()~
+  method that produces a new owned item of the underlying type.
+  * This is a *generalization of the ~Clone~ trait*:
+    where ~Clone~ specifically requires a Rust reference ~&T~,
+    ~ToOwned~ instead copes with things that implement ~Borrow~.
+
+- This gives a couple of possibilities for _HANDLING BOTH_ /references/ and
+  /moved items/ *in a unified way*:
+  * A function that operates on /references/ to some type can accept ~Borrow~
+    so that it can also be called with /moved items/ as well as /references/.
+
+  * A function that operates on /owned items/ of some type can accept ~ToOwned~
+    so that it can also be called with /references to items/ as well as /moved
+    items/; ANY /references/ passed to it will _be REPLICATED into a LOCALLY
+    OWNED item_.
+
+- ~Cow~ is NOT a /pointer type/,
+  BUT provides an _alternative way_ to dealing with the same kind of situation.
+
+*** TODO Smart Pointer Types - 60
 
 ** TODO Item 9: Consider using iterator transforms instead of explicit loops - 64
-*** Iterator Traits - 66
-*** Iterator Transforms - 68
+- History:
+  1. The B language had only ~while (condition) { ... }~ loop.
+
+  2. The C language introduces the ~for~ loop to iterate through indexes.
+     #+begin_src c
+       // C code
+       int i;
+       for (i = 0; i < len; i++) {
+         Item item = collection[i];
+         // body
+        }
+     #+end_src
+
+  3. The C++ language introduce the ~for~ loop that can move the index variable inside the loop scope.
+     #+begin_src cpp
+       // C++98 code
+       for (int i = 0; i < len; i++) {
+         Item item = collection[i];
+         // body
+        }
+     #+end_src
+     C also adopted this syntax in C99.
+
+  4. Tracking the logistics that are required to reach that item (~index++~ or
+     ~++it~) is mostly an irrelevant detail. This realization produced _TWO_
+     core concepts:
+     * /Iterators/:
+       A type whose purpose is to _repeatedly emit the next item of a
+       container_, until exhausted.
+
+     * /For-each loops/:
+       A compact loop expression for
+       1. iterating over all of the items in a container,
+       2. binding a loop variable to the item rather than to the details of
+          reaching that item.
+       #+begin_src cpp
+         // C+11 code
+         for (Item& item : collection) {
+           // ...
+         }
+       #+end_src
+       /For-each loops/ were added to _Java 1.5_ and _C++11_.
+
+  5. Rust introduces next level abstraction: allowing the whole loop to be
+     expressed as an /iterator transform/ (sometimes also referred to as an
+     /iterator adaptor/).
+     * Comparison:
+       + C-like style Rust iteration:
+         #+begin_src rust
+           let values: Vec<u64> = vec![1, 1, 2, 3, 5 /* ... */];
+
+           let mut even_sum_squares = 0;
+           let mut even_count = 0;
+           for i in 0..values.len() {
+               if values[i] % 2 != 0 {
+                   continue;
+               }
+               even_sum_squares += values[i] * values[i];
+               even_count += 1;
+               if even_count == 5 {
+                   break;
+               }
+           }
+         #+end_src
+
+       + Rust iteration:
+         #+begin_src rust
+           let even_sum_squares: u64 = values
+               .iter() // 1
+               .filter(|x| *x % 2 == 0) // 2
+               .take(5) // 2
+               .map(|x| x * x) // 2
+               .sum(); // 3
+         #+end_src
+
+     * /Iterator transformation expressions/ like this can roughly be broken down
+       into _THREE parts_:
+       1) An /initial source iterator/, from an instance of a type that implements
+          one of Rust's iterator traits
+       2) A sequence of /iterator transforms/
+       3) A final /consumer method/ to combine the results of the iteration into
+          a final value
+
+       The _FIRST TWO_ of these parts effectively *move functionality out of the
+       loop body and into the for expression;*
+
+       the _LAST_ *removes the need for the for statement altogether*.
+
+*** DONE Iterator Traits - 66
+CLOSED: [2024-12-27 Fri 21:16]
+~Iterator~ with a ~next~ method.
+~IntoIterator~ with a ~into_iter~ method.
+
+- iterable ::
+
+- The compiler will automatically use the ~IntoIterator~ trait for expressions
+  of the form:
+  #+begin_src rust
+    for item in collection {
+        // body
+    }
+  #+end_src
+
+  effectively converting them to code roughly like:
+  #+begin_src rust
+    let mut iter = collection.into_iter();
+    while let Some(item) = iter.next() {
+        // body
+    }
+  #+end_src
+
+- To keep things running smoothly, there's also an implementation of
+  ~IntoIterator~ for any ~Iterator~, which just returns ~self~; after all, it's
+  easy to convert an ~Iterator~ into an ~Iterator~!
+
+- Often, all-consuming behavior is often undesired; some kind of /borrow/ of the
+  iterated items is needed.
+
+  If a collection being iterated over is prefixed with ~&~:
+  #+begin_src rust
+    // Deliberately not `Copy`
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct Thing(u64);
+
+    let collection = vec![Thing(0), Thing(1), Thing(2), Thing(3)];
+
+    for item in &collection {
+        println!("{}", item.0);
+    }
+    println!("collection still around {collection:?}");
+  #+end_src
+  then the Rust compiler will look for an implementation of ~IntoIterator~ for
+  the type ~&Collection~. _Properly designed collection types will provide such
+  an implementation;_ this implementation will *still consume ~Self~, but now
+  Self is ~&Collection~ rather than ~Collection~,* and the associated ~Item~ type
+  will be a reference ~&Thing~.
+
+  This leaves the collection _intact after iteration_, and the equivalent expanded
+  code is as follows:
+  #+begin_src rust
+    let mut iter = (&collection).into_iter();
+    while let Some(item) = iter.next() {
+        println!("{}", item.0);
+    }
+  #+end_src
+  Similar for ~for item in &mut collection {~.
+
+- BY CONVENTION,
+  standard containers also provide an ~iter()~ method that returns an /iterator/
+  over /references/ to the underlying item, and an equivalent ~iter_mut()~ method,
+  if appropriate, with the same behavior as just described.
+
+  * These methods can be used in ~for~ loops BUT have a more obvious benefit when
+    used as the start of an /iterator transformation/:
+    #+begin_src rust
+      let result: u64 = (&collection).into_iter().map(|thing| thing.0).sum();
+    #+end_src
+
+    becomes
+
+    #+begin_src rust
+      let result: u64 = collection.iter().map(|thing| thing.0).sum();
+    #+end_src
+
+*** DONE Iterator Transforms - 68
+CLOSED: [2024-12-27 Fri 21:16]
+The ~Iterator~ trait has a single required method (~next~)
+BUT also provides /default implementations/ (_Item 13_) of a large number of
+other methods that perform transformations on an /iterator/.
+
+- Some of these /transformations/ AFFECT the _overall iteration process_:
+  * ~take(n)~
+  * ~skip(n)~
+  * ~step_by(n)~
+  * ~chain(other)~
+  * ~cycle()~
+  * ~rev()~
+
+- Other /transformations/ AFFECT the nature of the ~Item~ that's the subject of
+  the ~Iterator~:
+  * ~map(|item| {...})~
+  * ~cloned()~
+  * ~copied()~
+  * ~enumerate()~
+  * ~zip(it)~
+
+- Yet other /transformations/ perform _FILTERING_ on the Items being emitted by
+  the ~Iterator~:
+  * ~filter(|item| {...})~
+  * ~take_while()~
+  * ~skip_while()~
+
+- ~flatten()~: deals with an /iterator/ whose items are themselves /iterators/,
+  flattening the result. Useful when a stream of ~Option~ / ~Result~ show up.
+
 *** Iterator Consumers - 70
+The most general method of consuming an iterator is ~.for_each(|item| {...})~.
+
+- Example:
+  #+begin_src rust
+    let mut even_sum_squares = 0;
+    values
+        .iter()
+        .filter(|x| *x % 2 == 0)
+        .take(5)
+        .for_each(|value| {
+            // closure needs a mutable reference to state elsewhere
+            even_sum_squares += value * value;
+        });
+  #+end_src
+
+- Patterns include shortcuts for building a single value out of the collection:
+  * ~sum()~
+  * ~product()~
+  * ~min()~
+  * ~max()~
+  * ~min_by(f)~
+  * ~max_by(f)~
+  * ~reduce(f)~
+  * ~fold(f)~, a generalization of ~reduce~.
+  * ~scan(init, f)~ =TODO: try it=
+
+- Selects a single value out of the collection:
+  * ~find(p)~
+  * ~position(p)~
+  * ~nth(n)~
+
+- Tests against every item in the collection:
+  * ~any(p)~
+  * ~all(p)~
+  In either case, /iteration/
+  _will *TERMINATE EARLY* IF the relevant counterexample is found_.
+
+- There are methods that _allow for the possibility of failure_ in the /closures/
+  used with each item.
+
+  In each case, if a /closure/ returns a failure for an item, _the /iteration/
+  is terminated and the operation as a whole returns the first failure_:
+  * ~try_for_each(f)~
+  * ~try_fold(f)~
+  * ~try_find(f)~
+
 *** Building Collections from ~Result~ Values - 73
 *** Loop Transformation - 74
 *** When Explicit Is Better - 76
@@ -500,27 +1096,92 @@ Rust encodes key behavioral aspects of its type system in the type system
 itself, through a collection of fine-grained standard traits that describe those
 behaviors (see Item 2)
 
-*** Common Standard Traits
+- It's important to be familiar with the most common of these standard traits so
+  that the available behaviors of a type definition can be immediately
+  understood.
+
+*** TODO Common Standard Traits - 78 - =START HERE!!! Missing Details!!!=
+*ALL* of these traits *can be derived*:
 **** ~Clone~
+
 **** ~Copy~
+
 **** ~Default~
+
 **** ~PartialEq~ and ~Eq~
+
 **** ~PartialOrd~ and ~Ord~
+
 **** ~Hash~
+Items of this type can produce a /STABLE hash/ of their contents when asked.
+
 **** ~Debug~ and ~Display~
 
-*** Standard Traits Covered Elsewhere
-*** Operator Overloads
-- Rust allows various built-in unary and binary operators to be overloaded for
-  /user-defined types/, by implementing various standard traits from the
+*** DONE Standard Traits Covered Elsewhere - 86
+CLOSED: [2024-12-27 Fri 00:02]
+Other standard traits that are less ubiquitous than traits discussed in the
+previous section.
+
+Of these additional standard traits, the following are the most important, but
+they are covered in other Items and so are not covered here in depth:
+
+- ~Fn~, ~FnOnce~, and ~FnMut~
+  Items implementing these traits
+  REPRESENT /closures/ that can be invoked.
+  _See Item 2._
+
+- ~Error~
+  Items implementing this trait
+  * _represent error information that can be displayed to users or programmers_,
+    and
+  * that may hold nested suberror information.
+  _See Item 4._
+
+- ~Drop~
+  Items implementing this trait
+  _perform processing when they are destroyed,_ which is essential for /RAII
+  patterns/.
+  _See Item 11._
+
+- ~From~ and ~TryFrom~
+  _See Item 5._
+
+- ~Deref~ and ~DerefMut~
+  Items implementing these traits are /pointer-like objects/ that can be
+  /dereferenced/ to get access to an inner item.
+  _See Item 8._
+
+- ~Iterator~ and friends
+  Items implementing these traits represent collections that can be iterated
+  over.
+  _See Item 9._
+
+- ~Send~
+  Items implementing this trait are _SAFE to TRANSFER BETWEEN multiple
+  /threads/._
+  _See Item 17._
+
+- ~Sync~
+  Items implementing this trait are _SAFE to be REFERENCED by multiple
+  /threads/._
+  _See Item 17._
+
+*NONE of these traits are deriveable.*
+BUT ~Send~ and ~Sync~ _may be automatically implemented by the compiler._
+
+*** DONE Operator Overloads - 87
+CLOSED: [2024-12-27 Fri 00:06]
+- Rust allows various _built-in_ /unary and binary operators/ to be *overloaded*
+  for /user-defined types/, by implementing various standard traits from the
   ~std::ops~ module.
 
-  * These traits
+  * These traits =IMPORTANT=
     + are *NOT derivable* and
     + are typically needed *ONLY* for types that represent “algebraic” objects,
       where there is a natural interpretation of these operators.
 
-- However, experience from C++ has shown that it's best to *avoid* overloading
+- =IMPORTANT=
+  However, experience from C++ has shown that it's best to *avoid* overloading
   operators for unrelated types as it often leads to code that is _hard to maintain_
   and has unexpected performance properties (e.g., x + y silently invokes an
   expensive O(N) method).
@@ -528,16 +1189,21 @@ behaviors (see Item 2)
   * To comply with the principle of least astonishment, if you implement any operator
     overloads, you should implement a *COHERENT* set of operator overloads.
     + For example,
-      if x + y has an overload (Add), and -y (Neg) does too, then you should also
-      implement x - y (Sub) and make sure it gives the same answer as x + (-y).
+      if x + y has an overload (~Add~), and -y (~Neg~) does too, then you should
+      also implement x - y (~Sub~) and make sure it gives the same answer as x +
+      (-y).
 
 - The items passed to the operator overload traits are *moved*, which means that
-  nonCopy types will be consumed by default. Adding implementations for ~&'a
-  MyType~ can help with this but requires more boilerplate to cover all of the
-  possibilities (e.g., there are 4 = 2 × 2 possibilities for combining
-  reference/non-reference arguments to a binary operator).
+  /non-~Copy~ types/ will be consumed by default.
 
-*** Summary
+  * Adding implementations for ~&'a MyType~ _can help_ with this
+    BUT requires more boilerplate to cover all of the possibilities (e.g., there
+    are _4 = 2 × 2 possibilities_ for combining reference/non-reference arguments
+    to a binary operator).
+
+*** DONE Summary
+CLOSED: [2024-12-27 Fri 00:09]
+=Review=
 
 ** Item 11: Implement the ~Drop~ trait for RAII patterns - 89
 ** DONE Item 12: Understand the trade-offs between generics and trait objects - 93
@@ -1211,8 +1877,8 @@ catchier)_.
   program, and _BY DEFAULT_ it terminates the thread that issues the ~panic!~.
   However, there are _alternatives_ to this DEFAULT.
 
-- 
-  
+- xxx
+
 ** TODO Item 19: Avoid reflection - 162
 *** Upcasting in Future Versions of Rust
 
@@ -1221,7 +1887,8 @@ catchier)_.
 *** Who’s Afraid of the Big Bad Copy?
 *** References and Smart Pointers
 
-* TODO 4. Dependencies - 175
+* DONE 4. Dependencies - 175 - =TODO: NOTE=
+CLOSED: [2024-12-25 Wed 19:21]
 - It's usually still easier to reuse existing code than to write it yourself,
   BUT
   there are potential pitfalls and risks that come along with dependencies on
@@ -1467,20 +2134,91 @@ languages:
 - If, for some reason, you don't follow the advice in this Item,
   _consider pinning dependencies that you wildcard import to a precise version_
 
-** TODO Item 24: Re-export dependencies whose types appear in your API - 188
+** DONE Item 24: Re-export dependencies whose types appear in your API - 188
+CLOSED: [2024-12-25 Wed 19:21]
 The title of this Item is a little convoluted, but working through an example
 will make things clearer.
 
-** TODO Item 25: Manage your dependency graph - 191
+- *re-export dependencies whose types appear in your API.*
+
+- Assume your code depends on a 3rd-party crate (version A), the types from that
+  crate appears in the public API of your code - this often happens when that
+  3rd-party crate is widely used, like ~rng~. Back-compatible can be broken if
+  a project depends on your crate also depends on an incompatible 3rd-party crate
+  (version A).
+
+  To resolve this issue, the 3rd-party library author should explicitly
+  *re-export* either of the following:
+  * The types involved in the API
+  * The entire dependency crate
+    _Re-export the version of `rand` used in this crate's API._
+    #+begin_src rust
+      pub use rand;
+    #+end_src
+
+** TODO Item 25: Manage your dependency graph - 191 - =TODO: Reread, Take Note, and Experiment=
+- /dependency graph/
+
 *** Version Specification - 193
 *** Solving Problems with Tooling - 194
 *** What to Depend On - 195
 *** Things to Remember - 196
 
-** TODO Item 26: Be wary of feature creep - 197
-*** Conditional Compilation
-*** Features
-*** Things to Remember
+** TODO Item 26: Be wary of feature creep - 197 - =TODO: NOTE=
+Rust allows the same codebase to support a variety of different configurations
+via Cargo's /feature/ mechanism, which is _BUILT ON TOP OF a lower-level
+mechanism for /conditional compilation/._
+
+HOWEVER, the /feature/ mechanism has a few *subtleties* to be aware of, which
+this Item explores.
+
+*** DONE Conditional Compilation
+CLOSED: [2024-12-25 Wed 16:24]
+- Rust /conditional compilation/ is controlled by ~cfg~ (and ~cfg_attr~)
+  attributes.
+
+  * These attributes govern whether the thing - /function/, /line/, /block/,
+    etc.- that they are attached to is included in the compiled source code or
+    not (which is in contrast to _C/C++’s *line-based* preprocessor_).
+
+  * The /conditional inclusion/ is controlled by configuration options that are
+    + either plain names (e.g., ~test~)
+    + or pairs of names and values (e.g., ~panic = "abort"~)
+      - Note that the this variants of config options are *multivalued* - it's
+        possible to set more than one value for the same name:
+        #+begin_src rust
+          // Build with `RUSTFLAGS` set to:
+          // '--cfg myname="a" --cfg myname="b"'
+
+          #[cfg(myname = "a")]
+          println!("cfg(myname = 'a') is set");
+          #[cfg(myname = "b")]
+          println!("cfg(myname = 'b') is set");
+
+          // cfg(myname = 'a') is set
+          // cfg(myname = 'b') is set
+        #+end_src
+
+- The *most commonly used* config values are those that _the toolchain populates
+  AUTOMATICALLY_, with values that describe the /target environment/ for the
+  build. These include
+  * the OS (~target_os~),
+  * CPU architecture (~target_arch~),
+  * pointer width (~target_pointer_width~), and
+  * endianness (~target_endian~).
+
+  This allows for code portability, where /features/ that are specific to some
+  particular target are compiled in only when building for that target.
+
+- The standard ~target_has_atomic~ option also provides an example of the
+  _MULTIVALUED nature of config values_:
+  both ~[cfg(target_has_atomic = "32")]~ and ~[cfg(target_has_atomic = "64")]~
+  will be set for targets that support both 32-bit and 64-bit /atomic operations/.
+  (For more information on /atomics/, see Chapter 2 of Mara Bos's Rust Atomics
+  and Locks [O’Reilly].)
+
+*** TODO Features
+*** TODO Things to Remember
 
 * TODO 5. Tooling - 203
 ** Item 27: Document public interfaces - 203
