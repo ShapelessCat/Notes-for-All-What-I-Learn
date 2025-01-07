@@ -843,7 +843,8 @@ CLOSED: [2024-12-26 Thu 23:40]
 
 *** TODO Smart Pointer Types - 60
 
-** TODO Item 9: Consider using iterator transforms instead of explicit loops - 64
+** DONE Item 9: Consider using iterator transforms instead of explicit loops - 64
+CLOSED: [2025-01-03 Fri 09:42]
 - History:
   1. The B language had only ~while (condition) { ... }~ loop.
 
@@ -1039,8 +1040,26 @@ other methods that perform transformations on an /iterator/.
 - ~flatten()~: deals with an /iterator/ whose items are themselves /iterators/,
   flattening the result. Useful when a stream of ~Option~ / ~Result~ show up.
 
-*** Iterator Consumers - 70
-The most general method of consuming an iterator is ~.for_each(|item| {...})~.
+*** DONE Iterator Consumers - 70
+CLOSED: [2025-01-02 Thu 17:19]
+The previous two sections described
+1. how to obtain an iterator
+2. how to transform it into exactly the right shape for precise iteration.
+
+This precisely targeted iteration could happen as an _EXPLICIT for-each loop_:
+#+begin_src rust
+  let mut even_sum_squares = 0;
+
+  for value in values.iter().filter(|x| *x % 2 == 0).take(5) {
+      even_sum_squres += value * value
+  }
+#+end_src
+
+However, the large collection of ~Iterator~ /methods/ includes many that allow
+an iteration to be consumed in a single method call, _removing the need for an
+EXPLICIT ~for~ loop._
+
+- The most general method of consuming an iterator is ~.for_each(|item| {...})~.
 
 - Example:
   #+begin_src rust
@@ -1055,40 +1074,135 @@ The most general method of consuming an iterator is ~.for_each(|item| {...})~.
         });
   #+end_src
 
-- Patterns include shortcuts for building a single value out of the collection:
-  * ~sum()~
-  * ~product()~
-  * ~min()~
-  * ~max()~
-  * ~min_by(f)~
-  * ~max_by(f)~
-  * ~reduce(f)~
-  * ~fold(f)~, a generalization of ~reduce~.
-  * ~scan(init, f)~ =TODO: try it=
+- However, if the body of the ~for~ loop _matches one of a number of common
+  patterns_, there are more *SPECIFIC* iterator-consuming methods that are clearer,
+  shorter, and more idiomatic.
 
-- Selects a single value out of the collection:
-  * ~find(p)~
-  * ~position(p)~
-  * ~nth(n)~
+  * Patterns include shortcuts for building a single value out of the collection:
+    + ~sum()~
+    + ~product()~
+    + ~min()~
+    + ~max()~
+    + ~min_by(f)~
+    + ~max_by(f)~
+    + ~reduce(f)~
+    + ~fold(f)~, a generalization of ~reduce~.
+    + ~scan(init, f)~ =TODO: try it=
 
-- Tests against every item in the collection:
-  * ~any(p)~
-  * ~all(p)~
-  In either case, /iteration/
-  _will *TERMINATE EARLY* IF the relevant counterexample is found_.
+  * Selects a single value out of the collection:
+    + ~find(p)~
+    + ~position(p)~
+    + ~nth(n)~
 
-- There are methods that _allow for the possibility of failure_ in the /closures/
-  used with each item.
+  * Tests against every item in the collection:
+    + ~any(p)~
+    + ~all(p)~
+    In either case, /iteration/
+    _will *TERMINATE EARLY* IF the relevant counterexample is found_.
 
-  In each case, if a /closure/ returns a failure for an item, _the /iteration/
-  is terminated and the operation as a whole returns the first failure_:
-  * ~try_for_each(f)~
-  * ~try_fold(f)~
-  * ~try_find(f)~
+  * There are methods that _allow for the possibility of failure_ in the /closures/
+    used with each item.
 
-*** Building Collections from ~Result~ Values - 73
-*** Loop Transformation - 74
-*** When Explicit Is Better - 76
+    In each case, if a /closure/ returns a failure for an item, _the /iteration/
+    is terminated and the operation as a whole returns the first failure_:
+    + ~try_for_each(f)~
+    + ~try_fold(f)~
+    + ~try_find(f)~
+
+  * Finally, there are methods that accumulate all of the iterated items into a
+    new collection. The most important of these is ~collect()~, which can be
+    used to build a new instance of any collection type that implements the
+    ~FromIterator~ trait.
+
+- The ~FromIterator~ trait is implemented for all of the standard library
+  collection types (~Vec~, ~HashMap~, ~BTreeSet~, etc.), but this ubiquity also
+  means that you often *have to use explicit types*, because otherwise the
+  compiler can't figure out what you're trying to assemble.
+
+- Besides /range/, other (more obscure) collection-producing methods include the
+  following:
+  * ~unzip()~
+  * ~partition(p)~
+
+- =TODO= =REVIEW=
+  =TODO=
+  =TODO=
+  However, it's also the case that an old-style loop might not be subject to
+  additional bounds checks compared to the equivalent iterator transformation.
+  The Rust compiler and optimizer is very good at analyzing the code
+  surrounding a slice access to determine whether it's safe to skip the bounds
+  checks; _Sergey “Shnatsel” Davidoff's 2023 article explores the subtleties
+  involved._
+
+*** DONE Building Collections from ~Result~ Values - 73 - =IMPORTANT=
+CLOSED: [2025-01-02 Thu 17:25]
+There is another version of ~collect~ can help to collect result from the
+~Result::Ok~ variants. For forcing use this version, a turbofish
+(~::<Result<Vec<_>, _>>~) is required:
+#+begin_src rust
+  let result: Vec<u8> = inputs
+      .into_iter()
+      .map(|v| <u8>::try_from(v))
+      .collect::<Result<Vec<_>, _>>()?;
+#+end_src
+
+Combining this with the question mark operator gives useful behavior:
+- If the iteration encounters an error value, that error value is emitted to the
+  caller and iteration stops.
+- If no errors are encountered, the remainder of the code can deal with a
+  sensible collection of values of the right type.
+
+*** DONE Loop Transformation - 74
+CLOSED: [2025-01-02 Thu 17:29]
+*** DONE When Explicit Is Better - 76
+CLOSED: [2025-01-03 Fri 09:41]
+This Item has highlighted the advantages of iterator transformations,
+particularly with respect to concision and clarity.
+
+- Q :: So when are /iterator transformations/ *NOT appropriate or idiomatic*?
+
+- A ::
+  * If the loop body is *large* and/or *multifunctional*,
+    it makes sense to keep it as an explicit body rather than squeezing it into
+    a /closure/.
+    =from Jian=
+    + I think there is no good and simple way to handle *multifunctional* body
+      with /iterator transformation/, which can do it, but not good for
+      readability in my opinion.
+
+    + For *large* body, if further abstraction can be done, /iterator
+      transformations/ can be a good way.
+
+  * If the loop body _involves error conditions that result in early
+    termination_ of the surrounding function, these are often best kept
+    explicit - the ~try_..()~ methods help only a little.
+
+    However, ~collect()~'s ability to convert _a collection of ~Result~ values_
+    into _a ~Result~ holding a collection of values_ often allows error
+    conditions to still be handled with the ~?~ operator.
+    =from Jian=
+    A poor man version of ~Traverse~ /typeclass/.
+
+  * If *performance is vital*, an /iterator transform/ that involves a /closure/
+    _should get optimized_ so that it is just as fast as the equivalent explicit
+    code.
+
+    _BUT_ if performance of a core loop is that important, *measure different
+    variants and tune appropriately*:
+    + Be careful to ensure that your measurements reflect real-world
+      performance - the compiler's optimizer can give overoptimistic results on
+      test data (as described in _Item 30_).
+
+    + =IMPORTANT=
+      _The Godbolt compiler explorer is an amazing tool for exploring what the
+      compiler spits out._
+
+- Most importantly,
+  _don't convert a loop into an iteration transformation if the conversion is
+  forced or awkward_.
+
+  This is a matter of taste to be sure - but be aware that your taste is likely
+  to change as you become more familiar with the functional style.
 
 * TODO 2. Traits - 77
 ** Item 10: Familiarize yourself with standard traits - 77
@@ -1666,7 +1780,8 @@ Here's a summary of the /lifetime elision rules/ for functions:
 *** Anonymous Lifetimes
 *** Things to Remember
 
-** TODO Item 15: Understand the borrow checker - 123
+** DONE Item 15: Understand the borrow checker - 123 - =TODO: RE-READ, NOTE=
+CLOSED: [2025-01-03 Fri 18:49]
 - The borrowing mechanism involves _the CREATION and USE of /references/,_
   subject to rules policed by the /borrow checker/.
 
@@ -1722,7 +1837,8 @@ Here's a summary of the /lifetime elision rules/ for functions:
      redesign your code
      _SO THAT_ you can win fights against the /borrow checker/.
 
-*** Access Control
+*** DONE Access Control
+CLOSED: [2025-01-03 Fri 14:53]
 - There are _THREE_ ways to access the contents of a Rust item: via
   * the item's /owner/ (~item~),
   * a /reference/ (~&item~), or
@@ -1817,12 +1933,17 @@ Here's a summary of the /lifetime elision rules/ for functions:
      For ~Option~, this is a common pattern, therefore ~Option~ actual has a
      replace /method/: ~pub const fn replace(&mut self, value: T) -> Option<T>~.
 
-*** Borrow Rules
-- There are _TWO key rules_ to remember _WHEN borrowing references in Rust_.
+*** DONE Borrow Rules
+CLOSED: [2025-01-03 Fri 14:53]
+- There are _TWO key rules_ to remember WHEN _borrowing references in Rust_.
 
   * Rule 1 ::
     The /scope/ of ANY /reference/ must be smaller than the /lifetime/ of the
     item that it refers to.
+    + /Lifetimes/ are explored in detail in _Item 14_, but it's worth noting
+      that the compiler has special behavior for /reference lifetimes/; the
+      /non-lexical lifetimes/ feature allows reference lifetimes to be shrunk so
+      they end at the point of last use, rather than the enclosing block.
 
   * Rule 2 ::
     For /borrowing references/ is that, in addition to the /owner/ of an item,
@@ -1832,12 +1953,11 @@ Here's a summary of the /lifetime elision rules/ for functions:
 
 - These borrowing rules allow the compiler to *make better decisions around
   /aliasing/:*
-  =from Jian= _Here the /aliasing/ is an important concept in compiler theory!!!_
+  * aliasing :: tracking when two different pointers may or may not refer to the
+    same underlying item in memory.
+    =from Jian= _Here the /aliasing/ is an important concept in compiler theory!!!_
 
-  Tracking when two different pointers may or may not refer to the same
-  underlying item in memory.
-
-  If the compiler can be sure (as in Rust) that the memory location pointed to
+- If the compiler can be sure (as in Rust) that the memory location pointed to
   by a collection of /immutable references/ *cannot be altered via an aliased
   /mutable reference/,* then it can generate code that has the following
   advantages:
@@ -1849,14 +1969,42 @@ Here's a summary of the /lifetime elision rules/ for functions:
     /Data races/ arising from _unsynchronized access to memory between /threads/
     (Item 17)_ are *NOT possible*.
 
-*** Owner Operations
-*** Winning Fights Against the Borrow Checker
+*** TODO Owner Operations
+*** TODO Winning Fights Against the Borrow Checker - =RE-READ, TAKE NOTE=
 **** Local code refactoring
 **** Data structure design
 **** Smart pointers
 **** Self-referential data structures
 
-*** Things to Remember
+*** DONE Things to Remember
+CLOSED: [2025-01-03 Fri 18:48]
+- Rust's /references/ are _borrowed,_ indicating that they cannot be held forever.
+
+- The /borrow checker/ allows _MULTIPLE immutable references_ or _A SINGLE mutable
+  reference_ to an item *but NOT both*.
+
+  The /lifetime/ of a /reference/ stops at the point of last use, rather than at
+  the end of the enclosing scope, due to /non-lexical lifetimes/.
+
+- Errors from the /borrow checker/ can be dealt with in various ways:
+  * Adding an additional ~{ ... }~ /scope/ can *reduce* the extent of a value's
+    lifetime.
+
+  * Adding /a named local variable/ for a value *extends* the value's /lifetime/
+    to the end of the scope.
+
+  * TEMPORARILY adding multiple local variables can help _narrow down_ what the
+    /borrow checker/ is complaining about.
+    =from Jian and this book=
+    Use this way to debug and get rid of the complaining from /borrow checker/
+    if possible.
+
+- /Rust's smart pointer type/s provide ways *around* /the borrow checker's
+  rules/ and so are useful for /interconnected data structures/.
+
+- However, /self-referential data structures/ remain awkward to deal with in Rust.
+  Need ~Pin~ or use some libraries like _ouroborous_.
+  =TODO= =TODO= =TODO: Learn this library=
 
 ** TODO Item 16: Avoid writing ~unsafe~ code - 142
 ** TODO Item 17: Be wary of shared-state parallelism - 145
