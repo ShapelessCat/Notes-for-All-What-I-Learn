@@ -342,7 +342,8 @@ CLOSED: [2025-01-07 Tue 00:14]
 *** DONE What's Next - 30
 CLOSED: [2025-01-07 Tue 00:14]
 
-** TODO 3. pytest Fixtures - 31
+** DONE 3. pytest Fixtures - 31 - =TODO: exercises=
+CLOSED: [2025-01-07 Tue 18:17]
 - fixtures :: _test helper functions_ that are essential to structuring test
   code for almost any non-trivial software system.
 
@@ -801,18 +802,84 @@ People may want to add prefix or posfix like ~_fixture~ / ~fixture_~ to a
 *** DONE Review - 47
 CLOSED: [2025-01-07 Tue 16:19]
 *** TODO Exercises - 48
-*** TODO What's Next - 48
+*** DONE What's Next - 48
+CLOSED: [2025-01-07 Tue 18:17]
 
 ** TODO 4. Builtin Fixtures - 49
+Reusing COMMON /fixtures/ is such a good idea that the _pytest_ developers
+*included some commonly used /fixtures/ with _pytest_.*
+
+- The /pytest builtin fixtures/ that come prepackaged with _pytest_ can help you
+  do some pretty useful things in your tests easily and consistently.
+  * For example, _pytest_ includes /builtin fixtures/ that can
+    + handle temporary directories and files,
+    + access command-line options,
+    + communicate between test sessions,
+    + validate output streams,
+    + modify environment variables, and
+    + interrogate warnings.
+
+- The /builtin fixtures/ are extensions to the core functionality of _pytest_.
+
+- We'll take a look at a few of the /builtin fixtures/ in this chapter:
+  * ~tmp_path~ and ~tmp_path_factory~ - for _temporary directories_
+  * ~capsys~ - for _capturing output_
+  * ~monkeypatch~ - for changing the environment or application code, like a
+    _LIGHTWEIGHT form of /mocking/._
+
+- This is a good mix that shows you some of the extra capabilities you can get
+  with creative /fixture/ use.
+
+  I encourage you to read up on other builtin fixtures by reading the output of
+  ~pytest --fixtures~.
+
 *** Using ~tmp_path~ and ~tmp_path_factory~ - 49
-*** Using capsys - 51
-*** Using monkeypatch - 54
+*** Using ~capsys~ - 51
+*** Using ~monkeypatch~ - 54
 *** Remaining Builtin Fixtures - 58
 *** Review - 59
 *** Exercises - 59
 *** What's Next - 60
 
 ** TODO 5. Parametrization - 61
+- Parametrized testing ::
+  adding _parameters_ to our _test functions_ and
+  passing in multiple sets of arguments to the test
+  TO create new test cases.
+
+- We'll look at _THREE ways_ to implement /parametrized testing/ in _pytest_ in
+  the order in which they should be selected:
+  * Parametrizing functions
+  * Parametrizing /fixtures/
+  * Using a /hook function/ called ~pytest_generate_tests~
+
+  We'll compare them side by side by solving the same parametrization problem
+  using all THREE methods -- there are times when one solution is preferred over
+  the others.
+
+- Steps:
+  Before we really jump in to how to use parametrization, though,
+  1. we'll take a look at the redundant code we are avoiding with
+     parametrization.
+
+  2. Then we'll look at THREE methods of parametrization.
+
+  3. When we're done, you’ll be able to write concise, easy-to-read test code
+     that tests a huge number of test cases.
+
+- *Parametrize or Parameterize?*
+  * Legal English spellings:
+    + parametrize
+    + parameterize
+    + parametrise
+    + parameterise
+
+  * _pytest_ pick one form and keeps using it: *parametrize*
+    If you spell it wrong, you'll see:
+    #+begin_quote
+    "E Failed: Unknown 'parameterize' mark, did you mean 'parametrize'?"
+    #+end_quote
+
 *** Testing Without Parametrize - 62
 *** Parametrizing Functions - 64
 *** Parametrizing Fixtures - 66
@@ -823,24 +890,509 @@ CLOSED: [2025-01-07 Tue 16:19]
 *** What's Next - 72
 
 ** TODO 6. Markers - 73
+In _pytest_,
+/markers/ are a way to tell pytest there's something special about a particular
+test.
+
+- You can think of /markers/ like _tags_ or _labels_.
+
+  * ~@pytest.mark.slow~:
+    If some tests are slow, you can mark them with this and have _pytest_ *skip*
+    those tests when you're in a hurry.
+
+  * You can pick a handful of tests out of a test suite and mark them with
+    ~@pytest.mark.smoke~ and run those as the first stage of a testing pipeline
+    in a CI system.
+
+  Really, for any reason you might have for *separating out some tests*, you can
+  use /markers/.
+
+- _pytest_ includes a handful of /builtin markers/ that _MODIFY the behavior of
+  how tests are run._
+
+  * In addition to the _custom tag-like markers_ we can create and add to our
+    tests, =TODO=
+
+    the /builtin markers/ tell _pytest_ to do something special with the _marked
+    tests_.
+
+- In this chapter,
+  we're going to explore both /types/ of /markers/:
+  the _builtins_ that change behavior, and
+  the _custom markers_ we can create to select which tests to run.
+
+- We can also use markers to pass information to a fixture used by a test. We’ll
+  take a look at that, too.
+
 *** Using Builtin Markers - 73
-*** Skipping Tests with ~pytest.mark.skip~ - 74
-*** Skipping Tests Conditionally with ~pytest.mark.skipif~ - 76
-*** Expecting Tests to Fail with ~pytest.mark.xfail~ - 77
-*** Selecting Tests with Custom Markers - 79
-*** Marking Files, Classes, and Parameters - 82
-*** Using “and,” “or,” “not,” and Parentheses with Markers - 85
-*** Being Strict with Markers - 86
-*** Combining Markers with Fixtures - 88
-*** Listing Markers - 92
-*** Review - 92
-*** Exercises - 94
-*** What's Next - 95
+- /pytest's builtin markers/ are used to _modify the behavior of how tests run_.
+
+- We explored ~@pytest.mark.parametrize()~ in the last chapter. Here's the full
+  list of the /builtin markers/ included in pytest as of _pytest 6_:
+  * ~@pytest.mark.filterwarnings(warning)~:
+    This marker adds a warning filter to the given test.
+    =TODO: ???=
+
+  * ~@pytest.mark.skip(reason=None)~:
+    This marker skips the test with an optional reason.
+
+  * ~@pytest.mark.skipif(condition, ..., *, reason)~:
+    This marker skips the test if any of the conditions are True.
+
+  * ~@pytest.mark.xfail(condition, ..., *, reason, run=True, raises=None, strict=xfail_strict)~:
+    This marker tells pytest that we expect the test to fail.
+
+  * ~@pytest.mark.parametrize(argnames, argvalues, indirect, ids, scope)~:
+    This marker calls a test function multiple times, passing in different
+    arguments in turn.
+
+  * ~@pytest.mark.usefixtures(fixturename1, fixturename2, ...)~:
+    This marker marks tests as needing all the specified fixtures.
+    =TODO: ???=
+
+*** DONE Skipping Tests with ~pytest.mark.skip~ - 74
+CLOSED: [2025-01-08 Wed 10:39]
+#+file_name: ch6/builtins/test_less_than.py
+#+begin_src python
+  from cards import Card
+
+  @pytest.mark.skip(reason="Card doesn't support < comparison yet")
+  def test_less_than():
+      c1 = Card("a task")
+      c2 = Card("b task")
+      assert c1 < c2
+
+
+  def test_equality():
+      c1 = Card("a task")
+      c2 = Card("a task")
+      assert c1 == c2
+#+end_src
+- ~pytest test_skip.py~
+
+- ~pytest -v -ra test_skip.py~
+  * ~-r~ flag tells _pytest_ to report reasons for different test results at the
+    end of the session.
+
+    =IMPORTANT=
+    You give it a single character that represents the kind of result you want
+    more information on.
+
+    + ~a~ in ~-ra~ stands for "all except passed."
+      The ~-ra~ flag is therefore the most useful, as we almost always want to
+      know the reason why certain tests did not pass.
+
+    + The default display use the flags ~-rfE~:
+      - ~f~ for failed tests.
+      - ~E~ for errors.
+
+*** DONE Skipping Tests Conditionally with ~pytest.mark.skipif~ - 76
+CLOSED: [2025-01-08 Wed 10:48]
+- With both the ~skip~ and the ~skipif~ /markers/,
+  *the test is NOT actually run*.
+
+- Example:
+  Won't support sorting in the 1.x.x versions of the Cards application, but will
+  in version 2.x.x.
+
+  We can tell _pytest_ to skip the test for all versions of Cards lower than than
+  2.x.x like this:
+  #+file_name: ch6/builtins/test_skipif.py
+  #+begin_src python
+    import cards
+    from packaging.version import parse
+
+
+    @pytest.mark.skipif(
+        parse(cards.__version__).major < 2,
+        reason="Card < comparison not supported in 1.x",
+    )
+    def test_less_than():
+        c1 = Card("a task")
+        c2 = Card("b task")
+        assert c1 < c2
+  #+end_src
+  * Use a third-party package for handling version info: ~packaging~
+
+- =IMPORTANT=
+  Common use cases:
+  * create tests for different OS with the help of ~skipif~.
+
+*** DONE Expecting Tests to Fail with ~pytest.mark.xfail~ - 7
+CLOSED: [2025-01-08 Wed 15:39]
+If you want to run a test which will raise a expected failure, use the ~xfail~
+/builtin marker/.
+
+- The full signature for ~xfail~:
+  #+begin_src python
+    @pytest.mark.xfail(
+        condition,
+        ...,
+        *,
+        reason,
+        run=True,
+        raises=None,
+        strict=xfail_strict
+    )
+  #+end_src
+
+- Example:
+  #+file_name: ch6/builtins/test_xfail.py
+  #+begin_src python
+    @pytest.mark.xfail(
+        parse(cards.__version__).major < 2,
+        reason="Card < comparison not supported in 1.x",
+    )
+    def test_less_than():
+        c1 = Card("a task")
+        c2 = Card("b task")
+        assert c1 < c2
+
+
+    @pytest.mark.xfail(reason="XPASS demo")
+    def test_xpass():
+        c1 = Card("a task")
+        c2 = Card("a task")
+        assert c1 == c2
+
+
+    @pytest.mark.xfail(reason="strict demo", strict=True)
+    def test_xfail_strict():
+        c1 = Card("a task")
+        c2 = Card("a task")
+        assert c1 == c2
+  #+end_src
+
+  * ~pytest -v -ra test_xfail.py~
+    #+begin_src text
+      ========================= test session starts ==========================
+      collected 3 items
+
+      test_xfail.py::test_less_than XFAIL (Card < comparison not s...) [ 33%]
+      test_xfail.py::test_xpass XPASS (XPASS demo)                     [ 66%]
+      test_xfail.py::test_xfail_strict FAILED                          [100%]
+      =============================== FAILURES ===============================
+      __________________________ test_xfail_strict ___________________________
+      [XPASS(strict)] strict demo
+      ======================= short test summary info ========================
+      XFAIL test_xfail.py::test_less_than
+        Card < comparison not supported in 1.x
+      XPASS test_xfail.py::test_xpass XPASS demo
+      FAILED test_xfail.py::test_xfail_strict
+      =============== 1 failed, 1 xfailed, 1 xpassed in 0.11s ================
+    #+end_src
+
+    For tests marked with ~xfail~:
+    + Failing tests will result in ~XFAIL~.
+    + Passing tests (with no ~strict~ setting) will result in ~XPASSED~.
+    + Passing tests with ~strict=true~ will result in ~FAILED~.
+
+- If you want to set ~strict~ for ~xfail~ globally, add ~xfail_strict=true~ to
+  =pytest.ini=.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =THE RIGHT WAY TO USE xfail=
+  There are a couple additional reasons why you might want to use ~xfail~:
+  * =The author's favorite use of xfail=
+    Writing tests first - =from Jian= also suggested by _How to Design Programs_
+
+    Writing a bunch of test cases you know aren't implemented yet
+    *BUT that you plan on implementing SHORTLY.*
+
+    MARKS the new behaviors with ~xfail~ and REMOVE the ~xfail~ gradually as you
+    implement the behavior.
+
+    =from Jian= Summary: use this way, the ~xfail~'s disappear after a short
+    period, when the planned behaviors have been implemented.
+
+    OR
+
+  * Something breaks, a test (or more) fails, and the person or team that needs
+    to fix the break can't work on it right away.
+
+    Marking the tests as xfail, ~strict=true~, with the reason _written to
+    include the defect/issue report ID_ is a decent way to keep the test
+    running, not forget about it, and alert you when the bug is fixed.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *BAD reasons to use use ~xfail~ or ~skip~.* Here's one:
+
+  Remember YAGNI ("Ya Aren’t Gonna Need It") that comes from Extreme
+  Programming and states: "Always implement things when you actually need
+  them, never when you just foresee that you need them."
+
+  Don't use ~xfail~ and ~~skip~ for features if you can't finish the
+  development of these features in a short term.
+
+*** DONE Selecting Tests with Custom Markers - 79
+CLOSED: [2025-01-08 Wed 15:51]
+/Custom markers/ can be used to *select* tests to _run_ or _skip_.
+
+- Example:
+  Two custom markers and register them for using without warnings:
+  #+file_name: ch6/reg/pytest.ini
+  #+begin_src ini
+    [pytest]
+    markers =
+        smoke: subset of tests
+        exception: check for expected exceptions
+  #+end_src
+
+  #+file_name: ch6/reg/test_start.py
+  #+begin_src python
+    @pytest.mark.smoke
+    def test_start(cards_db):
+        """start changes state from "todo" to "in prog"
+        """
+        i = cards_db.add_card(Card("foo", state="todo"))
+        cards_db.start(i)
+        c = cards_db.get_card(i)
+        assert c.state == "in prog"
+
+
+    @pytest.mark.exception
+    def test_start_non_existent(cards_db):
+        """Shouldn't be able to start a non-existent card."""
+        any_number = 123 # any number will be invalid, db is empty
+        with pytest.raises(InvalidCardId):
+            cards_db.start(any_number)
+  #+end_src
+
+  * ~pytest -v -m smoke test_start.py~
+  * ~pytest -v -m exception test_start.py~
+
+*** TODO Marking Files, Classes, and Parameters - 82
+*** TODO Using “and,” “or,” “not,” and Parentheses with Markers - 85
+*** DONE Being Strict with Markers - 86
+CLOSED: [2025-01-08 Wed 16:01]
+#+file_name: ch6/strict/pytest.ini
+#+begin_src toml
+  [pytest]
+  markers =
+      smoke: subset of tests
+      exception: check for expected exceptions
+      finish: all of the "cards finish" related tests
+  addopts =
+      --strict-markers
+#+end_src
+
+This is good for /markers/ that can't be found -- feedback about this error is
+issued at collection time, not at test case run time.
+
+*** DONE Combining Markers with Fixtures - 88
+CLOSED: [2025-01-08 Wed 16:37]
+=from Jian=
+I think _property test frameworks_ often support this directly.
+_Property test frameworks_ is more straightforward in my experience, I mean in
+Scala.
+
+- /Markers/ can be used in conjunction with /fixtures/.
+  * They also can be used in conjunction with /plugins/ and /hook functions/
+    (=TODO= but that's a topic for Chapter 15, Building Plugins, on page 205).
+
+    Here, we'll combine /markers/ and /fixtures/ to help test _the Cards
+    application_.
+
+- The /builtin markers/ took parameters,
+  WHILE the custom ones we've used *SO FAR do not*.
+
+  Let's create a new /marker/ called ~num_cards~ that we can pass to the
+  ~cards_db~ /fixture/.
+
+- The ~cards_db~ /fixture/
+  CURRENTLY
+  cleans out the database for each test that wants to use it:
+  #+file_name: ch6/combined/test_three_cards.py
+  #+begin_src python
+    @pytest.fixture(scope="function")
+    def cards_db(session_cards_db):
+        db = session_cards_db
+        db.delete_all()
+        return db
+  #+end_src
+
+- Example:
+  #+file_name: ch6/combined/pytest.ini
+  #+begin_src ini
+    [pytest]
+    markers =
+        smoke: subset of tests
+        exception: check for expected exceptions
+        finish: all of the "cards finish" related tests
+        num_cards: number of cards to prefill for cards_db fixture
+  #+end_src
+
+  #+file_name: ch6/combined/conftest.py
+  #+begin_src python
+    @pytest.fixture(scope="function")
+    def cards_db(session_cards_db, request, faker):
+        db = session_cards_db
+        db.delete_all()
+
+        # support for `@pytest.mark.num_cards(<some number>)`
+        # random seed
+        faker.seed_instance(101)
+        m = request.node.get_closest_marker("num_cards")
+        if m and len(m.args) > 0:
+            num_cards = m.args[0]
+            for _ in range(num_cards):
+                db.add_card(
+                    Card(summary=faker.sentence(), owner=faker.first_name())
+                )
+        return db
+  #+end_src
+  This assume ~@pytest.mark.num_cards~ is the same as
+  ~@pytest.mark.num_cards(0)~.
+
+  #+file_name: ch6/combined/test_num_cards.py
+  #+begin_src python
+    import pytest
+
+
+    def test_no_marker(cards_db):
+        assert cards_db.count() == 0
+
+
+    @pytest.mark.num_cards
+    def test_marker_with_no_param(cards_db):
+        assert cards_db.count() == 0
+
+
+    @pytest.mark.num_cards(3)
+    def test_three_cards(cards_db):
+        assert cards_db.count() == 3
+        # just for fun, let's look at the cards Faker made for us
+        print()
+        for c in cards_db.list_cards():
+            print(c)
+
+    @pytest.mark.num_cards(10)
+    def test_ten_cards(cards_db):
+        assert cards_db.count() == 10
+  #+end_src
+
+  ~pytest -v -s test_num_cards.py~
+
+*** DONE Listing Markers - 92
+CLOSED: [2025-01-08 Wed 16:03]
+~pytest --markers~
+
+*** TODO Review - 92
+*** TODO Exercises - 94
+*** TODO What's Next - 95
 
 * Part II — Working with Projects
-** 7. Strategy - 99
+** TODO 7. Strategy - 99
+- _SO FAR in this book_ we've been talking about the mechanics of _pytest_ - the
+  "how to write tests" part of software testing - including
+  * writing test functions
+  * using fixtures
+  * implementing parametrized testing
+
+  =IMPORTANT=
+  In this chapter, we're going to use all that you've learned about _pytest_ so
+  far to *create a test strategy for the Cards project* - the *"what tests to
+  write"* part of software testing.
+
+- Steps:
+  1. We'll start by defining goals for our test suite.
+
+  2. We'll then look at HOW the software architecture of Cards has INFLUENCE on
+     our /test strategy/ and IS INFLUENCED BY the need for tests.
+
+  3. Then we can start selecting and prioritizing which features to test.
+
+  4. Once we know what features need tests, we can generate a list of test cases
+     needed.
+
+  5. All of this methodical planning really doesn't take long, and will help to
+     generate a pretty decent initial test suite.
+
 *** Determining Test Scope - 99
+- Different projects have different test goals and requirements.
+
+- We will almost always want to test the behavior of the user visible
+  functionality.
+
+  However, there are quite a few other questions we need to consider when
+  determining how much testing we need to do:
+  * _Is security a concern?_
+    This is especially important if you save any confidential information.
+
+  * _Performance?_
+    Do interactions need to be fast? How fast?
+
+  * _Loading?_
+    Can you handle lots of people with lots of requests? Are you expecting to need to?
+    If so, you should test for that.
+
+  * _Input validation?_
+    For really any system that accepts input from users, we should validate the
+    data before acting on it.
+
+- _The Cards project_ is intended for use by an individual or a small team.
+
+  Even so, in reality, all of the concerns above apply to this project,
+  especially as it grows.
+
+  *So for an initial test suite*, how much testing should we do?
+  Here's a reasonable start:
+  * Test the behavior of user visible functionality.
+
+  * Postpone security, performance, and load testing for the current design.
+    + The current design is to have the database stored in the users home
+      directory. When/if that moves to a shared location with multiple users,
+      these concerns will definitely be more important.
+
+  * _Input validation is also less important while Cards is a single user
+    application._
+    However, I also don't want stack traces to occur while using the app, so we
+    should test wacky input, at least at the CLI level.
+
+- All projects will need to have /functionality or feature testing/.
+  * However, even with /functionality testing/ alone,
+    + we need to decide which features need testing and at what priority.
+    + Then for each feature, we need to decide on test cases.
+
+- Using a methodical approach makes all of this fairly straightforward.
+  * We'll go through all of this for the Cards project as an example.
+  * We'll begin by prioritizing features and then generating test cases.
+  * *But first*, let's take a look at how your project's software architecture
+    can influence the testing strategy you choose.
+
 *** Considering Software Architecture - 101
+How your application is set up - its software architecture - is an important
+consideration when determining a testing strategy.
+
+- Software architecture ::
+  * how your project's software is organized,
+  * what APIs are available,
+  * what the interfaces are,
+  * where code complexity lives, modularity, and so much more.
+
+- In relation to testing, we need to know
+  * how much of the system we need to test
+  * what the entry points are
+
+- As a simple example,
+  let's say we're testing _code that exists in one module_,
+  1. is intended to be used on the command line,
+  2. has no interactive components other than print output,
+  3. has no API.
+
+- If the code is not written in Python, we have no choices by test it as a black box.
+  This is not the case of _the Cards project_, which we want to test.
+
+- If the code is written in Python and is importable, and we can test the
+  different parts of it by calling functions within the module, we then have
+  choices.
+  1. We can still test it as before, as a black box.
+  2. But we can also test the functions inside separately if we want to.
+
 *** Evaluating the Features to Test - 103
 *** Creating Test Cases - 105
 *** Writing a Test Strategy - 108
@@ -848,19 +1400,100 @@ CLOSED: [2025-01-07 Tue 16:19]
 *** Exercises - 110
 *** What's Next - 111
 
-** 8. Configuration Files - 113
-*** Understanding pytest Configuration Files - 113
-*** Saving Settings and Flags in pytest.ini - 114
-*** Using tox.ini, pyproject.toml, or setup.cfg in place of pytest.ini - 116
-*** Determining a Root Directory and Config File - 118
-*** Sharing Local Fixtures and Hook Functions with conftest.py - 119
-*** Avoiding Test File Name Collision - 119
-*** Review - 121
-*** Exercises - 121
-*** What's Next - 122
+** DONE 8. Configuration Files - 113 - =NOTE=
+CLOSED: [2025-01-09 Thu 12:28]
+Configuration files for _pytest_ -
+those non-test files that _affect how pytest runs_ - save time and duplicated
+work.
 
-** 9. Coverage - 123
+- For example,
+  if you find yourself always using certain flags in your tests, like
+  ~--verbose~ or ~--strict-markers~, you can tuck those away in a config file
+  and not have to type them all the time.
+
+- IN ADDITION TO /configuration files/, a handful of other files are useful when
+  using pytest to make work of writing and running tests easier.
+  We'll cover all of them in this chapter.
+
+*** DONE Understanding pytest Configuration Files - 113
+CLOSED: [2025-01-08 Wed 18:50]
+- Let's run down the non-test files relevant to pytest:
+  * =pytest.ini=:
+    This is the primary pytest configuration file that allows you to change
+    pytest's default behavior. Its location also defines _the pytest root
+    directory_, or ~rootdir~.
+
+  * =conftest.py=:
+    This file contains /fixtures/ and /hook functions/. It can exist at the
+    ~rootdir~ or in _ANY subdirectory_.
+
+  * =__init__.py=:
+    When put into test subdirectories, this file allows you to have identical
+    test file names in multiple test directories.
+    =TODO: ??? re-export ???=
+
+  * =tox.ini=, =pyproject.toml=, and =setup.cfg=:
+    These files can take the place of =pytest.ini=.
+    If you already have one of these files in a project, you can use it to save
+    pytest settings.
+
+    + =tox.ini=
+      is used by _tox_, the command-line automated testing tool we take a look
+      at in =TODO= Chapter 11, _tox_ and _Continuous Integration, on page 151._
+
+    + =pyproject.toml=
+      is used for packaging Python projects and can be used to save settings for
+      various tools, INCLUDING _pytest_.
+
+    + =setup.cfg=
+      is also used for packaging, and can be used to save _pytest_ settings.
+
+- Example project directory, with =tests=
+  #+begin_src text
+    cards_proj
+    ├── ... top level project files, src dir, docs, etc ...
+    ├── pytest.ini
+    └── tests
+        ├── conftest.py
+        ├── api
+        │   ├── __init__.py
+        │   ├── conftest.py
+        │   └── ... test files for api ...
+        └── cli
+            ├── __init__.py
+            ├── conftest.py
+            └── ... test files for cli ...
+  #+end_src
+
+*** TODO Saving Settings and Flags in pytest.ini - 114 - =NOTE=
+*** TODO Using tox.ini, pyproject.toml, or setup.cfg in place of pytest.ini - 116 - =NOTE=
+*** TODO Determining a Root Directory and Config File - 118
+*** TODO Sharing Local Fixtures and Hook Functions with conftest.py - 119
+*** TODO Avoiding Test File Name Collision - 119
+*** TODO Review - 121
+*** TODO Exercises - 121
+*** TODO What's Next - 122
+
+** DONE 9. Coverage - 123 - =NOTE=
+CLOSED: [2025-01-09 Thu 15:54]
+- /line coverage/
+- /branch coverage/
+
+- Use _Coverage.py_ and optinoally _pytest-cov_ (make the command line a little
+  shorter).
+
 *** Using coverage.py with pytest-cov - 123
+- They are 3rd-party packages that need installation.
+
+- ~pytest --cov=cards ch7~ (use coverage.py through pytest-cov)
+  1. run ~coverage~ with ~--source~ set to ~cards~ while running _pytest_ with
+     the tests in ch7, and
+  2. run ~coverage report~ for the terminal line-coverage report.
+
+- Use coverage.py directly
+  1. ~coverage run --source=cards -m pytest ch7~
+  2. ~coverage report~
+
 *** Generating HTML Reports - 127
 *** Excluding Code from Coverage - 129
 *** Running Coverage on Tests - 130
@@ -868,9 +1501,33 @@ CLOSED: [2025-01-07 Tue 16:19]
 *** Running Coverage on a Single File - 132
 *** Review - 134
 *** Exercises - 134
-*** What’s Next - 135
+*** What's Next - 135
 
-** 10. Mocking - 137
+** TODO 10. Mocking - 137
+- In the last chapter, we _tested the Cards project through the API._
+
+- In this chapter, we're going to _test the CLI._
+
+  When we wrote the /test strategy/ for the Cards project in Writing a Test
+  Strategy, on page 108, we included the following statement:
+  * Test the CLI enough to verify the API is getting properly called for all features.
+
+- We're going to use the ~mock~ package to help us with that.
+
+  Shipped as part of the Python standard library as ~unittest.mock~ as of
+  _Python 3.3_, the ~mock~ package *is used to swap out pieces of the system to
+  isolate bits of our application code from the rest of the system.*
+
+  * /Mock objects/ are sometimes called test *doubles*, *spies*, *fakes*, or
+    *stubs*. Between pytest's own ~monkeypatch~ fixture (covered in Using
+    monkeypatch, on page 54) and ~mock~, you should have all the test double
+    functionality you need.
+
+- In this chapter,
+  * we'll take a look at using ~mock~ to help us test the Cards CLI.
+  * we'll also look at using the ~CliRunner~ provided by _Typer_ to *assist* in
+    testing.
+
 *** Isolating the Command-Line Interface - 137
 *** Testing with Typer - 139
 *** Mocking an Attribute - 140
@@ -899,7 +1556,7 @@ CLOSED: [2025-01-07 Tue 16:19]
 *** Exercises - 162
 *** What's Next - 163
 
-** 12. Testing Scripts and Applications - 165
+** TODO 12. Testing Scripts and Applications - 165
 *** Testing a Simple Python Script - 166
 *** Testing an Importable Python Script - 168
 *** Separating Code into src and tests Directories - 170
@@ -909,7 +1566,7 @@ CLOSED: [2025-01-07 Tue 16:19]
 *** Exercises - 176
 *** What's Next - 177
 
-** 13. Debugging Test Failures - 179
+** TODO 13. Debugging Test Failures - 179
 *** Adding a New Feature to the Cards Project - 179
 *** Installing Cards in Editable Mode - 182
 *** Debugging with pytest Flags - 183

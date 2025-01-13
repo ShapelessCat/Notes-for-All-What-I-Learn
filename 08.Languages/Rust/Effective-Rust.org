@@ -2008,6 +2008,18 @@ CLOSED: [2025-01-03 Fri 18:48]
 
 ** TODO Item 16: Avoid writing ~unsafe~ code - 142
 ** TODO Item 17: Be wary of shared-state parallelism - 145
+- The official documentation describes Rust as enabling "fearless concurrency",
+  but this Item will explore why (sadly) there are still some reasons to be
+  afraid of concurrency, even in Rust.
+
+- This Item is specific to shared-state parallelism: where different threads of
+  execution communicate with each other by sharing memory. Sharing state between
+  threads generally comes with two terrible problems, regardless of the language
+  involved:
+  * Data races: can lead to corrupted data.
+
+  * Deadlocks: can lead to your program grinding to a halt.
+
 *** Data Races
 **** Data races in C++
 **** Data races in Rust
@@ -2016,23 +2028,151 @@ CLOSED: [2025-01-03 Fri 18:48]
 *** Deadlocks
 *** Advice
 
-** TODO Item 18: Don't panic - 159
+** DONE Item 18: Don't panic - 159
+CLOSED: [2025-01-12 Sun 15:25]
 The title of this Item would be more accurately described as
 _prefer returning a ~Result~ to using ~panic!~ (but don't panic is much
 catchier)_.
 
 - /rust's panic mechanism/ is primarily designed for *UNRECOVERABLE bugs* in your
-  program, and _BY DEFAULT_ it terminates the thread that issues the ~panic!~.
-  However, there are _alternatives_ to this DEFAULT.
+  program, and _BY DEFAULT_ it *TERMINATES the thread* that issues the ~panic!~.
 
-- xxx
+  *However, there are _alternatives_ to this DEFAULT.*
+
+- IT SEEMS ~std::panic::catch_unwind~ as a way to simulate /exceptions/, because
+  it appears to provide a mechanism for _catching panics_ at a point further up
+  the /call stack/.
+  #+begin_src rust
+    fn divide(a: i64, b: i64) -> i64 {
+        if b == 0 {
+            panic!("Cowardly refusing to divide by zero!");
+        }
+        a / b
+    }
+
+    fn divide_recover(a: i64, b: i64, default: i64) -> i64 {
+        let result = std::panic::catch_unwind(|| divide(a, b));
+        match result {
+            Ok(x) => x,
+            Err(_) => default,
+        }
+    }
+
+    fn main() {
+        let result = divide_recover(0, 0, 42);
+        println!("result = {result}"); // result = 42
+    }
+  #+end_src
+
+  However, *this appearance is deceptive*.
+
+  * /panics/ don't always /unwind/; there is a compiler option (which is also
+    accessible via a =Cargo.toml= profile setting) that shifts panic behavior so
+    that it immediately aborts the process:
+    #+begin_src text
+      thread 'main' panicked at 'Cowardly refusing to divide by zero!', main.rs:11:9
+      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+      /bin/sh: line 1: 29100 Abort trap: 6 cargo run --release
+    #+end_src
+
+    This leaves any attempt to _simulate exceptions_ *entirely at the mercy of the
+    wider project settings.*
+
+  * =IMPORTANT=
+    A more subtle problem that's surfaced by /panic handling/ is /exception safety/:
+    if a /panic/ occurs _MIDWAY through an operation on a data structure_, it
+    removes any guarantees that the data structure has been left in a
+    self-consistent state.
+
+    Preserving internal invariants in the presence of exceptions has been known
+    to be *extremely difficult* SINCE the 1990s; this is one of the main reasons
+    why _Google (famously) bans the use of exceptions in its C++ code._
+
+- Q :: What's the _alternative_ to ~panic!~ for dealing with error conditions?
+
+- A ::
+  * For library code,
+    make the error _someone else's problem_ by returning a ~Result~.
+    The library users should make their decisions.
+    + Use ~panic!~ in library code is OK, if the error is rare and you don't
+      want users to have to litter their code with ~.unwrap()~ calls.
+
+  * It is OK to ~panic!~ if you have control of ~main~;
+    at that point, no further caller that the buck could be passed to.
+
+- Use cases:
+  * If an error situation should occur
+    ONLY BECAUSE (say) _internal data is corrupted_, RATHER THAN as a result of
+    invalid inputs,
+    THEN _triggering a ~panic!~ is legitimate._
+
+  * It can even be occasionally useful to
+    allow panics that
+    CAN be triggered by invalid input
+    BUT where such invalid inputs are out of the ordinary.
+
+    This works best when the relevant entrypoints come in pairs:
+    + An “infallible” version whose signature implies it always succeeds (and
+      which panics if it can't succeed)
+      - The _Rust's API guidelines_ suggest that the ~panic!~ should be
+        documented in a specific section of the inline documentation (_Item
+        27_).
+
+    + A “fallible” version that returns a ~Result~
+      - Examples:
+        ~String::from_utf8_unchecked~ and ~String::from_utf8~ entrypoints
+        (although in this case, the /panics/ are actually deferred to the point
+        where a ~String~ constructed from invalid input gets used).
+
+- Assuming that you are trying to comply with the advice in this Item, there are
+  a few things to bear in mind. The first is that _panics can appear in different
+  guises_; avoiding ~panic!~ also involves avoiding the following:
+  * ~unwrap()~ and ~unwrap_err()~
+  * ~expect()~ and ~expect_err()~
+  * ~unreachable!()~
+
+- Harder to spot are things like these:
+  * ~slice[index]~ when the index is out of range
+  * ~x / y~ when ~y~ is zero
+
+- =from Jian=:
+  Good engineering should reduce the cognitive cost of developers and help them
+  focus on creative parts, and let the machine do the repetitive parts.
+
+  Following this idea, working with /panics/:
+  =from this book=
+  * a plan that involves _constant vigilance of humans_ is never a good idea.
+
+  * However, _constant vigilance of machines_ is another matter:
+    adding a check to your /continuous integration/ (see _Item 32_) system that
+    spots new, potentially panicking code is much more reliable.
+
+    + A simple version could be a simple grep for the most common panicking
+      entrypoints (as shown previously);
+
+    + a more thorough check could involve additional tooling from the Rust
+      ecosystem (_Item 31_), such as setting up a /build variant/ that pulls in
+      the ~no_panic~ crate.
+      =TODO: Learn the no_panic library=
 
 ** TODO Item 19: Avoid reflection - 162
+- Programmers coming to Rust from other languages are often used to reaching for
+  reflection as a tool in their toolbox. They can waste a lot of time trying to
+  implement reflection-based designs in Rust, only to discover that what they're
+  attempting can only be done poorly, if at all. This Item hopes to save that
+  time wasted exploring dead ends, by describing what Rust does and doesn't have
+  in the way of reflection, and what can be used instead.
+
+- Reflection is the ability of a program to examine itself at runtime. Given an
+  item at runtime, it covers these questions:
+  * What information can be determined about the item’s type?
+  * What can be done with that information?
+
 *** Upcasting in Future Versions of Rust
 
-** TODO Item 20: Avoid the temptation to over-optimize - 169
+** TODO Item 20: Avoid the temptation to over-optimize - 169 - =NOTE=
 *** Data Structures and Allocation
-*** Who’s Afraid of the Big Bad Copy?
+*** Who's Afraid of the Big Bad Copy?
 *** References and Smart Pointers
 
 * DONE 4. Dependencies - 175 - =TODO: NOTE=
@@ -2369,14 +2509,23 @@ CLOSED: [2024-12-25 Wed 16:24]
 *** TODO Things to Remember
 
 * TODO 5. Tooling - 203
-** Item 27: Document public interfaces - 203
+** TODO Item 27: Document public interfaces - 203 - =NOTE=
 *** Tooling
 *** Additional Documentation Locations
 *** Published Crate Documentation
+- As a result, the home page for a crate shows different content in each location:
+  * _docs.rs_
+    Shows the top-level page from the output of cargo doc, as generated from ~//!~
+    comments in the top-level =src/lib.rs= file.
+
+  * _crates.io_
+    Shows the content of any top-level *README.md* file that’s included in the
+    project's repo.
+
 *** What Not to Document
 *** Things to Remember
 
-** Item 28: Use macros judiciously - 209
+** TODO Item 28: Use macros judiciously - 209
 *** Declarative Macros
 *** Procedural Macros
 **** Function-like macros
@@ -2387,21 +2536,330 @@ CLOSED: [2024-12-25 Wed 16:24]
 *** Disadvantages of Macros
 *** Advice
 
-** Item 29: Listen to Clippy - 223
-** Item 30: Write more than unit tests - 227
-*** Unit Tests
-*** Integration Tests
-*** Doc Tests
-*** Examples
-*** Benchmarks
-*** Fuzz Testing
-*** Testing Advice
-*** Things to Remember
+** TODO Item 29: Listen to Clippy - 223 - =NOTE=
+- _Clippy_ is an additional component for Cargo (~cargo clippy~) that emits
+  warnings about your Rust usage, across a variety of categories:
+  * _Correctness_
+    Warns about common programming errors
 
-** Item 31: Take advantage of the tooling ecosystem - 235
+  * _Idiom_
+    Warns about code constructs that aren't quite in standard Rust style
+
+  * _Concision_
+    Points out variations on the code that are more compact
+
+  * _Performance_
+    Suggests alternatives that avoid unnecessary processing or allocation
+
+  * _Readability_
+    Describes alterations to the code that would make it easier for humans to read
+    and understand
+
+- _Clippy warning comes with a linke to a webpage describing the error_
+  _The text also describes known problems with the lint_
+  This is important, and you can read that webpage to decide follow the lint
+  advice or not.
+
+- Disable a lint warning for a particular item: ~#[allow(clippy::some_lint)]~
+- Disable a lint for the entire crate ~#![allow(clippy::some_lint)]~ with an
+  extra ~!~, at the top level.
+
+- Whether you choose to fix or disable the warnings,
+  you should make your code *Clippy-warning free*.
+
+- Clippy's warnings are particularly helpful when you're learning Rust,
+  _BECAUSE_
+  they reveal gotchas you might not have noticed and help you become familiar
+  with Rust idiom.
+
+- Many of the _Items_ in this book also have corresponding _Clippy warnings_,
+  when it's possible to mechanically check the relevant concern:
+  * Item 1
+  * Item 3
+  * Item 3
+  * Item 5
+  * Item 5
+  * Item 8
+  * Item 9
+  * Item 10
+  * Item 18
+  * Item 21
+  * Item 23
+  * Item 24 and 25
+  * Item 26
+  * Item 26
+  * Item 27
+
+** DONE Item 30: Write more than unit tests - 227 - =NOTE=
+CLOSED: [2025-01-13 Mon 21:44]
+This Item assumes that you're already signed up to write tests for your code.
+
+- /Unit tests/ and /integration tests/, described in the next two sections, are
+  the key forms of tests.
+
+  However, the _Rust toolchain_, and _extensions to the toolchain_, allow for
+  _various other types of tests_.
+
+  This Item describes their DISTINCT _logistics_ and _rationales_.
+
+*** DONE Unit Tests - 227
+CLOSED: [2025-01-13 Mon 20:32]
+- The _most common form of test_ for Rust code is a /unit test/, which might
+  look something like this:
+  #+begin_src rust
+    // ... (code defining `nat_subtract*` functions for natural
+    // number subtraction)
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        #[test]
+        fn test_nat_subtract() {
+            assert_eq!(nat_subtract(4, 3).unwrap(), 1);
+            assert_eq!(nat_subtract(4, 5), None);
+        }
+        #[should_panic]
+        #[test]
+        fn test_something_that_panics() {
+            nat_subtract_unchecked(4, 5);
+        }
+    }
+  #+end_src
+  Some aspects of this example will appear in every /unit test/:
+  * A COLLECTION of /unit test functions/.
+  * EACH /test function/ is marked with the ~#[test]~ attribute.
+  * The /module/ holding the /test functions/ is annotated with a ~#[cfg(test)]~
+    attribute, so the code _gets built *ONLY* in test configurations._
+
+- Other aspects of this example illustrate things that are _OPTIONAL_ and may be
+  relevant only for particular tests:
+  * The test code here is held in a SEPARATE /module/, conventionally called
+    ~tests~ or ~test~.
+
+    + This /module/ may be *inline* (as here) or *held in a separate ~tests.rs~
+      file*.
+
+      Using a *SEPARATE file* for /the test module/ has the advantage that it's
+      easier to spot whether code that uses a function is test code or “real”
+      code.
+
+  * The /test module/ might have a wildcard use ~super::*~ to pull in everything
+    from the /parent module/ under test.
+
+    This makes it more convenient to add tests (and is an *EXCEPTION* to the
+    general advice in _Item 23_ to avoid wildcard imports).
+
+  * The _normal visibility rules_ for /modules/ mean that a unit test has the
+    ability to use anything from the parent module, whether it is ~pub~ or not.
+
+  * The test code makes use of ~expect()~ or ~unwrap()~ for its expected results.
+    Also use ~assert_eq!~. /panic/ is not a problem in tests.
+
+  * ~#[should_panic]~
+
+- However, if your code relies on specific functionality from your /dependencies/,
+  *it can be helpful to include BASIC TESTS of that functionality.*
+
+  It is an early warning system that indicates whether the behavior has changed
+  when you update that dependency. Also, sometimes, a dependency may violate
+  semantic versioning conventions -- early detection can help to avoid damage.
+
+*** DONE Integration Tests - 229
+CLOSED: [2025-01-13 Mon 20:32]
+- The other common form of test included with a Rust project is /integration
+  tests/, held under =tests/=. Each file in that directory is run as a SEPARATE
+  test program that executes all of the functions marked with ~#[test]~.
+
+- /Integration tests/ do NOT have access to _crate internals_ and so act as
+  behavior tests that can exercise _ONLY the public API_ of the crate.
+
+*** DONE Doc Tests - 229
+CLOSED: [2025-01-13 Mon 20:40]
+- _Item 27_ described the inclusion of short code samples in documentation
+  comments, to illustrate _the use of a particular public API item._
+
+  Each such chunk of code is enclosed in an *implicit* ~fn main() { ... }~ and
+  run as part of ~cargo test~, effectively making it an _ADDITIONAL test case_
+  for your code, known as a /doc test/. /Individual tests/ can also be executed
+  selectively by running ~cargo test --doc <item-name>~.
+
+- =IMPORTANT=
+  =from Jian= A reason why do we need /doc tests/.
+  Regularly running tests as part of your CI environment (_Item 32_) ensures that
+  your code samples don't drift too far from the current reality of your API.
+
+*** DONE Examples - 229
+CLOSED: [2025-01-13 Mon 21:02]
+_Item 27_ also described the ability to provide _example programs_ that
+exercise your public API.
+
+- Each Rust file under =examples/= (or each _subdirectory_ under =examples/=
+  that includes a =main.rs=) can be run as a STANDALONE BINARY with
+  ~cargo run -- example <name>~ or ~cargo test --example <name>~.
+
+- These programs have access to *ONLY* _the public API_ of your crate and are
+  intended to _ILLUSTRATE the use of your API as a whole_.
+
+  Examples are *NOT* specifically designated as test code (no ~#[test]~, no
+  ~#[cfg(test)]~), and they're a poor place to put code that exercises obscure
+  nooks and crannies of your crate - particularly as examples are *NOT run by
+  ~cargo test~ BY DEFAULT*.
+
+- NEVERTHELESS, it's a good idea to ensure that your CI system (_Item 32_)
+  builds and runs all the associated examples for a crate (with ~cargo test
+  --examples~), because it can act as a good _early warning system_ for
+  regressions that are likely to affect lots of users.
+
+  + As noted, if your examples demonstrate mainline use of your API, then a
+    failure in the examples implies that something significant is wrong:
+    * If it's a genuine bug, then it's likely to affect lots of users -
+      =IMPORTANT=
+      _the very nature of example code means that users are likely to have
+      copied, pasted, and adapted the example._
+
+    * IF it's _an intended change to the API_,
+      then the examples *need to be updated* to match.
+
+      _A change to the API also IMPLIES a *backward incompatibility*,_
+      =IMPORTANT=
+      so if the crate is published, then the semantic version number needs a
+      corresponding update to indicate this (_Item 21_).
+
+- The likelihood of users copying and pasting _example code_ means that it should
+  have a *different style* than _test code_.
+
+  =REMEMBER=
+  In line with _Item 18_, you should set a good example for your users by
+  avoiding ~unwrap()~ calls for ~Result~'s. Instead, make each example's
+  ~main()~ function return something like ~Result<(), Box<dyn Error>>~, and then
+  use the /question mark operator/ THROUGHOUT (_Item 3_).
+
+*** TODO Benchmarks - =TODO: NOTE=
+- Item 20 attempts to persuade you that fully optimizing the performance of your
+  code isn’t always necessary. Nevertheless, there are definitely times when
+  performance is critical, and if that’s the case, then it’s a good idea to
+  measure and track that perfor‐ mance. Having benchmarks that are run regularly
+  (e.g., as part of CI; Item 32) allows you to detect when changes to the code
+  or the toolchains adversely affect that performance.
+
+- The ~cargo bench~ command runs special test cases that repeatedly perform an
+  operation, and emits average timing information for the operation. At the time
+  of writing, support for benchmarks is not stable, so the precise command may
+  need to be cargo +nightly bench. (Rust’s unstable features, including the test
+  feature used here, are described in The Unstable Book.)
+
+- However, there's a danger that compiler optimizations may give misleading
+  results, particularly if you restrict the operation that's being performed to
+  a small subset of the real code. Consider a simple arithmetic function:
+  #+begin_src rust
+    pub fn factorial(n: u128) -> u128 {
+        match n {
+            0 => 1,
+            n => n * factorial(n - 1),
+        }
+    }
+  #+end_src
+
+  A naive benchmark for this code:
+  #+begin_src rust
+    #![feature(test)]
+    extern crate test;
+
+    #[bench]
+    fn bench_factorial(b: &mut test::Bencher) {
+        b.iter(|| {
+            let result = factorial(15);
+            assert_eq!(result, 1_307_674_368_000);
+        });
+    }
+  #+end_src
+
+  gives incredibly positive results:
+  #+begin_src text
+    test bench_factorial ... bench: 0 ns/iter (+/- 0)
+  #+end_src
+
+- With fixed inputs and a small amount of code under test, the compiler is able
+  to optimize away the iteration and directly emit the result, leading to an
+  unrealistically optimistic result.
+
+- The ~std::hint::black_box~ function can help with this; it's an identity function
+  whose implementation the compiler is “encouraged, but not required” (their
+  italics) to pessimize.
+
+- Moving the benchmark code to use this hint:
+  #+begin_src rust
+    #[bench]
+    fn bench_factorial(b: &mut test::Bencher) {
+        b.iter(|| {
+            let result = factorial(std::hint::black_box(15));
+            assert_eq!(result, 1_307_674_368_000);
+        });
+    }
+  #+end_src
+
+  gives more realistic results:
+  #+begin_src text
+    test blackboxed::bench_factorial ... bench: 16 ns/iter (+/- 3)
+  #+end_src
+
+- The Godbolt compiler explorer can also help by showing the actual machine code
+  emitted by the compiler, which may make it obvious when the compiler has
+  performed optimizations that would be unrealistic for code running a real
+  scenario.
+
+- =IMPORTANT=
+  Finally, if you are including benchmarks for your Rust code, the ~criterion~
+  crate may provide an alternative to the standard ~test::bench::Bencher~
+  functionality that is more convenient (it runs with stable Rust) and more
+  fully featured (it has support for _statistics_ and _graphs_).
+
+*** TODO Fuzz Testing - 231 - =TODO: RE-READ and NOTE=
+*** DONE Testing Advice - 234
+CLOSED: [2025-01-13 Mon 21:43]
+- An Item about testing WOULDN'T BE COMPLETE WITHOUT
+  _repeating some common advice (which is mostly not Rust-specific)_:
+  * Run all your tests in CI on every change
+    + with the *EXCEPTION* of /fuzz tests/.
+
+  * When you're fixing a bug, write a test that exhibits the bug *BEFORE* fixing
+    the bug.
+
+    That way you can be sure that
+    + the bug is fixed and
+    + =IMPORTANT= that it won't be accidentally reintroduced in the future.
+
+  * If your crate has /features/ (_Item 26_), run tests over *every possible
+    combination* of available features.
+
+  * More generally, if your crate includes any config-specific code (e.g.,
+    ~#[cfg(target_os = "windows")]~), run tests for every platform that has
+    distinct code.
+
+- This Item has covered a lot of different types of tests,
+  so it's up to you to decide how much each of them is relevant and worthwhile
+  for your project.
+
+- If you have a lot of test code and you are publishing your crate to crates.io,
+  then you might need to consider which of the tests make sense to include in
+  the published crate.
+
+  1. _BY DEFAULT,_
+     cargo will include /unit tests/, /integration tests/, /benchmarks/, and
+     /examples/ (but *not* /fuzz tests/, because the cargo-fuzz tools store these
+     as a separate crate in a subdirectory), which may be *more than end users
+     need*.
+
+  2. If that's the case, you can
+     * either ~exclude~ some of the files or
+     * (for /behavior tests/) MOVE the tests OUT of the crate and into a
+       *SEPARATE* /test crate/.
+
+*** TODO Things to Remember - 234
+
+** TODO Item 31: Take advantage of the tooling ecosystem - 235
 *** Tools to Remember
 
-** Item 32: Set up a continuous integration (CI) system - 237
+** TODO Item 32: Set up a continuous integration (CI) system - 237
 *** CI Steps
 *** CI Principles
 *** Public CI Systems
