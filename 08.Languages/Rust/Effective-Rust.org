@@ -2510,8 +2510,109 @@ CLOSED: [2024-12-25 Wed 16:24]
 
 * TODO 5. Tooling - 203
 ** TODO Item 27: Document public interfaces - 203 - =NOTE=
+=from Jian= Read *the rustdoc book*
+
+Write doc comments for all exposed API elements.
+
+- The particulars of Rust's documentation comment format - *Markdown-based*,
+  delimited with ~///~ or ~//!~.
+  * There are some specific details about the format that are worth highlighting:
+    + Use a code font for code
+    + Add copious cross-references
+      - Example:
+        The ~[`...`]~ in the comment below
+        #+begin_src rust
+          /// Calculate the [`BoundingBox`] that exactly encompasses a pair
+          /// of [`BoundingBox`] objects.
+          pub fn union(a: &BoundingBox, b: &BoundingBox) -> BoundingBox {
+              // ...
+          }
+        #+end_src
+
+    + Consider including example code
+      Adding an ~# Examples~ section with sample code can be helpful.
+      - Note that sample code in doc comments gets compiled and executed when
+        you run cargo test (see _Item 30_), which helps it stay in sync with the
+        code it's demonstrating.
+
+    + *Document /panics/ and ~unsafe~ constraits*
+      - If there are _inputs that cause a function to /panic/,_
+        document (in a ~# Panics~ section) the preconditions that are required
+        to avoid the ~panic!~.
+
+      - Similarly, document (in a ~# Safety~ section) any requirements for
+        ~unsafe~ code.
+
+- Learn from the documentation for Rust's standard library.
+
 *** Tooling
+- The Markdown format that's used for documentation comments results in elegant
+  output, but this also means that there is an explicit conversion step
+  (~cargo doc~).
+
+  _This in turn raises the possibility that something goes wrong along the way_.
+
+  * =IMPORTANT=
+    The simplest advice for this is just to
+    read the rendered documentation after writing it, by running
+    + ~cargo doc --open~ or
+    + ~cargo doc --no-deps --open~ to restrict the generated documentation to
+      just the current crate.
+
+- You could also check that all the generated hyperlinks are valid, but that's a
+  job more suited to a machine—via the ~broken_intra_doc_links~ crate attribute:
+  #+begin_src rust
+    #![deny(broken_intra_doc_links)]
+
+    /// The bounding box for a [`Polygone`].
+    #[derive(Clone, Debug)]
+    pub struct BoundingBox {
+        // ...
+    }
+  #+end_src
+  With this attribute enabled, ~cargo doc~ will detect invalid links, the
+  ~[`Polygone`]~.
+
+- Another use attribute ~#![warn(missing_docs)]~.
+  * _pros_: the compiler will emit a warning for every undocumented public item.
+
+  * _cons_: there's a risk that enabling this option will lead to poor-quality
+    documentation comments that are rushed out just to get the compiler to shut
+    up - more on this to come.
+
+- =IMPORTANT=
+  =from Jian=
+  * For current Rust (2024-01-17), should use
+    ~#![deny(rust_doc::broken_intra_doc_links)]~.
+
+  * Always use
+    ~#![deny(rust_doc::broken_intra_doc_links)]~
+    ~#![deny(missing_docs)]~
+    because they can point out where the doc is missing!
+
+- =IMPORTANT=
+  As ever, any tooling that detects potential problems should form a part of
+  your /CI system/ (_Item 32_), to catch any regressions that creep in.
+
 *** Additional Documentation Locations
+The output from ~cargo doc~ is the primary place where your crate is documented,
+but it's not the only place - other parts of a Cargo project can help users
+figure out how to use your code.
+
+- _The =examples/= subdirectory of a Cargo project_ can hold the code for
+  *standalone* binaries that make use of your crate.
+
+  These programs are built and run _very similarly to integration tests (Item
+  30)_ but are specifically intended to hold example code that illustrates the
+  correct use of your crate’s interface.
+  =from Jian's summary=
+  *primary purpose* teach the users how to use this crate.
+
+- On a related note, bear in mind that _the integration tests under the =tests/=
+  subdirectory_ can also serve as examples for the confused user, even though
+  their
+  *primary purpose* is to test the crate's external interface.
+
 *** Published Crate Documentation
 - As a result, the home page for a crate shows different content in each location:
   * _docs.rs_
@@ -2522,7 +2623,76 @@ CLOSED: [2024-12-25 Wed 16:24]
     Shows the content of any top-level *README.md* file that’s included in the
     project's repo.
 
-*** What Not to Document
+*** TODO What Not to Document - =IMPORTANT= =NOTE=
+WHEN a project requires that documentation be included for all public items (as
+mentioned in the first section),
+_it's very easy to fall into the trap of having documentation that’s a POINTLESS
+WASTE of valuable pixels._
+
+- Having the compiler warn about missing doc comments is only a proxy for what
+  you really want—useful documentation—and is likely to incentivize programmers
+  to do the minimum needed to silence the warning.
+
+- =IMPORTANT=
+  =Criterion for deciding is a document should be added=
+  * _GOOD doc comments_ are a boon that helps users understand the code they're
+    using;
+
+  * _BAD doc comments_
+    + *impose a maintenance burden* and
+    + *increase the chance of user confusion when they get out of sync with the
+      code*.
+
+  _So how to distinguish between the two?_
+
+- *The primary advice*
+  is to *avoid repeating* in text something that's clear from the code.
+
+  * Item 1 exhorted you to encode as much semantics as possible into Rust's type
+    system. Try your best to do so.
+    =from Jian=
+    Naming is another important documentation.
+
+- Returning to the previous example, an overly verbose documentation comment
+  might be as follows:
+  =CODE=
+
+  * This comment repeats many details that are clear from the function signature,
+    to no benefit.
+
+  * Worse, consider what’s likely to happen if the code gets refactored to store
+    the result in one of the original arguments (which would be a breaking change;
+    see _Item 21_). No compiler or tool complains that the comment isn’t updated to
+    match, so it’s easy to end up with an out-of-sync comment:
+    =CODE=
+
+- In contrast, the original comment survives the refactoring unscathed, because
+  its text describes behavior, not syntactic details:
+  =CODE=
+
+- The mirror image of the preceding advice also helps improve documentation:
+  include in text anything that’s not clear from the code. This includes
+  preconditions, invariants, panics, error conditions, and anything else that
+  might surprise a user; if your code can’t comply with the principle of least
+  astonishment, make sure that the surprises are documented so you can at least
+  say, “I told you so.”
+
+- Another common failure mode is when doc comments describe how some other code
+  uses a method, rather than what the method does:
+  =CODE=
+
+  * Comments like this are almost guaranteed to get out of sync: when the using
+    code (here, hits.rs) changes, the comment that describes the behavior is
+    nowhere nearby.
+
+  * Rewording the comment to focus more on the why makes it more robust to future changes:
+    =CODE=
+
+- When writing software, it’s good advice to “program in the future tense”:3
+  structure the code to accommodate future changes. The same principle is true
+  for documentation: focusing on the semantics, the whys and the why nots,
+  gives text that is more likely to remain helpful in the long run.
+
 *** Things to Remember
 
 ** TODO Item 28: Use macros judiciously - 209
