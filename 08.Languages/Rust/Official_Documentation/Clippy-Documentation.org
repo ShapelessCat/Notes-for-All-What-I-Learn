@@ -3,39 +3,876 @@
 #+STARTUP: indent
 #+STARTUP: overview
 
-* Introduction
-* 1. Installation
-* 2. Usage
-* 3. Configuration
-** 3.1. Lint Configuration
+* DONE Introduction
+CLOSED: [2025-01-22 Wed 21:08]
+- Clippy :: A collection of lints to
+  * catch common mistakes
+  * improve your Rust code
 
-* 4. Clippy's Lints
-* 5. Continuous Integration
-** 5.1. GitHub Actions
-** 5.2. GitLab CI
-** 5.3. Travis CI
+- There are over 750 lints included in this crate!
 
-* 6. Development
-** 6.1. Basics
-** 6.2. Adding Lints
-** 6.3. Defining Lints
-** 6.4. Writing tests
-** 6.5. Lint Passes
-** 6.6. Emitting lints
-** 6.7. Type Checking
-** 6.8. Trait Checking
-** 6.9. Method Checking
-** 6.10. Macro Expansions
-** 6.11. Common Tools
-** 6.12. Infrastructure
-*** 6.12.1. Syncing changes between Clippy and rust-lang/rust
-*** 6.12.2. Backporting Changes
-*** 6.12.3. Updating the Changelog
-*** 6.12.4. Release a New Version
-*** 6.12.5. The Clippy Book
+- /Lints/ are divided into _categories_, each with a _default lint level_.
 
-** 6.13. Proposals
-*** 6.13.1. Roadmap 2021
-*** 6.13.2. Syntax Tree Patterns
+- You can choose how much Clippy is supposed to +annoy+ help you
+  _by changing the lint level by category_.
 
-** 6.14. The Team
+  | Category              | Description                                                                         | Default level |
+  |-----------------------+-------------------------------------------------------------------------------------+---------------|
+  | ~clippy::all~         | all lints that are on by default (correctness, suspicious, style, complexity, perf) | warn/deny     |
+  | ~clippy::correctness~ | code that is outright wrong or useless                                              | deny          |
+  | ~clippy::suspicious~  | code that is most likely wrong or useless                                           | warn          |
+  | ~clippy::style~       | code that should be written in a more idiomatic way                                 | warn          |
+  | ~clippy::complexity~  | code that does something simple but in a complex way                                | warn          |
+  | ~clippy::perf~        | code that can be written to run faster                                              | warn          |
+  | ~clippy::pedantic~    | lints which are rather strict or have occasional false positives                    | allow         |
+  | ~clippy::restriction~ | lints which prevent the use of language and library features1                       | allow         |
+  | ~clippy::nursery~     | new lints that are still under development                                          | allow         |
+  | ~clippy::cargo~       | lints for the cargo manifest                                                        | allow         |
+
+- =IMPORTANT=
+  The ~clippy::restriction~ category should, emphatically, not be enabled as a
+  whole.
+
+  =RATIONALE=
+  The contained lints
+  * may lint against perfectly reasonable code,
+  * may not have an alternative suggestion, and
+  * may contradict any other lints (including other categories).
+
+  Lints should be considered on a case-by-case basis before enabling.
+
+- footnote 1:
+  some examples in the ~clippy::restriction~ category.
+
+* DONE 1. Installation
+CLOSED: [2025-01-22 Wed 21:08]
+** Using Rustup
+If Clippy was not installed for a toolchain, it can be installed with
+#+begin_src shell
+  rustup component add clippy [--toolchain=<name>]
+#+end_src
+
+** TODO From Source
+
+* DONE 2. Usage
+CLOSED: [2025-01-23 Thu 16:06]
+This chapter describes how to use Clippy to get the most out of it.
+
+- Clippy can be used as
+  1. a cargo subcommand or
+  2. directly with the clippy-driver binary. =TODO: ???=
+
+** DONE Cargo subcommand
+CLOSED: [2025-01-23 Thu 15:55]
+~cargo clippy~
+
+*** DONE Lint configuration
+CLOSED: [2025-01-22 Wed 22:20]
+The above command will run _the DEFAULT set of lints_, which are included in the
+lint group ~clippy::all~.
+
+- Different requirements:
+  * You might want to use even more lints, or
+  * you may not agree with every Clippy lint,
+
+  and for that there are ways to *configure lint levels*.
+
+- *NOTE*:
+  Clippy is meant to be used with a generous _SPRINKLING of ~#[allow(..)]~'s_
+  through your code.
+  So if you disagree with a lint, don't feel bad disabling them for parts of
+  your code or the whole project.
+
+**** Command line
+- You can configure lint levels on the command line by adding
+  ~-A/W/D clippy::lint_name~ like this:
+  #+begin_src shell
+    cargo clippy -- -Aclippy::style -Wclippy::double_neg -Dclippy::perf
+  #+end_src
+
+- =CAUTION=
+  *For CI*
+  all warnings can be elevated to errors which will in turn fail the build and
+  cause Clippy to exit with a code other than ~0~.
+  #+begin_src shell
+    cargo clippy -- -Dwarnings
+  #+end_src
+
+- *NOTE*:
+  Adding _-Dwarnings_ will cause your build to fail
+  IF
+  any warnings are found in your code. That includes warnings found by ~rustc~
+  (e.g. ~dead_code~, etc.).
+
+- =TODO=
+  For more information on _configuring lint levels_,
+  see the *rustc documentation*.
+
+**** Even more lints
+Clippy has /lint groups/ which are *allow-by-default*. This means, that you will
+have to *ENABLE the lints in those groups MANUALLY* (=from Jian= enable lints
+means "disallow something", and this is why when using lints that are
+*allow-by-default* you need to enable it to make them *disallow-manually*).
+
+TWO most important allow-by-default groups:
+
+***** ~clippy::pedantic~
+This group contains *really OPINIONATED lints*, that may have some intentional
+_false positives_ *in order to prevent* _false negatives_.
+
+So while this group is ready to be used in production, you can expect to
+sprinkle multiple ~#[allow(..)]~'s in your code.
+
+=IMPORTANT= =CONTRIBUTION=
+If you find any _false positives_, you're still welcome to report them to us for
+future improvements.
+
+- =INTERESTING=
+  FYI: Clippy uses the whole group to lint itself.
+
+***** ~clippy::restriction~
+This group contains lints that *"restrict" the language in some way*.
+
+- For example,
+  the ~clippy::unwrap~ lint from this group won't allow you to use ~.unwrap()~ in
+  your code.
+
+- You may want to look through the lints in this group and enable the ones that
+  fit your need.
+
+- *Note*:
+  * _You *SHOULDN'T* enable the whole lint group,_
+    BUT
+    cherry-pick lints from this group.
+
+  * =INTERESTING=
+    =IMPORTANT=
+    Some lints in this group will even contradict other Clippy lints!
+
+**** Too many lints
+- The *MOST opinionated* _warn-by-default group_ of Clippy is the
+  ~clippy::style~ group.
+
+  * Some people prefer to disable this group completely and then cherry-pick some
+    lints they like from this group.
+    The same is of course possible with every other of Clippy's lint groups.
+
+- *NOTE*:
+  We try to *keep the warn-by-default groups free from _false positives (FP)_.*
+
+  * If you find that a lint wrongly triggers, please report it in an issue (if
+    there isn't an issue for that FP already)
+
+**** Source Code
+You can
+_CONFIGURE lint levels in source code_
+the same way you can
+_CONFIGURE ~rustc~ lints_:
+
+#+begin_src rust
+  #![allow(clippy::style)]
+
+  #[warn(clippy::double_neg)]
+  fn main() {
+      let x = 1;
+      let y = --x;
+      //      ^^ warning: double negation
+  }
+#+end_src
+
+*** DONE Automatically applying Clippy suggestions
+CLOSED: [2025-01-23 Thu 15:41]
+_Clippy can *AUTOMATICALLY APPLY* some lint suggestions,_ just like the compiler.
+Note that
+~--fix~ implies ~--all-targets~, =IMPORTANT=
+so it can fix as much code as it can.
+#+begin_src shell
+  cargo clippy --fix
+#+end_src
+
+*** DONE Workspaces
+CLOSED: [2025-01-23 Thu 15:55]
+All the usual /workspace/ options should work with Clippy.
+
+- For example the following command will run Clippy on the ~example~ crate in
+  your /workspace/:
+  #+begin_src shell
+    cargo clippy -p example
+  #+end_src
+
+- As with cargo check, this *includes* dependencies that are /members/ of the
+  /workspace/, =???= like path dependencies.
+
+  If you want to run Clippy *ONLY on the given crate,* use the ~--no-deps~
+  option like this:
+  #+begin_src shell
+    cargo clippy -p example -- --no-deps
+  #+end_src
+
+** DONE Using Clippy without cargo: ~clippy-driver~
+CLOSED: [2025-01-23 Thu 16:06]
+Clippy can also be used in projects that do not use _cargo_.
+
+- To do so, run ~clippy-driver~ with the same arguments you use for ~rustc~.
+  For example:
+  #+begin_src shell
+    clippy-driver --edition 2018 -Cpanic=abort foo.rs
+  #+end_src
+
+  * *Note*:
+    ~clippy-driver~ is designed for running Clippy and should not be used as a
+    general replacement for ~rustc~. ~clippy-driver~ may produce artifacts that
+    are *NOT optimized* as expected, for example.
+
+* DONE 3. Configuration
+CLOSED: [2025-01-23 Thu 18:37]
+# Configuring Clippy
+
+_Note: The configuration file is unstable and may be deprecated in the future._
+
+- Some lints can be configured in a TOML file named =clippy.toml= or
+  =.clippy.toml=, which is searched for in:
+  1. The directory specified by the ~CLIPPY_CONF_DIR~ /environment variable/, or
+  2. The directory specified by the ~CARGO_MANIFEST_DIR~ /environment variable/, or
+  3. The current directory.
+
+- It contains a basic =variable = value= mapping e.g.
+  #+begin_src toml
+    avoid-breaking-exported-api = false
+    disallowed-names = ["toto", "tata", "titi"]
+  #+end_src
+
+- The [[https://doc.rust-lang.org/nightly/clippy/lint_configuration.html][table_of_configurations]] contains all config values, their default, and a
+  list of lints they affect.
+  =TODO: REVIEW=
+
+- Each [[https://rust-lang.github.io/rust-clippy/master/index.html#Configuration][configurable lint]], also contains information about these values.
+  =TODO: REVIEW=
+
+- For configurations that are a /list type/ with /default values/ such as
+  ~disallowed-names~, you can use the unique value ~".."~ to extend the /default
+  values/ instead of replacing them.
+  #+begin_src toml
+    # default of disallowed-names is ["foo", "baz", "quux"]
+    disallowed-names = ["bar", ".."] # -> ["bar", "foo", "baz", "quux"]
+  #+end_src
+
+- To _DEACTIVATE_ the "for further information visit lint-link" message you can
+  define the ~CLIPPY_DISABLE_DOCS_LINKS~ /environment variable/.
+  =???= =WHY do we need this?=
+
+*** DONE Allowing/Denying Lints
+CLOSED: [2025-01-23 Thu 18:08]
+**** DONE Attributes in Code
+CLOSED: [2025-01-23 Thu 18:00]
+- You can add attributes to your code to ~allow~ / ~warn~ / ~deny~ Clippy lints:
+  * the whole set of _warn-by-default lints_ using the /clippy lint group/
+    (~#![allow(clippy::all)]~)
+
+  * all lints using both the clippy and ~clippy::pedantic~ lint groups
+    (~#![warn(clippy::all, clippy::pedantic)]~.
+    + Note that ~clippy::pedantic~ contains some VERY AGGRESSIVE lints _prone to
+      FALSE POSITIVES_.
+
+  * only some lints (~#![deny(clippy::single_match, clippy::box_vec)]~, etc.)
+
+  * ~allow~ / ~warn~ / ~deny~ can be limited to _a single function or module_
+    using ~#[allow(...)]~, etc.
+
+- *NOTE*:
+  * ~allow~ means to suppress the lint for your code.
+
+  * With ~warn~ the lint will only emit a warning, while with ~deny~ the lint
+    will emit an error, when triggering for your code.
+
+    An error causes Clippy to exit with an error code, so is most useful in
+    scripts used in CI/CD.
+
+**** DONE Command Line Flags
+CLOSED: [2025-01-23 Thu 18:07]
+If you do not want to include your lint levels in the code,
+you can *globally enable/disable lints* _by passing extra flags_ to Clippy
+during the run:
+
+- To *ALLOW* ~lint_name~, run
+  #+begin_src shell
+    cargo clippy -- -A clippy::lint_name
+  #+end_src
+
+- And to *WARN* on ~lint_name~, run
+  #+begin_src shell
+    cargo clippy -- -W clippy::lint_name
+  #+end_src
+
+- This also works with /lint groups/.
+  * For example, you can run Clippy with *WARNINGS* for all pedantic lints
+    enabled:
+    #+begin_src shell
+      cargo clippy -- -W clippy::pedantic
+    #+end_src
+
+- If you care only about a certain lints, you can
+  1. allow all others and then
+  2. explicitly warn on the lints you are interested in:
+  #+begin_src shell
+    cargo clippy -- -A clippy::all -W clippy::useless_format -W clippy::...
+  #+end_src
+
+**** DONE Lints Section in =Cargo.toml=
+CLOSED: [2025-01-23 Thu 18:07]
+For example,
+#+file_name: Cargo.toml
+#+begin_src toml
+  [lints.clippy]
+  enum_glob_use = "deny"
+#+end_src
+
+*** DONE Specifying the minimum supported Rust version
+CLOSED: [2025-01-23 Thu 18:34]
+- Projects that _INTEND TO support old versions of Rust_ can
+  DISABLE lints pertaining to newer features by specifying the minimum supported
+  Rust version (MSRV) in the Clippy configuration file.
+  #+file_name: clippy.toml
+  #+begin_src toml
+    msrv = "1.30.0"
+  #+end_src
+
+- The MSRV can also be specified as an attribute, like below.
+  #+begin_src rust
+    #![feature(custom_inner_attributes)]
+    #![clippy::msrv = "1.30.0"]
+
+    fn main() {
+        ...
+    }
+  #+end_src
+
+  * You can also _OMIT the patch version_ when specifying the MSRV, so ~msrv =
+    1.30~ is equivalent to ~msrv = 1.30.0~.
+
+  * *NOTE*:
+    ~custom_inner_attributes~ is an /UNSTABLE feature/, so it has to be enabled
+    explicitly.
+
+- Lints that recognize this configuration option can be found _here_
+  =TODO: ???=
+
+*** DONE Disabling evaluation of certain code
+CLOSED: [2025-01-23 Thu 18:34]
+- *NOTE*:
+  This should only be used in cases where other solutions, like
+  ~#[allow(clippy::all)]~, are not sufficient.
+
+- Very rarely, you may wish to
+  _prevent Clippy from evaluating certain sections of code entirely._
+
+  You can do this with /conditional compilation/ by checking that the clippy cfg
+  is not set. You may need to provide a stub so that the code compiles:
+  #+begin_src rust
+    #[cfg(not(clippy))]
+    include!(concat!(env!("OUT_DIR"), "/my_big_function-generated.rs"));
+
+    #[cfg(clippy)]
+    fn my_big_function(_input: &str) -> Option<MyStruct> {
+        None
+    }
+  #+end_src
+
+** TODO 3.1. Lint Configuration - =TODO: READ=
+
+* DONE 4. Clippy's Lints
+CLOSED: [2025-01-23 Thu 21:29]
+This chapter will give an OVERVIEW of _the DIFFERENT lint categories,_ which
+kind of lints they offer and recommended actions when you should see a lint out
+of that category.
+
+- The different /lint groups/ were defined in _the Clippy 1.0 RFC._
+
+** DONE Correctness
+CLOSED: [2025-01-23 Thu 20:30]
+The ~clippy::correctness~ group is the *ONLY* /lint group/ in Clippy which lints
+are *deny-by-default* and abort the compilation when triggered.
+
+- This is for good reason: If you see a /correctness lint/, it means that your
+  code is outright wrong or useless, and you should try to fix it.
+
+- Lints in this category are carefully picked and _SHOULD BE FREE of false
+  positives._
+  =IMPORTANT=
+  So just ~#[allow]~'ing those lints is not recommended.
+
+** DONE Suspicious
+CLOSED: [2025-01-23 Thu 20:34]
+- The ~clippy::suspicious~ group _is similar to_ /the correctness lints/ in that
+  it contains lints that trigger on code that is really suspicious (=FIXME= sus)
+  and should be fixed.
+  * As _OPPOSED TO_ /correctness lints/, it might be possible that the linted
+    code is intentionally written like it is.
+
+- It is still recommended to fix code that is linted by lints out of this group
+  instead of ~#[allow]~'ing the lint.
+
+  * =IMPORTANT=
+    In case you intentionally have written code that offends the lint you should
+    specifically and locally ~#[allow]~ the lint and add give a reason why the
+    code is correct as written.
+
+** DONE Complexity
+CLOSED: [2025-01-23 Thu 21:24]
+- The ~clippy::complexity~ group offers lints that give you suggestions on how to
+  *SIMPLIFY your code*:
+  It mostly focuses on code that can be written in a shorter and more readable
+  way, while preserving the semantics.
+
+- If you should see a /complexity lint/, it usually means that you can remove or
+  replace some code, and it is recommended to do so.
+
+  * HOWEVER,
+    if you need the more complex code for some expressiveness reason, it is
+    recommended to allow complexity lints on a case-by-case basis.
+
+** DONE Perf
+CLOSED: [2025-01-23 Thu 21:25]
+- The ~clippy::perf~ group gives you suggestions on how you can increase the
+  performance of your code.
+
+- =IMPORTANT=
+  Those lints are mostly about code that the compiler can't trivially optimize,
+  but has to be written in a slightly different way to make the optimizer job
+  easier.
+
+- /Perf lints/ are usually easy to apply, and it is recommended to do so.
+
+** DONE Style
+CLOSED: [2025-01-23 Thu 21:25]
+- The ~clippy::style~ group is mostly about writing idiomatic code.
+
+- Because style is subjective, this lint group is _the most opinionated
+  *warn-by-default* group_ in Clippy.
+
+- If you see a style lint, applying the suggestion usually makes your code more
+  readable and idiomatic.
+  * BUT because we know that this is _OPINIONATED_, *FEEL FREE to sprinkle
+    ~#[allow]~'s for style lints* in your code or ~#![allow]~ a style lint on
+    your whole crate if you disagree with the suggested style completely.
+
+** DONE Pedantic
+CLOSED: [2025-01-23 Thu 21:27]
+- _The ~clippy::pedantic~ group_ makes Clippy even more pedantic. You can enable
+  the whole group with ~#![warn(clippy::pedantic)]~ in the ~lib.rs~ / ~main.rs~
+  of your crate. This lint group is for Clippy power users that want an in depth
+  check of their code.
+
+- *NOTE*:
+  Instead of enabling the whole group (like Clippy itself does), you may want to
+  cherry-pick lints out of the pedantic group.
+
+- If you enable this group, expect to also use ~#[allow]~ attributes generously
+  throughout your code.
+  * Lints in this group are designed to be pedantic and _false positives_
+    sometimes are INTENTIONAL IN ORDER TO PREVENT _false negatives_.
+
+** DONE Restriction
+CLOSED: [2025-01-23 Thu 21:29]
+- _The ~clippy::restriction~ group_ contains lints that will restrict you from
+  using certain parts of the Rust language.
+
+  *It is NOT RECOMMENDED TO ENABLE the whole group,* but rather cherry-pick
+  lints that are useful for your code base and your use case.
+
+- *Note*:
+  Clippy will produce a warning if it finds a ~#![warn(clippy::restriction)]~
+  attribute in your code!
+
+- Lints from this group will restrict you in some way.
+
+  1. If you enable a /restriction lint/ for your crate it is recommended to also
+     fix code that this lint triggers on.
+
+  2. HOWEVER, those lints are really strict by design, and you might want to
+     ~#[allow]~ them in some special cases, with a comment justifying that.
+
+** DONE Cargo
+CLOSED: [2025-01-23 Thu 20:28]
+The ~clippy::cargo~ group gives you suggestions on how to improve your
+=Cargo.toml= file.
+
+- This might be especially interesting
+  IF you want to _PUBLISH_ your crate and are not sure if you have all useful
+  information in your =Cargo.toml=.
+
+* DONE 5. Attributes for Crate Authors
+CLOSED: [2025-01-23 Thu 19:11]
+In some cases it is possible to extend Clippy coverage to 3rd party libraries.
+
+To do this, Clippy provides attributes that can be applied to items in the 3rd
+party crate.
+
+=from Jian= It seems currently there are only two lints.
+
+** ~#[clippy::format_args]~
+*Available since Clippy v1.84*
+
+This attribute can be added to a macro that supports ~format!~, ~println!~, or
+similar syntax.
+
+1. It tells Clippy that the macro is a /formatting macro/, and that the
+   arguments to the macro should be linted as if they were arguments to
+   ~format!~.
+
+2. Any lint that would apply to a ~format!~ call will also apply to the macro
+   call.
+
+3. The macro may have additional arguments before the _format string_, and these
+   will be ignored.
+
+*** Example
+#+begin_src rust
+  /// A macro that prints a message if a condition is true.
+  #[macro_export]
+  #[clippy::format_args]
+  macro_rules! print_if {
+      ($condition:expr, $($args:tt)+) => {{
+          if $condition {
+              println!($($args)+)
+          }
+      }};
+  }
+#+end_src
+
+** ~#[clippy::has_significant_drop]~ - =TODO: ???=
+*Available since Clippy v1.60*
+
+The ~clippy::has_significant_drop~ attribute can be added to types whose ~Drop~
+impls have an *important side effect,* such as _unlocking a mutex_, making it
+important for users to be able to accurately understand their /lifetimes/.
+
+When a temporary is returned in a function call in a match scrutinee, its
+/lifetime/ lasts until the end of the match block, which may be surprising.
+
+*** Example
+#+begin_src rust
+  #[clippy::has_significant_drop]
+  struct CounterWrapper<'a> {
+      counter: &'a Counter,
+  }
+
+  impl<'a> Drop for CounterWrapper<'a> {
+      fn drop(&mut self) {
+          self.counter.i.fetch_sub(1, Ordering::Relaxed);
+      }
+  }
+#+end_src
+
+* DONE 6. Continuous Integration
+CLOSED: [2025-01-23 Thu 19:30]
+This chapter will give an overview on how to use Clippy on different popular CI
+providers.
+
+- =IMPORTANT=
+  It is recommended to run Clippy on CI with ~-Dwarnings~,
+  _so that Clippy lints prevent CI from passing._
+
+  _To enforce errors on warnings on *ALL* cargo commands_ *NOT JUST*
+  ~cargo clippy~, you can set _the environment variable
+  ~RUSTFLAGS="-Dwarnings"~._
+
+- We recommend to *use Clippy from the SAME toolchain*, that you use for compiling
+  your crate _for maximum compatibility_. E.g. if your crate is compiled with the
+  ~stable~ toolchain, you should also use ~stable~ Clippy.
+
+- *NOTE*:
+  New Clippy lints are first added to _the nightly toolchain_. If you want to
+  help with improving Clippy and have CI resources left, please consider adding
+  a nightly Clippy check to your CI and report problems like false positives
+  back to us. With that we can fix bugs early, before they can get to stable.
+
+** DONE 6.1. GitHub Actions
+CLOSED: [2025-01-23 Thu 19:30]
+GitHub hosted runners using the latest stable version of Rust have Clippy
+pre-installed. It is as simple as running ~cargo clippy~ to run lints against
+the codebase.
+#+begin_src yaml
+on: push
+name: Clippy check
+
+# Make sure CI fails on all warnings, including Clippy lints
+env:
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features
+#+end_src
+
+** 6.2. GitLab CI
+** 6.3. Travis CI
+
+* TODO 7. Development
+# Clippy Development
+*** Getting started
+*** Additional Readings for Beginners
+*** Writing code
+
+** 7.1. Basics
+# Basics for hacking on Clippy
+
+*** Get the Code
+*** Building and Testing
+*** ~cargo dev~
+*** ~lintcheck~
+*** PR
+*** Common Abbreviations
+*** Install from source
+
+** 7.2. Adding Lints
+# Adding a new lint
+
+*** Setup
+*** Getting Started
+*** Defining Our Lint
+**** Standalone
+**** Specific Type
+**** Tests Location
+
+*** Testing
+**** Cargo lints
+
+*** Rustfix tests
+*** Testing manually
+*** Lint declaration
+*** Lint registration
+*** Lint passes
+*** Emitting a lint
+*** Adding the lint logic
+*** Specifying the lint's minimum supported Rust version (MSRV)
+*** Author lint
+*** Pring HIR lint
+*** Documentation
+*** Running rustfmt
+*** Debugging
+*** Conflicting lints
+*** PR Checklist
+*** Adding configuration to a lint
+*** Cheat Sheet
+
+** 7.3. Defining Lints
+# Defining New Lints
+
+*** Lint types
+*** Lint name
+*** Add and Register the Lint
+**** Standalone
+**** Specific Type
+**** The ~define_clippy_lints~ macro
+
+*** Lint registration
+
+** 7.4. Writing tests
+# Testing
+
+*** Develop Lints with Tests
+*** Clippy UI Tests
+**** Write Test Cases
+**** Example output
+**** ~cargo bless~
+**** =toml= Tests
+
+*** Cargo Lints
+*** Rustfix Tests
+*** Testing Manually
+
+** 7.5. Lint Passes
+*** ~EarlyLintPass~
+**** Example for ~EarlyLintPass~
+
+*** ~LateLintPass~
+**** Example for ~LateLintPass~
+
+** 7.6. Emitting lints
+# Emitting a lint
+**** Emitting a lint
+
+*** Suggestions: Automatic fixes
+**** Example
+
+*** How to choose between notes, help messages and suggestions
+**** Notes
+**** Help Messages
+**** Suggestions
+**** Snippets
+
+*** Final: Run UI Tests to Emit the Lint
+
+** 7.7. Type Checking
+*** ~LateContext~ and ~TypeckResults~
+*** ~Ty~
+*** ~is_*~ Usage
+*** ~TyKind~
+*** ~kind~ Usage
+*** ~hir::Ty~ and ~ty::Ty~
+*** Creating Types programmatically
+*** Useful Links
+
+** 7.8. Trait Checking
+*** Using Diagnostic Items
+*** Using Lang Items
+*** Using Type Path
+*** Creating Types Programmatically
+
+** 7.9. Method Checking
+*** Checking if an expr is calling a specific method
+*** Checking if a ~impl~ block implements a method
+
+** 7.10. Macro Expansions
+# Dealing with macros and expansions
+
+*** False Positives
+*** How to Work with Macros
+**** The ~Span.from_expansion~ method
+**** ~Span.ctxt~ method
+**** The ~in_external_macro~ function
+
+** 7.11. Common Tools
+# Common tools for writing lints
+
+*** Retrieving the type of expression
+*** Checking if an expr is calling a specific method
+*** Checking for a specific type
+*** Checking if a type implements a specific trait
+*** Checking if a type defines a specific method
+*** Dealing with macros and expansions
+
+** 7.12. Infrastructure
+*** TODO 7.12.1. Syncing changes between Clippy and rust-lang/rust
+**** Patching git-subtree to work with big repos
+**** Performing the sync from ~rust-lang/rust~ to Clippy
+**** Performing the sync from Clippy to ~rust-lang/rust~
+
+*** TODO 7.12.2. Backporting Changes
+**** Filtering PRs to backport
+**** Preparation
+**** Backport the changes
+**** Open PR in the Rust repository
+**** Relabel backported PRs
+
+*** TODO 7.12.3. Updating the Changelog
+# Changelog Update
+
+**** When to update
+**** Changelog update walkthrough
+***** 1. Finding the relevant Clippy commits
+***** 2. Fetching the PRs between those commits
+***** 3. Authoring the final changelog
+****** 3.1 Include beta-accepted PRs
+
+***** 4. Update clippy::version attributes
+
+*** TODO 7.12.4. Release a New Version
+# Release a new Clippy Version
+
+**** Defining Remotes
+**** Bump Version
+**** Find the Clippy commit
+**** Update the ~beta~ branch
+**** Update the ~stable~ branch
+**** Tag the ~stable~ commit
+**** Publish ~clippy_utils~
+**** Update =CHANGELOG.md=
+
+*** TODO 7.12.5. The Clippy Book
+**** Get mdBook
+**** Make changes
+
+** 7.13. Proposals
+*** 7.13.1. Roadmap 2021
+**** Summary
+**** Motivation
+**** Explanation
+***** User Facing
+****** Usability
+******* No Output After ~cargo check~
+
+******* =lints.toml= Configuration
+******* Lint Groups
+
+****** Reliability
+******* False Positive Rate
+
+***** Internal
+****** Management
+******* Clear Expectations for Team Members
+******* Scaling up the Team
+******* Regular Meetings
+******* Triaging
+
+****** Development
+******* Process for New and Existing Lints
+******* Processes
+******* Dev-Tools
+******* Contributor Guide
+******* ~rustc~ integration
+
+***** Prioritization
+
+**** Prior Art
+***** Rust Roadmap
+
+**** Drawbacks
+***** Big Roadmap
+
+*** 7.13.2. Syntax Tree Patterns
+**** Summary
+**** Motivation
+**** Approach
+**** Guide-level explanation
+***** Pattern syntax
+******* ~Any(_)~
+******* ~Node(<node-name>(<args>))~
+******* ~Literal(<lit>)~
+******* ~Alternations(a | b)~
+******* Empty (~()~)
+******* Sequence (<a> <b>)
+******* Repetition (<a>*, <a>+, <a>?, <a>{n}, <a>{n,m}, <a>{n,})
+******* Named submatch (<a>#<name>)
+
+****** Summary
+
+***** The result type
+******* Two stages
+
+***** Implementing Clippy lints using patterns
+
+**** Reference-level explanation
+***** Overview
+***** PatternTree
+***** Parsing / Lowering
+***** The ~IsMatch~ Trait
+
+**** Drawbacks
+******* Performance
+******* Applicability
+
+**** Rationale and alternatives
+***** Alternatives
+****** Rust-like pattern syntax
+******* Problems
+
+**** Prior art
+**** Unresolved questions
+******* How to handle multiple matches?
+
+**** Future possibilities
+******* Implement rest of Rust Syntax
+******* Early filtering
+******* Match descendant
+******* Negation operator for alternatives
+******* Functional composition
+******* Clippy Pattern Author
+******* Supporting other syntaxes
+
+** 7.14. The Team
