@@ -117,44 +117,142 @@ CLOSED: [2023-10-25 Wed 17:23]
      /Threads/ share memory and can interact with each other through that memory.
 
 - This chapter will explain
-  1. how /threads/ are spawned in Rust, and
+  1. how /threads/ are *spawned* in Rust, and
      all the basic concepts around them, such as
-  2. how to safely share data between multiple
-  threads. The con‐ cepts explained in this chapter are foundational to the rest
-  of the book.
+  2. HOW TO _safely *share* data between MULTIPLE /threads/._
+  =IMPORTANT=
+  The concepts explained in this chapter are foundational to the rest of the
+  book.
 
-- Tip or Suggestion:
-  If you’re already familiar with these parts of Rust, feel free to skip ahead.
-  However, before you continue to the next chapters, make sure you have a good
-  understanding of threads, interior mutability, Send and Sync, and know what a
-  mutex, a condition variable, and thread parking are.
+** TODO Threads in Rust - 2 - =NOTE=
+- Every program starts with EXACTLY *one* /thread/:
+  /the main thread/.
 
-** Threads in Rust - 2 - =NOTE=
+  This /thread/ will execute your ~main~ function and can be used to _spawn more
+  threads_ if necessary.
+
+- In Rust,
+
+  * NEW /threads/ are spawned using the ~std::thread::spawn~ function from
+    the standard library.
+
+    + ~std::thread::spawn~ takes a single argument: the function the new /thread/
+      will execute.
+
+  * The /thread/ STOPS once this function returns.
+
+- Example:
+  #+begin_src rust
+    use std::thread;
+
+    fn main() {
+        thread::spawn(f);
+        thread::spawn(f);
+
+        println!("Hello from the main thread.");
+    }
+
+    fn f() {
+        println!("Hello from another thread!");
+
+        let id = thread::current().id();
+        println!("This is my thread id: {id:?}");
+    }
+  #+end_src
+
 - *Thread ID*
+  _The Rust standard library assigns every /thread/ a unique identifier._
+
+  * This identifier is accessible through ~Thread::id()~ and is of the type
+    ~ThreadId~.
+
+  * There's not much you can do with a ~ThreadId~ other than
+    + copying it around and
+    + checking for equality.
+
+  * There is _no guarantee_ that these IDs will be assigned consecutively, only
+    that they will be different for each /thread/.
+
+- If we want to *make sure* the /threads/ are finished BEFORE we return from
+  ~main~, we can wait for them by *joining* them.
+
+  To do so, we have to use the ~JoinHandle~ returned by the ~spawn~ function:
+  #+begin_src rust
+    fn main() {
+        let t1 = thread::spawn(f);
+        let t2 = thread::spawn(f);
+
+        println!("Hello from the main thread.");
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+    }
+  #+end_src
+  * No output order are guaranteed.
+
+  * The ~.join()~ method *waits until* the /thread/ has *finished* executing and
+    *returns* a ~std::thread::Result~.
+
+  * If the /thread/ did not successfully finish its function because it
+    _panicked_, this will contain the panic message.
+
+    We could attempt to
+    + handle that situation, or
+    + just call ~.unwrap()~ to panic
+    WHEN joining a panicked /thread/.
+
 - *Output Locking*
+  The ~println~ macro uses ~std::io::Stdout::lock()~ to make sure its output
+  does not get interrupted.
+
+  A ~println!()~ expression will *wait until* any concurrently running one is
+  finished BEFORE writing any output.
+
+  * IF this was not the case, we could've gotten more interleaved output such as:
+    #+begin_src text
+      Hello fromHello from another thread!
+      another This is my threthreadHello fromthread id: ThreadId!
+      ( the main thread.
+      2)This is my thread
+      id: ThreadId(3)
+    #+end_src
+
+- Rather than passing the name of a function to std::thread::spawn, as in our
+  example above, it’s far more common to pass it a closure. This allows us to
+  capture values to move into the new thread:
+  #+begin_src rust
+    let numbers = vec![1, 2, 3];
+
+    thread::spawn(move || {
+        for n in numbers {
+            println!("{n}");
+        }
+    }).join().unwrap();
+  #+end_src
+
 - *Thread Builder*
 
-** Scoped Threads - 5 - =READING=
+** TODO Scoped Threads - 5 - =READING=
 - *The Leakpocalypse*
 
-** Shared Ownership and Reference Counting - 7
+** TODO Shared Ownership and Reference Counting - 7
 *** Statics - 7
 *** Leaking - 8
 *** Reference Counting - 8
 - *Naming Clones*
 
-** Borrowing and Data Races - 11
+** TODO Borrowing and Data Races - 11
 - *Undefined Behavior*
 
-** Interior Mutability - 13
+** TODO Interior Mutability - 13
 *** ~Cell~ - 14
 *** ~RefCell~ - 14
 *** ~Mutex~ and ~RwLock~ - 15
 *** ~Atomics~ - 15
 *** ~UnsafeCell~ - 16
 
-** Thread Safety: ~Send~ and ~Sync~ - 16
-** Locking: Mutexes and RwLocks - 18
+** TODO Thread Safety: ~Send~ and ~Sync~ - 16
+** TODO Locking: Mutexes and RwLocks - 18
 *** Rust's ~Mutex~ - 18
 *** Lock Poisoning - 21
 - *Lifetime of the MutexGuard*
@@ -162,11 +260,11 @@ CLOSED: [2023-10-25 Wed 17:23]
 *** Reader-Writer Lock - 22
 - *Mutexes in Other Languages*
 
-** Waiting: Parking and Condition Variables - 24
+** TODO Waiting: Parking and Condition Variables - 24
 *** Thread Parking - 24
 *** TODO Condition Variables - 26
 
-** Summary - 29
+** TODO Summary - 29
 
 * DONE 2. Atomics - 31 - =TODO: NOTE=
 CLOSED: [2023-10-26 Thu 21:16]
