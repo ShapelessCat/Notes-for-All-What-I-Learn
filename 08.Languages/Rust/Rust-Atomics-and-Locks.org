@@ -232,24 +232,401 @@ CLOSED: [2023-10-25 Wed 17:23]
 
 - *Thread Builder*
 
-** TODO Scoped Threads - 5 - =READING=
+** DONE Scoped Threads - 5
+CLOSED: [2025-02-05 Wed 21:27]
+- If we know *for sure* that
+  a spawned thread will definitely *NOT outlive* a certain scope,
+
+  that thread could *safely borrow* _things that do NOT LIVE FOREVER,_ such as
+  * local variables, as long as they outlive that scope.
+
+- The Rust standard library provides the ~std::thread::scope~ function to
+  _SPAWN_ such /scoped threads/.
+
+  It allows us to SPAWN /threads/ that *cannot outlive* _the scope of the
+  closure_ we pass to that function, making it possible to *safely borrow* local
+  variables.
+
+- How it works is best shown with an example:
+  #+begin_src rust
+    let numbers = vec![1, 2, 3];
+
+    thread::scope(|s| {
+        s.spawn(|| {
+            println!("length: {}", numbers.len());
+        });
+        s.spawn(|| {
+            for n in &numbers {
+                println!("{n}");
+            }
+        });
+    });
+  #+end_src
+  * When the /scope/ ends,
+    all /threads/ that haven't been joined yet are *AUTOMATICALLY joined*.
+
+  * This pattern *GUARANTEES* that
+    NONE of the threads spawned in the scope can outlive the scope.
+
+    + Because of that, this _scoped ~spawn~ method_ does NOT have a ~'static~
+      bound on its argument type, allowing us to reference anything *as long as*
+      _it outlives the scope_, such as ~numbers~ in the above code.
+
+- In the example above, no modification, and concurrent access is fine.
+  If we introduce modification naively, the code can't compile:
+  #+begin_src rust
+    let mut numbers = vec![1, 2, 3];
+
+    thread::scope(|s| {
+        s.spawn(|| {
+            numbers.push(1);
+        });
+        s.spawn(|| {
+            numbers.push(2); // Error!
+        });
+    });
+  #+end_src
+
 - *The Leakpocalypse*
+  HISTORY:
 
-** TODO Shared Ownership and Reference Counting - 7
-*** Statics - 7
-*** Leaking - 8
-*** Reference Counting - 8
+  1. _Before Rust 1.0_,
+     ~std::thread::scoped~ (before Rust 1.0) would directly spawn a thread, just
+     like ~std::thread::spawn~. It _ALLOWED_ /non-~'static~ captures/, because
+     instead of a ~JoinHandle~, it returned a ~JoinGuard~ *which JOINED the
+     /thread/ when DROPPED.*
+     Any borrowed data only needed to outlive this ~JoinGuard~.
+
+     * This *SEEMED* SAFE, as long as the ~JoinGuard~ got dropped at some point.
+
+  2. _Just before the release of Rust 1.0_,
+     it slowly became clear that
+     _it's *not possible* to GUARANTEE that something will be dropped._
+
+     * There are many ways, such as
+       + creating a cycle of reference-counted nodes,
+         that make it possible to forget about something, or
+
+       + leak it, without dropping it.
+
+  3. _Eventually_,
+     in what some people refer to as “The Leakpocalypse,” the conclusion was
+     made that the design of a (safe) interface cannot rely on the assumption
+     that objects will always be dropped at the end of their lifetime.
+
+     Leaking an object might reasonably result in leaking more objects (e.g.,
+     leaking a Vec will also leak its elements), but it may *NOT* result in
+     /undefined behavior/.
+
+     * Because of this conclusion, ~std::thread::scoped~ was no longer deemed
+       safe and was removed from the standard library.
+
+     * Additionally, ~std::mem::forget~ was upgraded from an /unsafe function/
+       to a /safe function/, to emphasize that forgetting (or leaking) is always
+       a possibility.
+
+  4. _Only much later, in Rust 1.63_,
+     a new std::thread::scoped~ function was added with a new design that does
+     not rely on ~Drop~ for correctness.
+
+** DONE Shared Ownership and Reference Counting - 7
+CLOSED: [2025-02-09 Sun 20:12]
+- REVIEW:
+  So far we've looked at
+  * _TRANSFERRING_ /ownership/ of a value _TO_ a /thread/ using /a ~move~
+    closure/ ("Threads in Rust" on page 2) and
+  * _BORROWING_ data from /longer-living PARENT threads/ (“Scoped Threads” on
+    page 5).
+
+- Question not solved yet:
+  * Q :: When sharing data between two /threads/ where neither /thread/ is guaranteed
+         to outlive the other, neither of them can be the owner of that data.
+    + Any data shared between them will need to live as long as the longest living
+      thread.
+
+*** DONE Statics - 7
+CLOSED: [2025-02-08 Sat 02:29]
+There are *SEVERAL* ways to create something that's not owned by a single thread.
+
+The *simplest* one is a /static value/, which is "owned" by the entire program,
+instead of _an INDIVIDUAL /thread/._
+
+- In the following example, both /threads/ can access ~X~, but NEITHER of them
+  owns it:
+  #+begin_src rust
+    static X: [i32; 3] = [1, 2, 3];
+    thread::spawn(|| dbg!(&X));
+    thread::spawn(|| dbg!(&X));
+  #+end_src
+
+- A /static/ item has a /constant initializer/, is *NEVER /dropped/,* and
+  *already exists BEFORE* the main function of the program even starts.
+  * Every /thread/ can /borrow/ it, since it's guaranteed to *always exist*.
+
+*** DONE Leaking - 8
+CLOSED: [2025-02-09 Sun 07:31]
+Another way to share /ownership/ is by *leaking an allocation*.
+
+- Using ~Box::leak~, one can *release* /ownership/ of a ~Box~, promising to
+  never drop it.
+
+  From that point on, the ~Box~ will *live forever*, *WITHOUT* an /owner/,
+  allowing it to be borrowed by any ~thread~ for as long as the program runs.
+  #+begin_src rust
+    let x: &'static [i32; 3] = Box::leak(Box::new([1, 2, 3]));
+
+    thread::spawn(move || dbg!(x));
+    thread::spawn(move || dbg!(x));
+  #+end_src
+
+  * The ~move~ closure might make it _LOOK LIKE_ we're moving /ownership/ into
+    the /threads/, _BUT_ a closer look at the type of ~x~ reveals that we're
+    only giving the /threads/ a /reference/ to the data.
+
+    + Tips:
+      /References/ are ~Copy~, meaning that when you "move" them, the original
+      still exists, just like with an integer or booleans.
+
+    + *Note*
+      how the ~'static~ /lifetime/
+      1. *doesn't mean* that the value lived since the start of the program,
+      2. *BUT* only that it lives to the end of the program.
+         The past is simply not relevant.
+
+- Downside:
+  leaking memory.
+  * Limited number of times is okay.
+
+*** DONE Reference Counting - 8
+CLOSED: [2025-02-09 Sun 20:12]
+- _TO MAKE SURE_ that *shared data gets dropped and deallocated*,
+  1. we can't completely give up its /ownership/.
+  2. INSTEAD, we can *share ownership*.
+     By keeping track of the number of owners, we can make sure the value is
+     dropped only when there are no owners left.
+
+- The Rust standard library provides this functionality through the ~std::rc::Rc~ type,
+  short for _"reference counted."_
+  * It is very similar to a ~Box~, *EXCEPT* cloning it will *NOT* allocate
+    anything new, but instead increment a counter stored next to the contained
+    value. Both the original and cloned ~Rc~ will refer to the same allocation;
+    they *share* /ownership/.
+    #+begin_src rust
+      use std::rc::Rc;
+
+      let a = Rc::new([1, 2, 3]);
+      let b = a.clone();
+
+      assert_eq!(a.as_ptr(), b.as_ptr()); // Same allocation!
+    #+end_src
+
+- /Dropping/ an ~Rc~ will decrement the counter.
+  * Only the _LAST_ ~Rc~, which will see the counter drop to zero, will be the
+    one dropping and deallocating the contained data.
+
+- ~Rc~ is *NOT* /thread safe/.
+  INSTEAD, we can use ~std::sync::Arc~, which stands for _"atomically reference
+  counted."_
+  #+begin_src rust
+    use std::sync::Arc;
+
+    let a = Arc::new([1, 2, 3]);
+    let b = a.clone();
+
+    thread::spawn(move || dbg!(a));
+    thread::spawn(move || dbg!(b));
+  #+end_src
+
 - *Naming Clones*
+  Having to give every /clone/ of an ~Arc~ a DIFFERENT name can quickly make
+  the code quite cluttered and hard to follow.
 
-** TODO Borrowing and Data Races - 11
+  * While every clone of an ~Arc~ is a separate object, each clone represents
+    the same shared value, which is *NOT well reflected by* naming each one
+    differently.
+
+  * Rust allows (and encourages) you to shadow variables by defining a new
+    variable with the same name. If you do that in the same scope, the original
+    variable cannot be named anymore.
+
+    _BUT_ by opening a new scope, a statement like ~let a = a.clone();~ can be
+    used to reuse the same name within that scope, while leaving the original
+    variable available outside the scope.
+
+  * By wrapping a /closure/ in a NEW /scope/ (with ~{}~), we can clone variables
+    before moving them into the closure, *WITHOUT* having to rename them.
+
+  * The /clone/ of the ~Arc~ lives in the SAME /scope/. Each thread gets its own
+    clone with a different name.
+    #+begin_src rust
+      let a = Arc::new([1, 2, 3]);
+      let b = a.clone();
+
+      thread::spawn(move || {
+          dbg!(b);
+      });
+
+      dbg!(a);
+    #+end_src
+
+  * The /clone/ of the ~Arc~ lives in a DIFFERENT /scope/. We can use the same
+    name in each thread.
+    #+begin_src rust
+      let a = Arc::new([1, 2, 3]);
+
+      thread::spawn({
+          let b = a.clone();
+          move || {
+              dbg!(b);
+          }
+      });
+
+      dbg!(a);
+    #+end_src
+
+- BECAUSE *ownership is SHARED*,
+  /reference counting pointers (~Rc<T>~ and ~Arc<T>~)/ have the same
+  restrictions as /shared references (~&T~)/:
+  they do *NOT* give you /mutable access/ to their contained value, since the
+  value might be borrowed by other code at the same time.
+  * Example:
+    *Can't compile code*: in place sort the slice of integers in an ~Arc<[i32]~.
+    #+begin_src text
+      error[E0596]: cannot borrow data in an `Arc` as mutable
+        |
+      6 |     a.sort();
+        |     ^^^^^^^^
+    #+end_src
+
+** DONE Borrowing and Data Races - 11
+CLOSED: [2025-02-10 Mon 20:16]
+- *Immutable borrowing*
+  Borrowing something with ~&~ gives an /immutable reference/.
+  * Such a reference can be copied.
+    Access to the data it references is shared between all copies of such a
+    reference.
+
+  * As the name implies, the compiler doesn't normally allow you to mutate
+    something through such a reference, since that might affect other code
+    that's currently borrowing the same data.
+
+- *Mutable borrowing*
+  Borrowing something with ~&mut~ gives a /mutable reference/.
+
+  A mutable borrow *guarantees* it's the ONLY active borrow of that data.
+
+  _This ensures that mutating the data will not change anything that other code
+  is currently looking at._
+
+- These two concepts together *fully prevent* /data races/.
+
+  * To clarify what that means, let's take a look at an example where the
+    compiler can make a useful assumption using the borrowing rules:
+    #+begin_src rust
+      fn f(a: &i32, b: &mut i32) {
+          let before = *a;
+          *b += 1;
+          let after = *a;
+          if before != after {
+              x(); // never happens
+          }
+      }
+    #+end_src
+    Based on the borrowing rules, ~a~ and ~b~ can't refer to the same integer,
+    and the compiler can easily conclude that ~*a~ will not change and the condition
+    of the ~if~ statement will never be true, and can completely remove the call
+    to ~x~ from the program as an optimization.
+
+- It's IMPOSSIBLE to write a Rust program that breaks the compiler's assumptions,
+  *other than* by using an ~unsafe~ block to disable some of the compiler's safety
+  checks.
+
 - *Undefined Behavior*
+  * undefined behavior :: Languages like C, C++, and Rust have a set of rules
+    that need to be followed to avoid.
+    + For example, one of Rust's rules is that there may never be more than one
+      mutable reference to any object.
+
+  * In Rust, it's only possible to break any of these rules when using ~unsafe~
+    code.
+    + "Unsafe" doesn't mean that the code is incorrect or never safe to use, but
+      rather that the compiler is not validating for you that the code is safe.
+      - =from Jian=
+        Not all rules, some rules won't be validated by the compiler.
+
+    + If the code *DOES violate* these rules, it is called /unsound/.
+
+  * /Undefined behavior/ should be avoided at all costs --
+    _IF_ we allow the compiler to make an assumption that is not actually true,
+    it can easily result in *MORE wrong conclusions* about different parts of
+    your code, affecting your whole program.
+
+  * *EXAMPLE*
+    =IMPORTANT= REVIEW THIS!!!
 
 ** TODO Interior Mutability - 13
-*** ~Cell~ - 14
-*** ~RefCell~ - 14
-*** ~Mutex~ and ~RwLock~ - 15
-*** ~Atomics~ - 15
-*** ~UnsafeCell~ - 16
+The /borrowing rules/ as introduced in the previous section are simple, but can be
+*quite limiting* -- _especially when multiple threads are involved._
+
+- *QUESTION*:
+  Following these rules makes communication between threads extremely limited and
+  almost impossible, since no data that's accessible by multiple threads can be
+  mutated.
+
+- *SOLUTION*:
+  A *escape hatch*: /interior mutability/, which slightly bends the /borrowing rules/.
+
+  Under certain conditions, those types can _ALLOW_
+  *mutation through an "immutable" reference.*
+
+- In "Reference Counting" on page 8, we've already seen one subtle example
+  involving /interior mutability/ -- mutate a /reference counter/,
+  _MULTIPLE_ clones all using the _SAME_ reference counter.
+  =from Jian=
+  This is an /interior mutability/ example, though NOT mutate the data referred
+  but the related _reference counter_.
+
+- *TERMINOLOGY*:
+  * As soon as /interior mutable types/ are involved, calling a reference
+    “immutable” or “mutable” becomes _CONFUSING and INACCURATE_,
+    *SINCE some things can be mutated through both.*
+
+  * The more _ACCURATE_ terms are *"shared"* and *"exclusive"*:
+    + a /shared reference (~&T~)/ can be *copied* and *shared* with others,
+    + while an /exclusive reference (~&mut T~)/ guarantees it's the only
+      *exclusive borrowing* of that ~T~.
+
+  * For _MOST_ types, /shared references/ do *NOT allow* _MUTATION_,
+    _BUT_ there are *exceptions*.
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    Since in this book we will mostly be working with these exceptions, we'll
+    use the more accurate terms in the rest of this book.
+
+- *WARNING and CAUTION*
+  * Keep in mind that /interior mutability/ *only bends* the rules of /shared
+    borrowing/ to allow mutation when shared.
+
+  * It does *NOT change anything* about /exclusive borrowing/.
+    + /Exclusive borrowing/ still guarantees that there are no other active borrows.
+
+    + /Unsafe code/ that results in *more than one* ACTIVE /exclusive reference/
+      to something *ALWAYS* _invokes /undefined behavior/,_ REGARDLESS of
+      /interior mutability/.
+
+- =THIS CHAPTER=
+  Let's
+  * take a look at a few types with /interior mutability/ and
+  * how they can allow mutation through /shared references/ *WITHOUT causing*
+    /undefined behavior/.
+
+*** TODO ~Cell~ - 14
+*** TODO ~RefCell~ - 14
+*** TODO ~Mutex~ and ~RwLock~ - 15
+*** TODO ~Atomics~ - 15
+*** TODO ~UnsafeCell~ - 16
 
 ** TODO Thread Safety: ~Send~ and ~Sync~ - 16
 ** TODO Locking: Mutexes and RwLocks - 18
