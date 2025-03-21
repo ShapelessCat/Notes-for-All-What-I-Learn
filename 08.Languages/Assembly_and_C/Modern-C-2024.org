@@ -473,43 +473,199 @@ _write_ and _use_ *good C programs*.
   for everyday needs that is not extremely sophisticated but useful and
   portable.
 
-** TODO Buckle up - 20
+** DONE Buckle up - 20
+CLOSED: [2025-03-19 Wed 00:41]
+In many ways, C is a permissive language; programmers are allowed to shoot
+themselves in the foot or other body parts if they choose to, and C will make no
+effort to stop them. Therefore, just for the moment, we will introduce some
+restrictions. We’ll try to avoid handing out guns in this level and place the
+key to the gun safe out of your reach for the moment, marking its location with
+big and visible exclamation marks.
+
 - The most dangerous constructs in C are the so-called /casts/, so we'll skip
   them at this level.
+
+- There are many other pitfalls that are less easy to avoid.
+
+- Some of “getting used to” our approach on this level may concern the emphasis
+  and ordering in which we present the material:
   * We will _focus_ primarily on the ~unsigned~ versions of integer types.
-  * We will _introduce_ /pointers/ in steps: ......
+  * We will _introduce_ /pointers/ in steps:
+    1. in disguise as parameters to functions (section 6.1.4),
+    2. then with their state (being valid or not, section 6.2),
+    3. and then, on the next level, (section 11), using their entire potential.
   * We will _focus_ on the use of /arrays/ whenever possible, instead.
 
-- We define variables as close to their first use as possible.
+- We *bind* /type modifiers/, /qualifiers/, and /attributes/ to the left.
+  We want to separate identifiers visually from their type. So we will
+  typically write things as
+  #+begin_src c
+    char* name;
+  #+end_src
+  WHERE
+  ~char*~ is the /type/ and
+  ~name~ is the /identifier/.
 
-- Lack of variable initialization, especially for pointers, is one of the major
-  pitfalls for novice C programmers. This is why we should, whenever possible,
-  combine the declaration of a variable with the first assignment to it
+- We also apply the left-binding rule to /qualifiers/ or
+  /attributes/ and write
+  #+begin_src c
+    char const* const path_name[[deprecated]];
+  #+end_src
+  1. the FIRST ~const~ qualifies the ~char~ to its left,
+  2. the ~*~ makes it to a /pointer/, and
+  3. the SECOND ~const~ again qualifies what is to its left.
+  4. The attribute ~[[deprecated]]~ clearly attaches to the identifier
+     ~path_name~.
 
-- We use prefix notation for code blocks (in this book).
+- *(1) We do not use continued declarations:*
+  They obfuscate the bindings of type declarators. For example,
+  #+begin_src c
+    unsigned const*const a, b;
+  #+end_src
+
+  is equivalent to
+
+  #+begin_src c
+    const a;
+    unsigned const b;
+  #+end_src
+
+- *(2) We use array notation for pointer parameters:*
+  We do so _WHEREVER these ASSUME that the /pointer/ *can't be null*._ Some
+  examples are as follows:
+  #+begin_src c
+    /* These emphasize that the arguments cannot be null. */
+    size_t strlen(char const string[static 1]);
+    int main(int argc, char* argv[argc+1]);
+
+    /* Compatible declarations for the same functions. */
+    size_t strlen(const char *string);
+    int main(int argc, char **argv);
+  #+end_src
+  _some details in book_
+
+- *(3) We use function notation for function pointer parameters:*
+  Along the same lines, we do so whenever we know that a function pointer can't
+  be null:
+  #+begin_src c
+    /* This emphasizes that the ``handler’’ argument cannot be null. */
+    int atexit(void handler(void));
+
+    /* Compatible declaration for the same function. */
+    int atexit(void (*handler)(void));
+  #+end_src
+
+- *(4) We define variables as close to their first use as possible:*
+  Lack of variable initialization, especially for pointers, is one of the major
+  pitfalls for novice C programmers.
+
+  This is why we should, whenever possible, combine the /declaration/ of a
+  variable with the first assignment to it. Use /definition/ can do this.
+
+- *(5) We use prefix notation for code blocks:*
+  =from Jian= Code style used in this book.
+
+- *(6) We use digit separators for numbers:*
+  * Use a _comma_ as _a thousands separator_ for large decimal numbers.
+    For example, 10,035.677,789.
+
+    + A notable *EXCEPTION* from this rule is _years_, where we do not apply a
+      thousands separator.
+
+  * *SINCE C23*,
+    there is also a _digit separator_ for /number literals/, namely a ~'~ that
+    appears directly between two consecutive digits, such as in
+    ~10'035.677'789~.
+
+    We use that for all number literals by grouping together
+    + _THREE_ decimal digits (for thousands),
+    + _FOUR_ hexadecimal digits (for double bytes), and
+    + _EIGHT_ binary digits (for the bits in a byte).
+
+  =from Jian=
+  The ~'~ digit separator is more flexible. We can't use ~,~ digit separator
+  under some context. For example,
+  #+begin_src c
+    double A[5] = {
+      [0] = 9.0,
+      [1] = 2.9,
+      [2] = 200,300,4,5,6.,
+      [4] = 3.E+25,
+      [3] = .00007,
+    };
+  #+end_src
+  the definition of ~A~ is an array with floating numbers:
+  9.0, 2.9, 200, 300, 4. Other number and syntax terms will be ignored.
+  Of course, if you write code like this, the compiler will issue a warning.
 
 ** DONE 3. Everthing is about control - 23
 CLOSED: [2017-04-25 Tue 16:11]
+- This section covers
+  * Conditional execution with ~if~
+  * Iterating over domains
+  * Making multiple selections
+
+- Besides the control statements discussed in this section,
+  C has some other conditionals that we will discuss later:
+  * the ternary operator,
+
+  * the compile-time preprocessor conditionals (section 8.1.5):
+    + ~#if~
+    + ~#ifdef~
+    + ~#ifndef~
+    + ~#elif~
+    + ~#elifdef~
+    + ~#elifndef~
+    + ~#else~
+    + ~#endif~
+
+  * the type generic expressions denoted with the keyword
+    ~_Generic~ (section 18).
+    =TODO: ???=
+
 *** 3.1. Conditional execution - 23
-- /controlling expression/, /dependent block/
+- Example:
+  #+begin_src c
+    if (i > 25) {
+      j = i - 25;
+    }
+  #+end_src
+  * The ~i > 25~ is called /the controlling expression/.
+  * The part in ~{ ... }~ is called the /secondary block/.
 
-- Takeaway 3.1 #1 :: The value 0 represents logical false.
+- /selection statement/: ~if (...) ... else ...~,
+  which has two /code paths/.
 
-- Takeaway 3.1 #2 :: Any value different from 0 represents logical true.
+- Takeaway 3.1 #1 :: The value 0 represents _logical false_.
 
-- =stdbool.h=
-  #+BEGIN_SRC c
-  #include <stdbool.h>
-  bool b = true;
-  #+END_SRC
+- Takeaway 3.1 #2 :: Any value different from 0 represents _logical true_.
 
-- Takeaway 3.1 #3 :: Don’t compare to ~0~, ~false~ or ~true~.
+- *BEFORE C23*, to use ~bool~ and its literals ~false~ and ~true~, you had to use
+  the ~<stdbool.h>~ header.
+
+- Takeaway 3.1 #3 :: Don't compare to ~0~, ~false~ or ~true~.
 
 - Takeaway 3.1 #4 :: All scalars have a truth value.
+  * Here, /scalar/ types include all the
+    + numerical types such as ~size_t~,
+    + ~bool~, and
+    + ~int~ that we already encountered and
+    + /pointer types/;
 
-- TABLE 1. Scalar types used in this book =RE-READ=
+  see table 3.1 for the types that are frequently used in this book.
+
+  =IMPORTANT=
+  TABLE 1. Scalar types used in this book =NEED REVIEW=
+  =IMPORTANT=
+
+  =TODO= We will come back to them in _section 6.2_.
 
 *** 3.2. Iterations - 26
+General form of ~for~ statements:
+#+begin_src c
+  for (clause1; condition2; expression3) secondary-block
+#+end_src
+
 - Example 1:
   #+BEGIN_SRC c
   #include <stdlib.h>
@@ -519,12 +675,13 @@ CLOSED: [2017-04-25 Tue 16:11]
   }
   #+END_SRC
 
-- ~do ... while~ always needs a semicolon ; after the while (condition) to
-  terminate the statement. =IMPORTANT=
+- Two more iterative statements in C:
+  #+begin_src c
+    while (condition) secondary-block
+    do secondary-block while(condition);
+  #+end_src
 
-- [ =TODO= ] Later we will see that this is a syntactic feature that turns
-  out to be quite useful in the context of multiple nested statements, see
-  Section 10.3.
+- ~break~ and ~continue~
 
 - Special usage (equivalent loosp):
   #+BEGIN_SRC c
@@ -563,23 +720,63 @@ CLOSED: [2017-04-25 Tue 16:11]
     x *= (2.0 - prod);
   }
   #+END_SRC
+  * ~for(;;)~ is equivalent to ~while(true)~.
+    + Rationale (no actual reason):
+      Historical artifact in the rules of C and has no other special purpose.
 
-- PAGE 19 =TODO ???=
+- PAGE 29 - 30 =TODO ???=
+  * CHALLENGE 1
 
-*** 3.3. Multiple selection - 30
+*** 3.3. Multiple selection - 30 - =TODO: ???=
 - The /fallback/ case of ~switch~.
 
-- Takeawy 3.3 #1 :: ~case~ values must be integer constant expressions.
+- Takeawy 3.3 #1 :: ~case~ values must be /integer constant expressions/.
 
-- Takeawy 3.3 #2 :: ~case~ values must be unique for each ~switch~ statement.
+- Takeawy 3.3 #2 :: ~case~ values must be *unique* for each ~switch~ statement.
 
-- Takeawy 3.3 #3 :: ~case~ labels must not jump beyond a variable definition. =TODO ???=
+- Takeawy 3.3 #3 :: ~case~ labels must not jump beyond a variable definition.
+  =TODO ???=
+  =TODO ???=
+  =TODO ???=
+
+- =TODO= Challenge 2
+
+- =TODO= Challenge 3
 
 *** Summary - 33
+- Numerical values can be directly used as conditions for ~if~ statements; 0
+  represents “false,” and all other values are “true.”
+
+- There are _THREE_ DIFFERENT /iteration statements/:
+  * ~for~,
+  * ~do~, and
+  * ~while~.
+
+  ~for~ is the preferred tool for /domain iterations/.
+
+- A ~switch~ statement performs multiple selections.
+  One case runs into the next if it is not terminated by a ~break~.
+  =from Jian= The fall through behavior.
 
 ** DONE 4. Expressing computations - 34
-CLOSED: [2017-04-25 Tue 16:11]
-*** 4.1 Operands and operators - 34
+CLOSED: [2025-03-19 Wed 20:20]
+- This section covers
+  * Performing arithmetic
+  * Modifying objects
+  * Working with booleans
+  * The ternary operator
+  * Setting the evaluation order
+
+*** DONE 4.1. Operands and operators - 34
+CLOSED: [2025-03-19 Wed 18:15]
+- ~size_t~: values correspond to "sizes," so they are numbers that cannot be
+  negative.
+
+  We would like to represent are all _the nonnegative integers_, often denoted
+  as ℕ, ℕ_{0}, or "natural" numbers in mathematics. Because computers are finite,
+  ~size_t~ is just a reasonable approximation of natural numbers. It has a big
+  upper limit ~SIZE_MAX~.
+
 - Takeaway 4.1 #1 :: The type ~size_t~ represents values in the range
                      ~[0, SIZE_MAX]~.
 
@@ -589,7 +786,11 @@ CLOSED: [2017-04-25 Tue 16:11]
   2. 2^32 − 1 = 4294967295 (common today)
   3. 2^64 − 1 = 18446744073709551615 (common today)
 
-*** 4.2. Arithmetic - 35
+- TABLE 4.1 - =TODO= =???= ICE
+  =RE-READ=
+
+*** DONE 4.2. Arithmetic - 35
+CLOSED: [2025-03-19 Wed 18:15]
 **** 4.2.1. ~+~, ~-~ and ~*~ - 35
 - TABLE 4.1 :: value operators =IMPORTANT=
 
@@ -597,11 +798,21 @@ CLOSED: [2017-04-25 Tue 16:11]
 
 - TABLE 4.3 :: type operators =IMPORTANT=
 
-- Rule 4.2.1 #1 :: Unsigned arithmetic is always well defined. =TODO ???=
+- =IMPORTANT=
+  EVEN THOUGH we use an /unsigned type/ for our computation,
+  negation and difference by means of the operator ~-~ are well defined:
+  REGARDLESS OF the values we feed into such a subtraction, our computation will
+  always have a *VALID* result.
 
-- Rule 4.2.1 #2 :: Operations +, - and * on size_t provide the
-                  mathematically correct result if it is representable as a
-                  ~size_t~.
+  In fact, one of the miraculous properties of ~size_t~ is that ~+-*~ arithmetic
+  always works where it can. As long as the final mathematical result is within
+  the range ~[0, SIZE_MAX]~, then that result will be the value of the expression.
+
+- Takeaway 4.2.1 #1 :: Unsigned arithmetic is always well defined.
+
+- Takeaway 4.2.1 #2 :: The operations ~+~, ~-~ and ~*~ on ~size_t~ provide the
+                       mathematically correct result if it is representable as a
+                       ~size_t~.
 
 **** 4.2.2. Division and remainder - 36
 - ~/~ and ~%~.
@@ -611,80 +822,283 @@ CLOSED: [2017-04-25 Tue 16:11]
 - Takeaway 4.2.2 #2 :: Unsigned ~/~ and ~%~ are well defined only if the second
                        operand is not =0=.
 
+- The ~%~ operator can also be used to EXPLAIN
+  _additive_ and _multiplicative_ arithmetic on /unsigned types/ a bit better.
+
+  =IMPORTANT=
+  When /unsigned type overflow/ happens, the result is reduced as if the ~%~
+  operator had been used.
+
+  The resulting value “wraps around” the range of the type. In the case of
+  ~size_t~, the range is ~0~ to ~SIZE_MAX~.
+
 - Takeaway 4.2.2 #3 :: Arithmetic on ~size_t~ implicitly computes modulo
                        ~SIZE_MAX +1~.
 
-- Takeaway 4.2.2 #4 :: In the case of overflow, unsigned arithmetic wraps around.
+- Takeaway 4.2.2 #4 :: In the case of overflow, unsigned arithmetic wraps
+                       around.
+  * This means for ~size_t~ values, ~SIZE_MAX + 1~ is equal to ~0~, and ~0 - 1~
+    is equal to ~SIZE_MAX~.
+
+  * This "wrapping around" is the magic that makes the ~-~ operators work for
+    /unsigned types/. For example, the value ~-1~ interpreted as a size_t is
+    equal to ~SIZE_MAX~; so adding ~-1~ to a value a just evaluates to
+    ~a + SIZE_MAX~, which wraps around to
+    ~a + SIZE_MAX - (SIZE_MAX + 1) = a - 1~
 
 - Takeaway 4.2.2 #5 :: The result of unsigned ~/~ and ~%~ is always smaller than
                        the operands.
 
-- Takeaway 4.2.2 #6 :: Unsigned ~/~ and ~%~ can't overflow.
+- Takeaway 4.2.2 #6 :: Unsigned ~/~ and ~%~ *can't* /overflow/.
 
-*** 4.3. Operators that modify objects - 37
+*** DONE 4.3. Operators that modify objects - 37
+CLOSED: [2025-03-19 Wed 18:15]
+- This book try to avoid the term lvalue (left value) and rvalue (right value).
+  Use /object/ and /value/ is sufficient.
+
+- ~+=~
+- ~-=~
+- ~*=~
+- ~/=~
+- ~%=~
+
 - Takeaway 4.3 #1 :: Operators must have all their characters directly attached
                      to each other.
 
-- Takeaway 4.3 #2 :: Side effects in value expressions are evil.
+- The /increment operator/ ~++~ and the /decrement operator/ ~--~:
+  * ~++i~ is equivalent to ~i += 1~.
+  * ~--i~ is equivalent to ~i -= 1~.
+
+- Takeaway 4.3 #2 :: /Side effects/ in value expressions are evil.
+  * side effects :: changes to objects that are involved in an expression.
 
 - Takeaway 4.3 #3 :: Never modify more than one object in a statement.
 
 - /postfix increment/ and /postfix decrement/.
 
-- Sciene You will nicely obey to _Rule 1.4.2.2_, you will not be tempted to
-  use them.
-
-*** 4.4. Boolean context - 38
-- Two categories:
-  1. comparisons
-  2. logical evaluation
+*** DONE 4.4. Boolean context - 38
+CLOSED: [2025-03-19 Wed 18:15]
+- Several operators yield a value of ~0~ or ~1~, depending on whether some
+  condition is verified; see table 4.1. They can be grouped into two categories:
+  * comparisons
+  * logical evaluation
 
 **** 4.4.1. Comparison - 38
-- Rule 4.4.1 #1 :: Comparison operators return the values ~false~ or ~true~.
+- Takeaway 4.4.1 #1 :: Comparison operators return the values ~false~ or ~true~.
+
+- Remember that ~false~ and ~true~ are nothing more than fancy names for ~0~ and
+  ~1~, respectively.
+
+- TIP:
+  ~not_eq~ comes from ~<iso646.h>~ can be used as a replacement for ~!=~.
+  It dates back to the times where some characters were not properly present on
+  all computer platforms.
 
 **** 4.4.2. Logic - 39
-- Rule 4.4.2 #1 :: Logic operators return the values ~false~ or ~true~.
+- Takeaway 4.4.2 #1 :: Logic operators return the values ~false~ or ~true~.
 
-- Page =26= _NEW_Standard.
+- /short-circuit evaluatio/n
 
-*** 4.5. The ternary or conditional operator - 40
-- =complex.h= is indirectly included by =tgmath.h=.
+*** DONE 4.5. The ternary or conditional operator - 40
+CLOSED: [2025-03-19 Wed 20:02]
+- Complex arithmetic and the tools used for it require the header =<complex.h>=,
+  =<tgmath.h>= which is indirectly included by =<tgmath.h>=. They will be
+  introduced later, in _section 5.7.8_.
 
 - ~__STDC_NO_COMPLEX__~
 
 - ~#error~
 
-*** 4.6. Evaluation order - 40
-- Rule 4.6 #1 :: &&, ||, ?: and , evaluate their first operand first.
+*** DONE 4.6. Evaluation order - 40
+CLOSED: [2025-03-19 Wed 20:19]
+- Takeaway 4.6 #1 :: ~&&~, ~||~, ~?:~ and ~,~ evaluate their first operand
+                     first.
 
-- Rule 4.6 #2 :: Don't use the , operator.
-                 _Remark_: ~A[i, j]~ is not a two dimension index for
-                           matrix ~A~, but results just in ~A[j]~.
+- The /comma operator/ is RARELY USEFUL in clean code, and it is a trap for
+  beginners:
+  ~A[i, j]~ is not a two dimension index for matrix ~A~, but results just in
+  ~A[j]~.
 
-- Rule 4.6 #3 :: Most operators don't sequence their operands.
-                 Other operators, excepts ~&&~, ~||~, ~?:~ and ~,~ don't
-                 have an evaluation restriction.
-                 _Remark_: That chosen order can depend on your compiler, on
-                           the particular version of that compiler, on
-                           compile time options or just on the code that
-                           surrounds the expression. Don’t rely on any such
-                           particular sequencing.
-                           i.e.,
-                           ~f(a) + g(b)~, if ~f(a)~ has side effects that
-                           can change ~g(b)~, or vice versa, this is a
-                           _potential bug_. =IMPORTANT=
+- Takeaway 4.6 #2 :: Don't use the ~,~ operator.
 
-- Rule 4.6 #4 :: Function calls don't sequence their argument expressions.
+- Other operators don’t have an evaluation restriction. For example, in an
+  expression such as f(a)+g(b), there is no pre-established order specifying
+  whether f(a) or g(b) is to be computed first. If either the function f or g
+  works with side effects (for instance, if f modifies b behind the scenes),
+  the outcome of the expression will depend on the chosen order.
 
-- Rule 4.6 #5 :: Functions calls within expressions should not have side effects.
+- Takeaway 4.6 #3 :: Most operators don't sequence their operands.
 
-*** Summary - 43
+  1. That order may depend on
+     * your compiler,
+     * the particular version of that compiler,
+     * compile-time options, or just
+     * the code that surrounds the expression.
 
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+     *Don't rely on any such particular sequencing; it will bite you.*
+
+     =IMPORTANT=
+     For example, no evaluation for the expression ~f(a) + g(b)~. If ~f(a)~
+     works with /side effects/ that affect ~b~, or ~g(b)~ works with /side
+     effects/ that affect ~a~, the outcome of the expression will depend on the
+     chosen order.
+
+     =from Jian= This is why /side effect/ free functions are good!
+
+  2. The same holds for _function arguments_. In something like
+     #+begin_src c
+       printf("%g and %g\n", f(a), f(b));
+     #+end_src
+
+- Takeaway 4.6 #4 :: Function calls don't sequence their argument expressions.
+
+- =IMPORTANT=
+  The only reliable way not to depend on evaluation ordering of arithmetic
+  expressions is to *ban* /side effects/.
+
+- Takeaway 4.6 #5 :: Functions calls within expressions should not have side effects.
+  =IMPORTANT=
+
+*** DONE Summary - 43
+CLOSED: [2025-03-19 Wed 20:19]
+- /Arithmetic operators/ do math. They operate on /values/.
+
+- /Assignment operators/ modify /objects/.
+
+- /Comparison operators/ compare /values/ and return ~0~ or ~1~.
+
+- /Function calls/ and most operators evaluate their operands in a *nonspecific
+  order*.
+    _ONLY_ ~&&~, ~||~, and ~?:~ impose an ordering on the evaluation of their
+  operands.
+
+** =Start Here=
 ** TODO 5. Basic values and data - 44 - =RE-READ=
+- This section covers
+  * Understanding the abstract state machine
+  * Working with /types/ and /values/
+  * Initializing /variables/
+  * Using /named constants/
+  * Binary representations of types
+
+- We will now change our focus from "how things are to be done" (/statements/
+  and /expressions/) to the things on which C programs operate: /values/ and
+  /data/.
+
+- A concrete program at an instance in time has to represent *values*.
+
 - Takeaway 5 #1 :: C programs primarily reason about values and not about their
                    representation.
 
-*** 5.1. The abstract state machine - 44
+- The _representation_ that a particular /value/ has should, in most cases,
+  *NOT* be your concern. The compiler is there to organize the translation back
+  and forth between values and representations.
+
+- =TODO: Review this note=
+  In this section, we will see how the different parts of this translation are
+  supposed to work.
+
+  * The ideal world in which you will usually “argue” in your program is C's
+    /abstract state machine/ (section 5.1).
+
+    It gives a vision of the execution of your program, which is mostly
+    independent of the platform on which the program runs. The components of the
+    state of this machine, the objects, all have a fixed interpretation (their
+    type) and a value that varies in time.
+
+  * _C's basic types_ are described in subsection 5.2, followed by
+
+  * descriptions of how we can express _specific values_ for such _basic types_
+    (subsection 5.3),
+
+  * how /types/ are assembled in /expressions/ (subsection 5.4),
+
+  * how we can ensure that our /objects/ initially have the desired /values/
+    (subsection 5.5),
+
+  * how we can give names to /recurrent values/ (subsection 5.6), and
+
+  * how such /values/ are represented in the /abstract state machine/
+    (subsection 5.7).
+
+*** DONE 5.1. The abstract state machine - 44
+CLOSED: [2025-03-21 Fri 14:21]
+- A C program can be seen as a sort of machine that manipulates /values/:
+  * the particular /values/ that /variables/ of the program have _at a given
+    time_
+    and
+  * _intermediate values_ that are the result of computed expressions.
+
+- Example:
+  #+begin_src c
+    double x = 5.0;
+    double y = 3.0;
+    // ...
+    x = (x * 1.5) - y;
+    printf("x is \%g\n", x);
+  #+end_src
+  * Not all operations and their _resulting values_ are *observable* from within
+    your program.
+
+    They are *observable* _ONLY IF_ they are stored
+    + in /addressable memory/
+      or
+    + written to an output device.
+
+- A C compiler is allowed to shortcut any of the steps during a process called
+  *optimization* only if it _ENSURES_ the realization of the end results.
+  * If the ~x~ is not used later in the program, this program can be optimized to
+    ~printf("x is 4.5\n");~
+    + Only /compile time calculation/.
+    + All the remaining code and even the definitions of the variables
+      *DISAPPEAR*.
+
+  * If the ~x~ is used later in the program, this compiler would either do
+    something like
+    #+begin_src c
+      double x = 4.5;
+      printf("x is 4.5\n");
+    #+end_src
+
+    or maybe
+
+    #+begin_src c
+      printf("x is 4.5\n");
+      double x = 4.5;
+    #+end_src
+
+    The order here is irrelevant.
+
+- =IMPORTANT=
+  For an optimization to be valid, it is only important that a C compiler
+  produces an executable that reproduces the /observable states/.
+
+  - /Observable states/ consist of
+    the contents of some variables (and similar entities that we will see later)
+    and
+    the output as they evolve during the execution of the program.
+
+    =IMPORTANT=
+    =CONCEPT=
+    This whole mechanism of change is called the /abstract state machine/.
+
+- =NEXT=
+  To explain the /abstract state machine/,
+  1. we first have to look into the concepts of
+     + a value (what state are we in),
+     + the type (what this state represents), and
+     + the representation (how state is distinguished).
+
+  As the term *abstract* suggests,
+  C's mechanism _ALLOWS_ different platforms to realize the /abstract state
+  machine/ of a given program differently according to their needs and
+  capacities.
+
+  _This permissiveness is one of the keys to C's potential for optimization._
+
 **** 5.1.1. Values - 46
 - Takeaway 5.1.1 #1 :: All values are numbers or translate to such.
 
@@ -701,18 +1115,40 @@ CLOSED: [2017-04-25 Tue 16:11]
   ignore the IO action details, it can be considered as platform
   independent.
 
+- The /data/ of a program execution consists of
+  ALL the assembled /values/ of ALL /objects/ _at a given moment_.
+
+  The /state/ of the program execution is determined by
+  * The executable
+  * The current point of execution
+  * The data
+  * Outside intervention, such as the IO from the user
+
+- If we abstract from the last point, an executable that runs with the same data
+  from the same point of execution must give the same result.
+
+  But since C programs should be portable between systems, *we want more than that.*
+
+  We don't want the result of a computation to depend on the executable (which
+  is platform specific) but
+  *IDEALLY* to depend only on the _program specification_ itself.
+
+  An important step to achieve this platform independence is the concept of
+  /types/.
+
 **** 5.1.2. Types - 46
 - A /type/ is an additional property that C associates with values.
 
-- Takeaway 5.1.2 #1 :: All values have a type that is statically determined.
+- Takeaway 5.1.2 #1 :: All values have a type that is STATICALLY determined.
 
 - Takeaway 5.1.2 #2 :: Possible operations on a value are determined by its type.
+  =IMPORTANT=
 
 - Takeaway 5.1.2 #3 :: A value's type determines the results of all operations.
 
 **** 5.1.3. Binary representation and the abstract state machine - 47
-- Since there are things that can't be specified by C standard,
-  C can't impose the results of the operations on a given type completely.
+- Since there are things that can't be specified by C standard, C can't impose
+  the results of the operations on a given type completely.
   e.g.
   * /sign representation/: how does the sign or signed type is represented.
   * /floating point representation/: this usually follows the IEEE standard.
@@ -723,29 +1159,59 @@ CLOSED: [2017-04-25 Tue 16:11]
   * some characteristic values that describe the particular platform.
   e.g.
   the operations on the type ~size_t~ can be entirely determined when ins-
-  pecting the value of ~SIZE_MAX~ in addition to the operands.
+  pecting the value of ~SIZE_WIDTH~ in addition to the operands.
+  * footnote 11:
+    _Prior to C23, this value was not available._
 
-- We call the model to represent values of a given type _on a given
-  platform_ the /binary representation/ _of the type_.
+    + We needed the value of ~SIZE_MAX~ (see previous discussion).
+      This value can be deduced from ~SIZE_WIDTH~.
+
+    + Similarly, by knowing that the sign representation now is fixed to 2's
+      complement, the minimal and maximal values can be deduced for all integer
+      types.
+
+- binary representation (_of the type_) ::
+  the model to represent values of a given type _on a given platform_.
 
 - Takeaway 5.1.3 #1 :: A type's binary representation determines the results of
-                   all operations.
+                       all operations.
 
 - Generally, all information that we need to determine that model are in
-  reach of any C program, the C library headers provide the necessary infor-
-  mation through named values (such as ~SIZE_MAX~), operators and function
-  calls.
+  reach of any C program, the /C library headers/ provide the necessary
+  information THROUGH
+  * named values (such as ~SIZE_MAX~),
+  * operators, and
+  * function calls.
 
-- Takeaway 5.1.3 #2 :: A type's binary representation is observable.
+- Takeaway 5.1.3 #2 :: A type's /binary representation/ is observable.
 
-- /object representation/ =TODO= Section 12.1
+- /binary representation/ is still a MODEL and thus an *ABSTRACT representation*
+  in the sense that
+  it _DOESN'T completely determine_
+  *HOW* values are stored in the memory of a computer or on a disk or other
+  persistent storage device.
 
-- The program text describes an /abstract state machine/ that regulates how
-  the program switches from one state to the next.
-    These transitions are determined _only_ by
-  * value,
-  * type, and
-  * binary representation
+- /object representation/ describes
+  *HOW* values are stored in the memory of a computer or on a disk or other
+  persistent storage device.
+
+- In contrast to the /binary representation/, the /object representation/ is
+  usually not of much concern to us
+  _as long as_
+  we don't want to hack together values of objects in main memory or have to
+  communicate between computers that have different platform models. Much later,
+  in section 12.1, we will see that we can even observe the object
+  representation, if such an object is stored in memory and we know its address.
+
+- As a consequence, all computation is fixed through the
+  * values,
+  * types, and
+  * their binary representations that are specified in the program.
+
+  In another words,
+  the program text describes an /abstract state machine/ that regulates how the
+  program switches from one state to the next. These transitions are determined
+  by /value/, /type/, and /binary representation only/.
 
 - Takeaway 5.1.3 #3 (as-if) :: Programs execute as if following the abstract
                                state machine.
@@ -753,20 +1219,26 @@ CLOSED: [2017-04-25 Tue 16:11]
 **** 5.1.4. Optimization - 47
 - =IMPORTANT= How a concrete executable achieves this goal is left to the
   discretion of the compiler creators.
-    Most modern C compilers produce code that
-  * doesn’t follow the exact code prescription,
+  Most modern C compilers produce code that
+  * doesn't follow the exact code prescription,
   * they cheat (for efficiency) wherever they can and
-  * _only respect the observable states of the abstract state machine_.
+  * _only respect the /observable states/ of the /abstract state machine/._
 
-- But such an optimization can also be forbidden because the compiler can't
-  prove that a certain operation will not force a program termination.
+- But such an /optimization/ can also be *forbidden*
+  BECAUSE the compiler can't prove that a certain operation will not force a
+  program *termination*.
   e.g.
-  _unsigend integer_ overflow usually won't raise an exception, but
-  _signed integer_ overflow may raise an exception.
+  _unsigend integer_ overflow itself won't raise any exception,
+  BUT _signed integer types_ and _floating-point types_ overflow may raise an
+  exception and terminate the program.
 
-- Takeaway 5.1.4 #1 :: Type determines optimization opportunities. =IMPORTANT=
+- Takeaway 5.1.4 #1 :: Type determines optimization opportunities.
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
 
-*** 5.2. Basic types - 48
+*** TODO _START HERE!!_!
+*** TODO 5.2. Basic types - 48
 - _first level of specification_: it is entirely done with _keywords_ of
   the language, such as ~signed~, ~int~ or ~double~.
     This first level is mainly _organized_ according to _C internals_.
@@ -824,7 +1296,7 @@ CLOSED: [2017-04-25 Tue 16:11]
 
 - PAGE 34 =RE-READ=
 
-*** 5.3. Specifying values - 51
+*** TODO 5.3. Specifying values - 51
 - /literals/:
   * =123= - /decimal integer constant/.
   * =077= - /octal integer constant/. This type of specification has merely
@@ -842,6 +1314,12 @@ CLOSED: [2017-04-25 Tue 16:11]
   All but the last are numerical constants.
 
 - Takeaway 5.3 #1 :: Consecutive string literals are concatenated.
+  #+begin_src c
+    puts("first line\n"
+         "another line\n"
+         "first and "
+         "second part of the third line");
+  #+end_src
 
 - =EXPLANATION=: That is if we write something like =-34= or =-1.5E-23=,
   _the leading sign is not considered part of the number but is the negation
@@ -907,28 +1385,28 @@ CLOSED: [2017-04-25 Tue 16:11]
 - Takeaway 5.3 #10 :: Literals have value, type, and binary representation.
 
 **** 5.2.1 Complex constants - 61
-     - Complex types are _not necessarily supported_ by all C platforms.
-       The fact can be checked by inspecting ~__STDC_NO_COMPLEX__~.
+- Complex types are _not necessarily supported_ by all C platforms.
+  The fact can be checked by inspecting ~__STDC_NO_COMPLEX__~.
 
-     - To have full support of complex types, use ~#include <complex.h>~.
-       If you use ~#include <tgmath.h>~ for mathematical functions, =complex.h=
-       this is already done implicitly.
+- To have full support of complex types, use ~#include <complex.h>~.
+  If you use ~#include <tgmath.h>~ for mathematical functions, =complex.h=
+  this is already done implicitly.
 
-     - Rule 1.5.4.12 :: ~I~ (macro) is reserved for the imaginary unit.
-                        =COMMENT=: leave ~I~ alone, don't use it as the name of
-                                   an identifier you create.
+- Takeaway 1.5.4.12 :: ~I~ (macro) is reserved for the imaginary unit.
+                   =COMMENT=: leave ~I~ alone, don't use it as the name of
+                              an identifier you create.
 
-     - Two form:
-       1. ~0.5 + 0.5*I~ is of type ~double complex~, and ~0.5F + 0.5F*I~ is of
-          type ~float complex~.
-       2. ~CMPLX(0.5, 0.5)~ is the same ~double complex~ value as above.
-          ~CMPLXF(0.5F, 0.5F)~ is the same ~float complex~ value as above.
-            =COMMENT=: This usage is what Jian guesses, no example in the book.
-            =TODO= read the ~complex.h~ later.
+- Two form:
+  1. ~0.5 + 0.5*I~ is of type ~double complex~, and ~0.5F + 0.5F*I~ is of
+     type ~float complex~.
+  2. ~CMPLX(0.5, 0.5)~ is the same ~double complex~ value as above.
+     ~CMPLXF(0.5F, 0.5F)~ is the same ~float complex~ value as above.
+       =COMMENT=: This usage is what Jian guesses, no example in the book.
+       =TODO= read the ~complex.h~ later.
 
-     - TABLE 9. Bounds for scalar types used in this book =TODO RE-READ=
+- TABLE 9. Bounds for scalar types used in this book =TODO RE-READ=
 
-*** 5.4. Implicit conversions - 55
+*** TODO 5.4. Implicit conversions - 55
 - Takeaway 5.4 #1 :: Unary ~-~ and ~+~ have the type of their promoted operand.
 
 - Takeaway 5.4 #2 :: Avoid narrowing conversions.
@@ -941,7 +1419,7 @@ CLOSED: [2017-04-25 Tue 16:11]
 
 - Takeaway 5.4 #6 :: Chose your arithmetic types such that implicit conversions
                      are harmless.
-*** 5.5. Initializers - 57
+*** TODO 5.5. Initializers - 57
 - Takeaway 5.5 #1 :: All variables should be initialized.
 
 - =TODO= VLA, see Section 6.1.3, that don’t allow for an initializer, or code
@@ -993,7 +1471,7 @@ CLOSED: [2017-04-25 Tue 16:11]
   as catch-all initializer in the C standard, so this is one of the rare
   cases where I would switch off a compiler warning.
 
-*** 5.6. Named constants - 58
+*** TODO 5.6. Named constants - 58
 - Takeaway 5.6 #1 :: All constants with particular meaning must be named.
 
 - Takeaway 5.6 #2 :: All constants with different meaning must be distinguished.
@@ -1087,7 +1565,7 @@ CLOSED: [2017-04-25 Tue 16:11]
   }
   #+END_SRC
 
-- Rule 5.6.4 #1 :: A compound literal defines an object.
+- Takeaway 5.6.4 #1 :: A compound literal defines an object.
 
 - Over all, _this form of macro_ has some _PITFALLS_ =MOST IMPORTANT=:
   * Compound literals aren't suitable for ICE.
@@ -1114,7 +1592,7 @@ CLOSED: [2017-04-25 Tue 16:11]
                        =COMMENT=: As you can see above this helps to visualize
                        the whole spread of the macro definition easily.
 
-*** 5.7. Binary representions - 65 - =RE-READ=
+*** TODO 5.7. Binary representions - 65 - =RE-READ=
 - Takeaway 5.7 #1 :: The same value may have different binary representations.
 
 **** 5.7.1. Unsigned integers - 65
@@ -1279,47 +1757,114 @@ CLOSED: [2017-04-25 Tue 16:11]
   representations is that values _can be cut off during intermediate
   computations_. =TODO examples=
 
-- Rule 5.7.8 #1 :: Floating-point operations are _NEITHER_ associative,
+- Takeaway 5.7.8 #1 :: Floating-point operations are _NEITHER_ associative,
                    commutative or distributive.
 
-- Rule 5.7.8 #2 :: Never compare floating-point values for equality.
+- Takeaway 5.7.8 #2 :: Never compare floating-point values for equality.
                    =IMPORTANT=
 
 - For any =z= of one of the three complex types we ~#include <tgmath.h>~
   have that ~z == creal(z)+ cimag(z)*I~
 
-*** Summary - 76
+*** TODO Summary - 76
 
 ** DONE 6. Derived data types - 77
 CLOSED: [2017-04-25 Tue 16:11]
-=50 ~ 61=
-- All other data types in C are derived from the basic types that we know now.
-  There are _four_ different strategies for combining types:
-  * arrays :: These combine items that all have _the same base type_.
-  * pointers :: Entities that refer to an object in memory. =TODO in section 11=
-  * structures :: These combine items that _may have different base types_.
-  * unions :: These overlay items of different base types in the same memory
-              location. =TODO section 12.2=
+- This section covers
+  * Grouping /objects/ into /arrays/
+  * Using /pointers/ as /opaque types/
+  * Combining /objects/ into /structures/
+  * Giving types new names with ~typedef~
 
-- /aggregate data types/
+- All other data types in C are _derived from the /basic types/_ that we know
+  now.
+
+- There are *FOUR* strategies for _DERIVING data types_.
+  * Two of them are called /aggregate data types/
+    BECAUSE they combine multiple instances of one or several other data types:
+    + Arrays :: These combine items that all have the SAME /base type/ (_subsection 6.1_).
+    + Structures :: These combine items that MAY have DIFFERENT /base types/ (_subsection 6.3_).
+
+  * The two other strategies to derive data types are more involved:
+    + Pointers :: Entities that *refer* to _an object in memory_.
+      - Delay a full discussion of them to section 11.
+        =TODO=
+
+      - Only discuss them as opaque data types,
+        _WITHOUT_ even mentioning the real purpose they fulfill.
+        =NEXT=
+
+    + Unions :: These *overlay* items of *DIFFERENT* /base types/ in the _same
+      memory location_.
+
+      - /Unions/ require _a deeper understanding of C's memory model_ and are not of
+        much use in a programmer's everyday life, so they are only introduced
+        later, in subsection 12.2. =TODO=
+
+- There is a *FIFTH* strategy that introduces new names for types: ~typedef~
+  (subsection 6.4). =NEXT=
+
+  *UNLIKE* the PREVIOUS FOUR,
+  this does *NOT create* a new type in C's type system,
+  BUT
+  only creates a new name for an existing type.
+
+  * In that way, it is _SIMILAR TO_
+    the definition of /macros/ with ~#define~, thus the choice for the keyword
+    for this feature.
 
 *** 6.1. Arrays - 77
+- Arrays allow us to group objects of the same type into an encapsulating
+  object.
+
+  We will see pointer types later (section 11), but many people who come
+  to C are confused about arrays and pointers. This is completely normal. Arrays
+  and pointers are closely related in C, and to explain them, we face a chicken
+  and egg problem. Arrays look like pointers in many contexts, and pointers
+  refer to array objects. We chose an order of introduction that is perhaps
+  unusual: we will start with arrays and stay with them as long as possible
+  before introducing pointers. This may seem “wrong” to some of you, but
+  remember that everything stated here must be viewed based on the as-if rule
+  (takeaway 5.1.3 #3). We will first describe arrays in a way that is consistent
+  with C's assumptions about the abstract state machine.
+
 - Takeaway 6.1 #1 :: Arrays are not pointers.
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =TODO=
+  Later, we will see how these two concepts relate, but for the moment, it is
+  important to read this section WITHOUT prejudice about arrays; otherwise, you
+  will delay your ascent to a better understanding of C.
 
 **** 6.1.1. Array declaration - 77
-- /multidimensional array/:
-  #+BEGIN_SRC C
-  // For those, declarations become a bit more difficult to read since []
-  // binds to the left. The following two declarations declare variables of
-  // exactly the same type:
-  double C[M][N];
-  double (D[M])[N];
+- /One dimension array/ declaration:
+  #+BEGIN_SRC c
+    double a[4];
+    signed b[N];
   #+END_SRC
 
+- /Multidimensional array/ declaration:
+  #+BEGIN_SRC c
+    double C[M][N];
+    double (D[M])[N];
+  #+END_SRC
+  For those, declarations become a bit more difficult to read
+  _SINCE_ ~[]~ binds to the left.
+
+- /Designated initializers/
+
 **** 6.1.2. Array operations - 78
+Arrays are really just objects of a different type than we have seen so far.
+
 - Takeaway 6.1.2 #1 :: An array in a condition evaluates to ~true~.
+  * =TODO=
+    The truth of that comes from the /array decay/ operation, which we will see
+    later.
+    =NEXT=
 
 - Takeaway 6.1.2 #2 :: There are array objects but no array values.
+  * /Value operations/ in table 4.1 *CANNOT* be applied on arrays!
 
 - =COMMENT=: So arrays can't be operands for _value operators_ in Table 2,
   there is _no_ arithmetic declared on arrays (themselves) and also
@@ -2885,7 +3430,7 @@ CLOSED: [2017-04-25 Tue 01:05]
     //    exceeds sizeof(float), we can't predict what will happen.
   #+END_SRC
 
-- Rule 2.12.5.4 :: Don't use casts.
+- Takeaway 2.12.5.4 :: Don't use casts.
                    =COMMENT= In most use cases that I have come across in
                    real life,
                    _the compiler was right and the programmer was wrong_:
