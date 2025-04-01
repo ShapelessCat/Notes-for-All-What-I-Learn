@@ -984,55 +984,79 @@ CLOSED: [2025-03-19 Wed 20:19]
   * Using /named constants/
   * Binary representations of types
 
-- We will now change our focus from "how things are to be done" (/statements/
-  and /expressions/) to the things on which C programs operate: /values/ and
-  /data/.
+- We will now _change our focus_
+  FROM
+    "how things are to be done" (/statements/ and /expressions/)
+  TO
+    the things on which C programs operate: /values/ and /data/.
 
-- A concrete program at an instance in time has to represent *values*.
+- =IMPORTANT=
+  A concrete program at an instance in time has to represent *values*.
+
+- Similarly, representations of values on a computer
+  * can vary “culturally” from architecture to architecture
+    OR
+  * are determined by the /type/ the programmer gave to the value.
+
+- *CONCLUSION*:
+  Therefore, we should try to reason primarily about /values/ and
+  *NOT* about /representations/ if we want to write portable code.
+
+  * If you already have some experience in C and in manipulating bytes and bits,
+    you will need to *make an effort to actively “forget” your knowledge for
+    most of this section.* -- Thinking about concrete representations of values
+    on your computer will inhibit you more than it helps you.
 
 - Takeaway 5 #1 :: C programs primarily reason about values and not about their
                    representation.
 
-- The _representation_ that a particular /value/ has should, in most cases,
-  *NOT* be your concern. The compiler is there to organize the translation back
-  and forth between values and representations.
+- The _representation_ that a particular /value/ has should, _IN MOST CASES_,
+  *NOT* be your concern.
+- The compiler is there to _organize the translation back and forth_ BETWEEN
+  /values/ and /representations/.
 
-- =TODO: Review this note=
-  In this section, we will see how the different parts of this translation are
-  supposed to work.
+- In this section, we will see
+  *HOW* the different parts of this *translation* are supposed to work.
 
   * The ideal world in which you will usually “argue” in your program is C's
-    /abstract state machine/ (section 5.1).
+    /abstract state machine/ (_section 5.1_).
 
-    It gives a vision of the execution of your program, which is mostly
-    independent of the platform on which the program runs. The components of the
-    state of this machine, the objects, all have a fixed interpretation (their
-    type) and a value that varies in time.
+    + It gives a vision of the execution of your program, which is mostly
+      *independent of the platform* on which the program runs.
 
-  * _C's basic types_ are described in subsection 5.2, followed by
+    + The components of
+      the /state of this machine/,
+      the /objects/,
 
-  * descriptions of how we can express _specific values_ for such _basic types_
-    (subsection 5.3),
+      all have
 
-  * how /types/ are assembled in /expressions/ (subsection 5.4),
+      a _fixed interpretation_ (their /type/) and
+      a /value/ that varies in time.
+
+  * _C's basic types_ are described in _subsection 5.2_, followed by
+
+  * descriptions of how we can *express* _specific values_ for such _basic
+    types_ (_subsection 5.3_),
+
+  * how /types/ are assembled in /expressions/ (_subsection 5.4_),
 
   * how we can ensure that our /objects/ initially have the desired /values/
-    (subsection 5.5),
+    (_subsection 5.5_),
 
-  * how we can give names to /recurrent values/ (subsection 5.6), and
+  * how we can give names to /recurrent values/ (_subsection 5.6_), and
 
   * how such /values/ are represented in the /abstract state machine/
-    (subsection 5.7).
+    (_subsection 5.7_).
 
 *** DONE 5.1. The abstract state machine - 44
-CLOSED: [2025-03-21 Fri 14:21]
+CLOSED: [2025-03-26 Wed 14:02]
 - A C program can be seen as a sort of machine that manipulates /values/:
   * the particular /values/ that /variables/ of the program have _at a given
     time_
     and
   * _intermediate values_ that are the result of computed expressions.
 
-- Example:
+- A basic example:
   #+begin_src c
     double x = 5.0;
     double y = 3.0;
@@ -1073,47 +1097,55 @@ CLOSED: [2025-03-21 Fri 14:21]
     The order here is irrelevant.
 
 - =IMPORTANT=
-  For an optimization to be valid, it is only important that a C compiler
-  produces an executable that reproduces the /observable states/.
+  =IMPORTANT=
+  =IMPORTANT=
+  For an /optimization/ to be *VALID*,
+  it is only important that a C compiler produces an executable that reproduces
+  the /observable states/.
 
-  - /Observable states/ consist of
-    the contents of some variables (and similar entities that we will see later)
-    and
-    the output as they evolve during the execution of the program.
+  * /Observable states/ consist of
+    + the contents of some variables (and similar entities that we will see later)
+      and
+    + the output as they evolve during the execution of the program.
 
     =IMPORTANT=
     =CONCEPT=
-    This whole mechanism of change is called the /abstract state machine/.
+  * This whole mechanism of change is called the /abstract state machine/.
 
 - =NEXT=
   To explain the /abstract state machine/,
   1. we first have to look into the concepts of
      + a value (what state are we in),
      + the type (what this state represents), and
-     + the representation (how state is distinguished).
+     + the representation (how state is distinguished). =TODO= =???=
 
-  As the term *abstract* suggests,
+- As the term *abstract* suggests,
   C's mechanism _ALLOWS_ different platforms to realize the /abstract state
   machine/ of a given program differently according to their needs and
   capacities.
 
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
   _This permissiveness is one of the keys to C's potential for optimization._
 
 **** 5.1.1. Values - 46
-- Takeaway 5.1.1 #1 :: All values are numbers or translate to such.
+- A /value/ in C is an *ABSTRACT entity* that usually exists _BEYOND_
+  * your _program_,
+  * the _particular implementation_ of that program, and
+  * the _representation of the value_ during a particular run of the program.
 
-- The /state/ of the program execution is determined by: =IMPORTANT=
-  * the executable
-  * the current point of execution
-  * the data
-  * outside intervention such as IO from the user. 
+- Example:
+  the value and concept of 0 should and will always have the same
+  effects on all C platforms:
+  * adding that value to another value x will again be x, and
+  * evaluating a value 0 in a control expression will always trigger the false
+    branch of the control statement.
 
-- (_Different from the original text, changed by Jian_):
-  We usually don't satisfy the points above, and we want get rid of the
-  first point "the executable", which is platform specific.
-    _From Jian_: The last point is also platform specific, but if we can
-  ignore the IO action details, it can be considered as platform
-  independent.
+- So far, most of our examples of values have been some kind of numbers. This
+  is not an accident; it relates to one of the major concepts of C.
+
+- Takeaway 5.1.1 #1 :: All values are numbers or translate to numbers.
 
 - The /data/ of a program execution consists of
   ALL the assembled /values/ of ALL /objects/ _at a given moment_.
@@ -1124,43 +1156,47 @@ CLOSED: [2025-03-21 Fri 14:21]
   * The data
   * Outside intervention, such as the IO from the user
 
-- If we abstract from the last point, an executable that runs with the same data
-  from the same point of execution must give the same result.
+- If we abstract from the last point,
+  an executable that runs
+  with the SAME data
+  from the SAME point of execution
+  MUST give the same result.
 
-  But since C programs should be portable between systems, *we want more than that.*
-
+  But since C programs should be portable between systems, *we want more than
+  that*:
   We don't want the result of a computation to depend on the executable (which
-  is platform specific) but
+  is platform specific) BUT
   *IDEALLY* to depend only on the _program specification_ itself.
 
   An important step to achieve this platform independence is the concept of
-  /types/.
+  /types/. =IMPORTANT=
 
 **** 5.1.2. Types - 46
-- A /type/ is an additional property that C associates with values.
+- types :: additional properties that C associates with /values/.
 
-- Takeaway 5.1.2 #1 :: All values have a type that is STATICALLY determined.
+- Takeaway 5.1.2 #1 :: ALL /values/ have a /type/ that is STATICALLY determined.
 
-- Takeaway 5.1.2 #2 :: Possible operations on a value are determined by its type.
+- Takeaway 5.1.2 #2 :: Possible operations on a /value/ are determined by its
+  /type/.
   =IMPORTANT=
 
-- Takeaway 5.1.2 #3 :: A value's type determines the results of all operations.
+- Takeaway 5.1.2 #3 :: A /value/'s /type/ determines the results of ALL operations.
 
 **** 5.1.3. Binary representation and the abstract state machine - 47
-- Since there are things that can't be specified by C standard, C can't impose
-  the results of the operations on a given type completely.
+- SINCE there are things that can't be specified by C standard,
+  _C *CAN'T* impose the results of the operations on a given /type/ COMPLETELY_.
   e.g.
   * /sign representation/: how does the sign or signed type is represented.
   * /floating point representation/: this usually follows the IEEE standard.
 
 - C only imposes as much properties on all representations, such that the
-  _results of operations can be deduced a priori from two different sources_:
-  * the values of the operands
-  * some characteristic values that describe the particular platform.
+  _results of operations can BE DEDUCED A PRIORI FROM two different sources_:
+  * the /values/ of the operands
+  * some /characteristic values/ that describe the particular platform.
   e.g.
-  the operations on the type ~size_t~ can be entirely determined when ins-
-  pecting the value of ~SIZE_WIDTH~ in addition to the operands.
-  * footnote 11:
+  the operations on the type ~size_t~ can be entirely determined when
+  inspecting the value of ~SIZE_WIDTH~ in addition to the operands.
+  * _footnote 11:
     _Prior to C23, this value was not available._
 
     + We needed the value of ~SIZE_MAX~ (see previous discussion).
@@ -1176,9 +1212,9 @@ CLOSED: [2025-03-21 Fri 14:21]
 - Takeaway 5.1.3 #1 :: A type's binary representation determines the results of
                        all operations.
 
-- Generally, all information that we need to determine that model are in
-  reach of any C program, the /C library headers/ provide the necessary
-  information THROUGH
+- Generally, all information we need to determine that model is within reach of
+  any C program.
+  The /C library headers/ provide the necessary information THROUGH
   * named values (such as ~SIZE_MAX~),
   * operators, and
   * function calls.
@@ -1196,12 +1232,20 @@ CLOSED: [2025-03-21 Fri 14:21]
   persistent storage device.
 
 - In contrast to the /binary representation/, the /object representation/ is
-  usually not of much concern to us
+  usually *NOT* of much concern to us
   _as long as_
-  we don't want to hack together values of objects in main memory or have to
-  communicate between computers that have different platform models. Much later,
-  in section 12.1, we will see that we can even observe the object
-  representation, if such an object is stored in memory and we know its address.
+  we don't want to
+  hack together values of objects in main memory or
+  have to communicate between computers that have different platform models.
+
+  =TODO=
+  =TODO=
+  =TODO=
+  Much later, _in section 12.1_, we will see that we can even OBSERVE the
+  /object representation/,
+  IF
+  * such an _OBJECT_ is stored in memory and
+  * we know its address.
 
 - As a consequence, all computation is fixed through the
   * values,
@@ -1209,65 +1253,183 @@ CLOSED: [2025-03-21 Fri 14:21]
   * their binary representations that are specified in the program.
 
   In another words,
-  the program text describes an /abstract state machine/ that regulates how the
-  program switches from one state to the next. These transitions are determined
-  by /value/, /type/, and /binary representation only/.
+  the program text describes an /abstract state machine/ that regulates
+  how the program switches from one state to the next.
+  These transitions are determined by /value/, /type/, and /binary
+  representation/ *only*.
 
 - Takeaway 5.1.3 #3 (as-if) :: Programs execute as if following the abstract
                                state machine.
+  =IMPORTANT=
 
 **** 5.1.4. Optimization - 47
-- =IMPORTANT= How a concrete executable achieves this goal is left to the
-  discretion of the compiler creators.
+How a concrete executable achieves this goal is left to the _discretion_ of the
+compiler creators.
+
+- =IMPORTANT=
   Most modern C compilers produce code that
   * doesn't follow the exact code prescription,
   * they cheat (for efficiency) wherever they can and
   * _only respect the /observable states/ of the /abstract state machine/._
 
-- But such an /optimization/ can also be *forbidden*
-  BECAUSE the compiler can't prove that a certain operation will not force a
+- Example:
+  #+begin_src c
+    x += 5;
+    /* Do something else without x in the meantime. */
+    x += 7;
+  #+end_src
+
+  may in many case be done as if it were specified as either
+  #+begin_src c
+    /* Do something without x. */
+    x += 12;
+  #+end_src
+
+  or
+  #+begin_src c
+    x += 12;
+    /* Do something without x. */
+  #+end_src
+
+- _BUT_
+  such an /optimization/ can also be *forbidden*
+  BECAUSE the compiler *CAN'T prove* that a certain operation will not force a
   program *termination*.
   e.g.
-  _unsigend integer_ overflow itself won't raise any exception,
-  BUT _signed integer types_ and _floating-point types_ overflow may raise an
+  _unsigend integer_ /overflow/ itself won't raise any exception,
+  BUT _signed integer types_ and _floating-point types_ /overflow/ may raise an
   exception and terminate the program.
+
+  _In that case, the /optimization/ CANNOT be performed._
+
+- As we have already mentioned,
+
+  this allowed *SLACKNESS* BETWEEN _program description_ and _abstract state
+  machine_ is a very valuable feature, commonly referred to as /optimization/.
+
+
+  * Combined with the relative simplicity of its language description, this is
+    actually one of the main features that allows C to outperform other
+    programming languages that have a lot more knobs and whistles.
+
+  An important consequence of this discussion can be summarized in the following
+  takeaway.
 
 - Takeaway 5.1.4 #1 :: Type determines optimization opportunities.
   =IMPORTANT=
   =IMPORTANT=
   =IMPORTANT=
 
-*** TODO _START HERE!!_!
-*** TODO 5.2. Basic types - 48
-- _first level of specification_: it is entirely done with _keywords_ of
-  the language, such as ~signed~, ~int~ or ~double~.
-    This first level is mainly _organized_ according to _C internals_.
+*** TODO 5.2. Basic types - 48 - =RE-READ=
+- C has
+  1. a series of /basic types/ and
+  2. means of constructing /derived types/ from them
+     =NEXT Section=
+     that we will describe later, in _section 6_
 
-- (On top of that first level) _second level of specification_: it comes
-  through header files and for which we already have seen examples, too,
-  namely ~size_t~ or ~bool~.
-    This second level is _organized_ by _type semantic_, that is by
-  specifying what properties a particular type brings to the programmer.
+- *CAUTION*:
+  Mainly for _historical reasons_,
+  the _SYSTEM_ of /basic types/ is a bit *COMPLICATED*, and
+  the _SYNTAX_ to specify such types is *NOT completely straightforward*.
 
-- As a principal distinction we have _two different classes_ of numbers, with
-  _two subclasses_, each, namely
+- There are *TWO levels of specification*:
+  * _first level of specification_:
+    it is entirely done with _keywords_ of the language, such as ~signed~, ~int~
+    or ~double~.
+
+    This first level is mainly ORGANIZED *according to _C internals_.*
+
+  * On top of that is a _second level of specification_ comes through /header
+    files/, and we have already seen examples: ~size_t~ and ~bool~.
+
+    This second level is ORGANIZED *by type semantics,* specifying what
+    properties a particular type brings to the programmer.
+
+- Starts with the first-level specification of such types.
+
+  From takeaway 5.1.1 #1: all basic values in C are numbers, but there are
+  different kinds of numbers.
+
+  As a principal DISTINCTION, we have _TWO different classes of numbers_, with
+  _TWO subclasses_, each, namely
   1. unsigned integers,
   2. signed integers
   3. real floating point numbers and
   4. complex floating point numbers
 
-  They differ according to their precision, which determines the valid range
+  Each of these four classes contains _SEVERAL_ types.
+    They differ according to their *precision*, which determines the valid range
   of values that are allowed for a particular type.
 
+- Table 5.1 contains an overview of the _18_ /base types/.
+
+- Table 5.1
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  * Types with a gray background don't allow for arithmetic;
+    they are promoted before doing arithmetic.
+
+  * Type ~char~ is special since it can be _unsigned_ or _signed_, depending on
+    the platform.
+
+  * _All_ types in this table are considered to be *distinct* types,
+    EVEN IF they have the same class and precision.
+
 - /narrow types/ can't be directly used for arithmetic.
+
+- Nowadays, on any realistic platform, this promotion will be a ~signed int~
+  of the same value as the /narrow type/, _REGARDLESS_ of whether the /narrow
+  type/ was signed.
 
 - Takeaway 5.2 #1 :: Before arithmetic, narrow integers are prompted to
                      ~signed int~.
 
 - Takeaway 5.2 #2 :: Each of the four classes of base types has 3 distinct
                      unpromoted types.
+  * Observe that among the /narrow integer types/, we have two prominent members:
+    + ~char~: C's type that handles printable characters for text.
+    + ~bool~: Holds truth values, ~false~ and ~true~.
 
-- Table 6. an overview of the 18 base types.
+    As we said earlier, for C, even these are just some sort of numbers. The 12
+    remaining, unpromoted types split nicely into the four classes.
+    =from Jian=
+    =???=
+    Why 12, how to count them to 12????????
+
+- The C standard *DOESN'T prescribe* the precision of these 12 types:
+  _it only constrains them._
+
+  They depend on a lot of factors that are *implementation defined*.
+
+  * One of the things the standard *does prescribe* is that the possible ranges
+    of values for the /signed types/ and /unsigned types/ must include each
+    other according to their /rank/ (in Table 5.1).
+
+    BUT this inclusion does not need to be strict -- equal precision is OK.
+
+- The comparison of the ranges of signed and unsigned types is more difficult.
+  Obviously, an unsigned type can never include the negative values of a signed
+  type. For the non-negative values, we have the following inclusion of the
+  values of types with corresponding rank:
+
+  That is, for a given rank, the non-negative values of the signed type fit into
+  the unsigned type. On any modern platform you encounter, this inclusion is
+  strict: the unsigned type has values that do not fit into the signed type. For
+  example, a common pair of maximal values is 231 −1 = 2,147,483,647 for signed
+  int and 232 −1 = 4,294,967,295 for unsigned int.
+  =TODO: note=
+
+- Because the interrelationship between integer types depends on the platform,
+  choosing the “best” type for a given purpose in a portable way can be a
+  tedious task. Luckily, we can get some help from the compiler implementation,
+  which provides us with typedefs such as size_t that represent certain features.
+  =TODO: note=
+
+- Takeaway 5.2 #3 :: Use ~size_t~ for
+  1. _sizes_,
+  2. _cardinalities_ or
+  3. _ordinal numbers_.
 
 - =IMPORTANT= Remember that _unsigned types_ are the most convenient types,
   since they are the _only types_ that
@@ -1275,41 +1437,92 @@ CLOSED: [2025-03-21 Fri 14:21]
      properties, namely modulo operation.
   2. They can't raise signals on overflow and
   3. They can be optimized best.
-  TODO They are described in more detail in Section 5.5.1. =IMPORTANT=
-
-- Takeaway 5.2 #3 :: Use ~size_t~ for
-  1. _sizes_,
-  2. _cardinalities_ or
-  3. _ordinal numbers_.
 
 - Takeaway 5.2 #4 :: Use ~unsigned~ for small quantities that can't be negative.
 
 - Takeaway 5.2 #5 :: Use ~signed~ for small quantities that bear a sign.
 
-- Takeaway 5.2 #6 :: Use ~ptrdiff_t~ for large differences that bear a sign. =TODO ??????=
+- Takeaway 5.2 #6 :: Use ~ptrdiff_t~ for large differences that bear a sign.
+  =from Jian= This book should explain this.
 
 - Takeaway 5.2 #7 :: Use ~double~ for floating-point calculations.
 
 - Takeaway 5.2 #8 :: Use ~double complex~ for complex calculations.
 
-- Table 7. Some semantic arithmetic types for specialized use cases. =RE-READ=
+- The C standard defines a lot of other types, among them other arithmetic types
+  that model special use cases. Table 5.2 list some of them.
 
-- PAGE 34 =RE-READ=
+- Table 5.2. Some semantic arithmetic types for specialized use cases
+  =IMPORTANT=
+  | Type        | Header       | Context of definition | Meaning                     |
+  |-------------+--------------+-----------------------+-----------------------------|
+  | ~size_t~    | ~<stddef.h>~ |                       | Type for "sizes" and cardi- |
+  |             |              |                       | nalities                    |
+  | ~ptrdiff_t~ | ~<stddef.h>~ |                       | Type for size differences   |
+  |-------------+--------------+-----------------------+-----------------------------|
+  | ~uintmax_t~ | ~<stdint.h>~ |                       | Unsigned integer type of    |
+  |             |              |                       | preprocessor                |
+  | ~intmax_t~  | ~<stdint.h>~ |                       | Signed integer type of pre- |
+  |             |              |                       | processor                           |
+  |-------------+--------------+-----------------------+-----------------------------|
+  | ~time_t~    | ~<time.h>~   | ~time(0)~,            | Calendar time in seconds    |
+  |             |              | ~difftime(t1, t0)~,   | since epoch                 |
+  | ~clock_t~   | ~<time.h>~   | ~clock()~             | Processor time              |
+  |-------------+--------------+-----------------------+-----------------------------|
 
+  * The second pair represents the type in which the preprocessor does any of its
+    arithmetic or comparison.
+
+    _Prior to C23_
+      these were the types of maximal width that the compiler supported,
+
+    _BUT_
+      this constraint has been relaxed; under certain circumstances, there may be
+      /extended integer types/ that are wider (see _section 5.7.6_).
+      =NEXT=
+      =FIXME: section -> subsection=
+
+  * The two types ~time_t~ and ~clock_t~ are used to handle times.
+
+    + They are /semantic types/
+      _BECAUSE_ the precision of the time computation can be different from
+      platform to platform.
+
+    + The way to have a time in seconds that can be used in arithmetic is the
+      function ~difftime~: _it computes the difference of two timestamps._
+
+    + ~clock_t~ values present /the platform's model of processor clock cycles/,
+      so the unit of time is usually much less than a second; ~CLOCKS_PER_SEC~
+      can be used to convert such values to seconds.
+
+*** TODO _START HERE!!_!
 *** TODO 5.3. Specifying values - 51
-- /literals/:
-  * =123= - /decimal integer constant/.
-  * =077= - /octal integer constant/. This type of specification has merely
-    historical value and is rarely used nowadays.
-  * =0xFFFF= - /hexadecimal integer constant/.
-  * =1.7E-13= - /decimal floating point constant/
+- Several ways in which numerical constants (/literals/) can be specified:
+  * =123= - /Decimal integer constant/.
+
+  * =077= - /Octal integer constant/. This type of specification has merely
+    historical value and is *RARELY USED nowadays*.
+
+  * =0xFFFF= - /Hexadecimal integer constant/.
+    ~0x~ or ~0X~.
+
+  * ~0b1010~ - /Binary integer literal/
+    Introduced in C23.
+
+  * =1.7E-13= - /Decimal floating point literal/
+
   * =0x1.7aP-13= - /hexadecimal floating point constant/.
     Usually used to describe floating point values in a form that will
     ease to _specify values that have exact representations_.
       Use this representation is because map from hex to bin is easy and no
     precision lost, and hex representation is much shorter.
-  * 'a' - /integer character constant/.
-  * "hello" - /string literal/.
+    + The general form ~0XhPe~ is interpreted as ~h * 2^e~.
+      =IMPORTANT=
+      Here ~e~ is still specified as a decimal number.
+
+  * ='a'= - /integer character literal/.
+
+  * ="hello"= - /string literal/.
 
   All but the last are numerical constants.
 
@@ -1329,6 +1542,24 @@ CLOSED: [2025-03-21 Fri 14:21]
     to be part of a floating point literal. =TODO ???=
 
 - Takeaway 5.3 #2 :: Numerical literals are never negative.
+  * If we write something like ~-34~ or ~-1.5E-23~, the leading sign
+    is NOT considered part of the number
+    BUT is the negation operator applied to the number that comes after it.
+
+    =IMPORTANT= =!!!= =TODO=
+    We will see shortly where this is important.
+
+  * Bizarre as this may sound,
+    =IMPORTANT=
+    the minus sign in the exponent is considered to be part of a floating-point
+    literal.
+
+  * We have already seen (_takeaway 5.1.2 #1_) that all literals must have
+    NOT ONLY a /value/
+    BUT ALSO a /type/.
+
+  * Don't mix up the FACT that a literal has a positive value with its type,
+    which can be signed.
 
 - Takeaway 5.3 #3 :: Decimal integer literals are signed.
 
@@ -2085,40 +2316,96 @@ Arrays are really just objects of a different type than we have seen so far.
 *** Summary - 94
 
 ** DONE 7. Functions - 95
-CLOSED: [2017-04-25 Tue 16:11]
-- Motivation: /modularity/ =IMPORTANT=
-  * Avoid code repetition
-    + Avoid copy and paste errors.
-    + Increase readability and maintainability.
-    + Decrease compilation times.
-  * Provide clear interfaces
-    + Specify the origin and type of data that flows into a computation.
-    + Specify the type and value of the result of a computation.
-    + Specify invariants for a computation, namely pre- and post-conditions
-  * Dispose a natural way to formulate algorithms that use a "stack" of
-    itermediate values.
+CLOSED: [2025-03-24 Mon 21:55]
+- This section covers
+  * An introduction to simple functions
+  * Working with ~main~
+  * Understanding /recursion/
 
-- Besides the concept of functions,
-  C has _other means of unconditional transfer of control_, that are mostly
+- BEFORE this section,
+  we have already seen different means that C offers for /conditional execution/ --
+  execution that, based on a value, chooses one branch of program over another
+  to continue.
+  * The reason for a potential “jump” fo this type to another part of the
+    program code (for example, to an else branch) is a run-time decision that
+    depends on run-time data.
+
+- This section starts with a discussion of /unconditional/ ways to transfer
+  control to other parts of our code: by themselves, no runtime data dependency.
+
+- The main reasons *MOTIVATING* the concept of /functions/ are
+  *modularity* and *code factorization*:
+  * Functions avoid code repetition.
+    + Avoids easily introduced copy-and-paste errors and spare the effort of
+      editing in multiple places if you modify a piece of functionality.
+
+    Thereby, functions increase _readability_ and _maintainability_.
+
+  * Use of functions _DECREASES compilation times_.
+    A given code snippet that we encapsulate in a function is compiled only
+    once.
+
+  * Functions simplify future code reuse.
+
+  * Functions provide clear interfaces.
+    + Function arguments and return types clearly
+      SPECIFY
+      the origin and type of data that flows into and out of a computation.
+
+    + Additionally, functions allow us to _specify invariants_ for a
+      computation: pre- and post-conditions.
+
+  * Functions provide a natural way to formulate algorithms that use a “stack”
+    of intermediate values.
+
+- Besides the concept of /functions/,
+  C has _other means of UNCONDITIONAL TRANSFER of control_, that are mostly
   used to
   _handle error conditions_ or _other forms of exceptions from the usual
   control flow_
   * ~exit~, ~_Exit~, ~quick_exit~ and ~abort~ terminate the program execution
-    TODO See Section 8.6
+    =TODO= (see subsection 8.8).
+
   * ~goto~ transfers control within a function body
-    TODO See Section 13.2.2 and 15
+    =TODO= (see subsection 13.2.2 and 15.6).
+
   * ~setjmp~ and ~longjmp~ can be used to return unconditionally to a calling
     context,
-    TODO see Section 18.4.
-  * Certain events of the execution environment or calls to the function raise
-    may raise so-called signals and that pass control to a specialized
-    function, a /signal handler/.
-    TODO ???
+    =TODO= (see subsection 19.5).
+
+  * Certain events of the execution environment or calls to the function ~raise~
+    may raise so-called /signals/ that pass control to a specialized function, a
+    /signal handler/.
+    =TODO= =???=
 
 *** 7.1. Simple functions - 95
-- /prototype/: _declaration_ and _definition_ included:
+- All the /functions/ we have seen so far have a /prototype/:
+  _declaration_ and _definition_ including
   * a parameter type-list and
   * a return type.
+
+- Example:
+  #+FROM: listing 6.3
+  #+begin_src c
+    bool leapyear(unsigned year) {
+      /* All years that are divisible by 4 are leap years,
+         unless they start a new century, provided they
+         are not divisible by 400. */
+      return !(year % 4) && ((year % 100) || !(year % 400));
+    }
+  #+end_src
+  * A declaration of this function (without a definition) could look as follows:
+    #+begin_src c
+      bool leapyear(unsigned year);
+    #+end_src
+
+  * Alternatively, we could *omit* _the name of the parameter_ an/or add the
+    /storage specifier/ ~extern
+    + footnote 52: More details on the keyword extern will be provided in
+      _subsection 13.2_.
+      =TODO=
+      =TODO=
+      =TODO=
 
 - There are _two_ special conventions that use the keyword ~void~:
   * If the function is to be _called with no parameter_, the list is replaced
@@ -2126,7 +2413,7 @@ CLOSED: [2017-04-25 Tue 16:11]
   * If the function _doesn't return a value_, the return type is given as
     ~void~.
 
-- Such a /prototype/ _helps the compiler in places where the function is to
+- Such a /prototype/ HELPS _the compiler in places where the function is to
   be called_. It _only has to know about the parameters that the function
   expects_. For example:
   #+BEGIN_SRC C
@@ -2134,24 +2421,39 @@ CLOSED: [2017-04-25 Tue 16:11]
   // ... ...
   double fbar2 = fbar(2) / 2;
   #+END_SRC
-  Here the call ~fbar(2)~ is not directly compatible with the expectation of
-  function fbar: it wants a ~double~ but receives a ~signed int~. But since
-  the calling code knows this, it can convert the ~signed int~ argument =2=
-  to the ~double~ value =2.0= before calling the function. The same holds
-  for the return: the caller knows that the return is a ~double~, so floating
-  point division is applied for the result expression. =IMPORTANT=
+  * Here the call ~fbar(2)~ is _NOT directly compatible_ with the expectation of
+    function ~fbar~: it wants a ~double~ but receives a ~signed int~.
 
-- In C, _there are ways to declare functions without prototype_,
-  but you will not see them here. You _shouldn't use_ them, they should be
-  retired. There were even ways in previous versions of C that allowed to
-  use functions without any knowledge about them at all. Don’t even think of
-  using functions that way. =TODO=
+    BUT since the calling code knows this, it can convert the ~signed int~
+    argument =2= to the ~double~ value =2.0= before calling the function.
+
+  * The same holds for the _return_: the caller knows that the return is a
+    ~double~, so floating point division is applied for the result expression.
+    =IMPORTANT=
+
+- Historically, C had ways to declare functions without prototype;
+  they have been retired with C23.
+
+  * =OLD VERSION=
+    =TODO: Learn more about this=
+    In C, _there are ways to declare functions without prototype_, but you will
+    not see them here. You _shouldn't use_ them, they should be retired. There
+    were even ways in previous versions of C that allowed to use functions
+    without any knowledge about them at all. Don't even think of using functions
+    that way. =TODO=
 
 - Takeaway 7.1 #1 :: All functions must have prototypes.
 
-- Exception: functions that can receive a varying number of parameters.
-             ~<stdargs.h>~, /variable argument list/ =TODO= 17.4.2
-  Try to avoid using this in any case.
+- A notable EXCEPTION:
+  functions that can receive a varying number of parameters, such as ~printf~.
+  * They use a mechanism for parameter handling called a /variable argument
+    list/, which comes with the /header/ ~<stdargs.h>~.
+
+    =TODO= Will see later (subsection 17.4.2) how this works, but his feature is
+    to be avoided in any case. Already from your experience with ~printf~, you
+    can imagine why such an interface poses difficulties.
+    You, as the programmer of the calling code, have to ensure consistency by
+    providing the correct ~"%XX"~ format specifiers.
 
 - Takeaway 7.1 #2 :: Functions have only one entry but can have several
                      ~return~'s.
@@ -2173,26 +2475,30 @@ CLOSED: [2017-04-25 Tue 16:11]
                      for ~void~ functions.
 
 *** 7.2. ~main~ is special - 97
-- The prototype of ~main~ function is enforced by the C standard,
+~main~ has very special role as the entry point into your program.
+
+- Its prototype is enforced by the C standard,
   but it is implemented by the programmer.
 
-- Being such a pivot between the runtime system and the application, it has
-  to obey some special rules:
-  1. First, to suit different needs it has several prototypes, one of which
-     must be implemented. _Two_ should always be possible:
-     #+BEGIN_SRC C
+- Being such a pivot between the /runtime system/ and the /application/,
+  it has to obey some special rules:
+  1. To suit different needs it has _SEVERAL_ /prototypes/,
+     *ONE of which MUST BE implemented.*
+     _Two_ should always be possible:
+     #+BEGIN_SRC c
      int main(void);
      #+END_SRC
 
-     #+BEGIN_SRC C
+     #+BEGIN_SRC c
      int main(int argc, char* argv[argc+1]);
      // int main(int argc, char* argv[]);
      #+END_SRC
+     Then, any C platform may provide other interfaces.
 
   2. There is another feature in the second prototype of ~main~, namely
      ~argv~, the vector of commandline arguments. We already have seen
      some examples where we used this vector to communicated some values
-     from the commandline to the program. E.g. in Listing 1.1 these
+     _from the commandline to the program._ E.g. in Listing 1.1 these
      commandline arguments were interpreted as double data for the program.
 
 - Then, any specific C platform may provide other interfaces. There are _two_
@@ -2223,63 +2529,132 @@ CLOSED: [2017-04-25 Tue 16:11]
 
 - Takeaway 7.2 #4 :: ~exit~ _NEVER fails_ and _NEVER returns to its caller_.
 
-- The later is indicated by the special keyword ~_Noreturn~. This keyword
-  should _only be used for such special functions_. There is even a pretty
-  printed version of it, the macro ~noreturn~, that comes with the header
-  ~stdnoreturn.h~.
+- The latter is indicated by the attribute ~[[noreturn]]~. This attribute
+  should _ONLY be used for such special functions_.
+  * footnote 53:
+    C versions *BEFORE* C23 had the /keyword/ ~_Noreturn~ and the /macro/
+    ~noreturn~, a pretty-printed version of it, which came with the header
+    =stdnoreturn.h=.
 
-- Strictly spoken, _each of the ~argv[i]~ for i = 0, ..., ~argc~ is a
-  pointer_, but since we don't know yet what that is (_didn't teach_), as an
-  easy first approximation we can see them as strings.
+- Each of the ~argv[i]~ for i = 0, ..., ~argc~ is a /pointer/ similar to those
+  we encountered earlier. As an easy *first approximation*, we can see them as
+  /strings/.
 
 - Takeaway 7.2 #5 :: All command-line arguments are transferred as strings.
 
+- Of the ~argv~ strings, _TWO elements hold SPECIAL values._
+
 - Takeaway 7.2 #6 :: ~argv[0]~ points to the name of the program invocation.
-                     =REMARK=: There is no strict rule of what that
-                               "program name" should be, but usually this is
-                               just taken as the name of the program executable.
-                               =IMPORTANT= NO rule in C standard.
+  * *NO strict rule* about what that program name should be,
+    BUT usually it is the NAME of _the program executable_.
 
 - Takeaway 7.2 #7 :: ~argv[argc]~ is a null pointer.
-                     =TODO=: usage??? only used to identify the end? We have
-                             ~argc~ already!!! Historical reason???
+  * In the ~argv~ array, the LAST argument could always be identified using this
+    property, but this feature _isn't very useful_: we have ~argc~ to process
+    that array.
+    =TODO: ???=
+    =TODO: ???=
+    =TODO: ???=
 
 *** 7.3. Recursion - 99 - =RE-READ=
+- An important feature of /functions/ is *encapsulation*.
+  * It has its own scope.
+  * Once we leave the function, all the mess we leave behind is cleaned up.
+
+- Recursion :: A /function/ that _directly or indirectly_ calls itself.
+
+- /Recursive functions/ are crucial for understanding C functions.
+  They demonstrate and use primary features of the *function call model* and are
+  only fully functional with these features.
+
+- As a first example, we will look at an implementation of Euclid's algorithm to
+  compute the /greatest common divisor (gcd)/ of two numbers:
+  #+begin_src c
+    inline size_t gcd2(size_t a, size_t b) [[__unsequenced__]] {
+      assert(a <= b);
+      if (!a) return b;
+      size_t r = b % a;
+      return gcd2(r, a);
+    }
+  #+end_src
+  * =TODO=
+    =???=
+    =TODO=
+    As you can see, this function is short and seemingly nice; it makes some
+    assumptions about its arguments and thus is not full interface for ~gcd~
+    (footnote 54).
+    =???= =I don't quite understand this!!!=
+    But to understand how it works, we need to thoroughly understand
+    1. how functions work and
+    2. how we transform mathematical statements into algorithms.
+
+  * footnote 54: The ~[[unsequenced]]~ attribute will be discussed much later in
+    section 16.3.
+    =TODO=
+
+- ~assert~ macro comes from =<assert.h>=.
+
 - Takeaway 7.3 #1 :: Make all preconditions for a function explicit.
 
 - Takeaway 7.3 #2 :: In a recursive function, first check the termination
                      condition.
 
+- Use a wrapper function to do ths initial call:
+  #+BEGIN_SRC C
+    inline size_t gcd(size_t a, size_t b) [[__unsequenced__]] {
+      assert(a);
+      assert(b);
+      if (a < b)
+        return gcd2(a, b);
+      else
+        return gcd2(b, a);
+    }
+  #+END_SRC
+
 - Takeaway 7.3 #3 :: Ensure the preconditions of a recursive function in a
                      wrapper function.
-  #+BEGIN_SRC C
-  #+END_SRC
 
-- This avoids that the precondition has to be checked at each recursive
-  call: the ~assert~ macro is such that it can be disabled in the final
-  "production" object file.
-  #+BEGIN_SRC C
-  // Just a example. (From Jian) The implimantation is not good though.
-  size_t gcd2(size_t a, size_t b) {
-    assert (a <= b);
-    if (!a) return b;
-    size_t rem = b % a;
-    return gcd2(rem, a);
-  }
-
-  size_t gcd(size_t a, size_t b) {
-    assert (a);
-    assert (b);
-    if(a < b) return gcd2(a, b);
-    else      return gcd2(b, a);
-  }
-  #+END_SRC
-  This avoids that the precondition has to be checked at each recursive
-  call: the ~assert~ macro is such that it can be disabled in the final
-  “production” object file.
+- Fibonacci:
+  #+begin_src c
+    size_t fib(size_t n) [[__unsequenced__]] {
+      if (n < 3)
+        return 1;
+      else
+        return fib(n-1) + fib(n-2);
+    }
+  #+end_src
 
 - Takeaway 7.3 #4 :: Multiple recursion may lead to exponential computation
                      times.
+
+- Improved algorithm that with cache:
+  #+begin_src c
+    /* Compute Fibonacci number n with the help of a cache that may
+       hold previously computed values. */
+
+    size_t fibCacheRec(size_t n, size_t cache[static n]) {
+      if (!cache[n-1]) {
+        cache[n-1]
+          = fibCacheRec(n-1, cache) + fibCacheRec(n-2, cache);
+      }
+      return cache[n-1];
+    }
+
+    size_t fibCache(size_t n) {
+      if (n+1 <= 3) return 1;
+      /* Set up a VLA to cache the values. */
+    #if __STDC_VERSION__ > 202311L
+      /* Since C23, VLA can be default initialized. */
+      size_t cache[n] = { };
+    #else
+      size_t cache[n]; memset(cache, 0, n*sizeof(*cache));
+    #endif
+      /* Non-trivial initialization is replaced by assignment. */
+      cache[0] = 1; cache[1] = 1;
+      /* Call the recursive function. */
+      return fibCacheRec(n, cache);
+    }
+  #+end_src
 
 - Takeaway 7.3 #5 :: A bad algorithm will never lead to a performing
                      implementation.
@@ -2291,7 +2666,31 @@ CLOSED: [2017-04-25 Tue 16:11]
 
 - /FLA/: fixed-length array
 
+- A simplified version, replace /VLA/ in previous implementation with /FLA/:
+  #+begin_src c
+    void fib2rec(size_t n, size_t buf[static 2]) [[__unsequenced__]] {
+      if (n > 2) {
+        size_t res = buf[0] + buf[1];
+        buf[1] = buf[0];
+        buf[0] = res;
+        fib2rec(n-1, buf);
+      }
+    }
+
+    size_t fib2(size_t n) [[__unsequenced__]] {
+      size_t res[2] = { 1, 1, };
+      fib2rec(n, res);
+      return res[0];
+    }
+  #+end_src
+
 *** Summary - 105
+- Functions have a /prototype/ that determines how they can be called.
+
+- Terminating ~main~ and calling ~exit~ are the same.
+
+- Each function call has its own copy of local variables and functions can
+  be called recursively.
 
 ** TODO 8. C Library functions - 106
 - This section covers
