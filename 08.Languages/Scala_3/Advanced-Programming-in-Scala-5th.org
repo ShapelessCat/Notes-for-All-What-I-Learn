@@ -11,7 +11,7 @@
 * Acknowledgments - xxiii
 * List of Tables - xviii
 * List of Listings - xix
-* TODO 1 Opaque Types - 27
+* TODO 1 Opaque Types - 27 - =READING=
 ** 1.2 The performance cost of boxing - 27
 ** 1.2 Use cases for zero-overhead types - 29
 ** 1.3 The ~AnyVal~ approach - 30
@@ -22,17 +22,515 @@
 ** 1.8 The ~Matchable~ trait - 39
 ** 1.9 Conclusion - 44
 
-* TODO 2 Inlining - 45
-** 2.1 Singleton types - 45
-** 2.2 Literal singleton types - 49
-** 2.3 Inlined constants - 50
-** 2.4 Inline methods - 52
-** 2.5 Preserving semantics - 55
-** 2.6 Partial evaluation - 56
-** 2.7 Inline methods and inheritance - 60
-** 2.8 Abstract methods can be inline - 61
-** 2.9 Performance considerations - 63
-** 2.10 Conclusion - 66
+* DONE 2 Inlining - 45
+CLOSED: [2025-04-08 Tue 14:57]
+- This feature
+  * _ENABLES_ the compiler to perform certain computations at compile time that
+    reduce the computational demands at runtime
+
+    or
+
+  * _ENABLE_ (=FIXME=) metaprogramming at compile-time.
+
+- Through techniques such as /constant folding/ and /partial evaluation/, the
+  Scala compiler can perform computations prior to the program's execution.
+
+- Inlining in Scala 3 also facilitates metaprogramming:
+  it allows you to write code that generates code.
+
+
+- This chapter will cover
+  1. the basics of inlining,
+     including inline constants and methods, and
+
+  2. along the way also discuss
+     /singleton types/,
+     /literal constant types/, and
+     _the dualism between inlining and factoring._ =TODO= =???=
+
+** DONE 2.1 Singleton types - 45
+CLOSED: [2025-04-07 Mon 18:56]
+- inhabitants :: as mentioned in Section 1.6, one way to view types is as _sets_
+  of values.
+  * When viewed this way the notion of _subset_ corresponds to /subtype/.
+
+- singleton set :: a set with just one element.
+  * singleton type :: a type with just one inhabitant.
+
+- Scala 2 included support for singleton types, and
+  Scala 3 gives them more roles to play.
+
+- You can FORM a /singleton type/ for ANY /singleton object/ by APPENDING
+  ~.type~ to the name of the /singleton object/.
+  * Example:
+    #+begin_src scala
+      def descibe(ds: DoorState): String = ds.toString
+      def descOpen(o: Open.type): String = o.toString
+
+      descOpen(open) // "Open"
+      descOpen(Closed) // DOES NOT COMPILE
+
+      val door: DoorState = Open
+      descOpen(dorr) // DOES NOT COMPILE
+
+      val openDoor: Open.type = Open
+      descOpen(openDoor) // "Open"
+    #+end_src
+
+- You can also form a /singleton type/ for ANY ~val~ by APPENDING ~.type~ to the
+  ~val~ name.
+  *Must be val, NOT var*
+  * Example:
+    #+begin_src scala
+      val msg: Some[String] = Some("hello") // `Some[Stirng]` is NOT a singleton type
+      def getString(s: msg.type): String = s.getOrElse("hi")
+
+      getString(msg)           // "hello"
+      getString(Some("hello")) // DOES NOT COMPILE
+    #+end_src
+
+  * *NOTE*:
+    EVEN THOUGH TWO ~val~'s may refer to the SAME object, their /singleton
+    types/ are *DISTINCT*.
+    For example, you can't do ~val greeting: Some[Stirng] = msg~ and pass it
+    to the ~getString~, which only accept a ~msg.type~ parameter.
+
+- Lastly, you cannot make a /singleton type/ out of a ~var~, because the object
+  referred to by the ~var~ can change over time.
+
+  The reason a ~val~ can be used to form a /singleton type/ is precisely because
+  a ~val~ *CANNOT be reassigned*: _it will always refer to the same, single
+  object_.
+
+** DONE 2.2 Literal singleton types - 49
+CLOSED: [2025-04-07 Mon 20:07]
+- Scala 3 introduced /literal singleton types/, also called /literal constant
+  types/.
+
+  These are /singleton types/ for ~Int~, ~Long~, ~Float~, ~Double~, and
+  ~String~: types with literals supported by the Scala language, such as ~3~,
+  ~2.0~, or ~"one"~.
+
+  * No need for ~.type~.
+
+** DONE 2.3 Inlined constants - 50
+CLOSED: [2025-04-07 Mon 20:42]
+- inlined constants :: ~val~'s declared as ~inline~.
+  * All usage sites of an ~inline val~ will be rewritten in place to the
+    initializer expression of that ~val~.
+
+- ~Inline val~'s SUPPORT /constant folding/ and /constant propagation
+  optimizations/ by the Scala compiler.
+
+  * Constant folding :: EVALUATING expressions that involve constants at compile
+    time.
+
+  * Constant propagation :: REPLACING variables with known constant values at
+    compile time, including those whose constant values become known through
+    prior /constant folding and propagation/.
+
+    + Example:
+      #+begin_src scala
+        val x = rewriteTo2 + rewriteTo2
+      #+end_src
+      1. Rewrited using /constant propagation/:
+         ~val x = 2 + 2~
+
+      2. Rewrited using /constant folding/:
+         ~val x = 4~
+
+- =IMPORTANT=
+  When you define an ~inline val~, the /initializer expression/ *MUST* have
+  a /literal constant type/.
+  * _NO need_ to be EXPLICIT.
+
+  * if you provide an *EXPLICIT* /literal constant type annotation/, you can
+    optionally LEAVE OFF the ~inline~ modifier.
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    the actual trigger of this behavior is the literal constant type, *NOT* the
+    ~inline~ modifier.
+
+    The ~inline~ modifier mainly serves as a way to tell the compiler you _want
+    it to infer_ a /literal constant type/.
+
+- The *ACTUAL REASON* that ~aTwo~ will be used in /constant propagation and
+  folding/, whereas ~anInt~ will not, therefore, is because ~aTwo~ has a
+  /literal constant type/ and ~anInt~ does not.
+
+  To observe this behavior, you can define a ~val~ that is not marked as
+  ~inline~, *BUT* is annotated with a /literal constant type/, like this:
+  #+begin_src scala
+    val explicitlyTwo: 2 = 2
+  #+end_src
+  Use this ~explicitlyTwo~ variable in an initializer expression of an ~inline
+  val~
+  #+begin_src scala
+    inline val z = explicitlyTwo + explicitlyTwo
+  #+end_src
+  This will compile. BECAUSE through /constant folding and propagation/, the
+  compiler will reduce the /initializer expression/ to 4.
+
+** DONE 2.4 Inline methods - 52
+CLOSED: [2025-04-07 Mon 23:12]
+- define an /inline method/ :: You can also mark a ~def~ with the ~inline~
+  modifier.
+  * For /inline method/, compiler will replace the invocation site with the
+    method's body.
+
+- Q :: How does /inline method/ expand?
+  #+begin_src scala
+    inline def add(regularParam: Int, byNameParam: => Int): Int =
+      regularParam + byNameParam
+
+    val n = 8
+    val res = add(10, n + 2)
+  #+end_src
+
+- A :: Code
+  #+begin_src scala
+    val res =
+      // Inlined invocation of add:
+      val regularParam = 10
+      def byNameParam = n + 2
+      regularParam + byNameParam
+  #+end_src
+
+- Q :: How about /inline method/, which has /inline parameter(s)/, expand?
+  #+begin_src scala
+    inline def add(regularParam: Int,
+                   byNameParam: => Int,
+                   inline inlineParam: Int): Int =
+      regularParam + byNameParam + inlineParam + inlineParam
+
+    val n = 8
+    val m = 9
+    val res = sum(10, n + 2, m * n)
+  #+end_src
+  =from Jian=:
+  The second ~inlineParam~ in ~add~ is added by me.
+  I think with it, the following expansion can be clearer!
+
+- A :: Code
+  #+begin_src scala
+    val res =
+      // Inlined invocation of sum:
+      val regularParam = 10
+      def byNameParam = n + 2
+      regularParam + byNameParam + m * n + m * n
+  #+end_src
+
+  Or using ~inline val~ to achieve the same final result
+  #+begin_src scala
+    val res =
+      // Inlined invocation of sum:
+      val regularParam = 10
+      def byNameParam = n + 2
+      inline val inlineParam = m * n
+      regularParam + byNameParam + inlineParam + inlineParam
+  #+end_src
+  After inline of ~inlineParam~, the body will look as in the previous
+  expansion.
+
+** DONE 2.5 Preserving semantics - 55
+CLOSED: [2025-04-08 Tue 00:37]
+The Scala 3 compiler will ensure that the semantics of a method invocation will
+*NOT change* whether you add or remove an ~inline~ modifier to a ~def~.
+
+*The performance of a method might change, but not its semantics.*
+
+- The purpose of _the semantics preservation design_ goal for Scala's /inline
+  methods/ was to make them easier to reason about:
+  you can count on an /inline method/ to compute the same result and have the same
+  side effects, if any, as the equivalent method without the ~inline~ modifier.
+
+  To achieve this goal, the Scala compiler makes ALL /type-directed decisions/
+  -- such as /overload resolution/, /implicit lookup/, and /extension method
+  resolution/ -- *on the method body while typing it, _BEFORE_ inlining it.*
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+
+- Example:
+  #+begin_src scala
+    enum Fruit:
+      val color: String
+      def name = getClass.getSimpleName
+      case Plum(color: String)
+      case Apricot(color: String)
+
+    import Fruit._
+
+    class Processor:
+      def withFruit(fruit: Fruit): String =
+        s"process ${fruit.color} ${fruit.name}"
+
+    class Juicer extends Processor:
+      def withFruit(plum: Plum): String =
+        s"make ${plum.color} juice"
+  #+end_src
+
+  #+begin_src scala
+    inline def processFruit[T](pr: Processor, fr: Fruit): String =
+      pr.withFruit(fr)
+
+    val pr = new Juicer
+    val fr = new Plum("purple")
+    pr.withFruit(fr)
+  #+end_src
+  If /type-directed decisions/ are performed after inlining, we will see
+  ="make purple juice"=, which change the semantics! If we do /type-directed
+  decisions/ before inlining or remove ~inline~, we we see the output
+  ="process purple Plum"=.
+
+** DONE 2.6 Partial evaluation - 56
+CLOSED: [2025-04-08 Tue 00:51]
+When the compiler encounters an /inline method/, it will attempt to evaluate as
+much of the method's body as it can at compile time. Because the compiler may
+only be able to evaluate part of an expression at compile time, this behavior is
+called /partial evaluation/.
+
+- Example:
+  #+begin_src scala
+    inline def factorial(x: Int): Int =
+      if x == 0 then 1
+      else x * factorial(x 1)
+  #+end_src
+  1. If a constant expression is passed,
+     this process *reduces* _runtime overhead_, BECAUSE the computation of the
+     factorial is done during compilation instead of at runtime.
+
+  2. If a non-constant expression is passed, the
+     expansion *can't stop* because each step may contains the /inline method/ call.
+
+     *To avoid this,* you can add ~inline~ modifier to ~if~ indicates that you
+     expect the compiler to
+     * EITHER evaluate the ~if~ expression at compile time
+     * OR give a compiler error.
+
+     #+begin_src scala
+       inline def fact(x: Int): Int =
+         inline if x == 0 then 1
+         else x * fact(x - 1)
+     #+end_src
+
+- CONCLUSION:
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  In a /recursive inline method/, ~inline if~ is a good way to do a _convergence
+  check_.
+
+  The semantics of the ~if~ expression will be preserved whatever you make it is
+  a good way to indicate that it is designed to be /partially evaluated/.
+
+** DONE 2.7 Inline methods and inheritance - 60
+CLOSED: [2025-04-08 Tue 11:57]
+- Because the compiler replaces /inline method invocations/ with their /method
+  bodies/, *some limitations exist* in _how you can combine inline methods with
+  inheritance._
+  * First,
+    /inline methods/ are *EFFECTIVELY ~final~:* they can't be overridden by
+    /subclasses/.
+
+    Because an /inline method/'s code is embedded directly into the call site
+    during compilation,
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    *there's NO POSSIBILITY for a /dynamic call/ that resolves to a subclass
+    implementation at runtime*.
+
+  * On the other hand,
+    although *YOU CAN'T* OVERRIDE an /inline method/ with another method,
+    *YOU CAN*
+    IMPLEMENT an /abstract method/, or
+    OVERRIDE a NONINLINE method, with an /inline method/.
+
+    + In this case,
+      - when the method is invoked on the /subclass type/, the _subclass's
+        method body_ will be inlined at that call site.
+
+      - If the method is invoked on the superclass type, the method
+        implementation must be determined by the object's class at runtime.
+
+    + In particular,
+      =from Jian= _if runtime method resolution is required,_
+      if the actual class at runtime is the /subclass type/, the /inline method/
+      in the subclass must be invoked.
+
+      This can be useful when you want to provide an optimized implementation of
+      a method in a subtype, but you still want to use the same method signature
+      in a supertype interface.
+
+      =from Jian=
+      This means _NOT ALL_ /inline methods/ can be inlined at runtime. When
+      subtyping polymorphism feature is used and only methods in subtype(s) are
+      /inline methods/, because things need to be decided at runtime, _inline
+      may not happen_.
+
+- =from Jian=
+  The above are the requirements,
+  now let's see the implementation details:
+
+- To support this use case, the compiler generates
+  _a RETAINED OR NON-INLINED version of an inline method_
+  WHENEVER
+  it overrides a _concrete or abstract noninline method._
+
+  * A /retained method/ will be EXECUTED
+    WHEN the method is _invoked on a supertype reference._
+
+    *This preserves the expected semantics, just without any inlining.*
+
+- Example:
+  #+begin_src scala
+    trait Fruit:
+      def peel(n: Int): String
+
+    class Orange extends Fruit:
+      inline def peel(n: Int): String =
+        s"Peeled into $n pieces."
+
+    val orange: Orange = new Orange
+    // will be inlined
+    orange.peel(3) // Peeled into 3 pieces
+
+    val fruit: Fruit = orange
+    // on inlinement happens
+    fruit.peel(3) // Peeled into 3 pieces
+  #+end_src
+
+** DONE 2.8 Abstract methods can be inline - 61
+CLOSED: [2025-04-08 Tue 14:33]
+/inline abstract method/
+
+- Example:
+  #+begin_src scala
+    trait Vegetable:
+      inline def slice(n: Int): String
+
+    class Broccoli extends Vegetable:
+      inline def slice(n: Int): String =
+        s"Sliced into $n pieces."
+  #+end_src
+  * Compilable:
+    #+begin_src scala
+      val broccoli: Broccoli = new Broccoli
+      broccoli.slice(5) // Ok (and inlined)
+    #+end_src
+
+  * NOT Compilable:
+    #+begin_src scala
+      val vegetable: Vegetable = broccoli
+      // Error
+      vegetable.slice(5)
+    #+end_src
+
+- One *RESTRICTION* on /inline methods/ that _override non-inline methods_:
+  they _CANNOT_ take /inline parameters/.
+
+  This restriction arises
+  BECAUSE the overriding inline method needs to have the same signature as the
+  non-inline method it's overriding, and _non-inline methods *CANNOT* have
+  inline parameters._
+  Inline parameters can only be declared, therefore, in inline methods that
+  don’t override non-inline methods.
+
+** DONE 2.9 Performance considerations - 63
+CLOSED: [2025-04-08 Tue 14:56]
+- Although inlining could potentially help your application's performance,
+  it could also hurt it.
+
+  Mostly, you can trust JVM JIT compiler and optimizer, instead of do inlining
+  manually.
+
+- Inline can increase the code size of the method that receives the inlined
+  code. If the size of a method's code grows too large, it can hurt your
+  application's performance by *EXCEEDING* _the CPU's capacity to cache
+  instructions._
+
+  * *Consequently, inline methods are not universally faster than regular methods.*
+
+  Except in unique scenarios where specific knowledge informs your decision, you
+  should
+  *avoid using /inline methods/ solely to avoid the cost of a /method call/
+  alone.*
+
+- That said, /inlining/ can be an effective tool for performing computations at
+  compile time through /constant folding/, /constant propagation/, and /partial
+  evaluation/.
+
+  _BY *reducing* the amount of code executed at runtime_, you not only
+  facilitate instruction caching but also enhance performance by not executing
+  code at runtime.
+
+  * There is a *trade-off*, however:
+    /partial evaluation/ and /constant folding and propagation/ may increase
+    your compile time.
+
+    Essentially when you use /inline constants and methods/ you are trading off
+    /compile time/ for /runtime cost/.
+
+- _The moral of the story_:
+  you should
+  in general consider /inline/ in Scala as *a gateway to metaprogramming*,
+  *NOT* as a path to better performance through the elimination of method calls.
+
+- *Constant folding across method boundaries*
+  #+begin_src scala
+    inline val pi = math.Pi // Initializing with a final val
+    inline def area(inline radius: Double): Double =
+      pi * radius * radius
+  #+end_src
+  _Were it not for the existence of /inline methods/, /constant folding/ would
+  only be possible within the body of methods._
+  =from Jian=:
+  for this example, if there weren't /inline method/, no /constant folding/,
+  only /constant propagation/ exists.
+
+- *Factoring and inlining are duals*
+  In short, /inlining/ enables you to *reduce code duplication* in your source
+  code *without reducing* it in the binaries.
+
+  Or, in the best of both worlds, (=from Jian= If use ~inline if~ properly) you
+  can
+  * *reduce* code duplication in your source code and through
+    + partial evaluation
+    + constant folding and propagation,
+
+  * *also reduce* the code in your binaries.
+
+- *Side effects and performance costs*
+  When writing an /inline function/ with /inline or by-name parameters/, it is
+  important to keep in mind the potential for /side effects/ and /long-running
+  computations/ in the passed expressions.
+
+  Because these types of parameters cause the *re-execution of code* each time
+  they appear in the body of the function, multiple uses of such parameters
+  could cause /side effects/ or /long-running computations/ to be *executed
+  REPEATEDLY*. Consider the following function:
+  #+begin_src scala
+    inline def addTwice(inline ip: Int, bnp: => Int): Int =
+      ip + bnp + ip + bnp
+
+    addTwice({ print("ip "); 1 }, { print("bnp "); 20 })
+  #+end_src
+
+  *To AVOID duplication of side effects or long-running computation,*
+  make sure execute /inline parameter/ or /by-name parameter/ once and bind the
+  results to local variables
+  #+begin_src scala
+    inline def addTwice(inline ip: Int, bnp: => Int): Int =
+      val ipsRes = ip
+      val bnpRes = bnp
+      ipRes + bnpRes + ipRes + bnpRes
+  #+end_src
+
+** DONE 2.10 Conclusion - 66
+CLOSED: [2025-04-08 Tue 14:57]
 
 * TODO 3 Metapgrogramming - 67
 ** 3.1 Inline matches - 67

@@ -5,283 +5,281 @@
 #+STARTUP: overview
 
 * DONE 1. The Forest for the Trees
-  CLOSED: [2023-03-19 Sun 00:10]
+CLOSED: [2023-03-19 Sun 00:10]
 ** DONE Parsing into Trees
-   CLOSED: [2023-03-18 Sat 23:56]
-   - COMPILERS do this by first *parsing* our code:
-     A process by which our ~String~ programs are _transformed into_
-     a *more CONSTRAINED and STRUCTURED form*.
-     * This _internal representation_ is called an /Abstract Syntax Tree (AST)/.
+CLOSED: [2023-03-18 Sat 23:56]
+- COMPILERS do this by first *parsing* our code:
+  A process by which our ~String~ programs are _transformed into_
+  a *more CONSTRAINED and STRUCTURED form*.
+  * This _internal representation_ is called an /Abstract Syntax Tree (AST)/.
 
-   - Example:
-     #+begin_src scala
-       // 5 + 7
+- Example:
+  #+begin_src scala
+    // 5 + 7
 
-       enum Tree:
-         case Num(value: Int)
-         case Add(lhs: Tree, rhs: Tree)
+    enum Tree:
+      case Num(value: Int)
+      case Add(lhs: Tree, rhs: Tree)
 
-       def parse(code: String): Tree
+    def parse(code: String): Tree
 
-       parse("5 + 7")
-       // Add(Num(5), Num(7))
+    parse("5 + 7")
+    // Add(Num(5), Num(7))
 
-       parse("5 + 7 + 3")
-       // Add(
-       //   lhs = Add(Num(5), Num(7)),
-       //   rhs = Num(3)
-       // )
-     #+end_src
+    parse("5 + 7 + 3")
+    // Add(
+    //   lhs = Add(Num(5), Num(7)),
+    //   rhs = Num(3)
+    // )
+  #+end_src
 
-   - One of the *BENEFITS* of representing our programs with ~Tree~'s is that
-     they are _naturally recursive_, allowing them to represent arbitrarily
-     complex programs while maintaining a simple structure.
+- One of the *BENEFITS* of representing our programs with ~Tree~'s is that
+  they are _naturally recursive_, allowing them to represent arbitrarily
+  complex programs while maintaining a simple structure.
 
 ** DONE Tree Transformations
-   CLOSED: [2023-03-18 Sat 23:56]
-   - /Parsing/ is just the beginning of a _multi-stage compilation process_, which
-     typically ends with /code generation/.
+CLOSED: [2023-03-18 Sat 23:56]
+- /Parsing/ is just the beginning of a _multi-stage compilation process_, which
+  typically ends with /code generation/.
 
-   - Between /parsing/ and /code generation/,
-     there are many _INTERMEDIATE compilation phases_.
-     * These phases are essentially a series of /AST transformations/,
-       daisy-chained together.
+- Between /parsing/ and /code generation/,
+  there are many _INTERMEDIATE compilation phases_.
+  * These phases are essentially a series of /AST transformations/,
+    daisy-chained together.
 
-     * Compilation phase:
+  * Compilation phase:
+    #+begin_src scala
+      // If we imagined a compiler-phase as a function,
+      // it might look something like this.
+      type CompilationPhase = Tree => Tree
+    #+end_src
+
+- For example,
+  one of the earliest phases in the /compilation pipeline/ is the /typer/,
+  * a /typer/ is responsible for
+    1. *inferring* the types of our program's expressions and
+    2. *adding* this information to the AST.
+
+  * Here's a hypothetical signature for the /typer/:
+    #+begin_src scala
+      // A transformatiton from `Tree => Tree`
+      def typer(tree: Tree): Tree
+    #+end_src
+
+  * To simulate this transformation, we'll need to complicate our fake language
+    a bit:
+    1. Add ~val~ binding, just like in Scala:
        #+begin_src scala
-         // If we imagined a compiler-phase as a function,
-         // it might look something like this.
-         type CompilationPhase = Tree => Tree
+         val x = 10 + 5
        #+end_src
 
-   - For example,
-     one of the earliest phases in the /compilation pipeline/ is the /typer/,
-     * a /typer/ is responsible for
-       1. *inferring* the types of our program's expressions and
-       2. *adding* this information to the AST.
-
-     * Here's a hypothetical signature for the /typer/:
+    2. Our /typer phase/ is to _decorate_ our AST with type information,
+       we'll also need some way of representing the types themselves.
+       So let's both add a ~ValDef~ case to our ~Tree~ and create a new ~Type~
+       enum:
        #+begin_src scala
-         // A transformatiton from `Tree => Tree`
-         def typer(tree: Tree): Tree
+         enum Tree:
+           case Num(value: Int)
+           case Add(lhs: Tree, rhs: Tree)
+           case ValDef(name: String, tpe: Type, rhs: Tree)
+
+         enum Type:
+           case Int
+           case Unknown
        #+end_src
+       * ~Unknown~: types that have *NOT* yet been inferred -- as a plalceholder
+         until the /type phase/.
 
-     * To simulate this transformation, we'll need to complicate our fake language
-       a bit:
-       1. Add ~val~ binding, just like in Scala:
-          #+begin_src scala
-            val x = 10 + 5
-          #+end_src
+     3. If run our example program through the /parser/, followed by the /typer/:
+        #+begin_src scala
+          // 1. Let's parse our program
+          val parsed = parse("val x = 10 + 5")
 
-       2. Our /typer phase/ is to _decorate_ our AST with type information,
-          we'll also need some way of representing the types themselves.
-          So let's both add a ~ValDef~ case to our ~Tree~ and create a new ~Type~
-          enum:
-          #+begin_src scala
-            enum Tree:
-              case Num(value: Int)
-              case Add(lhs: Tree, rhs: Tree)
-              case ValDef(name: String, tpe: Type, rhs: Tree)
+          // Output:
+          ValDef(
+            name = "x",
+            tpe = Type.Unknown, // The type placeholder
+            rhs = Add(Num(10), Num(5))
+          )
 
-            enum Type:
-              case Int
-              case Unknown
-          #+end_src
-          * ~Unknown~: types that have *NOT* yet been inferred -- as a plalceholder
-            until the /type phase/.
+          // 2. Let's run it through the typer
+          val typed = typer(parsed)
 
-        3. If run our example program through the /parser/, followed by the /typer/:
-           #+begin_src scala
-             // 1. Let's parse our program
-             val parsed = parse("val x = 10 + 5")
-
-             // Output:
-             ValDef(
-               name = "x",
-               tpe = Type.Unknown, // The type placeholder
-               rhs = Add(Num(10), Num(5))
-             )
-
-             // 2. Let's run it through the typer
-             val typed = typer(parsed)
-
-             // Output:
-             ValDef(
-               name = "x",
-               tpe = Type.Int, // The type has been inferred!
-               rhs = Add(Num(10), Num(5))
-             )
-           #+end_src
+          // Output:
+          ValDef(
+            name = "x",
+            tpe = Type.Int, // The type has been inferred!
+            rhs = Add(Num(10), Num(5))
+          )
+        #+end_src
 
 ** DONE Optimizing Trees
-   CLOSED: [2023-03-19 Sun 00:01]
-   Before we move on, let's explore another possible /AST transformation/:
-   /optimization/.
+CLOSED: [2023-03-19 Sun 00:01]
+Before we move on, let's explore another possible /AST transformation/:
+/optimization/.
 
-   - /Constant folding/:
-     #+begin_src scala
-       def optimize(tree: Tree): Tree = tree match
-         // If we have an Add node with two Num children
-         // we can replace it with a Num node of their sum.
-         case Add(Num(lhs), Num(rhs)) =>
-           Num(lhs + rhs)
+- /Constant folding/:
+  #+begin_src scala
+    def optimize(tree: Tree): Tree = tree match
+      // If we have an Add node with two Num children
+      // we can replace it with a Num node of their sum.
+      case Add(Num(lhs), Num(rhs)) =>
+        Num(lhs + rhs)
 
-         case Add(lhs, rhs) =>
-           val tree2 = Add(optimize(lhs), optimize(rhs))
-           // If the tree has changed, optimize again
-           // as we may be able to simplify further.
-           if tree2 != tree then optimize(tree2) else tree2
+      case Add(lhs, rhs) =>
+        val tree2 = Add(optimize(lhs), optimize(rhs))
+        // If the tree has changed, optimize again
+        // as we may be able to simplify further.
+        if tree2 != tree then optimize(tree2) else tree2
 
-         case ValDef(name, tpe, rhs) =>
-           ValDef(name, tpe, optimize(rhs))
+      case ValDef(name, tpe, rhs) =>
+        ValDef(name, tpe, optimize(rhs))
 
-         case _ => tree
-     #+end_src
+      case _ => tree
+  #+end_src
 
-   - Let's see what happens when we run our example program through the /optimizer/:
-     #+begin_src scala
-       val parsed = parse("5 + 7")
-       // Output:
-       Add(Num(5), Num(7))
+- Let's see what happens when we run our example program through the /optimizer/:
+  #+begin_src scala
+    val parsed = parse("5 + 7")
+    // Output:
+    Add(Num(5), Num(7))
 
-       val optimized = optimize(parsed)
-       // Output:
-       Num(12)
-     #+end_src
+    val optimized = optimize(parsed)
+    // Output:
+    Num(12)
+  #+end_src
 
 ** DONE Hey! Isn't this book about macros?
-   CLOSED: [2023-03-19 Sun 00:10]
-   /Macros/ are essentially *user-defined* /AST transformations/.
+CLOSED: [2023-03-19 Sun 00:10]
+/Macros/ are essentially *user-defined* /AST transformations/.
 
-   - =IMPORTANT=
-     A /macro system/ is simply a way for the COMPILER to
-     _ALLOW_
-     developers to *hook into* its /compilation pipeline/
-     *in a controlled, principled way*.
+- =IMPORTANT=
+  A /macro system/ is simply a way for the COMPILER to
+  _ALLOW_
+  developers to *hook into* its /compilation pipeline/
+  *in a controlled, principled way*.
 
-   - Building an intuition for what's possible at /compile-time/, and what's NOT,
-     will be a *KEY PART* of your macro journey.
+- Building an intuition for what's possible at /compile-time/, and what's NOT,
+  will be a *KEY PART* of your macro journey.
 
 *** What Can Be Done!?
-    - Your macros will be similarly *limited* by the information contained within
-      the /Abstract Syntax Trees/ you're given.
+- Your macros will be similarly *limited* by the information contained within
+  the /Abstract Syntax Trees/ you're given.
 
 * TODO 2. Split Brain
-  - What we learned from the previous chapter:
-    1. /Macros/ are essentially /user-defined AST transformations/
-       (=from Jian= happened at compile-time).
+- What we learned from the previous chapter:
+  1. /Macros/ are essentially /user-defined AST transformations/
+     (=from Jian= happened at compile-time).
 
-    2. The overall /macro framework/ allows us to
-       1) *hook into* the /compilation process/ itself,
+  2. The overall /macro framework/ allows us to
+     1) *hook into* the /compilation process/ itself,
 
-       2) *modifying* our own program's trees *in a controlled, principled way*
-          _BEFORE_ they're fully compiled.
+     2) *modifying* our own program's trees *in a controlled, principled way*
+        _BEFORE_ they're fully compiled.
 
-  - Q ::
-    How can we possibly break _the compile-time / run-time barrier_ and allow
-    our own code to transform itself?
-
+- Q ::
+  How can we possibly break _the compile-time / run-time barrier_ and allow
+  our own code to transform itself?
 
 ** DONE Traversing the Veil
-   CLOSED: [2023-03-19 Sun 00:50]
-   For this to work, we'll need a principled means of
-   *traversing back and forth between these realms*.
+CLOSED: [2023-03-19 Sun 00:50]
+For this to work, we'll need a principled means of
+*traversing back and forth between these realms*.
 
-   - A :: In fact, we'lll need *two*, complementary abilities.
+- A :: In fact, we'lll need *two*, complementary abilities.
 
 *** DONE 1. Quote
-    CLOSED: [2023-03-19 Sun 00:44]
-    There must be a way of *turning* regular code *into* its own AST representation.
-    This is the power of /quotation/.
+CLOSED: [2023-03-19 Sun 00:44]
+There must be a way of *turning* regular code *into* its own AST representation.
+This is the power of /quotation/.
 
-    - Conceiving of this power as a plain, old method, ~quote~ might have the
-      following /signature/:
-      #+begin_src scala
-        def quote[A](code: A): Tree
-      #+end_src
-      * We might imagine using it like this:
-        #+begin_src scala
-          val tree = quote { 5 + 7 }
-          // Output:
-          Add(Num(5), Num(7))
-        #+end_src
-        + If you think about it, this isn't too different from the ~parse~ method
-          we saw in the previous chapter. Only,
-          _INSTEAD OF_ turning *a ~String~ into a ~Tree~,*
-          it somehow turns *regular code into a ~Tree~.*
-          - =TODO=
+- Conceiving of this power as a plain, old method, ~quote~ might have the
+  following /signature/:
+  #+begin_src scala
+    def quote[A](code: A): Tree
+  #+end_src
+  * We might imagine using it like this:
+    #+begin_src scala
+      val tree = quote { 5 + 7 }
+      // Output:
+      Add(Num(5), Num(7))
+    #+end_src
+    + If you think about it, this isn't too different from the ~parse~ method
+      we saw in the previous chapter. Only,
+      _INSTEAD OF_ turning *a ~String~ into a ~Tree~,*
+      it somehow turns *regular code into a ~Tree~.*
+      - =TODO=
 
-    - Example:
-      Replace every number in a ~Tree~ with ~0~:
-      #+begin_src scala
-        def zero(tree: Tree): Tree = tree match
-          case Num(n)        => Num(0)
-          case Add(lhs, rhs) => Add(zero(lhs), zero(rhs))
+- Example:
+  Replace every number in a ~Tree~ with ~0~:
+  #+begin_src scala
+    def zero(tree: Tree): Tree = tree match
+      case Num(n)        => Num(0)
+      case Add(lhs, rhs) => Add(zero(lhs), zero(rhs))
 
-        val zeroedTree = zero(tree)
-        // Output:
-        Add(Num(0), Num(0))
-      #+end_src
+    val zeroedTree = zero(tree)
+    // Output:
+    Add(Num(0), Num(0))
+  #+end_src
 
-    - After /quotation/ and our customized transformation is done,
-      we need to convert the generated ~Tree~ back to code.
-      * Q :: WHY?
+- After /quotation/ and our customized transformation is done,
+  we need to convert the generated ~Tree~ back to code.
+  * Q :: WHY?
 
-      * A ::
-        + *If we were the compiler itself*,
-          we'd simply pass our ~Tree~ along to the _NEXT_ /phase of
-          compilation/, where it would eventually get churned down into our
-          target output.
+  * A ::
+    + *If we were the compiler itself*,
+      we'd simply pass our ~Tree~ along to the _NEXT_ /phase of
+      compilation/, where it would eventually get churned down into our
+      target output.
 
-        + *But we're NOT.*
-          We're in our own program.
-          We need to get this ~Tree~ back into its natural habitat --
-          we need a way to introduce *back* into the compilation pipeline, such
-          that it's compiled down to JVM bytecode along with the rest of our
-          program.
+    + *But we're NOT.*
+      We're in our own program.
+      We need to get this ~Tree~ back into its natural habitat --
+      we need a way to introduce *back* into the compilation pipeline, such
+      that it's compiled down to JVM bytecode along with the rest of our
+      program.
 
 *** DONE 2. Splice
-    CLOSED: [2023-03-19 Sun 00:50]
-    - /Splicing/ is the ability to
-      take a ~Tree~ and carefully *insert it back into* our program,
-      as though it were just like any other fragment of code you'd written by
-      hand in your original source file.
+CLOSED: [2023-03-19 Sun 00:50]
+- /Splicing/ is the ability to
+  take a ~Tree~ and carefully *insert it back into* our program,
+  as though it were just like any other fragment of code you'd written by
+  hand in your original source file.
 
-      * If we were to once again imagine this as a normal method, it might have the
-        following signature:
-        #+begin_src scala
-          def splice[A](tree: Tree): A
-        #+end_src
+  * If we were to once again imagine this as a normal method, it might have the
+    following signature:
+    #+begin_src scala
+      def splice[A](tree: Tree): A
+    #+end_src
 
-        + Add we might use it like this:
-          #+begin_src scala
-            val addNumbers: Int = splice { Add(Num(5), Num(7)) }
-            // Output:
-            val addNumbers: Int = 5 + 7
-          #+end_src
+    + Add we might use it like this:
+      #+begin_src scala
+        val addNumbers: Int = splice { Add(Num(5), Num(7)) }
+        // Output:
+        val addNumbers: Int = 5 + 7
+      #+end_src
 
-    - After our ~splice~ is processed, compilation will proceed as usual.
+- After our ~splice~ is processed, compilation will proceed as usual.
 
 ** TODO A Pseudo-Macro
-   Let's use these dual abilities, ~quote~ and ~splice~, to *write a
-   pseudo-macro*.
+Let's use these dual abilities, ~quote~ and ~splice~, to *write a pseudo-macro*.
 
-   - We want to implement the following (extremely contrived) method:
-     #+begin_src scala
-       // Every addition will accrue a nominal fee.
-       // Each time a `+` is encountered, 2 will be
-       // subtracted from the result.
-       def taxedArithmetic(sum: Int): Int
+- We want to implement the following (extremely contrived) method:
+  #+begin_src scala
+    // Every addition will accrue a nominal fee.
+    // Each time a `+` is encountered, 2 will be
+    // subtracted from the result.
+    def taxedArithmetic(sum: Int): Int
 
-       // And we'd expect it behave like this:
-       val taxedSum = taxedArithmetic { 5 + 7 }
-       // Expand to
-       val taxedSum: Int = 5 + 7 - 2
+    // And we'd expect it behave like this:
+    val taxedSum = taxedArithmetic { 5 + 7 }
+    // Expand to
+    val taxedSum: Int = 5 + 7 - 2
 
-       val taxedSum2 = taxedArithmetic { 5 + 7 + 9 }
-       // Expand to
-       val taxedSum2: Int = (5 + 7 - 2) + 9 - 2
-     #+end_src
+    val taxedSum2 = taxedArithmetic { 5 + 7 + 9 }
+    // Expand to
+    val taxedSum2: Int = (5 + 7 - 2) + 9 - 2
+  #+end_src
 
 *** TODO A First Attempt
 *** TODO Finishing the Job
@@ -290,4 +288,34 @@
 *** TODO Syntactic Punning
 *** TODO Tree Interpolation
 
-* TODO 3. Performing the Macro Rites (WIP)
+* TODO 3. Phantom Types
+** TODO Phantom Mechanics
+*** TODO Living Breathing Type Parameters
+*** TODO Phantom Types
+
+** TODO Phantom Power
+*** TODO Compile-Time State Machines
+*** TODO Typing the Untypable
+
+** TODO Ghost in the Macro Machine
+
+* TODO 4. The First Macro
+** TODO The First Ritual
+*** TODO The Simplest Macro
+*** TODO Calling the Macro
+*** TODO The Macro Expansion
+
+** TODO Macro with Parameters
+*** Calling the Macro
+*** Stepping Through the Macro Call
+*** Stepping Through the Macro Definition
+*** Stepping Through the Macro Implementation
+*** Last Steps
+*** Holy heck!
+
+* TODO 5. A Feast of Trees
+** A Literal Macro
+** Select and Apply
+*** Select
+*** Apply
+* [WIP] Macro Tactics
