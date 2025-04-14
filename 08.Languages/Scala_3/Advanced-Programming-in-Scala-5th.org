@@ -12,15 +12,485 @@
 * List of Tables - xviii
 * List of Listings - xix
 * TODO 1 Opaque Types - 27 - =READING=
-** 1.2 The performance cost of boxing - 27
-** 1.2 Use cases for zero-overhead types - 29
-** 1.3 The ~AnyVal~ approach - 30
-** 1.4 The opaque type approach - 32
-** 1.5 Extension methods on opaque types - 35
-** 1.6 Bounds on opaque types - 36
-** 1.7 Peaking behind the curtain - 38
-** 1.8 The ~Matchable~ trait - 39
-** 1.9 Conclusion - 44
+- Although types help you _achieve goals at compile time,_
+  classes -- the most common way to define types in Scala -- _have runtime
+  overhead._
+
+- Using stack-resident instances (extend ~AnyVal~ instead of ~AnyRef~) can be
+  more efficient than those that reside on the heap, as can avoiding
+  heap-resident instances that simply wrap an ~AnyRef~ with another ~AnyRef~.
+
+  Although often this runtime overhead may not matter to the performance of your
+  application, it can sometimes be important. It is therefore useful to have a
+  way to *define a type that _ONLY exists at compile time_,* which is guaranteed
+  to have _zero overhead at runtime._
+
+  Scala 3 introduced /opaque types/ for this purpose.
+
+** DONE 1.1 The performance cost of boxing - 27
+CLOSED: [2025-04-13 Sun 19:18]
+=Review Later=
+=IMPORTANT=
+
+- Predicting performance when looking at source code is difficult, because the
+  behavior of the JVM's just-in-time (JIT) compiler is hard to predict.
+
+  The JIT compiler bases its decisions
+  * not just on the code,
+  * but also on the behavior of the running application.
+
+- Nevertheless, despite the difficulty of making blanket statements about
+  performance of Java bytecode,
+  _it is possible to make some general observations about the performance cost of
+  /boxing/._
+
+- /boxing/ means
+  _allocating memory for objects on the /heap/_ as opposed to the /stack/.
+
+- The main way /boxing/ is likely to _HURT the performance_ of a Scala program
+  running on the JVM is by causing /cache misses/.
+
+  /Cache misses/ can be very costly to performance.
+
+- =NEED REVIEW LATER=
+  =Some details=
+  =IMPORTANT=
+
+- If objects are being *ALLOCATED* _at a high rate_, you are constantly
+  _flushing your caches_ to bring in fresh memory to allocate objects that are
+  often very short lived.
+
+  * _The garbage collection cycles themselves will be *LOW cost*,_
+    BECAUSE most objects don't survive the first collection of the young
+    generation.
+
+  _IN SUMMARY,_
+  the *main cost* of /boxing/ in a garbage collected language is that allocations
+  can CAUSE
+  1. caches to be constantly flushed to bring in memory to allocate new objects,
+  2. cache misses that result from indirections, and
+  3. needing to reload objects that had previously been evicted to make room for
+     new allocations.
+
+** DONE 1.2 Use cases for zero-overhead types - 29
+CLOSED: [2025-04-13 Sun 19:50]
+- A /zero-overhead type/ can help you achieve
+  1. /type safety/ goals at compile time
+  2. _WITHOUT fear that_
+     you may end up hurting performance at run time through UNNECESSARY
+     /boxing/.
+
+- Common use cases of /zero-overhead type/ (in Scala 3, /opaque type/ is the
+  implementation):
+  * Use different types to represent diffrent group of values which originally
+    has the same Scala type. This can help improve distinguishability.
+
+  * Different units of measure.
+
+  * "narrowed type".
+    + =from Jian=
+      combined with /refined type/
+
+  * Wrap a /mutable object/ with another whose interface _effectively reduces
+    the state space of the underlying mutable,_ including
+    1. reducing it to one state, enforcing that the mutable backing object is
+       *UNMODIFIABLE*.
+
+    For example, ~IArray~ in Scala 3.
+
+** TODO 1.3 The ~AnyVal~ approach - 30 - =TODO: read ~AnyVal~ in book 1=
+- As described in Section 17.4 of Programming in Scala, Scala allows youto
+  define new AnyVal types. These types are defined as classes that ex- tend
+  AnyVal and follow certain rules. First, an AnyVal must wrap one (andonly
+  one) instance of some underlying type. Second, you can’t extend froman
+  AnyVal; they are implicitly final. Third, the only members you can
+  defineinside an AnyVal are methods. You can’t define inner classes inside
+  anAnyVal, nor can you define any field (other than by making the lone
+  classparameter of the underlying type public), nor can you define lazy vals.
+  Youcan mix in traits, but only if they are “universal.” A universal trait
+  extendsAny, has only methods as members, and contains no initialization
+  code.
+
+- Wherever possible, instances of user-defined AnyVals are represented
+  atruntime by their underlying type, but under certain circumstances, they
+  willbe boxed. When boxed, they will be an instance of the AnyVal
+  wrappertype. Thus although user-defined AnyVals allow you to define types
+  thatmay have reduced boxing overhead at runtime, they do not guarantee
+  zeroboxing overhead. In exchange, AnyVals can be used in ways that a
+  trulyzero-overhead type could not.
+
+- An AnyVal is compiled like an AnyRef with some extra static methods.For each
+  method declared in the AnyVal that isn’t inherited from a universaltrait
+  (these are called extractable methods), the compiler will create a
+  staticmethod that takes an extra parameter of the AnyVal’s underlying type.
+  Wherepossible, the compiler will use the underlying type rather than the
+  AnyValwrapper type to represent instances. When an extractable instance
+  method isinvoked while the instance is in its unboxed form, the compiler
+  invokes thestatic method instead, passing the underlying type as a
+  parameter.
+
+- The intent of the AnyVals design was to allow you to create a wrapperclass
+  that behaves like a regular class, but can sometimes be representedby its
+  underlying type, especially when extractable instance methods are
+  invoked.The motivating use case for this feature was the addition of
+  implicitclasses to Scala 2.10. An implicit class that extended AnyVal would
+  neverneed to box to invoke any extractable methods. This gave Scala’s
+  implicitconversions the same performance as enjoyed by extension methods in
+  otherlanguages. In Scala 3, however, implicit classes were replaced by the
+  specialextension method syntax described in Chapter 22 of Programming in
+  Scala.
+
+- AnyVals will be boxed in many situations. Universal traits allow you touse
+  AnyVals via more abstract types, as you can with AnyRefs, but it
+  requiresboxing whenever an AnyVal is used from such a type. You can also
+  overridenon-final methods declared in Any on an AnyVal—equals, hashCode,
+  andtoString—but any invocation of these methods will require a box.
+  Typetests on AnyVals will perform as expected—both in isInstanceOf calls
+  and in typed and constructor patterns—but any such use will require
+  boxingthe AnyVal. Because any of these uses could happen on an AnyVal used
+  viaan abstract type, whenever an abstract type is instantiated to an AnyVal,
+  theAnyVal will be boxed. For example, if the type parameter of foldLeft
+  onList is instantiated as an AnyVal type, the AnyVal instance passed as
+  theinitial zero parameter to foldLeft will be boxed. Another example is
+  whenyou place an AnyVal into a collection such as a List. Each element of
+  thecollection will be boxed to the AnyVal form. This is also true of Arrays,
+  evenif the underlying type is a Java primitive: in a Java array of Scala
+  AnyVals,each element will be boxed.
+
+- In summary, AnyVals let you avoid boxing in some situations, but notothers.
+  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime,it
+  could give you worse performance than a corresponding AnyRef,which is just
+  boxed once. User-defined AnyVals successfully made implicitconversions via
+  implicit classes as efficient as extension methods in otherlanguages, but
+  there was still a need in Scala for a truly zero-overhead type.Scala 3’s
+  answer was opaque types.
+
+=from Jian=
+In Scala 2, I, also including others, I guess, combine /value classes/ and
+/universal traits/, and use them as the role of /opaque types/ today.
+After reading this chapter, it is clear that /opaque types/ is a better way,
+EXECPT that it can't do something reflectively during /runtime/ -- /opaque
+types/ disappear after compilation.
+
+- /Value classes/ in current Scala:
+  =from Jian= This may change in the future because of JVM evolution.
+
+  /Classes/ that extend ~AnyVal~ and follow certain rules:
+  1. An ~AnyVal~ must wrap one (and only one) instance of some underlying type.
+
+  2. You can't extend from an ~AnyVal~; they are *implicitly final*.
+
+  3. The only members you can define inside an ~AnyVal~ are /methods/.
+     * You *can't* define /inner classes/ inside an ~AnyVal~,
+           *nor* can you define any /field/ (other than by making the lone class
+                 parameter of the underlying type public =from Jian= public by
+                 default),
+           *nor* can you define ~lazy val~'s.
+     * You can *mix in* /traits/, but only if they are "universal."
+       + universal trait :: a /trait/ extends ~Any~, has only /methods/ as
+         members, and _contains *NO* initialization code._ =???=
+
+- Wherever possible, instances of user-defined AnyVals are represented at
+  runtime by their underlying type, but under certain circumstances, they will
+  be boxed. When boxed, they will be an instance of the AnyVal wrapper type.
+  Thus although user-defined AnyVals allow you to define types that may have
+  reduced boxing overhead at runtime, they do not guarantee zero boxing
+  overhead. In exchange, AnyVals can be used in ways that a truly zero-overhead
+  type could not.
+
+- An ~AnyVal~ is compiled like an ~AnyRef~ with some extra static methods.
+  For each method declared in the ~AnyVal~ that isn’t inherited from a universal
+  trait (these are called extractable methods), the compiler will create a
+  static method that takes an extra parameter of the ~AnyVal~'s underlying type.
+  Where possible, the compiler will use the underlying type rather than the
+  ~AnyVal~ wrapper type to represent instances. When an extractable instance
+  method is invoked while the instance is in its unboxed form, the compiler
+  invokes the static method instead, passing the underlying type as a parameter.
+
+- The intent of the ~AnyVal~'s design was to allow you to create a wrapper class
+  that behaves like a regular class, but can sometimes be represented by its
+  underlying type, especially when extractable instance methods are invoked. The
+  motivating use case for this feature was the addition of implicit classes to
+  Scala 2.10. An implicit class that extended ~AnyVal~ would never need to box to
+  invoke any extractable methods. This gave Scala's implicit conversions the
+  same performance as enjoyed by extension methods in other languages. In Scala
+  3, however, implicit classes were replaced by the special extension method
+  syntax described in Chapter 22 of Programming in Scala.
+
+- AnyVals will be boxed in many situations. Universal traits allow you to use
+  AnyVals via more abstract types, as you can with AnyRefs, but it requires
+  boxing whenever an AnyVal is used from such a type. You can also override
+  non-final methods declared in Any on an AnyVal—equals, hashCode, and
+  toString—but any invocation of these methods will require a box. Type tests on
+  AnyVals will perform as expected—both in isInstanceOf calls and in typed and
+  constructor patterns—but any such use will require boxing the AnyVal. Because
+  any of these uses could happen on an AnyVal used via an abstract type,
+  whenever an abstract type is instantiated to an ~AnyVal~, the ~AnyVal~ will be
+  boxed. For example, if the type parameter of foldLeft on List is instantiated
+  as an AnyVal type, the AnyVal instance passed as the initial zero parameter to
+  foldLeft will be boxed. Another example is when you place an AnyVal into a
+  collection such as a List. Each element of the collection will be boxed to the
+  AnyVal form. This is also true of Arrays, even if the underlying type is a
+  Java primitive: in a Java array of Scala ~AnyVal~'s, each element will be
+  boxed.
+
+- In summary, AnyVals let you avoid boxing in some situations, but notothers.
+  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime,it
+  could give you worse performance than a corresponding AnyRef,which is just
+  boxed once. User-defined AnyVals successfully made implicitconversions via
+  implicit classes as efficient as extension methods in otherlanguages, but
+  there was still a need in Scala for a truly zero-overhead type.Scala 3’s
+  answer was opaque types.
+
+** DONE 1.4 The ~opaque type~ approach - 32
+CLOSED: [2025-04-13 Sun 20:23]
+- Syntax:
+  An /opaque type/ is declared _LIKE_ a /type alias/ with an extra modifier,
+  ~opaque~.
+  * Example:
+    #+begin_src scala
+      object DefScope:
+        opaque type LastName = String
+
+        object LastName:
+          def apply(s: String): LastName = s
+    #+end_src
+
+- =IMPORTANT=
+  The compiler will treat any use of an /opaque type/ in one of TWO
+  ways, DEPENDING ON *whether the use is INSIDE or OUTSIDE of _the opaque type's
+  definition scope_.*
+
+  * A /definition scope/ is the nearest enclosing /template/ in which an
+    opaque type is defined.
+    + template :: a class, trait, or singleton object.
+
+  * *INSIDE* /definition scope/, an /opaque type/ is treated as if it were a
+    /regular type alias/.
+
+    Inside /definitions scope/, the compiler behave like:
+    #+begin_src scala
+      object DefScope:
+        // Inside DefScope, LastName is treated as if it
+        // were a regular type alias, defined like this:
+        type LastName = String
+    #+end_src
+
+  * *OUTSIDE* of an /opaque type/'s definition scope, the compiler treats it as
+    if it were an /abstract type/.
+
+    Outside /definitions scope/, the compiler behave like:
+    #+begin_src scala
+      object DefScope:
+        // Outside DefScope, LastName is treated as if it
+        // were a abstract type, defined like this:
+        type LastName
+    #+end_src
+    + Essentially, OUTSIDE ~DefScope~ the compiler treats ~LastName~ and
+      ~String~ as two *completely different, unrelated* /types/.
+
+
+- Listing 1.1 - Opaque "tiny" types.
+  #+begin_src scala
+    object TinyTypes:
+      opaque type Anchor = String
+      opaque type Style = String
+      opaque type Text = String
+      opaque type Html = String
+
+      def title(text: Text, anchor: Anchor, style: Style): Html =
+        s"<a id='$anchor'><h1 class='$style'>$text</h1></a>"
+
+      object Anchor:
+        def apply(s: String): Anchor = s
+
+      object Style:
+        def apply(s: String): Style = s
+
+      object Text:
+        def apply(s: String): Text = s
+
+      object Html:
+        def apply(s: String): Html = s
+    end TinyTypes
+
+    import TinyTypes.*
+
+    //// Can't compile
+    // def wontCompile(text: Text, anchor: Anchor, style: Style): Html =
+    //   s"<a id='$anchor'><h1 class='$style'>$text</h1></a>"
+
+    title(Text("Opaque Types"), Anchor("chap:otps"), Style("bold"))
+  #+end_src
+
+** DONE 1.5 Extension methods on opaque types - 35
+CLOSED: [2025-04-13 Sun 20:40]
+- Every /opaque type/ is a /subtype/ of ~Any~, and you can call methods defined
+  on ~Any~ -- such as ~equals~, ~hashCode~, and ~toString~ -- on an /opaque
+  type/.
+  * Invoking these has the effect of invoking the like-named methods on the
+    backing type.
+
+- Because /opaque types/ are *NOT* /classes/, however, you *CANNOT* define any
+  other methods DIRECTLY on them. Instead, you must use /extension methods/.
+  Listing 1.2 shows an example in which /extension methods/ are added to two
+  /opaque types/ backed by ~Double~: ~Inches~ and ~Centimeters~.
+
+  * Listing 1.2 - Adding extension methods to Inches and Centimeters.
+    #+begin_src scala
+      object UnitsOfMeasure:
+        opaque type Inches = Double
+        object Inches:
+          def apply(inches: Double): Inches = inches
+          extension (inches: Inches)
+            def value: Double = inches
+            def toCentimeters: Centimeters = inches * 2.54
+
+        opaque type Centimeters = Double
+        object Centimeters:
+          def apply(centimeters: Double): Centimeters = centimeters
+          extension (centimeters: Centimeters)
+            def value: Double = centimeters
+            def toInches: Inches = centimeters / 2.54
+
+
+      import UnitsOfMeasure.*
+
+      val inches = Inches(42.0)     // 42.0 (type Inches)
+      inches.value                  // 42.0 (type Double)
+      val cm = inches.toCentimeters // 106.68 (type Centimeters)
+      cm.value                      // 106.68 (type Double)
+    #+end_src
+
+** DONE 1.6 Bounds on opaque types - 36
+CLOSED: [2025-04-13 Sun 21:02]
+- The DISTINCT /values/ of a /type/ are referred to as the /inhabitants of the
+  type/.
+
+- One important use case for /opaque types/ is defining a /type/ that represents
+  _a SUBSET of an *immutable* underlying type's values._
+  * For example,
+    you might want to define a type, ~NonEmptyString~, which can be backed by
+    any string value other than an empty string.
+
+- This means ~NonEmptyString~ could be seen as a subtype of ~String~.
+  * ~NonEmptyString~ would have one lessinhabitant than String: the empty
+    string.
+
+- In the case of ~NonEmptyString~, it would be convenient if the compiler could
+  treat it as a /subtype/ of ~String~, at least in terms of /automatic widening
+  conversions/:
+  If some method asks for a ~String~, and you have a ~NonEmptyString~ in hand,
+  it would be nice to just be able to pass the ~NonEmptyString~ as is,
+  *WITHOUT converting it to a String explicitly.* It will *always be a safe*
+  conversion, and intuitively a non-empty string is-a string.
+
+  * You can
+    _establish that sort of /subtyping relationship/ by including an /upper
+    boun/d on the ~NonEmptyString~ /opaque type/._
+
+    Listing 1.3 shows how you would do that for ~NonEmptyString~.
+    #+begin_src scala
+      object NonEmptyStrings:
+        opaque type NonEmptyString <: String = String
+
+        object NonEmptyString:
+          def apply(s: String): NonEmptyString =
+            require(s.nonEmpty)
+            s
+
+          def from(s: String): Option[NonEmptyString] =
+            if s.nonEmpty then Some(s) else None
+    #+end_src
+
+- Defined this way, you can now use a ~NonEmptyString~ where a String is
+  required:
+  #+begin_src scala
+    import NonEmptyStrings.*
+
+    val nes: NonEmptyString = NonEmptyString("hi")
+    val s: String = nes // A NonEmptyString isa String
+  #+end_src
+  =FIXME=: ~import NonEmptyStrings._~ ==> ~import NonEmptyStrings.*~
+
+- Note that adding an /upper bound/ to an /opaque type/ acts much like
+  the ~extends~ keyword does when defining a /class/.
+
+  In particular, an /opaque type/ "inherits" the interface of its /upper bound/.
+  #+begin_src scala
+    "hi".charAt(1)                 // i
+    NonEmptyString("hi").charAt(1) // i
+  #+end_src
+
+- If you want to add new methods to ~NonEmptyString~ that don't exist on
+  ~String~, define /extension methods/ on ~NonEmptyString~.
+
+** DONE 1.7 Peaking behind the curtain - 38
+CLOSED: [2025-04-14 Mon 00:37]
+- One _CONSEQUENCE_ of the _zero overhead promise_ for /opaque types/ is that
+  there will be *NO information available about an /opaque type/ at runtime.*
+
+  The ONLY information available _at runtime_ will be for *the opaque type's backing
+  object*.
+  Because of this absence of runtime information, reflection performed on an
+  object with an /opaque type/ will behave in ways that *may SURPRISE you.*
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  In short,
+  if you try to do anything reflectively with an /opaque type/, you will be
+  peering behind the curtain at the backing object's class.
+
+- Example:
+  Listing 1.4 · Opaque types for street and city.
+  #+begin_src scala
+    object StreetAndCity:
+      opaque type Street = String
+      opaque type City = String
+      object Street:
+        def apply(s: String): Street = s
+      object City:
+        def apply(s: String): City = s
+
+    import StreetAndCity.*
+
+    City("Paris").isInstanceOf[String] // true
+
+    "Rue Cler".isInstanceOf[City] // true
+    // -- Unchecked Warning: ------------------
+    // 15 |    "Rue Cler".isInstanceOf[City])
+    //    | ˆˆˆˆˆˆˆˆˆˆ
+    //    |the type test for StreetAndCity.City
+    //    |cannot be checked at runtime
+
+    Street("Rue Cler").isInstanceOf[City] // true
+    // -- Unchecked Warning: ------------------
+    // 16 |    Street("Rue Cler").isInstanceOf[City]
+    //    |    ˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆ
+    //    |the type test for StreetAndCity.City
+    //    |cannot be checked at runtime
+  #+end_src
+
+- Compare /opaque types/ with ~AnyVal~'s about in this scenario:
+  Note that with ~AnyVal~'s, these features do work consistently with
+  ~AnyRef~'s
+  BECAUSE the compiler inserts a /boxing/ operation before any such runtime
+  test. The /boxing/ operation establishes the runtime information that
+  enables ~isInstanceOf~ to work as expected, _but COSTS a /box/._
+
+  By contrast,
+  /opaque types/ _NEVER cost a /box/,_
+  BUT are *unable* to make ~isInstanceOf~ work as consistently with ~AnyRef~'s.
+
+** TODO 1.8 The ~Matchable~ trait - 39 - =TODO: read equality and multiversal equality first=
+** DONE 1.9 Conclusion - 44
+CLOSED: [2025-04-14 Mon 01:38]
+/Opaque types/ allow you to get benefit of /compile time checking/ *WITHOUT* any
+_runtime performance cost_,
+BUT don't fit well with Scala's tradition of allowing _pattern matches on
+~Any~._ The ~Matchable~ /universal trait/ was added in Scala 3 to mitigate this
+issue.
 
 * DONE 2 Inlining - 45
 CLOSED: [2025-04-08 Tue 14:57]
@@ -533,7 +1003,39 @@ CLOSED: [2025-04-08 Tue 14:56]
 CLOSED: [2025-04-08 Tue 14:57]
 
 * TODO 3 Metapgrogramming - 67
+Scala 3 includes several features that facilitate metaprogramming.
+/Inline methods/, described in the previous chapter, are one example.
+
+This chapter will introduce more _metaprogramming facilities_ of Scala 3,
+including /inline matches/, /transparent inlines/, and /other compile-time
+functionality/.
+
 ** 3.1 Inline matches - 67
+- One of the language features introduced in Scala 3 that gives you new and
+  powerful metaprogramming capabilities is ~inline match~.
+
+  * Although similar in many ways to ~inline if~,
+    ~inline match~ *differs in a significant way.*
+
+  * Like an ~inline if~, an ~inline match~ will
+    + either be REDUCED at compile time,
+    + or if that's not possible, result in a _compiler error_.
+
+  * But there's a big difference:
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    ~inline if~ is designed to preserve semantics; ~inline match~ is *not*.
+
+    Because ~inline if~ is aimed at /partial evaluation/, the compiler ensures the
+    if expression semantics will be the same whether you add or remove an ~inline~
+    modifier.
+
+    BY CONTRAST,
+    ~inline match~ is aimed at unlocking metaprogramming capabilities that are
+    POSSIBLE ONLY at compile time. As a result, the semantics of the match
+    expression *may be different* if you add or remove the ~inline~ modifier.
+
 ** 3.2 Transparent inline methods - 71
 ** 3.3 Constructor patterns in inline matches - 73
 ** 3.4 Compiler errors from inline matches - 75
