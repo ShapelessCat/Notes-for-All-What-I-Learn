@@ -660,8 +660,237 @@ CLOSED: [2022-05-21 Sat 00:54]
    Given the smaller selection of methods to call, they may have to choose a
    less than perfect match for their needs and write extra code to use it.
 
-** 11.3 Traits as stackable modifications - 239
+CLOSED: [2017-10-12 Thu 03:17]
+=From Jian= Except the phase /Java interface/, *interface* by itself in this
+section is used to represent its general meaning, NOT something for a
+specific language.
+
+- One major use of /traits/ is to automatically add (concrete) /methods/ to a
+  /class/ that extends it.
+
+- Thin vs Rich:
+  Consider the trade-off between the _implementers_ and the _clients_ of an
+  interface.
+
+  + A *rich* interface
+    has _MANY_ /methods/, which make it convenient for the _callers (clients)_
+    -- they have more chance to find /methods/ that can fit their requirement
+    exactly.
+
+  + A *thin* interface,
+    on the other hand, has _FEWER_ /methods/, and thus
+    * it is easier for the _implementers_ whoes load is light.
+
+    * more work are left for the _clients (clients)_, who call into a *thin*
+      interface, however, have to write more code -- comparing the the *rich*
+      interface, they have less chance to find /methods/ that can fit their
+      requirement exactly -- they can choose to implement the thin interface
+      required methods, or write a more fittable one -- either of them require
+      their own coding.
+
+- Unlike in Java, adding a /concrete method/ to a /Scala trait/ is a *one-time
+  effort* -- you only need to implement the /method/ once, in the /trait/
+  itself, instead of needing to reimplement it for every /class/ that mixes in
+  the /trait/.
+
+  Thus, *rich* interfaces are _less_ work to provide in Scala than in a
+  language without /traits/.
+
+- =From Jian=
+  The discussion above about "Thin vs Rich" is a discussion in general.
+  For Scala, even the /rich interface (trait)/ doesn't add load to the
+  _implementer_, a reasonable ~trait~
+
+  + has a *STILL* _small number_ of /abstract methods/ --
+    the part the implementer need to finish -- the coding load is still light.
+
+    This is _the (still) thin part_ of the trait's interface
+
+    and
+
+  - defines a potentially _large number_ of /concrete methods/,
+    *ALL _implemented in terms of_ the /abstract methods/.*
+
+  - then you can mix the enrichment /trait/ into a /class/, *implement the thin
+    portion of the interface*, and end up with a /class/ that has all of the
+    rich interface available.
+
+** 11.3 Traits as stackable modifications - 239 =Re-Read=
+CLOSED: [2017-10-12 Thu 03:04]
+- One major use of traits:
+  turning a thin interface into a rich one.
+
+- Now turn to a second major use of traits:
+  providing stackable modifications to classes.
+
+- Traits let you modify the methods of a class, and they do so in a way that
+  allows you to stack those modifications with each other (order matters).
+
+- As an example,
+  _consider stacking modifications to a queue of integers_.
+
+  + Two basic operations to the queue (FIFO):
+    * ~put~
+    * ~get~
+
+  + Code:
+    #+BEGIN_SRC scala
+      abstract class IntQueue {
+        def get(): Int
+        def put(x: Int)
+      }
+
+      import scala.collection.mutable.ArrayBuffer
+
+      class BasicIntQueue extends IntQueue {
+        private val buf = new ArrayBuffer[Int]
+        def get() = buf.remove(0)
+        def put(x: Int) = { buf += x }
+      }
+    #+END_SRC
+
+  + Given a class that implements such a queue, you could define traits to
+    perform modifications such as these:
+    * ~Doubling~: double all integers that are put in the queue
+    * ~Incrementing~: increment all integers that are put in the queue
+    * ~Filtering~: filter out negative integers from a queue
+
+    These THREE traits represent /modifications/, because they modify the
+    behavior of an underlying queue class rather than defining a full queue
+    class themselves.
+
+    The three are also /stackable/ -- you can select any of the three you
+    like, mix them into a class, and obtain a new class that has all of the
+    modifications you chose.
+
+  + The implementations of three traits.
+    #+BEGIN_SRC scala
+      trait Doubling extends IntQueue {
+        abstract override def put(x: Int) = { super.put(2 * x) }
+      }
+
+      trait Incrementing extends IntQueue {
+        abstract override def put(x: Int) = { super.put(x + 1) }
+      }
+
+      trait Filtering extends IntQueue {
+        abstract override def put(x: Int) = {
+          if (x >= 0) super.put(x)
+        }
+      }
+    #+END_SRC
+
+    * If a /trait/ extends a class A, _ONLY_ classes that extends A can mix in
+      this /trait/. For instance, you can mix ~Doubling~ into ~BasicIntQueue~,
+      but NOT into ~Rational~.
+
+    * If a /trait/ can have ~super~ call on a method declared ~abstract~.
+      =TODO= =???=
+      - Such calls are illegal for normal /classes/ because they will
+        certainly fail at run time.
+        =From Jian= since the current method ~m~ is ~abstract~, the ~m~
+        method of the superclass is also ~abstract~.
+
+      - For a trait, however, since ~super~ calls is dynamically bound, such a
+        call can actually succeed.
+
+      In this example the ~super~ call in ~trait Doubling~ will work so long
+      as _the trait is mixed in after another trait or class that gives a
+      concrete definition to the method_.
+
+      This arrangement is frequently needed with traits that implement stackable
+      modifications. To tell the compiler you are doing this on purpose, you
+      must mark such methods as ~abstract override~. _This combination of
+      modifiers is only allowed for members of traits, not classes_, and it
+      means that the trait must be mixed into some class that has a concrete
+      definition of the method in question.
+
+  + Run and check the result:
+    * Non-stacked
+      #+BEGIN_SRC scala
+        class MyQueue extends BasicIntQueue with Doubling
+
+        val queue = new MyQueue
+        // OR //
+        // Use anonymous class `val queue = new BasicIntQueue with Doubling`
+
+        queue.put(10)
+        queue.get()
+        // 20
+      #+END_SRC
+
+    * Stacked
+      #+BEGIN_SRC scala
+        val queue = (new BasicIntQueue
+                         with Incrementing with Filtering)
+        queue.put(-1)
+        queue.put(0)
+        queue.put(1)
+
+        queue.get()
+        // Int = 1
+        queue.get()
+        // Int = 2
+      #+END_SRC
+
+    * Stacked (different order)
+      #+BEGIN_SRC scala
+        val queue = (new BasicIntQueue
+                         with Filtering with Incrementing)
+        queue.put(-1)
+        queue.put(0)
+        queue.put(1)
+
+        queue.get()
+        // Int = 0
+        queue.get()
+        // Int = 1
+        queue.get()
+        // Int = 2
+      #+END_SRC
+
+  + Rules (roughly): =TODO= see the next section for details
+    + traits further to the right take effect first.
+      When you call a method on a class with mixins, the method in the trait
+      furthest to the right is called first.
+
+    + If that method calls ~super~, it invokes the method in the next trait to
+      its left, and so on.
+
+- Since _the order of traits is significant_,
+  you must keep eyes open for opportunities to arrange code as stackable
+  modifications.
+
+- mixin :: a /trait/ that is _mixed into_ a /class/ (from footnote 2).
+
 ** 11.4 Why not multiple inheritance? - 243
+CLOSED: [2018-03-21 Wed 23:13]
+/Traits/ are a way to inherit from multiple class-like constructs, but they
+*differ* in important ways from the /multiple inheritance/ present in many
+languages.
+
+- One _DIFFERENCE_ is especially important:
+  the *interpretation* of ~super~.
+
+- The precise order of the /linearization/ is described in the *language
+  specification*.
+
+- Example:
+  #+BEGIN_SRC scala
+    class Animal
+    trait Furry extends Animal
+    trait HasLegs extends Animal
+    trait FourLegged extends HasLegs
+    class Cat extends Animal with Furry with FourLegged
+  #+END_SRC
+
+  Left to Right:
+  1. ~Animal~: ~Animal~ --> ~AnyRef~ --> ~Any~
+
+  2. ~Furry~: ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
+
+  3. ~FourLegged~: ~FourLegged~ --> ~HasLegs~ ===> ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
+
 ** 11.5 Trait parameters - 248
 ** 11.6 Conclusion - 250
    
@@ -670,322 +899,92 @@ CLOSED: [2022-05-21 Sat 00:54]
 ** DONE 12 Traits - 257
  CLOSED: [2018-03-21 Wed 23:51]
 ** ---------------------------
-** DONE 12.2 Thin versus rich interfaces - 260
-   CLOSED: [2017-10-12 Thu 03:17]
-   =From Jian= Except the phase /Java interface/, *interface* by itself in this
-   section is used to represent its general meaning, NOT something for a
-   specific language.
-
-   - One major use of /traits/ is to automatically add (concrete) /methods/ to a
-     /class/ that extends it.
-
-   - Thin vs Rich:
-     Consider the trade-off between the _implementers_ and the _clients_ of an
-     interface.
-
-     + A *rich* interface
-       has _MANY_ /methods/, which make it convenient for the _callers (clients)_
-       -- they have more chance to find /methods/ that can fit their requirement
-       exactly.
-
-     + A *thin* interface,
-       on the other hand, has _FEWER_ /methods/, and thus
-       * it is easier for the _implementers_ whoes load is light.
-
-       * more work are left for the _clients (clients)_, who call into a *thin*
-         interface, however, have to write more code -- comparing the the *rich*
-         interface, they have less chance to find /methods/ that can fit their
-         requirement exactly -- they can choose to implement the thin interface
-         required methods, or write a more fittable one -- either of them require
-         their own coding.
-
-   - Unlike in Java, adding a /concrete method/ to a /Scala trait/ is a *one-time
-     effort* -- you only need to implement the /method/ once, in the /trait/
-     itself, instead of needing to reimplement it for every /class/ that mixes in
-     the /trait/.
-
-     Thus, *rich* interfaces are _less_ work to provide in Scala than in a
-     language without /traits/.
-
-   - =From Jian=
-     The discussion above about "Thin vs Rich" is a discussion in general.
-     For Scala, even the /rich interface (trait)/ doesn't add load to the
-     _implementer_, a reasonable ~trait~
-
-     + has a *STILL* _small number_ of /abstract methods/ --
-       the part the implementer need to finish -- the coding load is still light.
-
-       This is _the (still) thin part_ of the trait's interface
-
-       and
-
-     - defines a potentially _large number_ of /concrete methods/,
-       *ALL _implemented in terms of_ the /abstract methods/.*
-
-     - then you can mix the enrichment /trait/ into a /class/, *implement the thin
-       portion of the interface*, and end up with a /class/ that has all of the
-       rich interface available.
-
 ** DONE 12.3 Example: Rectangular objects - 261
-   CLOSED: [2017-10-12 Thu 01:21]
+CLOSED: [2017-10-12 Thu 01:21]
+
 ** DONE 12.4 The ~Ordered~ trait - 264
-   CLOSED: [2017-10-12 Thu 01:38]
-   Do comparison manually:
+CLOSED: [2017-10-12 Thu 01:38]
+Do comparison manually:
 
-   footnote 1: This example is based on the ~Rational~ class shown in Listing 6.5
-   on page 151, with ~equals~, ~hashCode~, and modifications to ensure a
-   _positive_ ~denom~ added.
-   #+BEGIN_SRC scala
-     class Rational(n: Int, d: Int) {
-       def < (that: Rational) =
-         this.numer * that.denom < that.numer * this.denom
+footnote 1: This example is based on the ~Rational~ class shown in Listing 6.5
+on page 151, with ~equals~, ~hashCode~, and modifications to ensure a
+_positive_ ~denom~ added.
+#+BEGIN_SRC scala
+  class Rational(n: Int, d: Int) {
+    def < (that: Rational) =
+      this.numer * that.denom < that.numer * this.denom
 
-       def > (that: Rational) = that < this
+    def > (that: Rational) = that < this
 
-       def <= (that: Rational) = (this < that) || (this == that)
+    def <= (that: Rational) = (this < that) || (this == that)
 
-       def >= (that: Rational) = (this > that) || (this == that)
-     }
-   #+END_SRC
+    def >= (that: Rational) = (this > that) || (this == that)
+  }
+#+END_SRC
 
-   Use the ~Ordered~ trait
-   #+BEGIN_SRC scala
-     class Rational(n: Int, d: Int) extends Ordered[Rational] {
-       //...
-       def compare(that: Rational) =
-         (this.numer * that.denom) - (that.numer * this.denom)
-     }
-   #+END_SRC
-
-** DONE 12.5 Traits as stackable modifications - 266 =Re-Read=
-   CLOSED: [2017-10-12 Thu 03:04]
-   - One major use of traits:
-     turning a thin interface into a rich one.
-
-   - Now turn to a second major use of traits:
-     providing stackable modifications to classes.
-
-   - Traits let you modify the methods of a class, and they do so in a way that
-     allows you to stack those modifications with each other (order matters).
-
-   - As an example,
-     _consider stacking modifications to a queue of integers_.
-
-     + Two basic operations to the queue (FIFO):
-       * ~put~
-       * ~get~
-
-     + Code:
-       #+BEGIN_SRC scala
-         abstract class IntQueue {
-           def get(): Int
-           def put(x: Int)
-         }
-
-         import scala.collection.mutable.ArrayBuffer
-
-         class BasicIntQueue extends IntQueue {
-           private val buf = new ArrayBuffer[Int]
-           def get() = buf.remove(0)
-           def put(x: Int) = { buf += x }
-         }
-       #+END_SRC
-
-     + Given a class that implements such a queue, you could define traits to
-       perform modifications such as these:
-       * ~Doubling~: double all integers that are put in the queue
-       * ~Incrementing~: increment all integers that are put in the queue
-       * ~Filtering~: filter out negative integers from a queue
-
-       These THREE traits represent /modifications/, because they modify the
-       behavior of an underlying queue class rather than defining a full queue
-       class themselves.
-
-       The three are also /stackable/ -- you can select any of the three you
-       like, mix them into a class, and obtain a new class that has all of the
-       modifications you chose.
-
-     + The implementations of three traits.
-       #+BEGIN_SRC scala
-         trait Doubling extends IntQueue {
-           abstract override def put(x: Int) = { super.put(2 * x) }
-         }
-
-         trait Incrementing extends IntQueue {
-           abstract override def put(x: Int) = { super.put(x + 1) }
-         }
-
-         trait Filtering extends IntQueue {
-           abstract override def put(x: Int) = {
-             if (x >= 0) super.put(x)
-           }
-         }
-       #+END_SRC
-
-       * If a /trait/ extends a class A, _ONLY_ classes that extends A can mix in
-         this /trait/. For instance, you can mix ~Doubling~ into ~BasicIntQueue~,
-         but NOT into ~Rational~.
-
-       * If a /trait/ can have ~super~ call on a method declared ~abstract~.
-         =TODO= =???=
-         - Such calls are illegal for normal /classes/ because they will
-           certainly fail at run time.
-           =From Jian= since the current method ~m~ is ~abstract~, the ~m~
-           method of the superclass is also ~abstract~.
-
-         - For a trait, however, since ~super~ calls is dynamically bound, such a
-           call can actually succeed.
-
-         In this example the ~super~ call in ~trait Doubling~ will work so long
-         as _the trait is mixed in after another trait or class that gives a
-         concrete definition to the method_.
-
-         This arrangement is frequently needed with traits that implement stackable
-         modifications. To tell the compiler you are doing this on purpose, you
-         must mark such methods as ~abstract override~. _This combination of
-         modifiers is only allowed for members of traits, not classes_, and it
-         means that the trait must be mixed into some class that has a concrete
-         definition of the method in question.
-
-     + Run and check the result:
-       * Non-stacked
-         #+BEGIN_SRC scala
-           class MyQueue extends BasicIntQueue with Doubling
-
-           val queue = new MyQueue
-           // OR //
-           // Use anonymous class `val queue = new BasicIntQueue with Doubling`
-
-           queue.put(10)
-           queue.get()
-           // 20
-         #+END_SRC
-
-       * Stacked
-         #+BEGIN_SRC scala
-           val queue = (new BasicIntQueue
-                            with Incrementing with Filtering)
-           queue.put(-1)
-           queue.put(0)
-           queue.put(1)
-
-           queue.get()
-           // Int = 1
-           queue.get()
-           // Int = 2
-         #+END_SRC
-
-       * Stacked (different order)
-         #+BEGIN_SRC scala
-           val queue = (new BasicIntQueue
-                            with Filtering with Incrementing)
-           queue.put(-1)
-           queue.put(0)
-           queue.put(1)
-
-           queue.get()
-           // Int = 0
-           queue.get()
-           // Int = 1
-           queue.get()
-           // Int = 2
-         #+END_SRC
-
-     + Rules (roughly): =TODO= see the next section for details
-       + traits further to the right take effect first.
-         When you call a method on a class with mixins, the method in the trait
-         furthest to the right is called first.
-
-       + If that method calls ~super~, it invokes the method in the next trait to
-         its left, and so on.
-
-   - Since _the order of traits is significant_,
-     you must keep eyes open for opportunities to arrange code as stackable
-     modifications.
-
-   - mixin :: a /trait/ that is _mixed into_ a /class/ (from footnote 2).
-
-** DONE 12.6 Why not multiple inheritance? - 270
-   CLOSED: [2018-03-21 Wed 23:13]
-   /Traits/ are a way to inherit from multiple class-like constructs, but they
-   *differ* in important ways from the /multiple inheritance/ present in many
-   languages.
-
-   - One _DIFFERENCE_ is especially important:
-     the *interpretation* of ~super~.
-
-   - The precise order of the /linearization/ is described in the *language
-     specification*.
-
-   - Example:
-     #+BEGIN_SRC scala
-       class Animal
-       trait Furry extends Animal
-       trait HasLegs extends Animal
-       trait FourLegged extends HasLegs
-       class Cat extends Animal with Furry with FourLegged
-     #+END_SRC
-
-     Left to Right:
-     1. ~Animal~: ~Animal~ --> ~AnyRef~ --> ~Any~
-
-     2. ~Furry~: ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
-
-     3. ~FourLegged~: ~FourLegged~ --> ~HasLegs~ ===> ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
+Use the ~Ordered~ trait
+#+BEGIN_SRC scala
+  class Rational(n: Int, d: Int) extends Ordered[Rational] {
+    //...
+    def compare(that: Rational) =
+      (this.numer * that.denom) - (that.numer * this.denom)
+  }
+#+END_SRC
 
 ** DONE 12.7 To trait or not to trait? - 274 =IMPORTANT=
-   CLOSED: [2018-03-21 Wed 23:50]
-   There is *NO* firm rules about the choice of using /trait/ or /abstract class/
-   for a specific use case. ONLY guidelines:
+CLOSED: [2018-03-21 Wed 23:50]
+There is *NO* firm rules about the choice of using /trait/ or /abstract class/
+for a specific use case. ONLY guidelines:
 
-   - If the behavior will _NOT be reused_, then make it a /concrete class/. It
-     is not reusable behavior after all.
+- If the behavior will _NOT be reused_, then make it a /concrete class/. It
+  is not reusable behavior after all.
 
-   - If it might be reused in _multiple, *unrelated* classes_, make it a /trait/.
-     Only traits can be mixed into different parts of the class hierarchy.
+- If it might be reused in _multiple, *unrelated* classes_, make it a /trait/.
+  Only traits can be mixed into different parts of the class hierarchy.
 
-   - If you want to _inherit from it in Java code_, use an /abstract class/.
-     Since traits with code do not have a close Java analog, it tends to be
-     *AWKWARD* to _inherit from a trait in a Java class_.
+- If you want to _inherit from it in Java code_, use an /abstract class/.
+  Since traits with code do not have a close Java analog, it tends to be
+  *AWKWARD* to _inherit from a trait in a Java class_.
 
-     =TODO= Learn the conversion rules from Scala /trait/ to Java code!!! =TODO=
+  =TODO= Learn the conversion rules from Scala /trait/ to Java code!!! =TODO=
 
-     Inheriting from a Scala class, meanwhile, is exactly like inheriting from a
-     Java class.
+  Inheriting from a Scala class, meanwhile, is exactly like inheriting from a
+  Java class.
 
-     *As one EXCEPTION*,
-     _a /Scala trait/ with only abstract members translates directly to a /Java
-     interface/_, so you should feel free to define such /traits/ even if you
-     expect Java code to inherit from it.
-     =TODO= =IMPORTANT=
-     See Chapter 31 for more information on working with Java and Scala together.
+  *As one EXCEPTION*,
+  _a /Scala trait/ with only abstract members translates directly to a /Java
+  interface/_, so you should feel free to define such /traits/ even if you
+  expect Java code to inherit from it.
+  =TODO= =IMPORTANT=
+  See Chapter 31 for more information on working with Java and Scala together.
 
-   - If you plan to _distribute it in compiled form_, and you expect outside groups
-     to write classes inheriting from it, you might lean towards using an
-     /abstract class/.
+- If you plan to _distribute it in compiled form_, and you expect outside groups
+  to write classes inheriting from it, you might lean towards using an
+  /abstract class/.
 
-     The issue is that when a trait gains or loses a member, any classes that
-     inherit from it must be recompiled, even if they have not changed.
+  The issue is that when a trait gains or loses a member, any classes that
+  inherit from it must be recompiled, even if they have not changed.
 
-     If outside clients will only call into the behavior, instead of inheriting
-     from it, then using a trait is fine.
+  If outside clients will only call into the behavior, instead of inheriting
+  from it, then using a trait is fine.
 
-   - *Default Choice* if NOT used in Java code:
-     If you _still do not know, after considering the above_,
-     then START BY making it as a /trait/.
+- *Default Choice* if NOT used in Java code:
+  If you _still do not know, after considering the above_,
+  then START BY making it as a /trait/.
 
-     You can always change it later, and in general using a /trait/ _keeps more
-     options open_.
+  You can always change it later, and in general using a /trait/ _keeps more
+  options open_.
 
 ** DONE 12.8 Conclusion - 275
-   CLOSED: [2017-10-12 Thu 03:39]
-   _Mix in multiple traits_ are similar to /multiple inheritance/.
-   But because /traits/ interpret ~super~ using /linearization/, they both
-   + _AVOID_ some of the difficulties of traditional multiple inheritance
-     and
-   + _ALLOW_ you to stack behaviors.
+CLOSED: [2017-10-12 Thu 03:39]
+_Mix in multiple traits_ are similar to /multiple inheritance/.
+But because /traits/ interpret ~super~ using /linearization/, they both
+- _AVOID_ some of the difficulties of traditional multiple inheritance
+  and
+- _ALLOW_ you to stack behaviors.
 
-* TODO 12 Packages, Imports, and Exports - 251 - _READING_
+* DONE 12 Packages, Imports, and Exports - 251
+CLOSED: [2025-04-17 Thu 10:49]
 - When working on a program, especially a large one, it is important to
   *minimize* /coupling/ -- the extent to which the various parts of the program
   rely on the other parts. _LOW coupling_ *reduces* the risk that a small,
@@ -1601,22 +1600,271 @@ CLOSED: [2025-04-16 Wed 20:50]
 - =NEXT=
   In the next chapter, we'll turn our attention to /pattern matching/.
 
-* TODO 13 Pattern Matching - 270
-** TODO 13.1 A simple example - 270
-*** Case classes - 271
-*** Pattern matching - 272
-*** ~match~ compared to ~switch~ - 274
+* DONE 13 Pattern Matching - 270
+CLOSED: [2025-04-17 Thu 19:13]
+- This chapter describes
+  * /case classes/ and
+  * /pattern matching/,
+  constructs support you when writing _regular, non-encapsulated data structures._
 
-** TODO 13.2 Kinds of patterns - 274
+- These two constructs are particularly helpful for _tree-like recursive data_.
+
+- /Case classes/ are Scala's way to allow /pattern matching/ on objects
+  _WITHOUT_ requiring a large amount of boilerplate.
+
+- This chapter
+  1. starts with an example of case classes and pattern matching.
+  2. It then goes through all of the kinds of _patterns_ that are supported,
+  3. talks about the role of /sealed classes/,
+  4. discusses /enums/, ~Option~'s, and
+  5. shows some _NON-OBVIOUS places_ in the language where /pattern matching/ is used.
+  6. Finally, a larger, more realistic example of /pattern matching/ is shown.
+
+** DONE 13.1 A simple example - 270
+CLOSED: [2025-04-17 Thu 11:25]
+#+begin_src scala
+  trait Expr
+  case class Var(name: String) extends Expr
+  case class Num(number: Double) extends Expr
+  case class UnOp(operator: String, arg: Expr) extends Expr
+  case class BinOp(operator: String, left: Expr, right: Expr) extends Expr
+#+end_src
+Listing 13.1 · Defining case classes.
+
+*** Case classes - 271
+- The ~case~ modifier makes the Scala compiler _ADD_ some syntactic conveniences
+  to your /class/.
+  * Adds a /factory method/ with the name of the /class/.
+    Use a noiseless way to construct a new object, especially when nesting them:
+    #+begin_src scala
+      val v = Var("x")
+
+      val op = BinOp("+", Num(1), v)
+    #+end_src
+
+  * The parameter of a /case class/ implicitly get a ~val~ prefix.
+
+  * The compiler adds "natural" implementations of methods ~toString~,
+    ~hashCode~, and ~equals~ to your /class/.
+    + Since ~==~ in Scala always delegates to ~equals~, this means that elements
+      of /case classes/ are always compared structurally.
+
+  * Finally, the compiler adds a ~copy~ method to your /class/ for making
+    modified copies.
+    #+begin_src scala
+      op.copy(operator = "-") // BinOp("-", Num(1.0), Var("x"))
+    #+end_src
+
+- All these conventions add a lot of convenience -- at a small price.
+
+  You have to write the ~case~ modifier, and your /classes/ and /objects/
+  _become a bit LARGER._
+
+  * They are _LARGER_
+    BECAUSE
+    + additional methods are generated and
+    + an /implicit field/ is added for each /constructor parameter/.
+
+  However, the biggest advantage of case classes is that they support pattern
+  matching.
+
+*** Pattern matching - 272
+- Example:
+  #+begin_src scala
+    def simplifyTop(expr: Expr): Expr =
+      expr match
+        case UnOp("-", UnOp("-", e)) => e // Double negation
+        case BinOp("+", e, Num(0)) => e // Adding zero
+        case BinOp("*", e, Num(1)) => e // Multiplying by one
+        case _ => expr
+  #+end_src
+  Listing 13.2 · The simplifyTop function, which does a pattern match.
+
+- Imagine trying to implement this same functionality using the /visitor design/
+  pattern!
+  =TODO=
+  =IMPORTANT=
+
+  Almost as awkward, imagine implementing it as a long sequence of ~if~
+  statements, _type tests_, and _type casts_.
+
+*** ~match~ compared to ~switch~ - 274
+- /Match expressions/ can be seen as a *generalization* of /Java-style switches/.
+
+- A /Java-style switch/ can be _naturally expressed_ as a /match expression/,
+  where each /pattern/ is a constant and the last pattern may be a wildcard (which
+  represents the default case of the switch).
+
+- However, there are *THREE differences* to keep in mind:
+  1. ~match~ is an /expression/ in Scala (i.e., it always results in a value).
+  2. Scala's alternative expressions *NEVER "fall through"* into the next
+     ~case~.
+  3. If none of the patterns match, an exception named ~MatchError~ is thrown.
+
+** DONE 13.2 Kinds of patterns - 274
+CLOSED: [2025-04-17 Thu 13:56]
 *** Wildcard patterns - 275
+The ~_~ pattern.
+
 *** Constant patterns - 275
+A /constant pattern/ matches only itself.
+Any /literal/ may be used as a constant.
+
 *** Variable patterns - 276
+- Q :: How does the Scala compiler know that a symbol, like ~Pi~ (from
+       ~scala.math~), is a constant?
+
+- A :: Scala uses a simple lexical rule for disambiguation:
+  * a _simple name_ starting with a *lowercase letter* is taken to be a /pattern
+    variable/;
+  * all other references are taken to be /constants/.
+    + You can still use a name starting with a lowercase letter for a /pattern
+      constant/, if you need to, by using one of two tricks (~`~).
+
+    + Or if it is a member of an object, like ~this.pi~ (if this is a constant),
+      it can be considered as a /pattern constant/ even if it starts with a
+      lowercase letter.
+
+- A SUMMARY (till now) about the usage of _back-tick syntax_:
+  As you can see, the back-tick syntax for /identifiers/ is used for two
+  different purposes in Scala (=from Jian= both of them are used to) *help you
+  code your way out of unusual circumstances*.
+
+  * Here you can see
+    it can be used to *treat a lowercase identifier as a constant* in a /pattern
+    match/.
+
+  * Earlier on, in Section 6.10, you saw that
+    it can also be used to *treat a keyword as an _ordinary identifier_,* e.g.,
+    writing ~Thread.`yield`()~ treats ~yield~ as an /identifier/ rather than a
+    /keyword/.
+
 *** Constructor patterns - 278
+The most commonly used patterns.
+
 *** Sequence patterns - 279
+~case List(0, _, _)~
+~case List(0, _*)~
+
 *** Tuple patterns - 279
-*** Typed patterns - 280
+*** Typed patterns - 280 - =REVIEW=
+#+begin_src scala
+  def generalSize(x: Any) =
+    x match
+      case s: String => s.length
+      case m: Map[_, _] => m.size
+      case _ => 1
+#+end_src
+
+- =IMPORTANT=
+  As you will have noted by now, writing /type tests and casts/ is RATHER
+  VERBOSE in Scala.
+
+  _That's INTENTIONAL_ because *it is NOT ENCOURAGED practice.*
+
+  *You are usually BETTER OFF using a /pattern match/ with a /typed pattern/.*
+  That's *particularly true* if you need to do both a /type test/ and a /type
+  cast/, because both operations are then rolled into a single pattern match.
+
+- *Type ascription*
+  * *Casts are inherently unsafe.*
+    It can compile but fail at runtime!
+
+  * An ALTERNATIVE to /casts/ that is *always safe* is /type ascription/: any
+    invalid ascription will give you a compiler error, not a runtime exception.
+    #+begin_src scala
+      3: String
+
+      // 1 |3: String
+      //   |^
+      //   |Found:    (3 : Int)
+      //   |Required: String
+    #+end_src
+
+    + A /type ascription/ will compile in only TWO cases:
+      1. you can use a /type ascription/ to *widen* a type to one of its
+         /supertypes/. For example:
+         #+begin_src scala
+           // In REPL
+
+           Var("x"): Expr // Expr is a supertype of Var
+           // val res0: Expr = Var(x)
+         #+end_src
+
+      2. you can use a /type ascription/ to *implicitly convert* one type
+         to another, such as implicitly converting an ~Int~ to ~Long~:
+         #+begin_src scala
+           // In REPL
+
+           3: Long
+           // val res1: Long = 3
+         #+end_src
+
+- /Type erasure/
+  * You *cannot* simple check if a map with specific element types because of
+    /type erasure/.
+    #+begin_src scala
+      def isIntIntMap(x: Any) =
+        x match
+          case m: Map[Int, Int] => true
+          case _ => false
+    #+end_src
+    + Compilation warning:
+      #+begin_src text
+        def isIntIntMap(x: Any): Boolean
+        3 | case m: Map[Int, Int] => true
+          |      ˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆˆ
+          |      the type test for Map[Int, Int] cannot be
+          |      checked at runtime
+      #+end_src
+
+    + This can show the "cannot be checked at runtime" fact:
+      #+begin_src scala
+        isIntIntMap(Map(1 > 1))         // true
+        isIntIntMap(Map("abc" > "abc")) // true
+      #+end_src
+
+  * The Only EXCEPTION:
+    _The only exception to the erasure rule is arrays,_
+    BECAUSE _they are *handled specially* in Java as well as in Scala._
+    *The /element type/ of an ARRAY is _stored with the array value_,*
+    so you can pattern match on it. Here's an example:
+    #+begin_src scala
+      def isStringArray(x: Any) =
+        x match
+          case a: Array[String] => "yes"
+          case _ => "no"
+
+      isStringArray(Array("abc"))   // yes
+      isStringArray(Array(1, 2, 3)) // no
+    #+end_src
+
+- =IMPORTANT=
+  =from Jian=
+  The bellow is NOT mentioned here in this chapter.
+
+  To address the /type erasure/ issue, Scala 2 use ~ClassTag~, and Scala 3
+  introduces ~TypeTest~. Since ~ClassTag~ is unsound and ~TypeTest~ fixes it.
+  Should use ~TypeTest~ if in Scala 3!!!
+
+  * Learn more about ~TypeTest~:
+    https://docs.scala-lang.org/scala3/reference/other-new-features/type-test.html
+    =TODO=
+    =TODO=
+    =TODO=
+
 *** Variable binding - 284
-- =from Jian=
+- Use ~@~
+  Example:
+  #+begin_src scala
+    expr match
+      case UnOp("abs", e @ UnOp("abs", _)) => e
+      case _ =>
+  #+end_src
+  Listing 13.13 · A pattern with a variable binding (via the ~@~ sign).
+
+- Anoter /variable binding/ (in general) without using ~@~:
+  =from Jian=
   =IMPORTANT=
   Should add a string interploation-like variable binding form added in some
   version of Scala 2.12 or 2.13.
@@ -1628,17 +1876,151 @@ CLOSED: [2025-04-16 Wed 20:50]
     // y
   #+end_src
 
-** TODO 13.3 Pattern guards - 284
-** TODO 13.4 Pattern overlaps - 285
-** TODO 13.5 Sealed classes - 287
-** TODO 13.6 Pattern matching ~Option~'s - 289
-** TODO 13.7 Patterns everywhere - 291
-*** Patterns in variable definitions - 291
-*** Case sequences as partial functions - 291
-*** Patterns in for expressions - 294
+** DONE 13.3 Pattern guards - 284
+CLOSED: [2025-04-17 Thu 14:00]
+Scala restricts patterns to be /linear/:
+a /pattern variable/ may only appear *once* in a pattern.
 
-** TODO 13.8 A larger example - 295
-** TODO 13.9 Conclusion - 303
+Use /pattern guard/ to do further check.
+
+You can't write a match case like:
+~case BinOp("+", x, x) => ..~
+
+You should write it with /pattern guard/:
+~case BinOp("+", x, y) if x == y => ..~
+
+** DONE 13.4 Pattern overlaps - 285
+CLOSED: [2025-04-17 Thu 18:41]
+The order of cases matters.
+
+** DONE 13.5 Sealed classes - 287
+CLOSED: [2025-04-17 Thu 18:48]
+Make the /superclass/ of your /case classes/ *sealed*,
+and then the compiler can do /exhaustivity checking/ when applying pattern
+matching.
+
+- The ~sealed~ keyword, therefore, is often a license to /pattern match/.
+
+- Use ~@unchecked~ to suppress /exhaustivity checking/ for /pattern matching/.
+
+** DONE 13.6 Pattern matching ~Option~'s - 289
+CLOSED: [2025-04-17 Thu 18:49]
+
+Talk about ~Option~'s in Scala and ~null~ in Java, and why ~Option~ is good.
+People often handle ~Option~'s with /pattern matching/.
+
+** DONE 13.7 Patterns everywhere - 291
+CLOSED: [2025-04-17 Thu 19:11]
+=IMPORTANT=
+/Patterns/ are allowed in many parts of Scala, not just in standalone
+~match~ expressions. Take a look at some other places you can use patterns.
+
+*** Patterns in variable definitions - 291
+#+begin_src scala
+  // scala>
+  val myTuple = (123, "abc")
+  // val myTuple: (Int, String) = (123,abc)
+
+  // scala>
+  val (number, string) = myTuple
+  // val number: Int = 123
+  // val string: String = abc
+#+end_src
+
+*** Case sequences as partial functions - 291
+_A sequence of ~case~'s (i.e., alternatives) in curly braces_ can be used
+anywhere a /function literal/ can be used.
+=FIXME=
+
+=from Jian=
+_A sequence of ~case~'s (i.e., alternatives) their own code block_ can be used
+anywhere a /function literal/ can be used.
+
+- Example:
+  #+begin_src scala
+    val withDefault: Option[Int] => Int =
+      case Some(x) => x
+      case None => 0
+  #+end_src
+
+- Partial function :: a function that doesn't covers all values of its input
+  type, represented by a sequence of cases in Scala.
+  * If you apply such a function on a value it does NOT SUPPORT, it will
+    generate a _run-time exception_.
+
+- Partial function type: ~PartialFunction[I, O]~
+  * It has method ~isDefinedAt~.
+
+- This facility is quite useful for the Akka actors library, because it allows
+  its ~receive~ method to be defined as a series of cases:
+  #+begin_src scala
+    var sum = 0
+
+    def receive =
+      case Data(byte) =>
+        sum += byte
+
+      case GetChecksum(requester) =>
+        val checksum = ~(sum & 0xFF) + 1
+        requester ! checksum
+  #+end_src
+
+- A /function literal/, for instance,
+  #+begin_src scala
+    { case x :: y :: _ => y }
+  #+end_src
+
+  gets translated to the following /partial function value/:
+
+  #+begin_src scala
+    new PartialFunction[List[Int], Int]:
+
+      def apply(xs: List[Int]) =
+        xs match
+          case x :: y :: _ => y
+
+      def isDefinedAt(xs: List[Int]) =
+        xs match
+          case x :: y :: _ => true
+          case _ => false
+  #+end_src
+
+- _IN GENERAL_, you should try to work with /complete functions/ *whenever
+  possible*, because using /partial functions/ _allows for runtime errors_ that
+  the compiler cannot help you with.
+
+- _SOMETIMES_ /partial functions/ are really helpful though. You might be sure that
+  an unhandled value will never be supplied.
+
+  ALTERNATIVELY, you might be using a framework that expects /partial functions/
+  and so will always check ~isDefinedAt~ before calling the function.
+
+  * An example of the latter is the ~receive~ method given previously, where the
+    result is a /partially defined function/, defined precisely for those
+    messages that the caller wants to handle.
+
+*** Patterns in ~for~ expressions - 294
+#+begin_src scala
+  for (country, city) <- capitals yield
+    s"The capital of $country is $city"
+  //
+  // List(The capital of France is Paris,
+  // The capital of Japan is Tokyo)
+#+end_src
+Listing 13.18 · A for expression with a tuple pattern.
+
+- If pattern may not match some values, the ~for~ expression will drop the
+  values not matched, and only process the matched values:
+  #+begin_src scala
+    val results = List(Some("apple"), None, Some("orange"))
+    for Some(fruit) <- results yield fruit
+    // List(apple, orange)
+  #+end_src
+  Listing 13.19 · Picking elements of a list that match a pattern.
+
+** TODO 13.8 A larger example - 295 - =TODO: Small- Project=
+** DONE 13.9 Conclusion - 303
+CLOSED: [2025-04-17 Thu 19:13]
 
 * TODO 14 Working with Lists - 304
 ** TODO 14.1 List literals - 304
@@ -1717,16 +2099,125 @@ CLOSED: [2025-04-16 Wed 20:50]
 ** 16.7 Conclusion - 376
 
 * TODO 17 Scala's Hierarchy - 378
-** 17.1 Scala’s class hierarchy - 378
-** 17.2 How primitives are implemented - 382
-** 17.3 Bottom types - 384
-** 17.4 Defining your own value classes - 385
+This chapter will look at /Scala’s class hierarchy/ as a whole.
+
+- In Scala, EVERY /class/ *inherits* from a _COMMON_ /superclass/ named ~Any~.
+
+- Because EVERY /class/ is a /subclass/ of ~Any~, the /methods/ defined in ~Any~
+  are /"universal" methods/: *they may be invoked on ANY object.*
+
+- Scala also defines some interesting /classes/ at the /bottom of the
+  hierarchy/, ~Null~ and ~Nothing~, which essentially act as _COMMON_
+  /subclasses/.
+
+  * For example,
+    just as ~Any~ is a /superclass/ of EVERY OTHER /class/,
+    ~Nothing~ is a /subclass/ of EVERY OTHER /class/.
+
+- In this chapter, we'll give you a tour of Scala's class hierarchy.
+
+** TODO 17.1 Scala's class hierarchy - 378
+- Figure 17.1 shows an outline of Scala's class hierarchy.
+
+- At the *TOP* of the hierarchy is /class/ ~Any~, which defines /methods/ that
+  include the following:
+  #+begin_src scala
+    final def ==(that: Any): Boolean
+    final def !=(that: Any): Boolean
+    def equals(that: Any): Boolean
+    def ##: Int
+    def hashCode: Int
+    def toString: String
+  #+end_src
+
+  * The ~==~ method is essentially the same as ~equals~ and ~!=~ is always the
+    NEGATION of ~equals~.
+    So individual /classes/ can tailor what ~==~ or ~!=~ means by _overriding the
+    ~equals~ method_.
+
+- footnote 1:
+  =from Jian= All below are about the inconsistency in Java. Scala doesn't have
+  those issues.
+
+  * The *ONLY case* where ~==~ does not directly call ~equals~ is for /Java's
+    boxed numeric classes/, such as ~Integer~ or ~Long~.
+    =IMPORTANT=
+
+    + Reason:
+      In Java, a ~new Integer(1)~ does *NOT equal* (=from Jian= Java's ~equals~)
+      a ~new Long(1)~ even though for /primitive values/ 1 == 1L.
+
+      - =from Jian=
+        Here the book *on purpose* keep using ~new~ instead of the ~.valueOf~
+        methods.
+        * Use ~new~ for /boxed numeric types/ is _deprecated_ since Java 9.
+        * Should use ~.valueOf~ methods on these types, which is cache friendly.
+        * Use ~new~ always create new instances of objects in /boxed numeric
+          types/. This usage "still works but strongly discouraged; may be
+          removed later" in Java 17+.
+
+    + Conclusion:
+      =IMPORTANT=
+      Since Scala is a more regular language than Java, it was necessary to
+      *correct* this discrepancy by special-casing the ~==~ method for these
+      /classes/.
+
+  * Likewise, the ~##~ method provides a Scala version of hashing that is the
+    same as Java's ~hashCode~, _EXCEPT_ for /boxed numeric types/, where _it
+    works CONSISTENTLY with ~==~ in Scala._
+
+    + For instance ~new Integer(1)~ and ~new Long(1)~ hash the same with ~##~
+      even though their Java ~hashCode~'s are DIFFERENT. =???=
+      - =from Jian=
+        =FIXME=
+        =???=
+        =???=
+        When using JDK 17, their ~hashCode~'s are the same!
+
+    + =from Jian=
+      ~.##~ can be called from ~null~, and ~.hashCode~ can't be.
+
+- *Multiversal equality*
+  Scala 3 introduced "multiversal equality," which can give you a _compiler
+  error_ for uses of ~==~ and ~=~ that represent likely bugs, such as comparing
+  a ~String~ and an ~Int~ for equality.
+  * =TODO= This mechanism will be described in Chapter 23.
+
+- The /root class/ ~Any~ has TWO /subclasses/:
+  * ~AnyVal~
+  * ~AnyRef~
+
+- ~AnyVal~ is the /parent class/ of /value classes/ in Scala.
+  * While you can _define your own_ /value classes/ (see _Section 17.4_),
+
+  * there are NINE /value classes/ _built into Scala_:
+    + ~Byte~
+    + ~Short~
+    + ~Char~
+    + ~Int~
+    + ~Long~
+    + ~Float~
+    + ~Double~
+    + ~Boolean~
+    + ~Unit~
+
+  * The first eight of these correspond to Java’s primitive types, and their
+    values are represented at run time as Java’s primitive values. The instances
+    of these classes are all written as literals in Scala. For example, 42 is an
+    instance of Int, 'x' is an instance of Char, and false an instance of
+    Boolean. You cannot create instances of these classes using new. This is
+    enforced by the “trick” that value classes are all defined to be both
+    abstract and final.
+
+** TODO 17.2 How primitives are implemented - 382
+** TODO 17.3 Bottom types - 384
+** TODO 17.4 Defining your own value classes - 385
 *** Avoiding a types monoculture - 386
 
-** 17.5 Intersection types - 388
-** 17.6 Union types - 389
-** 17.7 Transparent traits - 392
-** 17.8 Conclusion - 393
+** TODO 17.5 Intersection types - 388
+** TODO 17.6 Union types - 389
+** TODO 17.7 Transparent traits - 392
+** TODO 17.8 Conclusion - 393
 
 * TODO 18 Type Parameterization - 394
 ** 18.1 Functional queues - 394
@@ -1743,50 +2234,76 @@ CLOSED: [2025-04-16 Wed 20:50]
 ** 18.7 Upper bounds - 413
 ** 18.8 Conclusion - 415
 
-* TODO 19 Enums - 416
+* DONE 19 Enums - 416
+CLOSED: [2025-04-17 Thu 21:44]
 Scala 3 introduced the ~enum~ construct to make the definition of
-/sealed case class/ hierachies _more concise_.
+/sealed case class hierachies/ _more concise_.
 
 - /Enums/ can be used to define both /enums/ (enumerated data types) in
-  mainstream OO languages, and /enums/ (ADT) in FP languages.
+  mainstream OO languages, and /enums/ (algebraic data types) in FP languages.
 
 ** DONE 19.1 Enumerated data types - 416
-CLOSED: [2021-03-02 Tue 23:02]
-- =from Jian=:
-  In this book, we call the /enumerated data type/ *EDT*, to distinguish it
-  from *ADT*'s.
+CLOSED: [2025-04-17 Thu 19:53]
+- footnote 1:
+  Although "enum" is a more common short name for /enumerated data types/, we
+  will use /EDT/ in this book because the /enum construct in Scala/ is also used
+  to define /algebraic data types/, which are called /ADTs/.
 
-- An enumerated data type, or “EDT,”1 is useful when you want a type that’s
-  restricted to a finite set of named values. These named values are called
-  the cases of the EDT.
-  =RE-NOTE= =DUPLICATION=
+- An /enumerated data type (EDT)/ is useful when you want a type that's
+  _restricted to_ a _FINITE set of /named values/._
 
-- Example:
+  These named values are called _the cases of the EDT._
   #+begin_src scala
     enum Direction:
       case North, East, South, West
-
-    import Direction.{North, South, East, West}
-
-    def invert(dir: Direction): Direction =
-      dir match
-        case North => South
-        case East  => West
-        case South => North
-        case West  => East
   #+end_src
+  * =from Jian=
+    I'd like to use the term _enum variants_ instead of _enum cases_.
+
+  * This simple ~enum~ will generate a ~sealed class~ named ~Direction~ with a
+    /companion object/ containing the four values declared as ~val~'s.
+    The ~val~'s, named ~North~, ~East~, ~South~, and ~West~, will have /type/
+    ~Direction~. Given this definition, you could, for example, define a method
+    to ~invert~ a compass direction using a /pattern match/, as shown here:
+    #+begin_src scala
+      import Direction.{North, South, East, West}
+
+      def invert(dir: Direction): Direction =
+        dir match
+          case North => South
+          case East => West
+          case South => North
+          case West => East
+    #+end_src
+
+- footnote 2: The /sealed class/ is called the "enum type."
+
+- /Enumerated data types/ are called _"enumerated"_ because the compiler
+  *associates* an ~Int~ /ordinal/ to each case.
+
+  * The /ordinal/ starts at ~0~ and increases by one for each case,
+    in the order the cases are defined in the enum. You can access the /ordinal/
+    via a method named ~ordinal~, which the *compiler generates for each EDT.*
+    For example:
 
 - ~enum~'s build-in methods:
   * ~ordinal~: start at 0 and increases by one for each case, in the order the
     cases are defined in the /enum/.
     + The REASON why /Enumerated data types/ are called "enumerated":
-      the compiler associates an ~Int~ /ordinal/ to each /case/.
+      the compiler associates an ~Int~ /ordinal/ to each /case/ of /EDT/.
 
+    #+begin_src scala
+      North.ordinal // 0
+      East.ordinal  // 1
+      South.ordinal // 2
+      West.ordinal  // 3
+    #+end_src
 
-  * ~values~: ~Array[YourEnumType]~
+  * ~values~: returns an ~Array[YourEnumType]~ containing all of the /EDT/'s
+    cases, in declaration order.
 
-  * ~valueOf~: Convert a string, which is exactly the same as an enum case name,
-    to that enum value.
+  * ~valueOf~: Convert a /string/, which is *exactly* the same as an enum case
+    name, to that /enum value/.
 
 - Give an EDT value parameter(s):
   #+begin_src scala
@@ -1814,14 +2331,17 @@ CLOSED: [2021-03-02 Tue 23:02]
   #+end_src
   * =TODO= NOTE
 
-- =TODO= NOTE
-  * You can only define /methods/ for a whole /enum/, not for some SPECIFIC
-    /enum case(s)/.
+- _One *restriction* of enums:_
+  _CANNOT_ define /methods/ for the /individual cases/.
 
-  * *footnote*:
-    Of course, you COULD define /extension methods/ for the case types, but it
-    might be better in that situation to just write out the /sealed case
-    class hierarchy/ by hand.
+  Instead, you must declare any methods as members of _the /enum type/ ITSELF_,
+  which will make those methods _available on all of the enum's cases._
+
+  * footnote 3:
+    You could define /extension methods/ for the /case types/,
+    _BUT_
+    it might be better in that situation to just write out the /sealed case class
+    hierarchy/ *BY HAND*.
 
 - *Integration with Java enums*
   #+begin_src scala
@@ -1829,11 +2349,43 @@ CLOSED: [2021-03-02 Tue 23:02]
       case North, East, South, West
   #+end_src
 
-  Then you can all /Java enums/ /methods/ on these values. For instance,
-  ~Direction.East.compareTo(Direction.South)  // -1~
+  Then you can all /Java enums methods/ on these values. For instance,
+  #+begin_src scala
+    Direction.East.compareTo(Direction.South) // -1
+  #+end_src
 
 ** DONE 19.2 Algebraic data types - 420
 CLOSED: [2021-03-03 Wed 00:53]
+- Algebraic Data Type (ADT) :: a data type composed of a finite set of cases.
+
+- =IMPORTANT=
+  /ADTs/ are
+  a natural way to express /domain models/ in which you model the data case by
+  case.
+    Each case represents one "data constructor," a particular way to construct
+  an instance of the type.
+
+- In Scala, a sealed family of case classes forms an ADT so long as *at least one
+  of the cases takes parameters.*
+  * footnote 4:
+    _BY COMPARISON_,
+    an /EDT/ is a sealed family of case classes in which none of the cases take
+    parameters
+
+- An ADT example:
+  #+begin_src scala
+    enum Eastwood[+G, +B]:
+      def map[G2](f: G => G2): Eastwood[G2, B] =
+        this match
+          case Good(g) => Good(f(g))
+          case Bad(b) => Bad(b)
+          case Ugly(ex) => Ugly(ex)
+
+      case Good(g: G)
+      case Bad(b: B)
+      case Ugly(ex: Throwable)
+  #+end_src
+
 - Algebraic Data Type (ADT) :: a data type composed of a finite set of cases.
 
 - In Scala, a _sealed_ family of /case classes/ forms an /ADT/
@@ -1864,9 +2416,45 @@ CLOSED: [2021-03-03 Wed 00:53]
     // val xs = Yada(1, Yada(2, Yada(3, Nada)))
   #+end_src
 
+  The compiler will generate a /case class/ in the /companion object/ of the
+  /enum type/. =from Jian= Remember? /EDT/ generate values.
+  #+begin_src scala
+    // Generated sealed trait (the "enum type")
+    sealed trait Eastwood[+G, +B]
+
+    object Eastwood: // Generated companion object
+      // Generated case classes
+      case class Good[+G, +B](g: G) extends Eastwood[G, B]
+      case class Bad[+G, +B](b: B) extends Eastwood[G, B]
+      case class Ugly[+G, +B](ex: Throwable) extends Eastwood[G, B]
+  #+end_src
+  * =IMPORTANT=
+    Although the /result type/ of the /factory method/ created by the /case
+    classes/ will be the SPECIFIC /case class types/, _the compiler will *widen*
+    those to the more general enum type._
+
+    + =IMPORTANT=
+      If you need the _more specific type_ for a /case/, you can construct
+      an instance with ~new~ instead of the generated /factory method/.
+      #+begin_src scala
+        Good(42) // val res0: Eastwood[Int, Nothing] = Good(42)
+
+        new Good(1) // val res1: Good[Int, Nothing]
+      #+end_src
+
+- =IMPORTANT=
+  */ADTs/ can be /recursive/*.
+  * An example (linked list):
+    #+begin_src scala
+      enum Seinfeld[+E]:
+        def ::[E2 >: E](o: E2): Seinfeld[E2] = Yada(o, this)
+        case Yada(head: E, tail: Seinfeld[E])
+        case Nada
+    #+end_src
+
 ** DONE 19.3 Generalized ADTs - 422
-CLOSED: [2021-03-03 Wed 01:44]
-- Generalized Algebraic Data Types (GADTs) :: ADTs in which the sealed trait
+CLOSED: [2025-04-17 Thu 20:32]
+- Generalized Algebraic Data Types (GADTs) :: /ADTs/ in which the /sealed trait/
   takes a /type parameter/ that is filled in by the cases.
 
 - Example:
@@ -1884,38 +2472,124 @@ CLOSED: [2021-03-03 Wed 01:44]
   ~T~, which is specified by EACH of its cases in their _extends clauses_.
 
 - =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =from Jian: This is why GADT, as a kind of /ADT/ special cases, need this
+              specific section to describe!=
   This kind of /sealed type heirarchy/ is given the special name "generalized ADT"
-  because it presents *SPECIAL CHALLENGES to /type checking and inference/.*
-  * Here's an illustrative example:
+  _BECAUSE_
+  _it presents *SPECIAL CHALLENGES to /type checking and inference/*._
+
+- Here's an illustrative example:
+  #+begin_src scala
+    import Literal.*
+
+    def valueOfLiteral[T](lit: Literal[T]): T =
+      lit match
+        case IntLit(n)     => n
+        case LongLit(m)    => m
+        case CharLit(c)    => c
+        case FloatLit(f)   => f
+        case DoubleLit(d)  => d
+        case BooleanLit(b) => b
+        case StringLit(s)  => s
+  #+end_src
+  The ~valueOfLiteral~ /method/ passes the /type checker/, despite none of
+  it /match alternatives/ resulting in _the REQUIRED /result type/,_ ~T~.
+  * For example,
+    the ~case IntLit(n)~ alternative results in ~n~, which has type ~Int~.
+    The challenge is that ~Int~ is not type ~T~, nor is ~Int~ a /subtype/ of ~T~.
+      This /type checks/ only because the compiler notices that for the
+    ~IntLit~ case, ~T~ can be none other than ~Int~.
+
+  * Moreover, this _MORE SPECIFIC_ /type/ is propagated back to the caller.
     #+begin_src scala
-      import Literal.*
-
-      def valueOfLiteral[T](lit: Literal[T]): T =
-        lit match
-          case IntLit(n)     => n
-          case LongLit(m)    => m
-          case CharLit(c)    => c
-          case FloatLit(f)   => f
-          case DoubleLit(d)  => d
-          case BooleanLit(b) => b
-          case StringLit(s)  => s
+      valueOfLiteral(BooleanLit(true))  // true: Boolean
+      valueOfLiteral(IntLit(42))        // 42: Int
     #+end_src
-    The ~valueOfLiteral~ /method/ passes the /type checker/, despite none of
-    it match alternatives resulting in the required result type, ~T~.
-    + For example,
-      =FIXME= IntList => IntLit
-      the ~case IntLit(n)~ alternative results in ~n~, which has type ~Int~.
-      The challenge is that ~Int~ is not type ~T~, nor is ~Int~ a /subtype/ of ~T~.
-        This /type checks/ only because the compiler notices that for the
-      ~IntLit~ case, ~T~ can be none other than ~Int~.
-        Moreover, this _MORE SPECIFIC_ /type/ is propagated back to the caller.
-      #+begin_src scala
-        valueOfLiteral(BooleanLit(true))  // true: Boolean
-        valueOfLiteral(IntLit(42))        // 42: Int
-      #+end_src
 
-** 19.4 What makes ADTs algebraic - 423 - =RE-READ= =NOTE=
-** 19.5 Conclusion - 427
+** DONE 19.4 What makes ADTs algebraic - 423 - =IMPORTANT=
+CLOSED: [2025-04-17 Thu 21:44]
+/ADTs/ are called "algebraic" because they represent an application of
+_algebraic theory to /types/._
+
+- One way to observe this connection with mathematics is
+  BY _mapping each /type/ to its /cardinality/.
+  * cardinality :: a count of the inhabitants of that /type/.
+
+- If you think of /types/ as _representing sets of values,_
+  then
+  the /cardinality of a type/ is the /cardinality (the number of elements) of
+  that corresponding set of values/.
+
+  * For example,
+    + The /cardinality/ of ~Boolean~: 2 (2 values: ~true~ and ~false~)
+    + The /cardinality/ of ~Unit~: 1 (1 value: ~()~)
+
+- The /cardinality/ of /sum types/:
+  SUM /cardinalities/ of each cases (variants).
+  * Example:
+    #+begin_src scala
+      enum Hope[+T]:
+        case Glad(o: T)
+        case Sad
+    #+end_src
+    If ~T~ is ~Boolean~, the /cardinality/ of ~Hope[Boolean]~ is 3, which comes
+    from 2 (/cardinality/ of ~Glad[Boolean]~) + 1 (/cardinality/ of ~Sad~).
+
+  * More examples:
+    Table 19.1 · The cardinality of ~Hope~
+
+- The /cardinality/ of /product types/:
+  MULTIPLY /cardinalities/ of each cases (variants).
+  * Example:
+    #+begin_src scala
+      case class Both[A, B](a: A, b: B)
+    #+end_src
+    If ~A~ is ~Boolean~ and ~B~ is ~Unit~, the /cardinality/ of
+    ~Both[Boolean, Unit]~ is 2, which comes from 2 (/cardinality/ of
+    ~Boolean~) * 1 (/cardinality/ of ~Unit~).
+
+  * More examples:
+    Table 19.2 · The cardinality of ~Both~
+
+- =IMPORTANT=
+  Generally, /algebraic data types/ represent
+  */sums/ of /products/*,
+
+  * An /EDT/ is a special case of /ADT/
+    where *each /product type/ is a /singleton/.*
+
+- One of the benefits of understanding the _algebraic properties_ of your data
+  structures:
+  you can RELY ON the relevant _mathematical laws_ to *prove properties about your
+  code.*
+
+  * For example,
+    you might be able to prove that certain refactorings will preserve the
+    meaning of your program.
+
+- /ADT cardinalities/ _obey laws_ regulating /addition/ and /multiplication/,
+  such as /identity/, /commutativity/, /associativity/, and /distributivity/.
+
+  * =IMPORTANT=
+    In general, /functional programming/ often offers opportunities for you to
+    *gain insight into your code from branches of mathematics.*
+
+** DONE 19.5 Conclusion - 427
+CLOSED: [2025-04-17 Thu 20:45]
+- In this chapter,
+  1. You learned about /Scala's enums/, _a concise way to define /sealed case
+     class hierarchies/ that form /enumerated and algebraic data types/._
+
+  2. You
+     * learned that in Scala, /EDTs/ and /ADTs/ form two ends of the same
+       spectrum, and
+     * looked at the _algebra of algebraic data types_.
+
+- /Scala's enum construct/
+  * makes A COMMON IDIOM for _functional data modeling_ CONCISE, and
+  * indicates that /EDTs/ and /ADTs/ are _IMPORTANT patterns_.
 
 * TODO 20 Abstract Members - 428
 ** 20.1 A quick tour of abstract members - 428
