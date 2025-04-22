@@ -338,6 +338,19 @@ CLOSED: [2025-04-17 Thu 00:48]
 
 ** DONE Step 4. Write some Scala scripts - 67
 CLOSED: [2025-04-17 Thu 00:58]
+- script :: just a Scala source file that includes a top-level function
+  annotated as ~@main~.
+  * Example:
+    Put the code below in file =hello.scala=:
+    #+begin_src scala
+      @main def m() =
+        println("Hello, world, from a script!")
+    #+end_src
+    + Run it:
+      #+begin_src shell
+        scala hello.scala
+      #+end_src
+
 - Write a script in Scala and run it:
   1. Put this code in file =hello.scala=
      #+begin_src scala
@@ -470,23 +483,491 @@ CLOSED: [2025-04-17 Thu 01:22]
 ** DONE Conclusion - 73
 CLOSED: [2025-04-17 Thu 01:09]
 
-* TODO Learn more about scala-cli, the scala command since Scala 3.5
-* TODO 3 Next Steps in Scala - 74
-** TODO Step 7. Parameterize arrays with types - 74
-** TODO Step 8. Use lists - 78
-** TODO Step 9. Use tuples - 83
-** TODO Step 10. Use sets and maps - 84
-** TODO Step 11. Learn to recognize the functional style - 88
-** TODO Step 12. Transform with ~map~ and ~for-yield~ - 91
-** TODO Conclusion - 94
+* DONE 3 Next Steps in Scala - 74 - _NOTE_
+CLOSED: [2025-04-22 Tue 20:01]
+This chapter continues the previous chapter's introduction to Scala.
+In this chapter, we'll introduce some _more advanced_ features.
 
-* TODO 4 Classes and Objects - 95
-** 4.1 Classes, fields, and methods - 95
-** 4.2 Semicolon inference - 99
-** 4.3 Singleton objects - 100
-** 4.4 Case classes - 103
-** 4.5 A Scala application - 105
-** 4.6 Conclusion - 107
+When you complete this chapter, you should have _enough knowledge_ to ENABLE you
+to _start writing useful scripts in Scala_.
+
+** DONE Step 7. Parameterize arrays with types - 74
+CLOSED: [2025-04-19 Sat 02:14]
+- In Scala, you can *instantiate* /objects/, or /class instances/, using ~new~.
+
+  * When you *instantiate* an /object/ in Scala, you can /parameterize/ it with
+    /values/ and /types/.
+
+  * Parameterization :: "configuring" an /instance/ when you create it.
+
+  * You /parameterize/ an /instance/ with /values/
+    BY _passing /objects/ to a /constructor/ in parentheses_.
+    Example:
+    #+begin_src scala
+      val big = new java.math.BigInteger("12345")
+    #+end_src
+
+  * You /parameterize/ an /instance/ with /types/
+    BY _specifying one or more /types/ in square brackets._
+
+  * When you /parameterize/ an /instance/ with BOTH /types/ and /values/,
+    + the /types/ come first in its _square brackets_,
+    + followed by the /value/ in _parentheses_.
+
+- Listing 3.1 · Parameterizing an array with a type.
+  #+begin_src scala
+    val greetStrings = new Array[String](3)
+
+    greetStrings(0) = "Hello"
+    greetStrings(1) = ", "
+    greetStrings(2) = "world!\n"
+
+    for i <- 0 to 2 do
+      print(greetStrings(i))
+  #+end_src
+  * *NOT* the best way to initialize an ~Array~.
+    See Listing 3.2 on page 78 for a better way.
+
+  * Declare a variable with ~val~ means this variable _can't be reassigned_.
+    It _has nothing to do with_ the if the bound object itself is mutable or
+    not!
+
+  * If a /method/ takes _only one parameter_, and when the /receiver/ is
+    explicitly specified, you can call it *WITHOUT* a _dot_ or _parentheses_.
+    ~0 to 2~ in Listing 3.1 is an example, witch is equivalent to ~0.to(2)~.
+
+  * =IMPORTANT=
+    Scala *doesn't technically have* /operator overloading/,
+    BECAUSE it doesn't actually have /operators/ in the traditional sense.
+
+    Instead, characters such as +, -, *, and / can be used in /method names/.
+
+  * =IMPORTANT=
+    _Scala has *FEWER* SPECIAL CASES than Java._
+
+    1. ~Array~'s are simply /instances of classes/ _LIKE ANY OTHER_ /class/ in
+       Scala.
+       - Indexing operation ~greetStrings(i)~ will be translated into
+         ~greetStrings.apply(i)~
+
+       - Array member assignment (by index) ~greetStrings(0) = "Hello"~ will be
+         transformed into ~greetStrings.update(0, "Hello")~
+
+    2. These transformation by compiler can happen
+       IF ~apply~ and ~update~ methods exist in /types/.
+
+    After compiler transformations mentioned here, the code is like:
+    #+begin_src scala
+      val greetStrings = new Array[String](3)
+
+      greetStrings.update(0, "Hello")
+      greetStrings.update(1, ", ")
+      greetStrings.update(2, "world!\n")
+
+      for i <- 0.to(2) do
+        print(greetStrings.apply(i))
+    #+end_src
+
+- =IMPORTANT=
+  Scala achieves a *conceptual simplicity* by treating everything, from arrays
+  to expressions, as /objects/ with /methods/.
+
+  * You don't have to remember special cases (like in Java).
+
+  * Moreover, this _uniformity does NOT incur a SIGNIFICANT performance cost._
+    The Scala compiler uses /Java arrays/, /primitive types/, and /native
+    arithmetic/ *where possible in the compiled code.*
+
+- Scala provides a *more concise way* to _create and initialize_ arrays that you
+  would normally use (see Listing 3.2).
+  #+begin_src scala
+    val numNames = Array("zero", "one", "two")
+  #+end_src
+  Listing 3.2 · Creating and initializing an array.
+
+  This will be transformed into
+  #+begin_src scala
+    val numNames = Array.apply("zero", "one", "two")
+  #+end_src
+  calling a /factory method/ ~apply~ from the /companion object/ of ~Array~.
+
+- footnote 2:
+  =IMPORTANT=
+  =CONCEPT=
+  /Variable-length argument lists/ \equiv /repeated parameters/
+
+** DONE Step 8. Use lists - 78
+CLOSED: [2025-04-22 Tue 19:22]
+- One of the big ideas of the /functional style of programming/:
+  _/methods/ should *NOT have* /side effects/._
+
+  * Some benefits gained when you take this approach are that methods become
+    less entangled, and therefore more reliable and reusable.
+
+  * Another benefit (in a statically typed language) is that everything that
+    goes into and out of a method is checked by a type checker, so logic errors
+    are more likely to manifest themselves as type errors.
+
+  Applying this functional philosophy to the world of objects means making
+  objects *immutable*.
+
+- Scala's ~List~ class:
+  An *immutable* *sequence* of objects that share the *SAME* /type/.
+
+- More generally, Scala's ~List~ is designed to _ENABLE_ a /functional style of
+  programming/.
+
+- List concatenation: ~:::~.
+
+- If a method name ends in a *colon*, it is right associative!
+
+** DONE Step 9. Use tuples - 83
+CLOSED: [2025-04-22 Tue 19:25]
+=from Jian= Not mention the operators ~*:~ and ~:*~ (Scala version 3.0 have it
+or not???).
+
+- _footnote 5:_ The Scala compiler uses a /syntactic sugar/ form for /tuple types/
+  that looks *LIKE a tuple of types.*
+  * For example,
+    ~Tuple2[Int, String]~ is represented as ~(Int, String)~.
+- In Scala 3, use the ~.apply~ method to extract an element in a tuple at a
+  given index, *like using other indexible collections*.
+
+  * _footnote 6:_ prior to Scala 3, you _accessed the elements of a tuple_ using
+    /one-based field names/, such as ~_1~ or ~_2~.
+    =Not deprecated till v3.6.4=
+
+- _footnote 7:_ As of Scala 3, you can create tuples of any length.
+
+** DONE Step 10. Use sets and maps - 84
+CLOSED: [2025-04-22 Tue 19:32]
+*Mutable* sets/maps and *immutable* sets/maps.
+
+** DONE Step 11. Learn to recognize the functional style - 88
+CLOSED: [2025-04-22 Tue 19:55]
+As mentioned in Chapter 1, Scala
+_ALLOWS_ you to program in an /imperative style/,
+but _ENCOURAGES_ you to adopt a more /functional style/.
+
+- If you come from an imperative background, we believe that learning to program
+  in a functional style will not only make you a better Scala programmer, it
+  will expand your horizons and make you a better programmer in general.
+
+- The _FIRST_ step:
+  recognize the difference between the two styles in code.
+  * if code contains any ~var~'s, it is probably in an /imperative style/.
+  * Similarly, if only ~val~'s, it is probably in an /functional style/.
+
+- The *REASON* Scala encourages a /functional style/ is that it can help you
+  write code that is
+  * _more understandable,_
+  * _less error-prone._
+
+  Example:
+  1. Imperative style:
+     #+begin_src scala
+       def printArgs(args: List[String]): Unit =
+         var i = 0
+         while i <- args.length do
+           println(args(i))
+           i += 1
+     #+end_src
+
+  2. Functional style:
+     #+begin_src scala
+       def printArgs(args: List[String]): Unit =
+         for arg <- args do
+           println(args(i))
+     #+end_src
+
+     or this:
+
+     #+begin_src scala
+       def printArgs(args: List[String]): Unit =
+         args.foreach(println)
+     #+end_src
+
+- After the _FIRST_ step, go even further:
+  The refactored ~printArgs~ method is *NOT* purely functional because of side effects.
+  * ~Unit~ /result type/ is the telltale.
+
+  We can move the side-effect free code to its own function:
+  #+begin_src scala
+    def formatArgs(args: List[String]) =
+      args.mkString("\n")
+  #+end_src
+
+  and then the ~printArgs~ method body becomes:
+  #+begin_src scala
+    println(formatArgs(args))
+  #+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =CRITICAL=
+  Every useful program is likely to have /side effects/ of some form;
+  otherwise, it wouldn't be able to _provide value to the outside world_.
+
+  =from Jian=
+  =IMPORTANT=
+  It is not a single function, it is a program. There is no reason to write a
+  program that can't provide value to the outside world.
+
+  * =IMPORTANT=
+    METHODOLOGY:
+    _Preferring /methods/ *without* /side effects/_
+    ENCOURAGES you to
+
+    _design programs where /side-effecting code/ is *MINIMIZED*._
+
+    + One benefit of this approach is that it can help make your programs
+      *easier to test*.
+
+      For example,
+      For example, to test any of the three ~printArgs~ methods shown earlier in
+      this section, you'd need to *redefine* ~println~, capture the output
+      passed to it, and make sure it is what you expect.
+
+      _BY CONTRAST,_
+      you could test the ~formatArgs~ function simply by checking its result!
+      =from Jian=
+      Because body of ~printArgs~ which calls ~formatArgs~ is just a ~println~
+      function call, and test ~formatArgs~ is enough to test ~printArgs~!
+
+- =IMPORTANT=
+  *A balanced attitude for Scala programmers*
+  1. PREFER ~val~'s, /immutable objects/, and /methods WITHOUT side effects/.
+     Reach for them first.
+
+  2. Use ~var~'s, /mutable objects/, and /methods with side effects/
+     WHEN you have a specific _NEED and JUSTIFICATION_ for them.
+
+** DONE Step 12. Transform with ~map~ and ~for-yield~ - 91
+CLOSED: [2025-04-22 Tue 20:01]
+- =IMPORTANT=
+  * When programming in an /imperative style/,
+    you *MUTATE* data structures *in place* UNTIL you achieve the goal of the
+    algorithm.
+
+  * In a /functional style/,
+    you *TRANSFORM* /IMMUTABLE data structures/ *into* NEW ones to achieve the
+    goal.
+
+- "defined" option :: If the ~Option~ is a ~Some~.
+  =CONCEPT=
+  =IMPORTANT=
+
+** DONE Conclusion - 94
+CLOSED: [2025-04-22 Tue 20:01]
+
+* DONE 4 Classes and Objects - 95
+CLOSED: [2025-04-22 Tue 18:00]
+** DONE 4.1 Classes, fields, and methods - 95
+CLOSED: [2025-04-21 Mon 22:09]
+- A /class/ is a *blueprint* for /objects/.
+  * Create /objects/ from /classes/ with the keyword ~new~.
+    =from Jian=
+    Scala 3 reduces the explicit ~new~ usages by design.
+    =TODO= =???=
+    I don't remember the details, try to find the document or PR about this!
+
+- Inside a /class definition/, you place /fields/ and /methods/, which are
+  collectively called /members/.
+  * /Fields/ are /variables/ that refer to /objects/.
+    + The /fields/ hold the
+      - state
+      - data
+      of their host object.
+
+  * /Methods/ contain executable code.
+    + The /methods/ can use that data to do the computational work of the
+      /object/.
+
+- =TODO= _One way to check if your code is right!_
+  One important way to pursue _ROBUSTNESS_ of an /object/ is to ensure that the
+  /object's state/ -- the values of its /instance variables/ -- *remains VALID
+  during its entire lifetime.*
+  * One way to achieve this is to prevent outsiders from accessing the /fields/
+    DIRECTLY by making the /fields/ ~private~.
+
+- procedure :: A method that is executed only for its /side effects/.
+
+** DONE 4.2 Semicolon inference - 99
+CLOSED: [2025-04-21 Mon 22:17]
+- *The rules of semicolon inference*
+  The precise rules for statement separation are surprisingly simple for how
+  well they work.
+
+  In short, _a line ending is treated as a semicolon_
+  *UNLESS* one of the following conditions is true:
+
+  1. The line in question ends in a word that would _NOT be legal as the end of
+     a statement_, such as a /period/ or an /infix operator/.
+
+  2. The next line begins with a word that _CANNOT start a statement_.
+
+  3. The line ends while inside parentheses ~(...)~ or brackets ~[...]~, because
+     these _CANNOT contain multiple statements anyway_.
+
+** DONE 4.3 Singleton objects - 100
+CLOSED: [2025-04-21 Mon 22:34]
+- A /singleton object definition/ looks like a /class definition/,
+  EXCEPT instead of the keyword ~class~ you use the keyword ~object~.
+
+- (class's) companion object :: when a /singleton object/ shares the _SAME name_
+  with a /class/.
+  * A /class/ and its /companion object/ must be in the SAME source file.
+  * The /class/ is called the /companion class/ of the singleton object.
+  * =IMPORTANT=
+    A /class/ and its /companion object/ can access each other's ~private~
+    memebers.
+
+- A eample: Listing 4.2 · Companion object for class ChecksumAccumulator.
+  * footnote 3:
+    Might use a /weak map/, such as ~WeakHashMap~ in ~scala.collection.mutable~,
+    so that entries in the cache
+    could be _garbage collected IF memory becomes *scarce*._
+    =TODO=
+    =from Jian= Learn more about /weak map/!!!
+
+- /Singleton objects/ extend a /superclass/ and can *mix* in /traits/.
+
+- EACH /singleton object/ is implemented as an instance of a /synthetic class/
+  referenced from a /static variable/, so they have the
+  _SAME /initialization semantics/ as /Java statics/._
+  =IMPORTANT=
+  * In particular, a /singleton object/ is initialized the first time some code
+    accesses it.
+    =from Jian= A lazy initialization.
+
+- standalone object :: A /singleton object/ that does not share the same name
+  with a /companion class/.
+
+  You can use /standalone objects/ for many purposes, including
+  * collecting related utility methods together or
+  * defining an _entry point_ to a Scala application.
+    =NEXT=
+    This use case is shown in the next section.
+
+** DONE 4.4 Case classes - 103
+CLOSED: [2025-04-21 Mon 22:50]
+- _PROBLEM_:
+  Often when you write a /class/, you need implementations of /methods/ such as
+  ~equals~, ~hashCode~, ~toString~, /accessor methods/, or /factory methods/.
+  _These can be *time-consuming* and *error-prone* to write._
+
+- _SOLUTION_:
+  =IMPORTANT=
+  Scala offers *"case classes,"* which can
+  *GENERATE* implementations of several methods based on the values passed to its
+  /primary constructor/.
+
+- Example:
+  #+begin_src scala
+    case class Person(name: String, age: Int)
+  #+end_src
+
+- With the addition of the ~case~ modifier, the compiler will generate
+  several useful methods for you:
+
+  The compiler will
+  1. *CREATE* a /companion object/ and
+     *PLACE* a /factory method/ in it named ~apply~.
+     * Code ~Person("Sally", 30)~ will rewritten to ~Person.apply("Sally", 30)~.
+
+  2. *STORE* all /class parameters/ *IN* /fields/ and
+     *GENERATE* /accessor methods/ with the SAME name as the parameter.
+
+  3. *PROVIDE* an implementation of ~toString~ for you.
+
+  4. *GENERATE* an implementation of ~hashCode~ and ~equals~ for your /class/.
+     * These /methods/ will base their result on the parameters passed to the
+       /constructor/.
+
+     =IMPORTANT=
+  5. *NOT generate* any /method/ that you implement yourself.
+     It will use your implementation.
+
+  6. *ADDS* a ~copy~ method to your /class/ and an ~unapply~ method to the companion.
+     =TODO=
+     These will be described in Chapter 13.
+
+- _SUMMARY_:
+  All these conventions *ADD a lot of convenience -- AT a small price.*
+
+** DONE 4.5 A Scala application - 105 - =I updated some content=
+CLOSED: [2025-04-22 Tue 17:59]
+=OUTDATED!!!=
+
+- Need an entry point /main method/ in a standalone singleton object.
+  * Can be the standard ~main~ method, or
+  * Any function with the ~@main~ annotation, from _footnote 8_.
+
+- Scala doesn't force the name of a source file,
+  BUT it is *recommended style* to _name files *after* the /classes/ they
+  CONTAIN_ as is done in Java,
+  =IMPORTANT=
+  so that programmers can more easily locate classes by looking at file names.
+
+- =from Jian=
+  This section mentioned script, and it said
+  "NEITHER =ChecksumAccumulator.scala= NOR =Summer.scala= are scripts, BECAUSE they
+  end in a definition. A script, by contrast, *must END in a result /expression/.*"
+  =TODO=
+  It should explain more about the /script/ concept in the context of Scala.
+
+  =from Jian=
+  I found the =scala= can run =.sc= that ends with an expression directly, but
+  when using it to run the same content file with the =.scala= extension,
+  #+begin_src text
+    Illegal start of toplevel definition
+  #+end_src
+
+  Thus, even though here is exact definition of /script/, it seems in practice
+  /script/ in the Scala context and can run with the =scala= command
+  1. Must have =.sc= extension. Only with this extension, =scala= won't consider
+     top level expression wrong!
+
+  2. Make sure =.sc= content ends with a result /expression/.
+     Without it, the /script/ is legal, but useless!!!
+
+*** =from Jian= Update for Scala 3.5+
+- Run from from the script(s): =.scala= or =.sc=
+  1. Add a /using directive/ to the source file: =Summer.scala=.
+     Assume its dependency =ChecksumAccumulator.scala= is in the same folder.
+     #+begin_src scala
+       //> using file ChecksumAccumulator.scala
+     #+end_src
+
+  2. Run in with the command:
+     #+begin_src shell
+       scala Summer.scala -- of love
+     #+end_src
+
+- Q :: How to run the compiled result =.class=?
+- A :: From Scala 3.5 on,
+  #+begin_src shell
+    scalac ChecksumAccumulator.scala Summer.scala
+
+    scala run -classpath . --main-class Summer -- of love
+  #+end_src
+  * NOT like before that uses ~scala Summer of love~.
+
+  * Additional, if ~@main~ is used,
+    the command becomes
+    #+begin_src shell
+      scala run -classpath . --main-class main -- of love
+    #+end_src
+    because a =main.class= is generated.
+
+** DONE 4.6 Conclusion - 107
+CLOSED: [2025-04-22 Tue 18:00]
+This chapter has
+- given you the basics of /classes/ and /objects/ in Scala, and
+- shown you how to _compile_ and _run_ applications. =OUTDATED since Scala 3.5=
+
+In the next chapter, you'll learn about Scala's basic types and how to use them.
 
 * TODO 5 Basic Types and Operations - 108
 ** 5.1 Some basic types - 108
@@ -567,7 +1048,7 @@ CLOSED: [2025-04-17 Thu 01:09]
 ** 10.15 Putting it all together - 230
 ** 10.16 Conclusion - 233
 
-* TODO 11 Traits - 234
+* TODO 11 Traits - 234 - =READING=
   - /Traits/ are a _fundamental unit_ of code *reuse* in Scala.
 
   - A /trait/ encapsulates /method/ and /field/ definitions,
@@ -2022,44 +2503,315 @@ Listing 13.18 · A for expression with a tuple pattern.
 ** DONE 13.9 Conclusion - 303
 CLOSED: [2025-04-17 Thu 19:13]
 
-* TODO 14 Working with Lists - 304
-** TODO 14.1 List literals - 304
-** TODO 14.2 The ~List~ type - 305
-** TODO 14.3 Constructing lists - 305
-** TODO 14.4 Basic operations on lists - 306
-** TODO 14.5 List patterns - 307
-** TODO 14.6 First-order methods on class ~List~ - 309
+* DONE 14 Working with Lists - 304
+CLOSED: [2025-04-19 Sat 15:24]
+~List~'s are probably the _most commonly used_ /data structure/ in Scala
+programs.
+
+This chapter
+- Explains lists in DETAIL.
+- We will present many common operations that can be performed on lists.
+- We'll also cover some important design principles for programs working on lists.
+
+** DONE 14.1 List literals - 304
+CLOSED: [2025-04-19 Sat 11:41]
+/Lists/ are QUITE SIMILAR to /arrays/, but there are _TWO important
+differences_:
+1. /lists/ are *immutable*.
+2. /lists/ have a /recursive structure/ (i.e., a linked list), whereas /arrays/
+   are _flat_.
+
+** DONE 14.2 The ~List~ type - 305
+CLOSED: [2025-04-19 Sat 11:41]
+- Like /arrays/, /lists/ are _HOMOGENEOUS_: the elements of a list all have the
+  same type.
+
+- The ~List~ type in Scala is /covariant/.
+- Note the _empty list_ has type ~List[Nothing]~
+
+** DONE 14.3 Constructing lists - 305
+CLOSED: [2025-04-19 Sat 11:42]
+- ~::~ (pronounced "cons").
+  * associates to the right
+
+- ~Nil~
+
+** DONE 14.4 Basic operations on lists - 306
+CLOSED: [2025-04-19 Sat 11:44]
+- Example:
+  Insertion sort algorithm
+  #+begin_src scala
+    def isort(xs: List[Int]): List[Int] =
+      if xs.isEmpty then Nil
+      else insert(xs.head, isort(xs.tail))
+
+    def insert(x: Int, xs: List[Int]): List[Int] =
+      if xs.isEmpty || x <= xs.head then x :: xs
+      else xs.head :: insert(x, xs.tail)
+  #+end_src
+
+** DONE 14.5 List patterns - 307 - =TODO: Re-READ=
+CLOSED: [2025-04-19 Sat 13:13]
+- *About pattern matching on Lists*
+  * If you review the possible forms of patterns explained in Chapter 13, you
+    might find that _NEITHER ~List(...)~ NOR ~::~ look like it fits the kinds of
+    patterns defined there._
+
+    In fact, ~List(...)~ is an instance of a *library-defined* /extractor pattern/.
+    =TODO= Such patterns will be discussed in Advanced Programming in Scala.
+
+  * The /"cons" pattern/ ~x \colon{}\colon{} xs~ is a special case of an /infix operation pattern/.
+    + As an /expression/, an /infix operation/ _is equivalent to_ a /method call/.
+    + For /patterns/, the rules are different:
+      As a pattern, an /infix operation/ such as ~p op q~ is equivalent to ~op(p, q)~.
+      That is, the /infix operator/ ~op~ is treated as a /constructor pattern/.
+      In particular, a /cons pattern/ such as ~x :: xs~ is treated as ~::(x, xs)~.
+
+  * This hints that _there should be a /class/ named ~::~ that corresponds to
+    the /pattern constructor/._
+
+    Indeed, ~::~ is exactly the /class/ that builds non-empty lists.
+
+    =INTERESTING=
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    So ~::~ exists *TWICE* in Scala, once as a name of a /class/ and again as a
+    /method/ in /class/ ~List~.
+
+    The effect of the /method/ ~::~ is to produce an /instance/ of the ~class
+    scala.:~:.
+
+    =TODO=
+    =NEXT=
+    You can find out more details about how the ~List~ /class/ is implemented in
+    _Advanced Programming in Scala_.
+
+- Here's /insertion sort/ again (=from Jian= See example code in previous
+  section), this time written with /pattern matching/:
+  #+begin_src scala
+    def isort(xs: List[Int]): List[Int] =
+      xs match
+        case List() => List()
+        case x :: xs1 => insert(x, isort(xs1))
+
+    def insert(x: Int, xs: List[Int]): List[Int] =
+      xs match
+        case List() => List(x)
+        case y :: ys => if x <= y then x :: xs
+                        else y :: insert(x, ys)
+  #+end_src
+  Often, /pattern matching/ over lists is *clearer* than _decomposing them with
+  /methods/,_
+
+** DONE 14.6 First-order methods on class ~List~ - 309
+CLOSED: [2025-04-19 Sat 13:17]
 *** Concatenating two lists - 309
+~:::~
+
 *** The Divide and Conquer principle - 310
 *** Taking the length of a list: ~length~ - 311
 *** Accessing the end of a list: ~init~ and ~last~ - 312
 *** Reversing lists: ~reverse~ - 312
+- The reverse, init, and last operations satisfy some laws that can be used for
+  reasoning about computations and for simplifying programs.
+  1. ~reverse~ is its own _inverse_:
+     xs.reverse.reverse equals xs
+
+  2. ~reverse~ turns
+     ~init~ to ~tail~ and
+     ~last~ to ~head~,
+     EXCEPT that the elements are _reversed_:
+     ~xs.reverse.init equals xs.tail.reverse~
+     ~xs.reverse.tail equals xs.init.reverse~
+     ~xs.reverse.head equals xs.last~
+     ~xs.reverse.last equals xs.head~
+
+
+- The current implementation (in this chapter) of ~rev~ is not the best
+  implementation possible.
+
+  =IMPORTANT=
+  =TODO=
+  In the example starting on page 326, you will see how to speed it up.
+
 *** Prefixes and suffixes: ~drop~, ~take~, and ~splitAt~ - 314
+~xs.splitAt(n)~ equals ~(xs.take(n), xs.drop(n))~
+
 *** Element selection: ~apply~ and ~indices~ - 314
+~xs.apply(n)~ equals ~(xs.drop(n)).head~
+
 *** Flattening a list of lists: ~flatten~ - 315
 *** Zipping lists: ~zip~ and ~unzip~ - 315
 *** Displaying lists: ~toString~ and ~mkString~ - 316
-*** Converting lists: ~iterator~, ~toArray~, ~copyToArray~ - 317
-*** Example: Merge sort - 318
+- ~xs.mkString(sep)~ equals ~xs.mkString("", sep, "")~
 
-** TODO 14.7 Higher-order methods on class ~List~ - 320
+- ~xs.mkString~ equals ~xs.mkString("")~
+
+- =IMPORTANT=
+  =Often forget this=
+  There are also /variants/ of the ~mkString~ methods called ~addString~ which
+  append the constructed string to a ~scala.StringBuilder~ object, rather than
+  returning them as a result:
+  #+begin_src scala
+    val abcde = List('a', 'b', 'c', 'd', 'e')
+    val buf = new StringBuilder
+    abcde.addString(buf, "(", ";", ")")
+  #+end_src
+
+*** Converting lists: ~iterator~, ~toArray~, ~copyToArray~ - 317
+- ~xs.copyToArray(arr, start~), where ~start~ is the start index of ~arr~.
+  =IMPORTANT=
+  You must ensure that the destination array ~arr~ is large enough to hold the
+  list in full.
+
+*** TODO Example: Merge sort - 318
+
+** DONE 14.7 Higher-order methods on class ~List~ - 320
+CLOSED: [2025-04-19 Sat 14:22]
 *** Mapping over lists: ~map~, ~flatMap~ and ~foreach~ - 320
+- ~List.range(1, 5)~
+
 *** Filtering lists: ~filter~, ~partition~, ~find~, ~takeWhile~, ~dropWhile~, and ~span~ - 322
+~xs span p~ equals ~(xs takeWhile p, xs dropWhile p)~
+
 *** Predicates over lists: ~forall~ and ~exists~ - 323
-*** Folding lists: ~foldLeft~ and ~foldRight~ - 324
-*** Example: List reversal using ~fold~ - 326
+*** Folding lists: ~foldLeft~ and ~foldRight~ - 324 - =TODO: RE-READ=
+- ~List(a, b, c).foldLeft(z)(op)~ equals ~op(op(op(z, a), b), c)~
+- ~List(a, b, c).foldRight(z)(op)~ equals ~op(a, op(b, op(c, z)))~
+
+- For /associative operations/, /fold left/ and /fold right/ are _EQUIVALENT_,
+  but there might be a *difference in efficiency*.
+
+- One Scala /type inference/ LIMITATION can be seen when applying
+  ~foldLeft~ and ~foldRight~
+
+*** Example: List reversal using ~fold~ - 326 - =TODO: RE-READ=
 *** Sorting lists: ~sortWith~ - 327
 
-** TODO 14.8 Methods of the ~List~ object - 327
+** DONE 14.8 Methods of the ~List~ object - 327
+CLOSED: [2025-04-19 Sat 14:49]
 *** Creating lists from their elements: ~List.apply~ - 328
 *** Creating a range of numbers: ~List.range~ - 328
-*** Creating uniform lists: ~List.fill~ - 328
-*** Tabulating a function: ~List.tabulate~ - 329
-*** Concatenating multiple lists: ~List.concat~ - 329
+~List.range(9, 1, -3)~
+The third parameter is the _step_.
 
-** TODO 14.9 Processing multiple lists together - 329
-** TODO 14.10 Understanding Scala's type inference algorithm - 331
-** TODO 14.11 Conclusion - 334
+*** Creating uniform lists: ~List.fill~ - 328
+- ~List.fill(5)('a')~
+
+- ~List.fill(2, 3)('b'~)
+  2 entries and 3 elements per entry.
+
+*** Tabulating a function: ~List.tabulate~ - 329
+- ~val squares = List.tabulate(5)(n => n * n)~
+
+- ~val multiplication = List.tabulate(5, 5)(_ * _)~
+  5 entries and 5 elements per entry.
+
+*** Concatenating multiple lists: ~List.concat~ - 329
+- ~List.concat(List('a', 'b'), List('c'))~'s result is ~List('a', 'b', 'c')~
+
+- ~List.concat()~'s result is ~Nil~
+
+** DONE 14.9 Processing multiple lists together - 329
+CLOSED: [2025-04-19 Sat 15:03]
+- Example:
+  #+begin_src scala
+    (List(10, 20).zip(List(3, 4, 5))).map { (x, y) => x * y }
+    // List(30, 80)
+  #+end_src
+  * *Note*: =IMPORTANT=
+    The final ~map~ takes advantage of a _Scala 3 feature_ called /parameter
+    untupling/.
+
+  * parameter untupling :: in which a /function literal/ with two or more
+    parameters will be *untupled AUTOMATICALLY* if the expected type is a function
+    that accepts _one parameter of a /tuple type/._
+
+    + For example,
+      the ~map~ call in the previous expression means the same as:
+      ~map { case (x, y) => x * y }~.
+      =from Jian= In Scala 2, ~case~ must be written out.
+
+- When applying ~zip~,
+  any extra elements on the end are discarded.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Creating an intermediate list with ~zip~ can have an *important cost*
+  if the lists have a lot of elements. The ~lazyZip~ (=from Jian= since Scala
+  2.13) method solves this issue. Its syntax is similar to the ~zip~ method:
+  #+begin_src scala
+    (List(10, 20).lazyZip(List(3, 4, 5))).map(_ * _) // List(30, 80)
+  #+end_src
+  =IMPORTANT=
+  In the above example, you can see that the ~map~ method takes as parameter a
+  function that takes *two parameters (as opposed to one pair)*, allowing the
+  usage of the placeholder syntax.
+
+- There are also /lazy zip/ analogs to ~exists~ and ~forall~.
+  #+begin_src scala
+    (List("abc", "de").lazyZip(List(3, 2))).forall(_.length == _) // true
+    (List("abc", "de").lazyZip(List(3, 2))).exists(_.length != _) // false
+  #+end_src
+
+** DONE 14.10 Understanding Scala's type inference algorithm - 331 - =TODO: Review=
+CLOSED: [2025-04-19 Sat 15:24]
+- One difference between the previous uses of ~sortWith~ and ~msort~ concerns
+  the admissible syntactic forms of the comparison function.
+
+  * Compare:
+    #+begin_src scala
+      msort((x: Char, y: Char) => x > y)(abcde) // List(e, d, c, b, a)
+    #+end_src
+
+    with
+
+    #+begin_src scala
+      abcde.sortWith(_ > _) // List(e, d, c, b, a)
+    #+end_src
+
+- /Type inference in Scala/ is *flow based*.
+
+- This inference scheme suggests the following library design principle:
+  When designing a /polymorphic method/ that takes some non-function arguments and
+  a function argument,
+  *place the function argument last* in a /curried parameter list/ on its own.
+
+  That way,
+  1. the method's *correct* /instance type/ can be _inferred from_ the
+     _non-function arguments_, and that type can in turn be used to /type check/
+     the /function argument/.
+
+  2. The net effect:
+     users of the method will be able to
+     give *LESS* /type information/ and
+     write /function literals/ *in more compact ways*.
+
+- =IMPORTANT=
+  This example highlights some LIMITATIONS of
+  _the /local, flow-based type inference scheme/ of Scala._
+
+  It is *NOT present* in /the more global Hindley-Milner style of type
+  inference/ used in functional languages, such as ML or Haskell.
+
+  * HOWEVER, /Scala's local type inference/ *deals much more gracefully* with
+    /object-oriented subtyping/ than the /Hindley-Milner style/ does.
+
+  * Fortunately,
+    the limitations show up only in some corner cases, and are usually easily
+    _FIXED BY_ adding an /EXPLICIT type annotation/.
+
+- Adding /type annotations/ is also a useful _debugging technique_
+  WHEN you get confused by type error messages related to /polymorphic methods/.
+
+** DONE 14.11 Conclusion - 334
+CLOSED: [2025-04-19 Sat 15:07]
+- Now you have seen many ways to work with lists.
+
+- Along the way, you learned _a bit_ about
+  HOW Scala's /type inference/ works.
 
 * TODO 15 Working with Other Collections - 335
 ** 15.1 Sequences - 335
@@ -2098,8 +2850,9 @@ CLOSED: [2025-04-17 Thu 19:13]
 
 ** 16.7 Conclusion - 376
 
-* TODO 17 Scala's Hierarchy - 378
-This chapter will look at /Scala’s class hierarchy/ as a whole.
+* DONE 17 Scala's Hierarchy - 378
+CLOSED: [2025-04-18 Fri 15:54]
+This chapter will look at /Scala's class hierarchy/ as a whole.
 
 - In Scala, EVERY /class/ *inherits* from a _COMMON_ /superclass/ named ~Any~.
 
@@ -2110,72 +2863,93 @@ This chapter will look at /Scala’s class hierarchy/ as a whole.
   hierarchy/, ~Null~ and ~Nothing~, which essentially act as _COMMON_
   /subclasses/.
 
-  * For example,
-    just as ~Any~ is a /superclass/ of EVERY OTHER /class/,
-    ~Nothing~ is a /subclass/ of EVERY OTHER /class/.
+- ~Any~ is a /superclass/ of EVERY OTHER /class/
+- ~Nothing~ is a /subclass/ of EVERY OTHER /class/.
 
 - In this chapter, we'll give you a tour of Scala's class hierarchy.
 
-** TODO 17.1 Scala's class hierarchy - 378
+** DONE 17.1 Scala's class hierarchy - 378
+CLOSED: [2025-04-18 Fri 12:39]
 - Figure 17.1 shows an outline of Scala's class hierarchy.
+  =from Jian=
+  =FIXME???=
+  Should mention ~Matchable~, with or without its exact name. Just say this
+  figure doesn't include one fundamental trait, and it will be explain in
+  Advanced Programming in Scala. At least, in a footnote.
 
 - At the *TOP* of the hierarchy is /class/ ~Any~, which defines /methods/ that
   include the following:
   #+begin_src scala
-    final def ==(that: Any): Boolean
-    final def !=(that: Any): Boolean
+    final def ==(that: Any): Boolean = this equals that
+    final def != (that: Any): Boolean = !(this == that)
+    final def ##: Int
     def equals(that: Any): Boolean
-    def ##: Int
     def hashCode: Int
     def toString: String
   #+end_src
+  * =FIXME=
+    ~##~ should be ~final~!!!
 
-  * The ~==~ method is essentially the same as ~equals~ and ~!=~ is always the
-    NEGATION of ~equals~.
+  * =from Jian=
+    =IMPORTANT=
+    I read the source code of ~Any~, and I found that
+    the bodies of /final methods/ are in the form of ~sys.error(...)~.
+    + Methods of ~Any~ in this form:
+      - ~##~
+      - ~isInstanceOf~
+      - ~asInstanceOf~
+
+    The Scala compiler special-cases these methods and emits _optimized
+    bytecode_ for it, bypassing the ~sys.error~ definition.
+
+  * Since ~final def ==(that: Any): Boolean = this equals that~ and ~!=~ is
+    always the NEGATION of ~equals~.
+    =IMPORTANT=
     So individual /classes/ can tailor what ~==~ or ~!=~ means by _overriding the
     ~equals~ method_.
 
-- footnote 1:
-  =from Jian= All below are about the inconsistency in Java. Scala doesn't have
-  those issues.
+  * Page 379
+    footnote 1:
+    =from Jian= Summary: All below are about the inconsistency in Java. Scala
+    doesn't have those issues.
 
-  * The *ONLY case* where ~==~ does not directly call ~equals~ is for /Java's
-    boxed numeric classes/, such as ~Integer~ or ~Long~.
-    =IMPORTANT=
-
-    + Reason:
-      In Java, a ~new Integer(1)~ does *NOT equal* (=from Jian= Java's ~equals~)
-      a ~new Long(1)~ even though for /primitive values/ 1 == 1L.
-
-      - =from Jian=
-        Here the book *on purpose* keep using ~new~ instead of the ~.valueOf~
-        methods.
-        * Use ~new~ for /boxed numeric types/ is _deprecated_ since Java 9.
-        * Should use ~.valueOf~ methods on these types, which is cache friendly.
-        * Use ~new~ always create new instances of objects in /boxed numeric
-          types/. This usage "still works but strongly discouraged; may be
-          removed later" in Java 17+.
-
-    + Conclusion:
+    + The *ONLY case* where ~==~ does not directly call ~equals~ is for /Java's
+      boxed numeric classes/, such as ~Integer~ or ~Long~.
       =IMPORTANT=
-      Since Scala is a more regular language than Java, it was necessary to
-      *correct* this discrepancy by special-casing the ~==~ method for these
-      /classes/.
 
-  * Likewise, the ~##~ method provides a Scala version of hashing that is the
-    same as Java's ~hashCode~, _EXCEPT_ for /boxed numeric types/, where _it
-    works CONSISTENTLY with ~==~ in Scala._
+      - Reason:
+        In Java, a ~new Integer(1)~ does *NOT equal* (=from Jian= Java's ~equals~)
+        a ~new Long(1)~ even though for /primitive values/ 1 == 1L.
 
-    + For instance ~new Integer(1)~ and ~new Long(1)~ hash the same with ~##~
-      even though their Java ~hashCode~'s are DIFFERENT. =???=
+        * =from Jian=
+          Here the book *on purpose* keep using ~new~ instead of the ~.valueOf~
+          methods.
+          + Use ~new~ for /boxed numeric types/ is _deprecated_ since Java 9.
+          + Should use ~.valueOf~ methods on these types, which is cache friendly.
+          + Use ~new~ always create new instances of objects in /boxed numeric
+            types/. This usage "still works but strongly discouraged; may be
+            removed later" in Java 17+.
+
+      - Conclusion:
+        =IMPORTANT=
+        Since Scala is a more regular language than Java, it was necessary to
+        *correct* this discrepancy by special-casing the ~==~ method for these
+        /classes/.
+
+    + Likewise, the ~##~ method provides a Scala version of hashing that is the
+      same as Java's ~hashCode~, _EXCEPT_ for /boxed numeric types/, where _it
+      works CONSISTENTLY with ~==~ in Scala._
+
+      - For instance ~new Integer(1)~ and ~new Long(1)~ hash the same with ~##~
+        even though their Java ~hashCode~'s are DIFFERENT. =???=
+        * =from Jian=
+          =FIXME=
+          =???=
+          =???=
+          When using JDK 17, their ~hashCode~'s are the same!
+
       - =from Jian=
-        =FIXME=
-        =???=
-        =???=
-        When using JDK 17, their ~hashCode~'s are the same!
-
-    + =from Jian=
-      ~.##~ can be called from ~null~, and ~.hashCode~ can't be.
+        ~.##~ can be called from ~null~, and ~.hashCode~ can't be.
 
 - *Multiversal equality*
   Scala 3 introduced "multiversal equality," which can give you a _compiler
@@ -2183,43 +2957,430 @@ This chapter will look at /Scala’s class hierarchy/ as a whole.
   a ~String~ and an ~Int~ for equality.
   * =TODO= This mechanism will be described in Chapter 23.
 
-- The /root class/ ~Any~ has TWO /subclasses/:
-  * ~AnyVal~
-  * ~AnyRef~
+- The /root class/ ~Any~ has TWO /subclasses/: ~AnyVal~ and ~AnyRef~.
 
-- ~AnyVal~ is the /parent class/ of /value classes/ in Scala.
-  * While you can _define your own_ /value classes/ (see _Section 17.4_),
+  * ~AnyVal~ :: the /parent class/ of /value classes/ in Scala.
+    + While you can _define your own_ /value classes/ (see _Section 17.4_),
 
-  * there are NINE /value classes/ _built into Scala_:
-    + ~Byte~
-    + ~Short~
-    + ~Char~
-    + ~Int~
-    + ~Long~
-    + ~Float~
-    + ~Double~
-    + ~Boolean~
-    + ~Unit~
+    + there are NINE /value classes/ _built into Scala_:
+      - ~Byte~
+      - ~Short~
+      - ~Char~
+      - ~Int~
+      - ~Long~
+      - ~Float~
+      - ~Double~
+      - ~Boolean~
+      - ~Unit~
 
-  * The first eight of these correspond to Java’s primitive types, and their
-    values are represented at run time as Java’s primitive values. The instances
-    of these classes are all written as literals in Scala. For example, 42 is an
-    instance of Int, 'x' is an instance of Char, and false an instance of
-    Boolean. You cannot create instances of these classes using new. This is
-    enforced by the “trick” that value classes are all defined to be both
-    abstract and final.
+    + The first eight of these CORRESPOND TO _Java's primitive types_, and their
+      values are represented at run time as _Java's primitive values_.
 
-** TODO 17.2 How primitives are implemented - 382
-** TODO 17.3 Bottom types - 384
-** TODO 17.4 Defining your own value classes - 385
+      - The /instances/ of these /classes/ are all written as /literals/ in Scala.
+
+      - =IMPORTANT=
+        You *CANNOT* create /instances/ of these /classes/ using ~new~.
+        =from Jian= Useful trick!
+        This is enforced by the "trick" that /value classes/ are all defined to be
+        both ~abstract~ and ~final~.
+
+    + The other /value class/, ~Unit~, corresponds roughly to /Java's ~void~
+      type/.
+
+  * Note that the /value class/ space is *flat*;
+    all /value classes/ are (=from Jian= DIRECT) /subtypes/ of ~scala.AnyVal~,
+    but *NO* subclass relation betwhen each other.
+    + Instead there are /implicit conversions/ between different /value class
+      types/.
+
+  * As mentioned in Section 5.10, /implicit conversions/ are also used to add more
+    functionality to /value types/.
+    For example, many methods can be called from ~Int~ comes from
+    ~scala.runtime.RichInt~, and there is an /implicit conversion/ from ~Int~ to
+    ~RichInt~.
+
+- ~AnyRef~ :: _in fact_ just an alias for ~class java.lang.Object~.
+
+  So _classes written in Java_, as well as _classes written in Scala_,
+  *ALL* inherit from ~AnyRef~.
+
+  * One way to think of ~java.lang.Object~, therefore, is as the way ~AnyRef~ is
+    implemented on the Java platform.
+
+    Thus, although you *CAN* use ~Object~ and ~AnyRef~ *INTERCHANGEABLY* in
+    Scala programs on the Java platform, _the *RECOMMENDED* style is to use
+    ~AnyRef~ everywhere._
+
+  * footnote:
+    One reason the ~AnyRef~ alias exists, instead of just using the name
+    ~java.lang.Object~, is because Scala was originally designed to work on both
+    the Java and .NET platforms.
+    + On .NET, ~AnyRef~ was an alias for ~System.Object~.
+
+** DONE 17.2 How primitives are implemented - 382
+CLOSED: [2025-04-18 Fri 14:15]
+- Q :: How is all this implemented?
+
+- A :: In fact, Scala stores integers in the same way as Java -- as 32-bit words.
+       This is important for efficiency on the JVM and also for interoperability
+       with Java libraries.
+
+  * Standard operations like addition or multiplication are implemented as
+    primitive operations.
+
+  * However, Scala uses the “backup” class ~java.lang.Integer~ whenever an
+    integer needs to be seen AS a /(Java) object/.
+
+    + This happens FOR INSTANCE when
+      - invoking the ~toString~ method on an integer number or
+      - when assigning an integer to a variable of type ~Any~.
+
+      Integers of type ~Int~ are converted *TRANSPARENTLY* to "boxed integers"
+      of type ~java.lang.Integer~ _whenever necessary_.
+
+- All this sounds a lot like _/auto-boxing/ in Java_ and it is indeed _quite
+  SIMILAR_.
+
+  There's one crucial difference though: _/Boxing/ in Scala_ is *much less
+  visible* than _/boxing/ in Java_.
+
+  * For example,
+    The equality operation ~==~ in Scala is designed to be *TRANSPARENT* with
+    respect to the /type's representation/. For /value types/, it is the
+    _NATURAL (numeric or boolean) equality_.
+
+- ~eq~: reference equality check. Its negation is ~ne~.
+
+  For example:
+  #+begin_src scala
+    val x = new String("abc") // abc
+    val y = new String("abc") // abc
+    x == y // true
+    x eq y // false
+    x ne y // true
+  #+end_src
+
+** DONE 17.3 Bottom types - 384
+CLOSED: [2025-04-18 Fri 14:15]
+- At the *BOTTOM* of the /type hierarchy/ in Figure 17.1 you see the TWO /classes/:
+  * ~scala.Null~
+  * ~scala.Nothing~
+
+  These are _special types_ that handle some *"corner cases"* of /Scala's type
+  system/ *in a uniform way.*
+
+- ~Null~
+  is the type of the ~null~ /reference/; it is a /subclass/ of EVERY /reference
+  class/ (i.e., EVERY /class/ that itself _inherits_ from ~AnyRef~).
+
+  * ~Null~ is *NOT compatible* with /value types/.
+    For example,
+    #+begin_src scala
+      // scala>
+      val i: Int = null
+      1 |val i: Int = null
+        |             ^^^^
+        |             Found: Null
+        |             Required: Int
+    #+end_src
+
+  * footnote 5:
+    Scala 3 includes an _option_, ~-Yexplicit-nulls~, which _ENABLES_ an
+    EXPERIMENTAL ALTERNATE treatment of ~null~ that aims to track which variables
+    *can and cannot be* ~null~.
+
+    + This option be described in Advanced Programming in Scala.
+      =TODO=
+      =IMPORTANT=
+
+- ~Nothing~
+  is at *the VERY bottom* of /Scala's class hierarchy/; it is a /subtype/ of
+  EVERY other type.
+
+  * However, there exist *no values* of this type whatsoever.
+    + Q :: Why does it make sense to have a type without values?
+
+    + A :: As discussed in Section 7.4,
+           one use of ~Nothing~ is that _it signals abnormal termination._
+
+      - For instance, there's the ~error~ method in the ~sys~ object of Scala's
+        standard library:
+        #+begin_src scala
+          def error(message: String): Nothing =
+            throw new RuntimeException(message)
+        #+end_src
+
+** DONE 17.4 Defining your own value classes - 385
+CLOSED: [2025-04-18 Fri 14:49]
+See https://docs.scala-lang.org/overviews/core/value-classes.html
+
+Define your own /value classes/ to augment the ones that are built in.
+
+- Like the /built-in value classes/,
+  1. an /instance/ of your /value class/ will usually compile to /Java bytecode/
+     that does *NOT use* the /wrapper class/.
+
+  2. In contexts where a _wrapper_ is needed, such as with generic code, the
+     value will get /boxed/ and /unboxed/ *AUTOMATICALLY*.
+
+- footnote 6:
+  Scala 3 also offers /opaque types/, which is more restrictive but guarantees the
+  value will *NEVER be boxed*.
+  * =NEXT= /Opaque types/ will be described in Advanced Programming in Scala.
+    =from Jian=
+    The /Opaque types/ chapter explains when to use /value classes/ and when to
+    use /opaque types/, and the reason.
+
+- _Only certain_ /classes/ can be made into /value classes/.
+
+  For a /class/ to be a /value class/,
+  * it must have *EXACTLY ONE parameter* and
+    =from Jian=
+    Future JVM may relax this restriction, and support /multiple-value value
+    classes/.
+
+  * it must have *nothing inside it except ~def~'s*.
+
+  Furthermore,
+  * *no* other /class/ can extend a /value class/, and
+    =IMPORTANT= often forget this restriction!
+  * a value class *cannot* redefine ~equals~ or ~hashCode~.
+
+- To define a /value class/, make it a /subclass/ of ~AnyVal~, and put ~val~
+  before the one parameter. Here is an example /value class/:
+  #+begin_src scala
+    class Dollars(val amount: Int) extends AnyVal:
+      override def toString = "$" + amount
+  #+end_src
+
+  #+begin_src scala
+    val money = new Dollars(1_000_000)
+    money.amount // 1000000
+  #+end_src
+  * ~money~, refers to an instance of the /value class/,
+    + is of type ~Dollars~ _in Scala source code_,
+    + BUT the compiled _Java bytecode_ will use type ~Int~ directly.
+
 *** Avoiding a types monoculture - 386
+=FIXME=
+=from Jian=
+Update this use case and use /value clasess/ built from /primitive types/.
 
-** TODO 17.5 Intersection types - 388
-** TODO 17.6 Union types - 389
-** TODO 17.7 Transparent traits - 392
-** TODO 17.8 Conclusion - 393
+If not using /primitive types/, mostly using /opaque types/ is a better
+solution.
 
-* TODO 18 Type Parameterization - 394
+- =from the Internet=
+  =IMPORTANT=
+  In programming, "type monoculture" generally refers to a situation where a
+  codebase or system relies heavily on a single, dominant type for data or
+  logic, potentially leading to reduced flexibility, maintainability, and
+  scalability. This is analogous to monoculture in agriculture where a single
+  crop is grown, leading to reduced biodiversity and vulnerabilities.
+
+- Replace
+  #+begin_src scala
+    def title(text: String, anchor: String, style: String): String =
+      s"<a id='$anchor'><h1 class='$style'>$text</h1></a>"
+  #+end_src
+
+  with
+  #+begin_src scala
+    class Anchor(val value: String) extends AnyVal
+    class Style(val value: String) extends AnyVal
+    class Text(val value: String) extends AnyVal
+    class Html(val value: String) extends AnyVal
+
+    def title(text: Text, anchor: Anchor, style: Style): Html =
+      Html(
+        s"<a id='${anchor.value}'>" +
+          s"<h1 class='${style.value}'>" +
+          text.value +
+          "</h1></a>"
+      )
+  #+end_src
+
+** DONE 17.5 Intersection types - 388
+CLOSED: [2025-04-18 Fri 14:53]
+- An /intersection type/ is a /subtype/ of all combinations of its constituent
+  /types/.
+  * For example,
+    type ~B & I & F~ is a /subtype/ of
+    + ~B~
+    + ~I~
+    + ~F~
+    + ~B & I~
+    + ~B & F~
+    + ~I & F~
+    + (reflexively of) ~B & I & F~ itself.
+
+- =IMPORTANT=
+  /intersection types/ are *COMMUTATIVE*, the order of appearance of types in an
+  /intersection type/ *does NOT matter*.
+
+** TODO 17.6 Union types - 389 - =NOTE=
+- Scala offers a DUAL to /intersection types/ called /union types/, which
+  consist of two or more types joined by pipe (~|~) characters, such as ~Plum |
+  Apricot~.
+
+- A /union type/ indicates that an object is an /instance/ of *at least one*
+  mentioned /type/.
+  * For example,
+    an object of type ~Plum | Apricot~ is either an /instance/ of
+    + Plum, or
+    + Apricot, or
+    + both. =from Jian= some type may ~extends Plum with Apricot~
+
+- =IMPORTANT=
+  Like /intersection types/, /union types/ are *commutative*.
+
+- Dually to /intersection types/, a /union type/ is a /supertype/ of all
+  combinations of its constituent types.
+  * *Importantly*, a /union type/ is its constituent types /nearest common
+    supertype/, or /least upper bound/.
+
+- The addition of /union and intersection types/ to Scala 3
+  _ENSURES_ that
+  */Scala's type system/ forms a /mathematical lattice/.*
+
+  * A /lattice/ is a /partial order/ in which any two types have both a unique least
+    upper bound, or LUB,and a unique greatest lower bound. In Scala 3, the least
+    upper bound of anytwo types is their union; the greatest lower bound is
+    their intersection. Forexample, the least upper bound of Plum and Apricot is
+    Plum | Apricot.Their greatest lower bound is Plum & Apricot.
+
+- /Union types/ have important implications for the specification and
+  implementation of /type inference/ and /type checking/ in Scala. Whereas in
+  Scala2, the type inference algorithm had to settle on an approximation of
+  the leastupper bound of some pairs of types, whose actual least upper bound
+  was thelimit of an infinite series, Scala 3 can simply form a union of those
+  types.
+
+- To visualize this, consider the following hierarchy:
+  #+begin_src scala
+    trait Fruit
+    trait Plum extends Fruit
+    trait Apricot extends Fruit
+    trait Pluot extends Plum, Apricot
+  #+end_src
+  These four types yield the hierarchy shown in Figure 17.2. Fruit isa
+  supertype to both Plum and Apricot, but it is not the nearest
+  commonsupertype. Rather, the union type Plum | Apricot is the nearest common
+  supertype, or least upper bound, of Plum and Apricot. As shown in
+  Figure17.2, this implies that the Plum | Apricot union type is a subtype
+  ofFruit. And this is indeed the case, as illustrated here:
+  #+begin_src scala
+    val plumOrApricot: Plum | Apricot = new Plum {}
+    // This compiles fine, because Plum | Apricot <: Fruit
+    val fruit: Fruit = plumOrApricot
+    // But you cannot use a Fruit where Plum | Apricot is needed
+
+    // scala>
+    val doesNotCompile: Plum | Apricot = fruit
+    1 |val doesNotCompile: Plum | Apricot = fruit
+      |                                     ˆˆˆˆˆ
+      |                                Found: (fruit : Fruit)
+      |                                Required: Plum | Apricot
+  #+end_src
+
+- Dually Pluot is a subtype to both Plum and Apricot, but it is not thenearest
+  common subtype. Rather, the intersection type Plum & Apricot isthe nearest
+  common subtype, or greatest lower bound, of Plum and Apricot.As shown in
+  Figure 17.2, this implies that the Plum & Apricot intersectiontype is a
+  supertype of Pluot. And this is indeed the case:
+  #+begin_src scala
+    val pluot: Pluot = new Pluot {}
+
+    // This compiles fine, because Pluot <: Plum & Apricot
+    val plumAndApricot: Plum & Apricot = pluot
+
+    // But you cannot use a Plum & Apricot where Pluot is needed
+    // scala>
+    val doesNotCompile: Pluot = plumAndApricot
+    1 |val doesNotCompile: Pluot = plumAndApricot
+      |                            ˆˆˆˆˆˆˆˆˆˆˆˆˆˆ
+      |                Found:    (plumAndApricot : Plum & Apricot)
+      |                Required: Pluot
+  #+end_src
+
+- You can invoke any method or access any field defined on any of the
+  constituenttypes of an intersection type. On an instance of Plum & Apricot,
+  forexample, you can invoke any methods defined in either Plum or
+  Apricot.By contrast, on a union type, you can only access members of
+  supertypesthat are common to the constituent types. On an instance of Plum |
+  Apricot,therefore, you can access the members of Fruit (including members it
+  inheritsfrom AnyRef and Any), but you cannot access any members added
+  ineither Plum or Apricot. To access such members, you must perform a
+  patternmatch to determine the actual class of the value at runtime. Here’s
+  anexample of such a pattern match:
+  #+begin_src scala
+    def errorMessage(msg: Int | String): String =
+      msg match
+        case n: Int => s"Error number: ${n.abs}"
+        case s: String => s + "!"
+  #+end_src
+  The errorMessage method’s msg parameter has type Int | String.You could,
+  therefore, directly invoke on msg only methods declared on Any,the sole
+  common supertype of Int and String. You could not directlyinvoke any other
+  methods defined on either Int or String. To access,for example, the abs
+  method of Int, or the string concatenation operator(+) of String, you must
+  perform a pattern match on msg, as shown in the errorMessage method body. Here
+  are some examples of using theerrorMessage method:
+  #+begin_src scala
+    errorMessage("Oops") // "Oops!"
+    errorMessage(-42)    // "Error number: 42"
+  #+end_src
+
+** DONE 17.7 Transparent traits - 392
+CLOSED: [2025-04-18 Fri 15:50]
+- Traits have two main uses:
+  * They allow you to define /classes/ through /mixin composition/, and
+  * they define /types/.
+
+- Q :: WHY do we need REQUIREMENT?
+
+- A :: Sometimes you may intend a /trait/ to be used
+  * primarily as a /mixin/, and
+  * *NOT* as a /type/.
+
+  This means sometime you *don't want* _the name of a trait_ to *appear* in
+  /inferred types/.
+
+- SOLUTION:
+  Declare the /traits/ you only want to use them as /mixins/ with ~transparent~.
+
+- The ~transparent~ modifier ONLY AFFECTS /type inference/.
+  You can still _use /transparent traits/ as types_ if you write them out
+  *explicitly*.
+
+- In addition to traits _marked EXPLICITLY as ~transparent~,_ Scala 3 will
+  treat
+  * ~scala.Product~,
+  * ~java.lang.Serializable~, and
+  * ~java.lang.Comparable~ as ~transparent~ as well.
+
+  Because these /types/ will *never be inferred* in Scala 3, if you really want to
+  _use them as types_, you will need to do so through _EXPLICIT /type annotations
+  or ascriptions/._
+
+** DONE 17.8 Conclusion - 393
+CLOSED: [2025-04-18 Fri 15:54]
+In this chapter we showed you
+1. The /classes/ at the /top/ and /bottom/ of /Scala's class hierarchy/.
+
+2. HOW to create your own /value classes/, including how to use them
+   for "tiny types."
+
+3. /Intersection and union types/, and saw how they turn /Scala's
+   type hierarchy/ into a /lattice/.
+
+4. Lastly, how to use the ~transparent~ modifier to prevent Scala's /type
+   inference/ algorithm from using _/traits/ designed primarily as /mixins/_ as
+   /types/.
+
+=NEXT=
+In the next chapter, you'll learn about /type parameterization/.
+
+* TODO 18 Type Parameterization - 394 - =READING=
 ** 18.1 Functional queues - 394
 ** 18.2 Information hiding - 397
 *** Private constructors and factory methods - 398
@@ -2629,12 +3790,350 @@ CLOSED: [2025-04-17 Thu 20:45]
 ** 22.7 Conclusion - 491
 
 * TODO 23 Typeclasses - 493
-** 23.1 Why typeclasses? - 493
-** 23.2 Context bounds - 498
-** 23.3 Main methods - 501
-** 23.4 Multiversal equality - 505
-** 23.5 Implicit conversions - 511
-** 23.6 Typeclass case study: JSON serialization - 514
+- If you need to write a function that implements behavior useful for some types
+  but not others, you have a few options in Scala.
+
+  * Define /overloaded methods/.
+
+  * Require that the /class/ of ANY /instance/ _passed to your function_ mixes
+    in a PARTICULAR /trait/.
+    =???=
+
+  * _MORE FLEXIBLE_
+    Define a /typeclass/ and
+    write your function
+    to work with /types/ for which _a /given instance/ of the /typeclass trait/
+    is defined_.
+
+- This chapter will
+  1. _compare and contrast_ these different approaches,
+  2. then dive deeply into /typeclasses/.
+
+     We will
+     1) introduce the /context bound syntax/ for /typeclasses/ and
+     2) give several examples of /typeclasses/ from the standard library -
+        for
+        * /numeric literals/,
+        * /multiversal equality/,
+        * /implicit conversions/, and
+        * main methods. =???= =TODO=
+
+     3) We'll wrap up with an example that illustrates the use of a /typeclass/
+        for _JSON serialization_.
+
+** DONE 23.1 Why typeclasses? - 493
+CLOSED: [2025-04-21 Mon 13:19]
+- typeclass :: a grouping or set of /types/.
+
+- /typeclasses/ support /ad hoc polymorphism/ :: functions can be used with a
+  particular, enumerated set of /types/.
+
+  _As mentioned in Section 21.4_
+
+  Any attempt to use such a function with
+  a /type/ *NOT in* its enumerated set
+  will *NOT compile*.
+
+- _ORIGINALLY_,
+  /ad hoc polymorphism/ was first used to describe the way that operators, such
+  as ~+~ or ~-~, can be used with certain types but not others in many
+  programming languages.
+  * footnote 1:
+    Strachey, "Fundamental Concepts in Programming Languages."
+
+  * In Scala, this is achieved by /overloading methods/.
+    The /interface/ of ~scala.Int~, for instance, includes seven /overloaded abstract
+    methods/ named minus (~-~):
+    #+begin_src scala
+      def -(x: Double): Double
+      def -(x: Float): Float
+      def -(x: Long): Long
+      def -(x: Int): Int
+      def -(x: Char): Int
+      def -(x: Short): Int
+      def -(x: Byte): Int
+    #+end_src
+
+  * _Another way_ to achieve /ad hoc polymorphism/ in Scala is with a /class
+    hierarchy/. Here's an example that uses a /sealed trait/ to define a family
+    of colors:
+    #+begin_src scala
+      sealed trait RainbowColor
+
+      class Red extends RainbowColor
+      class Orange extends RainbowColor
+      class Yellow extends RainbowColor
+      class Green extends RainbowColor
+      class Blue extends RainbowColor
+      class Indigo extends RainbowColor
+      class Violet extends RainbowColor
+
+      def paint(rc: RainbowColor): Unit
+    #+end_src
+    Because ~RainbowColor~ is ~sealed~, the paint method can be passed *only*
+    arguments having one of the eight types. It won't compile for any other
+    type.
+
+  * Although this approach could be viewed as /ad hoc polymorphism/, it is
+    referred to as /subtyping polymorphism/ to highlight an important *DIFFERENCE*:
+    + the classes of all the instances passed to the paint method must mix in
+      trait RainbowColor and adhere any constraints established by its
+      interface.
+
+    + By contrast,
+      the types accepted by ~Int~'s minus (~-~) method, shown in Figure 23.1,
+      _need NOT ADHERE TO any COMMON /interface/ other than that of /Scala's top
+      type/, ~Any~._
+
+  * In short,
+    + /subtyping/ enables polymorphism of *RELATED types*, whereas
+    + /ad hoc polymorphism/ approaches such as /overloading/ and /typeclasses/
+      enable polymorphism of *UNRELATED types*.
+
+  * Different /polymorphism/ as solutions for different problems:
+
+    + Because of the interface constraints, /subtyping/
+      *WORKS BEST*
+      WHEN
+      /class hierarchies/ define _SMALL families of types_ focused on a *single
+      concept*.
+
+      _/Sealed hierarchies/ and /enums/ are great examples._
+
+      =IMPORTANT=
+      In such /self-contained families of types/ it is straightforward to ensure
+      the compatibility of interfaces.
+
+    + /Subtyping/ can also be used to model _LARGER, unsealed families_ that are
+      focused on a *single concept*.
+      - A good example is _the Scala collections library_.
+
+    + However, when used to model behavior that is widely applicable to otherwise
+      *UNRELATED types*, such as /serialization/ or /ordering/, _the /subtyping/
+      approach becomes more cumbersome._
+
+      - As an example,
+        Scala's ~Ordered~ trait vs. ~Ordering~ /typeclass/ (also a ~trait~ in
+        syntax):
+        * /Subtyping polymorphism/:
+          - One potential problem is the /class/ into which you mix ~Ordered~
+            could _ALREADY define_ /methods/ whose names or contracts *conflict* with
+            those in ~Ordered~.
+
+          - Another potential problem is _/variance/ conflicts_.
+            * ~Ordered~ is *invariant*.
+
+          - One more potential problem with /subtyping polymorphism/ is
+            /pre-existing interfaces/ that are *incompatible*.
+
+            Another, more common problem is /pre-existing compatible interfaces/
+            that you *can't change*.
+
+            * Example:
+              The ~orderedMergeSort~ shown in Listing 18.11 can't sort ~List[Int]~,
+              because ~Int~ does *NOT* extend ~Ordered[Int]~ -- and you can't
+              change that fact.
+
+        * /Typeclasses/ solve this problem by defining a *SEPARATE* hierarchy
+          focused on the _GENERAL concept_,
+          *using a /type parameter/ to SPECIFY the /type/ for which a service is
+          being provided.*
+
+          + Because this *SEPARATE* hierarchy is focused on just one concept,
+            such as /serialization/ or /ordering/,
+            _it is STRAIGHTFORWARD to ENSURE the *compatibility* of /interfaces/._
+
+          + Because a /typeclass instance/ uses a /type parameter/ to indicate
+            the /type/ for which it is providing a service, you *need NOT change
+            a /type/* to provide the service for that /type/.
+            - _footnote 2_:
+              Using a /type parameter/ in this way is referred to as /universal
+              polymorphism/.
+
+        * Example:
+          #+begin_src scala
+            import org.stairwaybook.enums_and_adts.hope.Hope
+
+            object HopeUtils:
+              given hopeOrdering[T](using ord: Ordering[T]): Ordering[Hope[T]] with
+                def compare(lh: Hope[T], rh: Hope[T]): Int =
+                  import Hope.{Glad, Sad}
+                  (lh, rh) match
+                    case (Sad, Sad) => 0
+                    case (Sad, _) => -1
+                    case (_, Sad) => +1
+                    case (Glad(lhv), Glad(rhv)) => ord.compare(lhv, rhv)
+          #+end_src
+          Listing 23.1 · A given ~Ordering~ instance for ~Hope[T]~.
+
+        * /Typeclasses/ support /ad hoc polymorphism/,
+          BECAUSE
+          you can write functions that can be used
+          *ONLY with /types/ for which /given instances/ of a particular
+          /typeclass/ exists.*
+
+          + Any attempt to use such a function with a /type/ that LACKS a /given
+            instance/ of the required /typeclass/ will *NOT compile*.
+
+          =from Jian=
+          This description can fit into the defintion of /ad hoc polymorphism/.
+
+** DONE 23.2 Context bounds - 498
+CLOSED: [2025-04-21 Mon 14:11]
+Because /typeclasses/ are such an important pattern in Scala, the language
+provides a shorthand syntax for them called /context bounds/.
+
+#+begin_src scala
+  def maxList[T](elements: List[T])
+        (using ordering: Ordering[T]): T =
+    elements match
+      case List() => throw new IllegalArgumentException("empty list!")
+      case List(x) => x
+      case x :: rest =>
+        // val maxRest = maxList(rest)(using ordering)
+        val maxRest = maxList(rest)
+        if ordering.gt(x, maxRest)
+        then x
+        else maxRest
+#+end_src
+Listing 23.2 · A function with a using parameter.
+
+
+- Q :: Why /context parameter(s)/ don't need to be passed explicitly.
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+
+- A ::
+  Use the ~maxList~ as an illustration:
+
+  The ~maxList~ function is an example of /a ~using~ parameter/ used to provide
+  more information about _a /type/ mentioned *explicitly* in an *earlier*
+  parameter list._
+
+  Because elements must always be provided explicitly in any invocation of
+  ~maxList~, the compiler will know ~T~ at /compile time/ and can therefore
+  determine whether /a ~given~ definition/ of /type/ ~Ordering[T]~ is available.
+  If so, it can pass in the second parameter list, ~ordering~, *implicitly*.
+
+- From the compiler point of view (operational):
+  When the compiler see the invocation ~maxList(rest)~, it knows one of two
+  argumetns is missing. Since that /a ~using~ parameter/ is in the definition,
+  the compiler *DOESN'T give up* /type checking/, and search for required ~given~.
+
+- Use ~def summon[T](using t: T) = t~ and the /context bounds/ syntax:
+  #+begin_src scala
+    def maxList[T: Ordering](elements: List[T]): T =
+      elements match
+        case List() => throw new IllegalArgumentException("empty list!")
+        case List(x) => x
+        case x :: rest =>
+          // val maxRest = maxList(rest)(using ordering)
+          val maxRest = maxList(rest)
+          if summon[Ordering[T]].gt(x, maxRest)
+          then x
+          else maxRest
+  #+end_src
+  * /Context bounds/ are essentially /syntactic sugar/ for /typeclasses/.
+
+- Compare two syntax:
+  * ~[T <: Ordered[T]]~: ~T~ is an ~Ordered[T]~.
+
+  * ~[T <: Ordered[T]]~: Nothing about ~T~ itself, just some form of ordering
+    associated with ~T~.
+
+** DONE 23.3 Main methods - 501
+CLOSED: [2025-04-21 Mon 15:00]
+- In Scala, /main methods/ can actually accept
+  *ANY* _number_ and _types_ of arguments.
+  * Q :: How can it know how to do some type conversion when reading command
+         line arguments that in string type as the expected arguments of a
+         /main method/.
+
+  * A :: Use the ~scala.util.CommandLineParser.FromString~.
+    + The Scala standard library defines /given/ ~FromString~ /instances/ for
+      several common types, including ~String~ and ~Int~ in the ~FromString~
+      /companion object/.
+
+    + If you want to write a /main method/ that takes a _CUSTOM type,_
+      you can do so by declaring a /given instance/ of the ~FromString~
+      /typeclass/ _for the custom type._
+
+- Example:
+  * Listing 23.8 · A main method that takes a custom type.
+    #+begin_src scala
+      // In file moody.scala
+      val errmsg =
+        "Please enter a word, a positive integer count, and\n" +
+          "a mood (one of 'angry', 'surprised', or 'neutral')"
+
+      @main def repeat(word: String, count: Int, mood: Mood) =
+        val msg =
+          if count <= 0 then
+            errmsg
+          else
+            val words = List.fill(count)(word.trim)
+            val punc =
+              mood match
+                case Mood.Angry => "!"
+                case Mood.Surprised => "?"
+                case Mood.Neutral => ""
+          end if
+        println(msg)
+    #+end_src
+
+  * Listing 23.9 · A given ~FromString~ instance for ~Mood~.
+
+- A typeclass-based design is a good choice for command line argument parsers
+  for /main methods/
+
+  BECAUSE
+  this service is needed *only for certain types,*
+  which are otherwise *unrelated* to each other.
+
+** TODO 23.4 Multiversal equality - 505
+** DONE 23.5 Implicit conversions - 511
+CLOSED: [2025-04-21 Mon 15:58]
+- Their purpose of /implicit conversions/ was to help make code more clear and
+  concise _by *removing* BOILERPLATE type conversions._
+
+- Scala 3 /implicit conversion/ syntax:
+  #+begin_src scala
+    given streetToString: Conversion[Street, String] = _.value
+  #+end_src
+
+  This can be done is because ~Conversion~ is a /SAM/ with definition:
+  #+begin_src scala
+    abstract class Conversion[-T, +U] extends (T => U):
+      def apply(x: T): U
+  #+end_src
+
+- Switch on /implicit conversion/:
+  * goblally with the compiler option: ~-language:implicitConversions~
+
+  * Per file by ~import~'s:
+    #+begin_src scala
+      import scala.language.implicitConversions
+    #+end_src
+
+- If you do _DEFINE /implicit conversions/,_ make sure the conversion will
+  always be appropriate.
+
+  * For example,
+    converting ~Double~'s to ~Int~'s _implicitly_ would raise some eyebrows,
+    BECAUSE
+    it's a dubious idea to have something that causes a loss in precision happen
+    invisibly.
+
+
+    + It makes much more sense to go the other way,
+      from some more constrained type to a more general one.
+
+      For instance, from ~Int~ to ~Double~. It, and similar reasonable /implicit
+      conversions/, exists the ~scala.Predef~ object, which is implicitly
+      imported into every Scala program.
+
+** TODO 23.6 Typeclass case study: JSON serialization - 514
 *** Importing an extension method - 516
 *** Serializing domain objects - 517
 *** Serializing lists - 519
@@ -2655,7 +4154,7 @@ CLOSED: [2025-04-17 Thu 20:45]
 ** 24.10 Strings - 568
 ** 24.11 Performance characteristics - 569
 ** 24.12 Equality - 571
-** 24.13 Views - 572
+** TODO 24.13 Views - 572 - =READING=
 ** 24.14 Iterators - 576
 ** 24.15 Creating collections from scratch - 584
 ** 24.16 Conversions between Java and Scala collections - 586
