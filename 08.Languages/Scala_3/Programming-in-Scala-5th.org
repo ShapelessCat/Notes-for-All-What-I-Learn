@@ -969,45 +969,715 @@ This chapter has
 
 In the next chapter, you'll learn about Scala's basic types and how to use them.
 
-* TODO 5 Basic Types and Operations - 108
-** 5.1 Some basic types - 108
-** 5.2 Literals - 109
-** 5.3 String interpolation - 114
-** 5.4 Operators are methods - 116
-** 5.5 Arithmetic operations - 119
-** 5.6 Relational and logical operations - 120
-** 5.7 Bitwise operations - 121
-** 5.8 Object equality - 122
-** 5.9 Operator precedence and associativity - 124
-** 5.10 Rich operations - 127
-** 5.11 Conclusion - 127
+* DONE 5 Basic Types and Operations - 108
+CLOSED: [2025-04-27 Sun 11:20]
+- In this chapter:
+  * You'll get an overview of /Scala's basic types/, including:
+    + ~String~'s and
+    + the value types
+      - ~Int~
+      - ~Long~
+      - ~Short~
+      - ~Byte~
+      - ~Float~
+      - ~Double~
+      - ~Char~
+      - ~Boolean~
+
+  * You'll learn the operations you can perform on these types, including
+    + how /operator precedence/ works in Scala expressions.
+    + how Scala *"enriches"* these /basic types/, giving you additional
+      operations beyond those supported by Java.
+
+** DONE 5.1 Some basic types - 108
+CLOSED: [2025-04-27 Sun 00:14]
+- integral types ::
+  + ~Byte~
+  + ~Short~
+  + ~Int~
+  + ~Long~
+  + ~Char~
+
+- numeric types :: /integral types/ + ~Float~ + ~Double~
+
+- For the /basic types/,
+  _other than_ ~String~, which resides in /package/ ~java.lang~,
+  all of the types shown in Table 5.1 are members of /package/ ~scala~.
+
+- Scala's /numeric types/ have the *EXACT same ranges* as the corresponding
+  types in Java. This enables the Scala compiler to _TRANSFORM_ instances of
+  /Scala value types/, _DOWN TO_ /Java primitive types/ in the /bytecodes/ it
+  produces.
+  =FIXME=
+  Replace /Scala's basic types/ with /Scala's numeric types/, because only them
+  have *range*!!!
+
+** DONE 5.2 Literals - 109
+CLOSED: [2025-04-27 Sun 00:33]
+- All of the /basic types/ listed in _Table 5.1_ can be written with /literals/.
+
+- *Fast track for Java programmers*
+  Special in Scala:
+  * /raw strings/ page 112
+  * /string interpolation/ page 114
+  * Scala doesn't support /octal literals/, while Java support it.
+    Integer-literal-like ~031~, can't compile in Scala!!!
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+
+*** Integer Literals - 110
+*** Floating point literals - 111
+*** Larger numberic literals - 111
+In Scala 3 includes an *experimental feature* that _eliminates size limits
+for /numeric literals/ and allows them be used to initialize ARBITRARY types._
+
+You can enable the feature with this language import:
+~import scala.language.experimental.genericNumberLiterals~
+
+- Here are two examples from the standard library:
+  #+begin_src scala
+    val invoice: BigInt = 1_000_000_000_000_000_000_000
+    val pi: BigDecimal = 3.1415926535897932384626433833
+  #+end_src
+
+*** Character literals - 112
+Any Unicode character.
+
+*** String literals - 112
+- raw strings ::
+  It is *awkward* for writing strings that contain a lot of escape sequences or
+  strings that span multiple lines in traditional Java-like string syntax.
+
+  Scala includes a _special syntax_ for /raw strings/.
+
+  * Example:
+    #+begin_src scala
+      println("""Welcome to Ultamix 3000.
+                 Type "HELP" for help.""")
+
+      // Welcome to Ultamix 3000.
+      //            Type "HELP" for help.
+    #+end_src
+    + Fix this usually unwanted indentation with:
+      #+begin_src scala
+        println("""|Welcome to Ultamix 3000.
+                   |Type "HELP" for help.""".stripMargin)
+
+        // Welcome to Ultamix 3000.
+        // Type "HELP" for help.
+      #+end_src
+
+*** Boolean literals - 114
+
+** DONE 5.3 String interpolation - 114
+CLOSED: [2025-04-27 Sun 00:41]
+- ~s~ string interpolator:
+  The expression, ~s"Hello, $name!"~ is a /processed string literal/.
+  * The ~s~ interpolator will
+    1. EVALUATE each _embedded expression_,
+    2. INVOKE ~toString~ on each result, and
+    3. REPLACE the _embedded expressions_ in the literal WITH those results.
+
+- ~raw~ string interpolator:
+  it does *NOT* recognize /character literal escape sequences/
+  #+begin_src scala
+    println(raw"No\\\\escape!") // prints: No\\\\escape!
+  #+end_src
+
+- ~f~ string interpolator:
+  Allows you to attach *printf-style formatting instructions* to
+  _embedded expressions_.
+  * Example:
+    #+begin_src scala
+      f"${math.Pi}%.5f"
+      // 3.14159
+    #+end_src
+
+- =TODO=
+  The ~s~, ~f~, and ~raw~ /string interpolators/ are implemented via this
+  *GENERAL mechanism*.
+  Libraries and users *CAN define* other /string interpolators/ for other
+  purposes.
+
+** DONE 5.4 Operators are methods - 116
+CLOSED: [2025-04-27 Sun 00:56]
+- ~1 + 2~ \equiv{} ~1.+(2)~
+
+- ~Int~ contains *SEVERAL* _overloaded ~+~ methods_.
+
+- footnote 4:
+  In future versions of Scala, methods with non-symbolic names will only be
+  allowed as operators if they are declared with the ~infix~ modifier.
+  =IMPORTANT=
+
+- =IMPORTANT=
+  In /Scala operators/ are *NOT special* _language syntax_;
+  *ANY* /method/ that accepts a _SINGLE parameter_ can be an /operator/.
+
+- /prefix operators/ and /postfix operators/.
+  * They are /unary/.
+  * ~unary_-~ method is one can be used to implement the unary ~-~ for your
+    types. Scala tranfsform the expression ~-2.0~ into the /method invocation/
+    ~(2.0).unary_-~.
+
+  * The *ONLY* identifiers that can be used as /prefix operators/ are
+    + ~+~
+    + ~-~
+    + ~!~
+    + ~~~
+
+  * You can define your method with name ~unary_*~, but it won't be handled by
+    the compiler as a /prefix operator/.
+
+  * If a method that requires no arguments, you can alternatively
+    _leave off the dot and use postfix operator notation._
+
+    However,
+    the compiler will require that you ~import scala.language.postfixOps~ before
+    you call a method in /postfix notation/
+    =IMPORTANT=
+
+    + =from Jian= Don't use /postfix operators/. I don't like it. It is often
+      confusing!
+
+** DONE 5.5 Arithmetic operations - 119
+CLOSED: [2025-04-27 Sun 01:02]
+- =IMPORTANT=
+  =from Jian= =TRICKY=
+  #+begin_src scala
+    11.0f / 4.0f // 2.75: Float
+    11.0 % 4.0 // 3.0: Double
+  #+end_src
+  =!!!=
+  The /floating-point remainder/ you get with ~%~ is *NOT* the one defined by
+  the IEEE 754 standard.
+
+  The *IEEE 754* remainder uses /rounding division/, *not* /truncating
+  division/, in calculating the /remainder/, so it is *quite different from* the
+  /integer remainder operation/. If you really want an /IEEE 754 remainder/, you
+  can call ~IEEEremainder~ on ~scala.math~, as in:
+  #+begin_src scala
+    math.IEEEremainder(11.0, 4.0) // -1.0: Double
+  #+end_src
+
+** DONE 5.6 Relational and logical operations - 120 - =REVIEW=
+CLOSED: [2025-04-27 Sun 01:06]
+- ~&&~: logical-and with short circuit
+- ~||~: logical-or with short circuit
+- ~&~ : logical-and NO short-circuit =Often forget about this=
+- ~|~ : logical-or NO short-circuit =Often forget about this=
+
+** DONE 5.7 Bitwise operations - 121
+CLOSED: [2025-04-27 Sun 01:10]
+- Bitwise methods :: operations on individual bits of integer types.
+  * bitwise-and: ~&~
+  * bitwise-or: ~|~
+  * bitwise-xor: ~^~
+  * bitwise-complement: ~
+
+- ~<<~
+- ~>>~
+- ~>>>~
+
+** DONE 5.8 Object equality - 122 - =REVIEW=
+CLOSED: [2025-04-27 Sun 11:19]
+- ~==~ first check the left side for ~null~. If it is not ~null~, calls the
+  ~equals~ method.
+  * =IMPORTANT=
+    Since there is an _automatic ~null~ check_, you do *NOT have to* do the
+    check yourself.
+    =Often forget about this=
+
+- *How Scala's ~==~ differs from Java's*
+  * In Java,
+    ~==~ between /primitive types/ compares *value equality*.
+    ~==~ between /reference types/ compares *reference equality*.
+
+  * In Scala,
+    ~==~ is always intended for *value equality*.
+    *reference equality* check if left for ~eq~ (and its opposite ~ne~).
+
+** DONE 5.9 Operator precedence and associativity - 124 - =REVIEW=
+CLOSED: [2025-04-27 Sun 11:19]
+- *Scala doesn't have operators*, per se, just a way to use methods in operator
+  notation.
+  * =from Jian=
+    This means Scala can't have rules for a limited number symbols about their
+    precedence.
+
+  * Q :: How /operator precedence/ works in Scala.
+    + Or say: How /operator-like method precedence/ works in Scala.
+
+  * A ::
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    Consider the first character of an operator-like method.
+    + =IMPORTANT=
+      One exception!!! See below.
+
+- Table 5.3 · Operator precedence
+  1. (all other special characters)
+  2. *, /,  %
+  3. +, -
+  4. :
+  5. <, >
+  6. =, !
+  7. &
+  8. ˆ
+  9. |
+  10. (all letters)
+  11. (all assignment operators)
+
+- The one *EXCEPTION* to the _precedence rule_, alluded to earlier,
+  concerns *assignment operators*, which end in an equals character.
+
+  If
+  1. an operator *ends* in an equals character (~=~), and
+  2. the operator is *NOT* one of the comparison operators
+     * <=
+     * >=
+     * ==
+     * !=
+  then the precedence of the operator is the same as that of simple assignment
+  (~=~).
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =from Jian=
+  SUMMARY:
+  /Operator precedence/ always consider the first character, except operators
+  ends with ~=~ (excluding ~<=~, ~>=~, ~==~, and ~!=~, which still use the first
+  character rule).
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  No matter what /associativity/ an operator has,
+  however, *its operands are always evaluated _left to right_.*
+
+  So if a is an expression that is not just a simple reference to an immutable
+  value, then ~a ::: b~ is more precisely treated as the following block:
+  #+begin_src scala
+    { val x = a; b.:::(x) }
+  #+end_src
+
+  instead of simply ~b.:::(a)~.
+
+  * =IMPORTANT=
+    This is extremely important especially when ~a~ or ~b~ evaluations include
+    /side effects/.
+
+- Operator precedence is part of the Scala language.
+  You needn't be afraid to use it.
+
+** DONE 5.10 Rich operations - 127
+CLOSED: [2025-04-27 Sun 01:21]
+=from Jian=
+=IMPORTANT=
+=IMPORTANT=
+=IMPORTANT=
+*MISLEADING*:
+*MISLEADING*:
+*MISLEADING*:
+"these methods are available via implicit conversions, a deprecated technique"
+
+/implicit conversion/ is not a deprecated technique!
+Use /implicit conversion/ to add rich operations is a deprecated technique,
+which should be replaced by /extension methods/.
+
+- It seems this can be clarified in a new added footnote for this part!
+
+- Currently, still use the old way, with /implicit conversions/.
+  The rich wrapper classes:
+
+  Table 5.5 · Rich wrapper classes
+
+  | Basic type | Rich wrapper                |
+  |------------+-----------------------------|
+  | ~Byte~     | ~scala.runtime.RichByte~    |
+  | ~Short~    | ~scala.runtime.RichShort~   |
+  | ~Int~      | ~scala.runtime.RichInt~     |
+  | ~Long~     | ~scala.runtime.RichLong~    |
+  | ~Char~     | ~scala.runtime.RichChar~    |
+  | ~Float~    | ~scala.runtime.RichFloat~   |
+  | ~Double~   | ~scala.runtime.RichDouble~  |
+  | ~Boolean~  | ~scala.runtime.RichBoolean~ |
+  | ~String~   | ~scala.runtime.RichString~  |
+
+** DONE 5.11 Conclusion - 127
+CLOSED: [2025-04-27 Sun 11:20]
 
 * TODO 6 Functional Objects - 129
-** 6.1 A specification for class ~Rational~ - 129
-** 6.2 Constructing a ~Rational~ - 130
-** 6.3 Reimplementing the ~toString~ method - 132
-** 6.4 Checking preconditions - 133
-** 6.5 Adding fields - 134
-** 6.6 Self references - 136
-** 6.7 Auxiliary constructors - 136
-** 6.8 Private fields and methods - 138
-** 6.9 Defining operators - 139
-** 6.10 Identifiers in Scala - 141
-** 6.11 Method overloading - 144
-** 6.12 Extension methods - 146
-** 6.13 A word of caution - 147
-** 6.14 Conclusion - 147
+- In this chapter, the emphasis is on /classes/ that define /functional objects/.
+  * functional objects :: objects that do _NOT have any /mutable state/._
 
-* TODO 7 Built-in Control Structures - 149
-** 7.1 If expressions - 150
-** 7.2 While loops - 151
-** 7.3 For expressions - 154
-** 7.4 Exception handling with ~try~ expressions - 159
-** 7.5 Match expressions - 163
-** 7.6 Living without ~break~ and ~continue~ - 164
-** 7.7 Variable scope - 166
-** 7.8 Refactoring imperative-style code - 169
-** 7.9 Conclusion - 171
+- As a running example, we'll create _SEVERAL_ variants of a /class/ that models
+  _rational numbers_ as /immutable objects/.
+
+- Along the way, we'll show you more aspects of _object-oriented programming in
+  Scala_:
+  1. class parameters and constructors
+  2. /methods/ and operators
+  3. private members
+  4. /overriding/
+  5. checking preconditions
+  6. /overloading/
+  7. /self references/
+
+** TODO 6.1 A specification for class ~Rational~ - 129
+** TODO 6.2 Constructing a ~Rational~ - 130
+** TODO 6.3 Reimplementing the ~toString~ method - 132
+** TODO 6.4 Checking preconditions - 133
+** TODO 6.5 Adding fields - 134
+** TODO 6.6 Self references - 136
+** TODO 6.7 Auxiliary constructors - 136
+** TODO 6.8 Private fields and methods - 138
+** TODO 6.9 Defining operators - 139
+** TODO 6.10 Identifiers in Scala - 141
+** TODO 6.11 Method overloading - 144
+** TODO 6.12 Extension methods - 146
+** TODO 6.13 A word of caution - 147
+** TODO 6.14 Conclusion - 147
+
+* TODO 7 Built-in Control Structures - 149 - =HERE= - =ALMOST DONE=
+- Scala has only a handful of built-in control structures.
+  The _only control structures_ are
+  * ~if~
+  * ~while~
+  * ~for~
+  * ~try~
+  * ~match~
+  * function calls
+
+- The reason Scala has so few:
+  it has included /function literals/ since its inception.
+
+  Instead of accumulating one higher-level control structure after another in
+  the base syntax, Scala accumulates them in libraries.
+  * =TODO= Learn more about how to do this from Chapter 9.
+
+- =???=
+  In other words, Scala’s if can result in a value. Scala then continuesthis
+  trend by having for, try, and match also result in values.
+
+- Overall, Scala’s basic control structures, minimal as they are, provideall
+  of the essentials from imperative languages. Further, they allow you
+  toshorten your code by consistently having result values. To show you how
+  thisworks, we’ll take a closer look at each of Scala’s basic control
+  structures.
+
+- =TODO=
+  Missing =NOTE=
+
+** DONE 7.1 If expressions - 150
+CLOSED: [2025-04-27 Sun 11:48]
+- Imperative way (don't use this way in Scala when possible):
+  #+begin_src scala
+    var filename = "default.txt"
+    if !args.isEmpty then
+      filename = args(0)
+  #+end_src
+  * In most imperative languages, ~if~ is not an expression, and you have to use
+    this way.
+
+- Functional way (recommended):
+  #+begin_src scala
+    val filename =
+      if !args.isEmpty then args(0)
+      else "default.txt"
+  #+end_src
+  * In most languages not in functional paradigm, if you want to write code in
+    such a concise way, you may need a /ternary operator/.
+
+- =FIXME=
+  Why do we use the old style ~if~ syntax in this expression???
+  ~println(if (!args.isEmpty) args(0) else "default.txt")~
+
+** DONE 7.2 While loops - 151
+CLOSED: [2025-04-27 Sun 12:13]
+The ~while~ construct is called a "loop," *NOT an expression*, because it
+doesn't result in an interesting value. The type of the result is ~Unit~.
+
+- =from Jian=
+  Syntactically, ~while~ is still an expression, because it result in ~Unit~.
+  However, since we use ~while~ for /side effect/, not for values, we prefer to
+  call it *while loops*, not while expression.
+
+- As of Scala 3, Scala no longer offers a ~do-while~ loop.
+
+- Example:
+  =from Jian=
+  You can see we put mutiple expressions in the _condition_ position:
+  #+begin_src scala
+    import scala.io.StdIn.readLine
+
+    while
+      val line = readLine()
+      println(s"Read: $line")
+      line != ""
+    do ()
+  #+end_src
+
+  * Assignment in Scala doesn't return the value being assigned,
+    write code like this is *NOT compilable*:
+    #+begin_src scala
+      var line = "" // This doesn't compile!
+      while (line = scala.io.StdIn.readLine()) != "" do
+        println(s"Read: $line")
+    #+end_src
+
+- Since ~while~ is often used in companion with ~var~,
+  in general, we recommend you challenge /while loops/ in your code in the same
+  way you challenge ~var~'s.
+
+** DONE 7.3 For expressions - 154
+CLOSED: [2025-04-27 Sun 12:39]
+*** Iteration through collections - 154
+#+begin_src scala
+  val filesHere = (new java.io.File(".")).listFiles
+  for file <- filesHere do
+     println(file)
+#+end_src
+
+- ~file <- filesHere~ syntax is called a /generator/.
+
+- The ~for~ expression syntax works for *any kind of collection*.
+  * footnote:
+    To be precise, the expression to the right of the ~<-~ symbol in a ~for~
+    expression can be any type that has certain methods (in the above case
+    ~foreach~) with appropriate signatures.
+
+    =TODO=
+    =TODO=
+    =TODO=
+    Details on how the Scala compiler processes for expressions are described in
+    Chapter 2.
+
+*** Filtering - 156
+#+begin_src scala
+  val filesHere = (new java.io.File(".")).listFiles
+  for file <- filesHere if file.getName.endsWith(".scala") do
+    println(file)
+#+end_src
+
+- An alternative:
+  #+begin_src scala
+    val filesHere = (new java.io.File(".")).listFiles
+    for file <- filesHere do
+      if file.getName.endsWith(".scala") then
+        println(file)
+  #+end_src
+  * They are the same for current usage.
+  * Sometimes, only the former one works -- I mean when using ~for-yield~.
+
+- Multiple filters:
+  #+begin_src scala
+    for
+      file <- filesHere
+      if file.isFile
+      if file.getName.endsWith(".scala")
+    do println(file)
+  #+end_src
+
+*** Nested iteration - 157
+If you add multiple ~<-~ clauses, you will get *nested "loops."*
+
+- Example:
+  #+begin_src scala
+    def fileLines(file: java.io.File) =
+      scala.io.Source.fromFile(file).getLines().toArray
+
+
+    def grep(pattern: String) =
+      for
+        file <- filesHere
+        if file.getName.endsWith(".scala")
+        line <- fileLines(file)
+        if line.trim.matches(pattern)
+      do println(s"$file: ${line.trim}")
+
+    grep(".*gcd.*")
+  #+end_src
+
+*** Mid-stream variable bindings - 157
+Improve the example code in the last section, and _ONLY do ~line.trim~ once._
+#+begin_src scala
+  def grep(pattern: String) =
+    for
+      file <- filesHere if file.getName.endsWith(".scala")
+      line <- fileLines(file)
+      trimmed = line.trim
+      if trimmed.matches(pattern)
+  do println(s"$file: $trimmed")
+
+  grep(".*gcd.*")
+#+end_src
+
+*** Producing a new collection
+With ~yield~.
+#+begin_src scala
+  def scalaFiles =
+    for
+      file <- filesHere
+      if file.getName.endsWith(".scala")
+    yield file
+#+end_src
+
+** DONE 7.4 Exception handling with ~try~ expressions - 159
+CLOSED: [2025-04-27 Sun 13:11]
+Scala's exceptions behave just like in many other languages.
+
+- The /exception/ propagates in this way,
+  unwinding the /call stack/,
+  until _a method handles it_ OR _there are no more methods left_.
+
+*** Throwing exceptions - 159
+Example: ~throw new IllegalArgumentException~
+
+=IMPORTANT=
+Technically, an /exception throw/ has type ~Nothing~.
+
+*** Catching exceptions - 160
+Scala ~catch~ /exceptions/ with /pattern matching/.
+
+#+begin_src scala
+  import java.io.FileReader
+  import java.io.FileNotFoundException
+  import java.io.IOException
+
+  try
+    val f = new FileReader("input.txt")
+    // Use and close file
+  catch
+    case ex: FileNotFoundException => // Handle missing file
+    case ex: IOException => // Handle other I/O error
+#+end_src
+
+- *Note*
+  =IMPORTANT=
+  One difference you'll quickly notice in Scala is that, *unlike Java*,
+  * Scala does *NOT* require you to
+    + catch /checked exceptions/ or
+    + declare them in a /throws clause/.
+
+  * You can declare a /throws clause/ if you wish with the ~@throws~ annotation,
+    but it is not required.
+
+    =TODO=
+    =IMPORTANT=
+    =IMPORTANT=
+    See Section 9.2 for more information on ~@throws~.
+
+*** The ~finally~ clause - 161
+- You can guard an expression with a ~finally~ clause
+  IF you want to cause some code to _execute no matter how the expression
+  completes._
+  #+begin_src scala
+    import java.io.FileReader
+
+    val file = new FileReader("input.txt")
+    try
+      println(file.read()) // Use the file
+    finally
+      file.close() // Be sure to close the file
+  #+end_src
+  Listing 7.12 · A ~try-finally~ clause in Scala.
+
+- *Note*
+  * Listing 7.12 shows the /idiomatic way/ to ensure a *non-memory resource*,
+    such as a file, socket, or database connection, is closed.
+    1. Acquire the resource;
+    2. Start a ~try~ block in which you use the resource;
+    3. Close the resource in a ~finally~ block.
+
+  * _ALTERNATIVELY_,
+    in Scala you can employ a technique called the /loan pattern/ to achieve the
+    same goal more concisely.
+
+    =TODO=
+    =IMPORTANT=
+    The /loan pattern/ will be described in Section 9.4.
+
+*** Yielding a value - 162 - =TRICKY=
+As with most other Scala control structures,
+*try-catch-finally results in a value.*
+
+- _IF_ an exception is thrown but *not caught*,
+  the expression has no result at all.
+
+  The value computed in the ~finally~ clause, if there is one, is *DROPPED*.
+
+- =IMPORTANT=
+  =TRICKY=
+  =TRICKY=
+  If you're familiar with Java, it's worth noting that Scala's behavior differs
+  from Java only because Java's ~try-finally~ does NOT result in a value.
+  * As in Java,
+    if a ~finally~ clause includes an EXPLICIT ~return~ statement, or throws an
+    exception, that /return value/ or /exception/ will *"overrule"* any previous
+    one that originated in the try block or one of its ~catch~ clauses.
+
+  * Given this, rather contrived, function defintion:
+    #+begin_src scala
+      // From Jian: same as in Java
+      def f(): Int = try return 1 finally return 2
+    #+end_src
+    calling ~f()~ results in 2.
+
+    By contrast, given:
+
+    #+begin_src scala
+      def g(): Int = try 1 finally 2
+    #+end_src
+    calling ~g()~ results in 1.
+
+- =IMPORTANT=
+  SUMMARY:
+  *it's usually best to avoid returning values from ~finally~ clauses.*
+
+  * The best way to think of ~finally~ clauses is
+    as a way to _ENSURE_ *some side effect happens*, such as closing an open
+    file.
+
+** DONE 7.5 Match expressions - 163
+CLOSED: [2025-04-27 Sun 13:19]
+** TODO 7.6 Living without ~break~ and ~continue~ - 164 - =REVIEW= =NOTE=
+** DONE 7.7 Variable scope - 166
+CLOSED: [2025-04-27 Sun 13:37]
+- *Fast track for Java programmers*
+  If you're a Java programmer, you'll find that Scala's scoping rules
+  are *almost identical to Java's.*
+  * _One difference_:
+    Scala ALLOWS you to define variables of the same name in nested scopes.
+
+- Keep in mind that shadowing can be very confusing to readers, because variable
+  names adopt new meanings in nested scopes.
+
+  It is usually better to choose a new, meaningful variable name rather than to
+  shadow an outer variable.
+  * =from Jian=
+    This is why I don't like the name shadowing feature in Rust.
+    In Rust, you can shadow names defined before some point, even they are in
+    the same scope level -- the new variable take effect since its definition
+    line.
+
+    + The only scenario I think is not confusing and useful is shadow a variable
+      that has the same meaning by different type.
+      For example, a input ~number~ is in ~String~ type, and in your function
+      body you want to parse it as a integer number and use. In this case, not
+      pick a new name is convenient and not confusing (at least for me)!
+
+** TODO 7.8 Refactoring imperative-style code - 169
+** DONE 7.9 Conclusion - 171
+CLOSED: [2025-04-27 Sun 13:40]
+=IMPORTANT=
+Just as important, /Scala's built-in control structures/ *are careful in what
+they omit* (=from Jian= keywords ~break~ and ~continue~), thus leaving room for
+one of Scala's most powerful features, the /function literal/, which will be
+described in the next chapter.
 
 * TODO 8 Functions and Closures - 172
 ** 8.1 Methods - 172
@@ -1049,20 +1719,20 @@ In the next chapter, you'll learn about Scala's basic types and how to use them.
 ** 10.16 Conclusion - 233
 
 * TODO 11 Traits - 234 - =READING=
-  - /Traits/ are a _fundamental unit_ of code *reuse* in Scala.
+- /Traits/ are a _fundamental unit_ of code *reuse* in Scala.
 
-  - A /trait/ encapsulates /method/ and /field/ definitions,
-    which can then be reused by *mixing* them *into* /classes/.
+- A /trait/ encapsulates /method/ and /field/ definitions,
+  which can then be reused by *mixing* them *into* /classes/.
 
-  - This chapter shows you
-    * how traits work
-    * TWO of the most common ways they are useful:
-      + widening thin interfaces to rich ones
-      + defining stackable modifications
+- This chapter shows you
+  * how traits work
+  * TWO of the most common ways they are useful:
+    + widening thin interfaces to rich ones
+    + defining stackable modifications
 
-  - It also shows
-    * *how to use* the ~Ordered~ /trait/
-    * *compares* /traits/ to the /multiple inheritance/ of other languages.
+- It also shows
+  * *how to use* the ~Ordered~ /trait/
+  * *compares* /traits/ to the /multiple inheritance/ of other languages.
 
 ** DONE 11.1 How traits work - 234
 CLOSED: [2022-05-21 Sat 00:54]
@@ -1120,7 +1790,7 @@ CLOSED: [2022-05-21 Sat 00:54]
     =TODO=
     The rules for resolving ~super~ calls will be given in _Section 11.4_.
 
-** 11.2 Thin versus rich interfaces - 237
+** TODO 11.2 Thin versus rich interfaces - 237
 - One major use of /traits/:
   automatically add /methods/ to a /class/ in terms of /methods/ the /class/
   _already has_ -- that is, /traits/ can enrich a *THIN interface*, making it
@@ -1196,8 +1866,7 @@ specific language.
     portion of the interface*, and end up with a /class/ that has all of the
     rich interface available.
 
-** 11.3 Traits as stackable modifications - 239 =Re-Read=
-CLOSED: [2017-10-12 Thu 03:04]
+** TODO 11.3 Traits as stackable modifications - 239 =Re-Read=
 - One major use of traits:
   turning a thin interface into a rich one.
 
@@ -1344,8 +2013,7 @@ CLOSED: [2017-10-12 Thu 03:04]
 
 - mixin :: a /trait/ that is _mixed into_ a /class/ (from footnote 2).
 
-** 11.4 Why not multiple inheritance? - 243
-CLOSED: [2018-03-21 Wed 23:13]
+** TODO 11.4 Why not multiple inheritance? - 243
 /Traits/ are a way to inherit from multiple class-like constructs, but they
 *differ* in important ways from the /multiple inheritance/ present in many
 languages.
@@ -1372,8 +2040,8 @@ languages.
 
   3. ~FourLegged~: ~FourLegged~ --> ~HasLegs~ ===> ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
 
-** 11.5 Trait parameters - 248
-** 11.6 Conclusion - 250
+** TODO 11.5 Trait parameters - 248
+** TODO 11.6 Conclusion - 250
    
 
 ** ===========================
@@ -3395,7 +4063,7 @@ In the next chapter, you'll learn about /type parameterization/.
 ** 18.7 Upper bounds - 413
 ** 18.8 Conclusion - 415
 
-* DONE 19 Enums - 416
+* DONE 19 Enums - 416 - =REVIEW=
 CLOSED: [2025-04-17 Thu 21:44]
 Scala 3 introduced the ~enum~ construct to make the definition of
 /sealed case class hierachies/ _more concise_.
