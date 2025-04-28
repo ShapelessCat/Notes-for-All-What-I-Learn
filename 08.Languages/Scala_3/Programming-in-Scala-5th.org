@@ -1310,7 +1310,8 @@ which should be replaced by /extension methods/.
 ** DONE 5.11 Conclusion - 127
 CLOSED: [2025-04-27 Sun 11:20]
 
-* TODO 6 Functional Objects - 129
+* DONE 6 Functional Objects - 129
+CLOSED: [2025-04-28 Mon 22:36]
 - In this chapter, the emphasis is on /classes/ that define /functional objects/.
   * functional objects :: objects that do _NOT have any /mutable state/._
 
@@ -1327,20 +1328,402 @@ CLOSED: [2025-04-27 Sun 11:20]
   6. /overloading/
   7. /self references/
 
-** TODO 6.1 A specification for class ~Rational~ - 129
-** TODO 6.2 Constructing a ~Rational~ - 130
-** TODO 6.3 Reimplementing the ~toString~ method - 132
-** TODO 6.4 Checking preconditions - 133
-** TODO 6.5 Adding fields - 134
-** TODO 6.6 Self references - 136
-** TODO 6.7 Auxiliary constructors - 136
-** TODO 6.8 Private fields and methods - 138
-** TODO 6.9 Defining operators - 139
-** TODO 6.10 Identifiers in Scala - 141
-** TODO 6.11 Method overloading - 144
-** TODO 6.12 Extension methods - 146
-** TODO 6.13 A word of caution - 147
-** TODO 6.14 Conclusion - 147
+** DONE 6.1 A specification for class ~Rational~ - 129
+CLOSED: [2025-04-28 Mon 11:43]
+- rational numbers :: numbers that can be expressed as a ratio n / d , where n
+  and d are integers, except that d cannot be zero.
+  * Compared to /floating-point numbers/, /rational numbers/ have the advantage
+    that _fractions are represented EXACTLY, without rounding or approximation._
+
+- Illustration example for this chapter: /rational number/.
+  The class we'll design in this chapter must
+  MODEL the _arithmetic behavior of rational numbers_,
+  including allowing them to be _added_, _subtracted_, _multiplied_, and
+  _divided_.
+  * No mutable state in the _arithmetic behavior of rational numbers_ in
+    mathematics.
+
+** DONE 6.2 Constructing a ~Rational~ - 130
+CLOSED: [2025-04-28 Mon 13:14]
+- A good place to _START_ designing class ~Rational~ is to
+  _consider how client programmers will create a new Rational object._
+
+  _Given_ we've decided to make Rational objects immutable,
+  we'll require that clients provide all data needed by an instance (in this
+  case, a numerator and a denominator) WHEN they construct the instance.
+  =from Jian= rather than later.
+  #+begin_src scala
+    class Rational(n: Int, d: Int)
+  #+end_src
+  =IMPORTANT=
+  =IMPORTANT=
+  =THIS IS WHY Scala CONSTRUCTOR SYNTAX IS MUCH CONCISER THAN Java=
+  * The Scala compiler will
+    1) GATHER up these two /class parameters/ and
+    2) CREATE a /primary constructor/ that takes the same two parameters.
+
+  * NoteThis initial Rational example highlights a difference between Java
+    andScala. In Java, classes have constructors, which can take
+    parameters;whereas in Scala, classes can take parameters directly. The
+    Scala notationis more concise—class parameters can be used directly in the
+    body of theclass; there’s no need to define fields and write assignments
+    that copyconstructor parameters into fields. This can yield substantial
+    savings inboilerplate code, especially for small classes.
+
+- *Immutable object trade-offs*
+  =TODO= =NOTE=
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =from Jian=: The way how does Scala compiler create the /primary constructor/:
+  The Scala compiler will compile any code you place in the _class body_,
+  which is *NOT* part of a /field/ or a /method definition/,
+  into the /primary constructor/.
+  * Example:
+    Print a debug message when constructing a ~Rational~
+    #+begin_src scala
+      class Rational(n: Int, d: Int):
+        println("Created " + n + "/" + d)
+    #+end_src
+
+- Universal ~apply~ Method :: when INSTANTIATING _classes that take parameters_,
+  you can optionally leave off the ~new~ keyword.
+  * ~Rational(1, 2)~ \equiv{} ~new Rational(1, 2)~
+
+  =from Jian= This feature comes with Scala 3.
+
+** DONE 6.3 Reimplementing the ~toString~ method - 132
+CLOSED: [2025-04-28 Mon 13:18]
+- The default string representation if no ~toString~ reimplmentation:
+  ~className~ followed by ~@~ followed by _a hexadecimal number_
+
+- Reimplementation
+  #+begin_src scala
+    class Rational(n: Int, d: Int):
+      override def toString = s"$n/$d"
+  #+end_src
+
+** DONE 6.4 Checking preconditions - 133
+CLOSED: [2025-04-28 Mon 13:32]
+Given that a zero denominator is an _invalid state_ for a ~Rational~ number, you
+should not let a ~Rational~ be constructed if a zero is passed in the d
+parameter.
+
+- *Problem*: The implementation before this section can't refuse the _zero denominator_.
+
+- *Solution*: The best way to approach this problem is to define as a
+  /precondition/ of the /primary constructor/ that _d must be non-zero_.
+  #+begin_src scala
+    class Rational(n: Int, d: Int):
+      require(d != 0)
+      override def toString = s"$n/$d"
+  #+end_src
+  ~require~ comes from ~Predef~.
+
+** DONE 6.5 Adding fields - 134
+CLOSED: [2025-04-28 Mon 16:54]
+Make the class parameters as fields
+=from Jian= the *NAIVE* way that we rarely use:
+#+begin_src scala
+  class Rational(n: Int, d: Int):
+    require(d != 0)
+    val numer: Int = n
+    val denom: Int = d
+    override def toString = s"$numer/$denom"
+    def add(that: Rational): Rational =
+      Rational(
+        numer * that.denom + that.numer * denom,
+        denom * that.denom
+      )
+#+end_src
+
+footnote 3: In Section 10.6, you'll find the *shorthand* that we'll always use.
+
+** DONE 6.6 Self references - 136
+CLOSED: [2025-04-28 Mon 16:58]
+~this~
+
+** DONE 6.7 Auxiliary constructors - 136
+CLOSED: [2025-04-28 Mon 17:17]
+- auxiliary constructors :: constructors other than the /primary constructor/.
+
+- Example use case:
+  A /rational number/ with a denominator of 1 can be written more succinctly as
+  simply the numerator (with an /auxiliary constructors/).
+
+- /Auxiliary constructors/ in Scala start with ~def this(...)~,
+  The body of ~Rational~'s /auxiliary constructor/ merely invokes the /primary
+  constructor/.
+  #+begin_src scala
+    class Rational(n: Int, d: Int):
+      require(d != 0)
+      val numer: Int = n
+      val denom: Int = d
+      def this(n: Int) = this(n, 1) // auxiliary constructor
+      override def toString = s"$numer/$denom"
+      def add(that: Rational): Rational =
+        Rational(
+          numer * that.denom + that.numer * denom,
+          denom * that.denom
+        )
+  #+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =RULE=
+  In Scala, _EVERY_ /auxiliary constructor/ *MUST invoke* _ANOTHER_ /constructor/ of
+  the _SAME_ /class/ as its first action -- in other words, the _first statement_ in
+  every /auxiliary constructor/ in every Scala class will have the form ~this(...)~.
+
+  Since the net effect of this rule is that _EVERY_ /constructor/ invocation in
+  Scala will end up eventually calling the /primary constructor/ of the /class/.
+  The /primary constructor/ is thus _the *single point of entry* of a /class/._
+
+- *NOTE*
+  * Q :: Why Scala's rules for /constructors/ are a bit *more restrictive than*
+    Java's.
+
+  * A ::
+    + In Java,
+      a /constructor/ *must, as its first action*,
+      - either invoke another constructor of _the SAME /class/,_
+      - or directly invoke a constructor of the /superclass/,
+
+    + In a Scala class,
+      *ONLY* the /primary constructor/ can invoke a /superclass constructor/.
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    =???=
+    =Learn more=
+    The increased restriction in Scala is really a design trade-off that needed
+    to be paid in exchange for the greater conciseness and simplicity of Scala's
+    constructors compared to Java's.
+
+    Superclasses and the details of how constructor invocation and inheritance
+    interact will be explained in Chapter 10.
+
+** DONE 6.8 Private fields and methods - 138
+CLOSED: [2025-04-28 Mon 17:31]
+- In the previous version of Rational, we simply initialized ~numer~ with ~n~
+  and ~denom~ with ~d~, directly.
+  #+begin_src scala
+    Rational(66, 42) // 66/42
+  #+end_src
+
+- When binding values to fields ~numer~ and ~denom~, we can *normalize* them,
+  and save smaller numbers to ~numer~ and ~denom~.
+  #+begin_src scala
+    class Rational(n: Int, d: Int):
+      require(d != 0)
+      private val g = gcd(n.abs, d.abs)
+      val numer = n / g
+      val denom = d / g
+      def this(n: Int) = this(n, 1)
+      def add(that: Rational): Rational =
+        Rational(
+          numer * that.denom + that.numer * denom,
+          denom * that.denom
+        )
+      override def toString = s"$numer/$denom"
+      private def gcd(a: Int, b: Int): Int =
+        if b == 0 then a else gcd(b, a % b)
+  #+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  The Scala compiler will
+  _PLACE_ the code for the /initializers/ of ~Rational~'s THREE /fields/
+  _into_ the /primary constructor/
+         *in the order in which they appear in the source code.*
+
+  Thus, ~g~'s /initializer/, ~gcd(n.abs, d.abs)~, will execute *before* the
+  other two, because it appears first in the source.
+
+** DONE 6.9 Defining operators - 139
+CLOSED: [2025-04-28 Mon 18:13]
+- =from Jian=
+  When implement /symbolic unary operators/, _you *must compromise* on the
+  language parser!_
+
+  Not like other definitions, you *must add a space* between _function name_ and
+  /method result type annotation/: ~: TypeXXX~.
+
+** DONE 6.10 Identifiers in Scala - 141 - =REVIEW=
+CLOSED: [2025-04-28 Mon 20:06]
+- alphanumeric identifier :: Just C-style identifier. The only difference is, in
+  Scala, $ also counts as a letter.
+  * _CAUTION_:
+    Don't use $ in your code. It is reserved for identifiers generated by the
+    Scala compiler. If you use it, you may create /name clashes/.
+
+  * *Note*:
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    One consequence of using a /trailing underscore/ in an identifier is that
+    if you attempt, for example, to write a declaration like this,
+    ~val name_: Int = 1~, you'll get a *compiler error* -- the compiler will
+    think you are trying to declare a val named ~name_:~.
+
+    To get this to compile, you would need to *insert an extra space before the
+    colon*, as in: ~val name_ : Int = 1~
+
+- =IMPORTANT=
+  Different from Java naming convention:
+  Scala use Pascal case, also known as UpperCamelCase, as the name of constants.
+
+- operator identifiers :: identifiers consists of one or more /operator characters/.
+  * /Operator characters/ are printable ASCII characters
+    SUCH AS
+    + +
+    + :
+    + ?
+    + ~
+    + #
+
+  * Here are some examples of /operator identifiers/:
+    + +
+    + ++
+    + :::
+    + <?>
+    + :->
+
+  * The Scala compiler will
+    INTERNALLY
+    *"mangle"* operator identifiers
+    *to* turn them into /legal Java identifiers/ with embedded ~$~ characters.
+    + For instance,
+      the identifier :> would be REPRESENTED INTERNALLY AS $colon$minus$greater.
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    + If you ever wanted to access this identifier _from Java code_,
+      you'd need to use this internal representation.
+
+  * =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    =TRICKY= but not a problem in practice
+    =TRICKY=
+    =TRICKY=
+    Because operator identifiers in Scala *can become arbitrarily long*,
+    there is a _small *difference* between Java and Scala._
+
+    + In Java, the input x<-y would be parsed as *four* lexical symbols,
+      so it would _be equivalent to_ x < - y.
+
+    + In Scala, <- would be parsed as a _SINGLE_ identifier, giving x <- y.
+      =IMPORTANT=
+
+    If you want the first interpretation (like in Java) in Scala, you need to
+    manually separate the < and - the characters by a space.
+
+    This is *UNLIKELY to be a problem in practice*, as very few people would
+    write x<-y in Java without inserting spaces or parentheses between the
+    operators.
+
+- mixed identifier :: consists of
+  * an _alphanumeric identifier_, which is *followed by*
+  * _an_ _underscore_ *and* (=from Jian= a single character!)
+  * an /operator identifier/.
+
+- /mixed identifier/ examples:
+  * ~unary_-~
+  * ~myvar_=~, more in Chapter 16 -- porperties (here, a /setter/ for ~myvar~).
+    =TODO=
+    =TODO=
+    =TODO=
+
+- literal identifier :: an aribitrary string enclosed in back ticks (`...`).
+  * Examples:
+    + `x`
+    + `<clinit>`
+    + `yield`
+
+  * The idea is that
+    you can put *any string* that's _accepted by the runtime_ (=from Jian= I
+    guess this means, in short, legal Scala string) as an identifier between
+    back ticks. The result is always a /Scala identifier/.
+
+** DONE 6.11 Method overloading - 144
+CLOSED: [2025-04-28 Mon 20:08]
+#+begin_src scala
+  // Inside `class Rational` definition:
+
+  def +(that: Rational): Rational =
+    Rational(
+      numer * that.denom + that.numer * denom,
+      denom * that.denom
+    )
+
+  def +(i: Int): Rational =
+    Rational(numer + i * denom, denom)
+#+end_src
+
+** DONE 6.12 Extension methods - 146
+CLOSED: [2025-04-28 Mon 20:13]
+- Problem:
+  Now ~Rational~ ~r~ can do ~r * 2~, but ~2 * r~ doesn't work.
+
+- Solution:
+  Of course, you can't change ~Int~, but you can add /extension methods/ to it.
+  #+begin_src scala
+    extension (x: Int)
+      def +(y: Rational) = Rational(x) + y
+      def -(y: Rational) = Rational(x) - y
+      def *(y: Rational) = Rational(x) * y
+      def /(y: Rational) = Rational(x) / y
+  #+end_src
+
+- For /extension methods/ to work, they need to be *in scope*.
+
+  * If you place the /extension method definitions/ inside ~class Rational~,
+    it *WON'T be in scope* in the REPL.
+
+    For now, you'll need to define it directly in the REPL.
+
+** DONE 6.13 A word of caution - 147 - =REVIEW=
+CLOSED: [2025-04-28 Mon 20:25]
+- If *used unartfully*, both /operator methods/ and /extension methods/ can give
+  rise to client code that is _hard to read and understand._
+  * Because /extension methods/ are *applied implicitly* by the compiler,
+    it can be *non-obvious to client programmers* what /extension methods/ are
+    being applied.
+    =from Jian= If the design is good, this application should be what those
+    programmers expected.
+
+  * And although /operator methods/ will usually make client code _more concise_,
+    they will only make it _more readable_ *to the extent client programmers will
+    be able to recognize and remember the meaning of each operator.*
+
+- _SUMMARY_:
+  * The _GOAL_ you should keep in mind as you design libraries is
+    + not merely enabling _concise_ client code,
+    + but _readable_, _understandable_ client code.
+
+  * _Conciseness_ will OFTEN be a big part of that readability,
+    *BUT* you can _take conciseness *too far*._
+
+  * By designing libraries that enable tastefully concise and at the same time
+    understandable client code, you can help those client programmers work
+    productively.
+
+** DONE 6.14 Conclusion - 147
+CLOSED: [2025-04-28 Mon 22:36]
+- ~Rational~ can be improved further.
+  It will be revisited and improved later in the book:
+  * In Chapter 8, override ~equals~ and ~hashcode~ to allow Rationals to behave
+    better when compared with == or placed into hash tables.
+
+  * In Chapter 22, you'll learn how to place /extension method definitions/ in a
+    /companion object/ for ~Rational~, so they can be _more easily placed into
+    /scope/_ when client programmers are working with ~Rational~'s.
 
 * TODO 7 Built-in Control Structures - 149 - =HERE= - =ALMOST DONE=
 - Scala has only a handful of built-in control structures.
@@ -1680,17 +2063,170 @@ one of Scala's most powerful features, the /function literal/, which will be
 described in the next chapter.
 
 * TODO 8 Functions and Closures - 172
-** 8.1 Methods - 172
-** 8.2 Local functions - 173
-** 8.3 First-class functions - 175
-** 8.4 Short forms of function literals - 176
-** 8.5 Placeholder syntax - 177
-** 8.6 Partially applied functions - 178
-** 8.7 Closures - 181
-** 8.8 Special function call forms - 183
-** 8.9 “SAM” types - 186
-** 8.10 Tail recursion - 188
-** 8.11 Conclusion - 191
+When programs get larger, you need some way to divide them into smaller, more
+manageable pieces.
+
+- For dividing up /control flow/, Scala offers an approach familiar to all
+  experienced programmers:
+  divide the code into /functions/.
+
+- In fact, Scala offers _SEVERAL WAYS_ to *define functions* that are _NOT
+  PRESENT in Java_:
+  * Besides /methods/, which are functions that are members of some object,
+  * there are also
+    + /functions nested within functions/,
+    + /function literals/, and
+    + /function values/.
+
+- This chapter takes you on a tour through all of these flavors of functions in
+  Scala.
+
+** DONE 8.1 Methods - 172
+CLOSED: [2025-04-28 Mon 22:57]
+Example:
+#+begin_src scala
+  object Padding:
+    def padLines(text: String, minWidth: Int): String =
+      val paddedLines =
+        for line <- text.linesIterator yield
+          padLine(line, minWidth)
+      paddedLines.mkString("\n")
+
+    private def padLine(line: String, minWidth: Int): String =
+      if line.length >= minWidth then line
+      else line + " " * (minWidth - line.length)
+#+end_src
+
+** DONE 8.2 Local functions - 173
+CLOSED: [2025-04-28 Mon 23:04]
+- =from Jian=
+  This section first explained why support /local functions/?
+  =IMPORTANT=
+
+- An IMPORTANT _design principle_ of the /functional programming style/:
+  programs should be decomposed into many small functions that each do
+  a well-defined task.
+
+  Individual functions are often quite small.
+
+  * _The advantage of this style:_
+    + It gives a programmer many building blocks that can be flexibly composed
+      to do more difficult things.
+
+    + Each building block should be simple enough to be understood individually.
+
+  * _One problem with this approach:_
+    all the helper function names can *pollute* the /program namespace/.
+
+    + Solution from Java: /private method/ -- not a perfect solution.
+
+    + Scala offers an additonal approach:
+      define functions inside other functions.
+      - A /local function/ has a limited scope as expected.
+      - A /local function/ can use its enclosing function's parameters directly,
+        because it is in a scope that can reach those parameters.
+
+** DONE 8.3 First-class functions - 175
+CLOSED: [2025-04-29 Tue 00:15]
+- first-class functions ::
+  1. You can expression functions in /function literal/ syntax,
+  2. that functions can be represented by /objects/, which are called /function
+     values/.
+
+- =from Jian=
+  /first-class functions/ given by the book Glossary is not the concept,
+  but the implementation overview of /first-class functions/ in Scala.
+
+  The *CONCEPT* should be (from _Wikipedia_):
+  /first-class functions/ if it treats /functions/ as /first-class citizens/.
+  This means the language supports
+  * *passing* functions as arguments to other functions,
+  * *returning* them as the values from other functions, and
+  * *assigning* them to variables or storing them in data structures.
+
+- A /function literal/ is compiled into a /Java method handle/ that, when
+  _instantiated at runtime_, is a /function value/.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Thus the *DISTINCTION* between /function literals/ and /function values/:
+  * /function literals/ exist _in the source code,_
+  * whereas /function values/ exist _as /objects/ at runtime._
+
+  This *DISTINCTION* is much like that between /classes/ (source code) and
+  /objects/ (runtime).
+
+- A simple example of a /function literal/:
+  ~(x: Int) => x + 1~
+
+- /function values/ are /objects/, so you can _store them in_ /variables/ if you
+  like.
+  Example:
+  #+begin_src scala
+    val increase = (x: Int) => x + 1
+    increase(10) // 11
+  #+end_src
+
+  * More than one line /function literal/ body:
+    #+begin_src scala
+      val addTwo = (x: Int) =>
+        val increment = 2
+        x + increment
+
+      addTwo(10) // 12
+    #+end_src
+
+** DONE 8.4 Short forms of function literals - 176 - =REVIEW= - =RE-READ=
+CLOSED: [2025-04-29 Tue 00:22]
+Scala provides a number of ways to
+_leave out redundant information_ and
+_write /function literals/ *more briefly*._
+
+- One way to make a /function literal/ more brief is to
+  *LEAVE OFF the /parameter types/.*
+
+- target typing :: the targeted usage of an /expression/ (in this case, an
+  argument to ~someNumbers.filter()~) is allowed to influence the
+  _typing of that expression_ (in this case to determine the type of the ~x~
+  parameter).
+  * The precise details of /target typing/ are not important.
+
+- _Methodology in practice:_
+  You can simply start by writing a /function literal/ WITHOUT the /argument
+  type/, and if the compiler gets CONFUSED, add in the type.
+    Over time you'll get a feel for which situations the compiler can and cannot
+  puzzle out.
+
+** DONE 8.5 Placeholder syntax - 177
+CLOSED: [2025-04-28 Mon 23:21]
+** TODO 8.6 Partially applied functions - 178
+- partially applied function :: an expression in which you don't supply all of
+  the arguments needed by the function.
+
+- =from Jian=
+  Later you'll learn another concept that is similar in name with this
+  /partially applied function/ -- /partial function/.
+  * *THEY ARE TOTALLY DIFFERENT!!!*
+
+- =TODO= =NOTE=
+  mechanism
+
+- =TODO= =NOTE=
+  Several syntax
+
+** TODO 8.7 Closures - 181
+** TODO 8.8 Special function call forms - 183
+*** Repeated parameters - 183
+*** Named parameters - 185
+*** Default parameters values - 185
+
+** TODO 8.9 "SAM" types - 186
+** TODO 8.10 Tail recursion - 188
+*** Tracing tail recursive functions - 189
+*** Limits of tail recursion - 190
+
+** TODO 8.11 Conclusion - 191
 
 * TODO 9 Control Abstraction - 192
 ** 9.1 Reducing code duplication - 192
