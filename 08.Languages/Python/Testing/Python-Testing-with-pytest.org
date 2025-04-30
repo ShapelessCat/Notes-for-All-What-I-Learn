@@ -1558,12 +1558,20 @@ CLOSED: [2025-01-09 Thu 15:54]
 *** Exercises - 149
 *** What's Next - 150
 
-** TODO 11. tox and Continuous Integration - 151
+** DONE 11. tox and Continuous Integration - 151
+CLOSED: [2025-04-29 Tue 23:24]
 - Most tools used for CI run on a server (/GitHub Actions/ is one example).
 
   *tox* is an automation tool that works a lot _LIKE a CI tool_
   _BUT_ can be run both locally and in conjunction with other CI tools on a
   server.
+
+  * =from Jian=
+    One value of *tox* is that we can use it instead of CI specific
+    multiple-Python-version test.
+    For example, it is convenient to use GitHub Actions ~stragegy~ to implement
+    this, but how about if we want change CI system in the future? Use *tox*,
+    and then this is no longer a problem.
 
 - In this chapter,
   1. we take a look at *tox* and how to set it up in the Cards application to
@@ -1590,24 +1598,168 @@ CLOSED: [2025-01-09 Thu 15:54]
 
 - =todo= note
 
-*** TODO Introducing tox - 152
-- xx
+*** DONE Introducing tox - 152
+CLOSED: [2025-04-29 Tue 23:24]
+- tox :: is a command-line tool that allows you to run your complete suite of
+  tests in *MULTIPLE environments.*
+  * _tox_ is a great _starting point_ when learning about CI.
+    Although it strictly is *NOT* a CI system,
 
-- xx
+- However, _tox_ is *NOT limited to just _Python versions_.*
 
-*** TODO Setting Up tox - 153
-*** TODO Running tox - 154
-*** TODO Testing Multiple Python Versions - 155
-*** TODO Running tox Environments in Parallel - 156
-*** TODO Adding a Coverage Report to tox - 156
-*** TODO Specifying a Minimum Coverage Level - 157
-*** TODO Passing pytest Parameters Through tox - 158
-*** TODO Running tox with GitHub Actions - 159
-*** TODO Review - 162
-*** TODO Exercises - 162
-*** TODO What's Next - 163
+- In gross generalities, here's a _mental model_ for how _tox_ works:
 
-** TODO 12. Testing Scripts and Applications - 165
+  tox uses project information in either =setup.py= or =pyproject.toml= for the
+  package under test to create an installable distribution of your package.
+
+  It looks in =tox.ini= for a list of environments, and then for each environment,
+  _tox_
+  1. creates a virtual environment in a =.tox= directory,
+  2. pip installs some dependencies,
+  3. builds your package,
+  4. pip installs your package, and
+  5. runs your tests.
+
+  After all environments are tested,
+  _tox_ reports A SUMMARY OF HOW THEY ALL DID.
+
+*** DONE Setting Up tox - 153
+CLOSED: [2025-04-29 Tue 22:30]
+- Put this =tox.ini= in Project top-level
+  #+NAME: ch11/cards_proj/tox.ini
+  #+begin_src text
+    [tox]
+    envlist = py310
+    isolated_build = True
+
+    [testenv]
+    deps =
+      pytest
+      faker
+    commands = pytest
+  #+end_src
+  * =IMPORTANT=
+    + For all =pyproject.toml=-configured packages, we need to set ~isolated_build = True~.
+    + For =setup.py=-configured projects using the /setuptools/ library, this line
+      *can be left out.*
+
+*** DONE Running tox - 154
+CLOSED: [2025-04-29 Tue 22:30]
+*** DONE Testing Multiple Python Versions - 155
+CLOSED: [2025-04-29 Tue 22:32]
+#+begin_src text
+  envlist = py37, py38, py39, py310
+  isolated_build = True
+  skip_missing_interpreters = True
+#+end_src
+
+Manually pass the configuration file for _tox_:
+#+begin_src shell
+  tox -c tox_multiple_pythons.ini
+#+end_src
+
+*** DONE Running tox Environments in Parallel - 156
+CLOSED: [2025-04-29 Tue 22:33]
+Add a -p flag:
+#+begin_src shell
+  tox -c tox_multiple_pythons.ini -p
+#+end_src
+
+*** DONE Adding a Coverage Report to tox - 156
+CLOSED: [2025-04-29 Tue 23:04]
+_tox_ can add /coverage reports/ to its test runs.
+
+ =tox.ini=
+#+begin_src text
+  [testenv]
+  deps =
+    pytest
+    faker
+    pytest-cov
+  commands = pytest --cov=cards
+#+end_src
+
+combined with =.coveragerc=
+#+begin_src text
+  [paths]
+  source =
+    src
+    .tox/*/site-packages
+#+end_src
+
+- Use can select a specific python version with a command line flag:
+  #+begin_src shell
+    tox -c tox_coverage.ini -e py310
+  #+end_src
+
+*** DONE Specifying a Minimum Coverage Level - 157
+CLOSED: [2025-04-29 Tue 23:05]
+#+begin_src text
+  [testenv]
+  deps =
+    pytest
+    faker
+    pytest-cov
+  commands = pytest --cov=cards --cov=tests --cov-fail-under=100
+#+end_src
+
+*** DONE Passing pytest Parameters Through tox - 158
+CLOSED: [2025-04-29 Tue 23:12]
+#+begin_src text
+  [testenv]
+  deps =
+    pytest
+    faker
+    pytest-cov
+  commands =
+    pytest --cov=cards --cov=tests --cov-fail-under=100 {posargs}
+#+end_src
+
+Then you can pass parameters to _pytest_ by adding -- and then the parameters
+_pytest_ needs:
+#+begin_src shell
+  tox -c tox_posargs.ini -e py310 -- -k test_version --no-cov
+#+end_src
+
+*** DONE Running tox with GitHub Actions - 159
+CLOSED: [2025-04-29 Tue 23:21]
+#+begin_src yaml
+  name: CI
+
+  on: [push, pull_request]
+
+  jobs:
+    builds:
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python: ["3.7", "3.8", "3.9", "3.10"]
+
+      steps:
+        - uses: actions/checkout@v2
+        - name: Setup Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: ${{ matrix.python }}
+        - name: Install Tox and any other packages
+          run: pip install tox
+        - name: Run Tox
+          run: tox -e py
+#+end_src
+The ~-e py~ is a bit surprising because we don't have a ~py~ environment
+specified. However, this works to select the correct version of Python
+specified in our =tox.ini=.
+
+=???=
+
+*** DONE Review - 162
+CLOSED: [2025-04-29 Tue 23:22]
+*** DONE Exercises - 162
+CLOSED: [2025-04-29 Tue 23:22]
+*** DONE What's Next - 163
+CLOSED: [2025-04-29 Tue 23:22]
+
+** TODO 12. Testing Scripts and Applications - 165 - =START HERE=
 *** Testing a Simple Python Script - 166
 *** Testing an Importable Python Script - 168
 *** Separating Code into src and tests Directories - 170
