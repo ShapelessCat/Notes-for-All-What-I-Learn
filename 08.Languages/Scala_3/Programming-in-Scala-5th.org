@@ -2592,7 +2592,8 @@ CLOSED: [2025-05-01 Thu 00:12]
 ** DONE 9.6 Conclusion - 204
 CLOSED: [2025-05-01 Thu 00:12]
 
-* TODO 10 Composition and Inheritance - 206 - =READING=
+* DONE 10 Composition and Inheritance - 206
+CLOSED: [2025-05-02 Fri 21:05]
 - Chapter 6 introduced some BASIC object-oriented aspects of Scala.
   This chapter
   * PICKS UP where Chapter 6 left off and
@@ -2849,38 +2850,360 @@ CLOSED: [2025-05-02 Fri 00:34]
     override def height = 1
 #+end_src
 
-** TODO 10.8 Using ~override~ modifiers - 217
-** TODO 10.9 Polymorphism and dynamic binding - 219
-** TODO 10.10 Declaring ~final~ members - 221
-** TODO 10.11 Using composition and inheritance - 222
-** TODO 10.12 Implementing ~above~, ~beside~, and ~toString~ - 224
-** TODO 10.13 Defining a factory object - 226
-** TODO 10.14 Heighten and widen - 228
-** TODO 10.15 Putting it all together - 230
-** TODO 10.16 Conclusion - 233
+** DONE 10.8 Using ~override~ modifiers - 217
+CLOSED: [2025-05-02 Fri 21:05]
+Not like Java's ~@Override~, Scala's ~override~ is required.
 
-* TODO 11 Traits - 234 - =READING=
+- "fragile base class" problem:
+  the problem is that if you add new members to /base classes/ (which we usually
+  call /superclasses/) in a class hierarchy, _you RISK *breaking* client code._
+  * Scala _CANNOT COMPLETELY solve_ the /fragile base class problem/,
+    BUT it _IMPROVES_ on the situation compared to Java.
+
+** DONE 10.9 Polymorphism and dynamic binding - 219
+CLOSED: [2025-05-02 Fri 17:30]
+- polymorphism :: it means "many shapes" or "many forms".
+  * For example, ~Element~ has many forms.
+    + footnote 9:
+      This kind of /polymorphism/ is called /subtyping polymorphism/.
+      Other kinds of /polymorphism/ in Scala are discussed in later chapters,
+      - =TODO= /universal polymorphism/ in Chapter 18 and
+      - =TODO= /ad hoc polymorphism/ in Chapters 21 and 23.
+
+- Example:
+  #+begin_src scala
+    abstract class Element:
+      def demo = "Element's implementation invoked"
+
+    class VectorElement extends Element:
+      override def demo = "VectorElement's implementation invoked"
+
+    class LineElement extends VectorElement:
+      override def demo = "LineElement's implementation invoked"
+
+    // UniformElement inherits Element's demo
+    class UniformElement extends Element
+
+    def invokeDemo(e: Element) = e.demo
+
+    invokeDemo(new VectorElement)  // VectorElement's implementation invoked
+    invokeDemo(new LineElement)    // LineElement's implementation invoked
+    invokeDemo(new UniformElement) // Element's implementation invoked
+  #+end_src
+
+- /Method invocations/ on /variables/ and /expressions/ are *dynamically bound*.
+
+- This means that the actualmethod implementation invoked is determined at run
+  time based on the class of the object, not the type of the variable or
+  expression.
+
+** DONE 10.10 Declaring ~final~ members - 221
+CLOSED: [2025-05-02 Fri 17:33]
+Add ~final~ on /members/ or /class (as a whole)/, and then they *can't be
+overridden*.
+
+** DONE 10.11 Using composition and inheritance - 222
+CLOSED: [2025-05-02 Fri 17:50]
+- =IMPORTANT=
+  /Composition/ and /inheritance/ are two ways to
+  _DEFINE_ a new /class/ _IN TERMS OF_ another existing /class/.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  If what you're after is primarily *code reuse*,
+  you should in general *prefer /composition/ to /inheritance/.*
+
+  Only /inheritance/ suffers from the fragile base class problem,
+  in which you can inadvertently *break /subclasses/ by changing a /superclass/.*
+
+- inheritance relationship: is-a relationship
+
+- If you ask these questions about the /inheritance relationships/ shown
+  in Figure 10.3,
+  * Q :: Do any of the relationships seem suspicious?
+  * Q :: In particular, does it seem obvious to you that a ~LineElement~ is-a
+    ~VectorElement~?
+  * Q :: Do you think clients would ever need to use a ~LineElement~ as a
+    ~VectorElement~?
+
+- A :: Revised ~LineElement~ -- inherit from ~Element~ instead of
+  ~VectorElement~:
+  #+begin_src scala
+    class LineElement(s: String) extends Element:
+      val contents = Vector(s)
+      override def width = s.length
+      override def height = 1
+  #+end_src
+
+  * In the previous version, ~LineElement~ had an /inheritance relationship/
+    with ~VectorElement~, from which it inherited contents.
+
+    It now has a /composition relationship/ with ~Vector~:
+    it holds a /reference/ to a _vector of strings_ from its own ~contents~ field.
+
+** DONE 10.12 Implementing ~above~, ~beside~, and ~toString~ - 224
+CLOSED: [2025-05-02 Fri 18:02]
+#+begin_src scala
+  abstract class Element:
+    def contents: Vector[String]
+
+    def width: Int =
+      if height == 0 then 0 else contents(0).length
+
+    def height: Int = contents.length
+
+    // Not a comprehensive solution -- not consider the case of different width.
+    // Will be refined in 10.14
+    def above(that: Element): Element =
+      VectorElement(this.contents ++ that.contents)
+
+    // Not a comprehensive solution -- not consider the case of different height.
+    // Will be refined in 10.14
+    def beside(that: Element): Element =
+      VectorElement(
+        for (line1, line2) <- this.contents.zip(that.contents)
+        yield line1 + line2
+      )
+    override def toString = contents.mkString("\n")
+  end Element
+#+end_src
+
+** DONE 10.13 Defining a factory object - 226
+CLOSED: [2025-05-02 Fri 19:30]
+You now have a hierarchy of classes for layout elements.
+This hierarchy could be presented to your clients “as is,”
+but you might also choose to
+_HIDE the hierarchy BEHIND a /factory object/._
+
+- Overview:
+  A /factory object/ contains /methods/ that construct other objects.
+  _Clients would then use these /factory methods/ to construct objects,_
+  RATHER THAN constructing the objects directly via their constructors.
+
+  * Advantage of this approach:
+    + _object creation_ can be _CENTRALIZED_ and
+    + _THE DETAILS_ of how objects are represented with classes _CAN BE HIDDEN_.
+
+  * This hiding will both
+    + make your library simpler for clients to _UNDERSTAND_,
+      because less detail is exposed, and
+    + provide you with _more opportunities to change your library's
+      implementation later_ *without breaking* client code.
+
+- Code:
+  #+begin_src scala
+    object Element:
+      def elem(contents: Vector[String]): Element =
+        VectorElement(contents)
+
+      def elem(chr: Char, width: Int, height: Int): Element =
+        UniformElement(chr, width, height)
+
+      def elem(line: String): Element =
+        LineElement(line)
+  #+end_src
+  Listing 10.10 · A factory object with factory methods.
+
+  #+begin_src scala
+    abstract class Element:
+      import Element.elem
+
+      def contents: Vector[String]
+
+      def width: Int =
+        if height == 0 then 0 else contents(0).length
+
+      def height: Int = contents.length
+
+      def above(that: Element): Element =
+        elem(this.contents ++ that.contents)
+
+      def beside(that: Element): Element =
+        elem(for (line1, line2) <- this.contents.zip(that.contents)
+             yield line1 + line2)
+
+      override def toString = contents.mkString("\n")
+    end Element
+  #+end_src
+  Listing 10.11 · Class Element refactored to use factory methods.
+
+  - In Scala, you can define /classes/ and /singleton objects/ *inside* other
+    /classes/ and /singleton objects/.
+
+  - In addition, given the /factory methods/, the /subclasses/, ~VectorElement~,
+    ~LineElement~, and ~UniformElement~, *could now be PRIVATE* because they no
+    longer need to be accessed directly by clients.
+
+    One way to make the ~Element~ /subclasses/ ~private~ is to place them inside the
+    ~Element~ /singleton object/ and declare them ~private~ there.
+    #+begin_src scala
+      object Element:
+        private class VectorElement(
+          val contents: Vector[String]
+        ) extends Element
+
+        private class LineElement(s: String) extends Element:
+          val contents = Vector(s)
+          override def width = s.length
+          override def height = 1
+
+        private class UniformElement(
+          ch: Char,
+          override val width: Int,
+          override val height: Int
+        ) extends Element:
+          private val line = ch.toString * width
+          def contents = Vector.fill(height)(line)
+          def elem(contents: Vector[String]): Element =
+            VectorElement(contents)
+          def elem(chr: Char, width: Int, height: Int): Element =
+            UniformElement(chr, width, height)
+          def elem(line: String): Element =
+            LineElement(line)
+      end Element
+    #+end_src
+    Listing 10.12 · Hiding implementation with private classes.
+
+** DONE 10.14 Heighten and widen - 228
+CLOSED: [2025-05-02 Fri 19:38]
+- One last enhancement. Solve:
+  The version of Element shown in Listing 10.11 is not quite sufficient because
+  it does _NOT allow_ clients to
+  * place elements of different widths on top of each other, or
+  * place elements of different heights beside each other.
+
+- Solution:
+  Add two methods ~widen~ and ~heighten~.
+
+** DONE 10.15 Putting it all together - 230 - =TODO: Understand `Spiral`=
+CLOSED: [2025-05-02 Fri 20:57]
+Listing 10.13 · Element with widen and heighten methods.
+#+begin_src scala
+  import Element.elem
+
+  abstract class Element:
+    def contents: Vector[String]
+    def width: Int =
+      if height == 0 then 0 else contents(0).length
+    def height: Int = contents.length
+    def above(that: Element): Element =
+      val this1 = this.widen(that.width)
+      val that1 = that.widen(this.width)
+      elem(this1.contents ++ that1.contents)
+
+    def beside(that: Element): Element =
+      val this1 = this.heighten(that.height)
+      val that1 = that.heighten(this.height)
+      elem(
+        for (line1, line2) <- this1.contents.zip(that1.contents)
+        yield line1 + line2
+      )
+
+    def widen(w: Int): Element =
+      if w <= width then this
+      else
+        val left = elem(' ', (w - width) / 2, height)
+        val right = elem(' ', w - width - left.width, height)
+        left beside this beside right
+
+    def heighten(h: Int): Element =
+      if h <= height then this
+      else
+        val top = elem(' ', width, (h - height) / 2)
+        val bot = elem(' ', width, h - height - top.height)
+        top above this above bot
+
+    override def toString = contents.mkString("\n")
+  end Element
+#+end_src
+
+- Create ~Spiral~ with the created library:
+  #+begin_src scala
+    import Element.elem
+
+    object Spiral:
+      val space = elem(" ")
+      val corner = elem("+")
+      def spiral(nEdges: Int, direction: Int): Element =
+        if nEdges == 1 then
+          elem("+")
+        else
+          val sp = spiral(nEdges - 1, (direction + 3) % 4)
+          def verticalBar = elem('|', 1, sp.height)
+          def horizontalBar = elem('-', sp.width, 1)
+          if direction == 0 then
+            (corner beside horizontalBar) above (sp beside space)
+          else if direction == 1 then
+            (sp above space) beside (corner above verticalBar)
+          else if direction == 2 then
+            (space beside sp) above (horizontalBar beside corner)
+          else
+            (verticalBar above corner) beside (space above sp)
+
+      def main(args: Array[String]) =
+        val nSides = args(0).toInt
+        println(spiral(nSides, 0))
+    end Spiral
+  #+end_src
+
+** DONE 10.16 Conclusion - 233
+CLOSED: [2025-05-02 Fri 20:59]
+In this section, you saw more concepts related to object-oriented programming in
+Scala.
+
+- Among others, you encountered
+  * /abstract classes/,
+  * /inheritance/ and /subtyping/,
+  * /class hierarchies/,
+  * /parametric fields/, and
+  * /method overriding/.
+
+- You should have developed a feel for constructing a non-trivial class
+  hierarchy in Scala.
+
+- We'll work with the layout library again in Chapter 25.
+
+* DONE 11 Traits - 234
+CLOSED: [2025-05-06 Tue 01:27]
 - /Traits/ are a _fundamental unit_ of code *reuse* in Scala.
 
-- A /trait/ encapsulates /method/ and /field/ definitions,
+- A /trait/ encapsulates
+  * /method/ declarations/definitions (=FIXME?=) and
+  * /field/  declarations/definitions (=FIXME?=),
   which can then be reused by *mixing* them *into* /classes/.
 
-- This chapter shows you
-  * how traits work
-  * TWO of the most common ways they are useful:
-    + widening thin interfaces to rich ones
-    + defining stackable modifications
+- UNLIKE /class inheritance/, in which each /class/ must inherit from just one
+  /superclass/,
 
-- It also shows
-  * *how to use* the ~Ordered~ /trait/
+  a /class/ can mix in *ANY NUMBER* of /traits/.
+
+  * =from Jian=
+    =???=
+    Should we use only /traits/ and /classes/, and consider /abstract classes/
+    as a legacy components and only use it when required to interact with /Java
+    abstract classes/.
+
+- This chapter shows you
+  * HOW traits work.
+  * TWO of the most common ways they are useful: =NEXT=
+    + widening thin interfaces to rich ones;
+    + defining stackable modifications.
+
+  * *how to use* the ~Ordered~ /trait/.
   * *compares* /traits/ to the /multiple inheritance/ of other languages.
 
 ** DONE 11.1 How traits work - 234
-CLOSED: [2022-05-21 Sat 00:54]
+CLOSED: [2025-05-05 Mon 20:13]
 - A /trait definition/ looks just LIKE a /class definition/
   EXCEPT that it uses the keyword ~trait~.
+  * Listing 11.1 · The definition of trait Philosophical.
+    #+begin_src scala
+      trait Philosophical:
+        def philosophize = "I consume memory, therefore I am!"
+    #+end_src
 
-- If a /trait/ doesn't decllare a /superclass/, like a /class/,
+- If a /trait/ doesn't declare a /superclass/, so like a /class/,
   it has the _default superclass_ of ~AnyRef~.
 
 - Once a /trait/ is defined,
@@ -2901,15 +3224,19 @@ CLOSED: [2022-05-21 Sat 00:54]
 
 - At this point you might philosophize that
   /traits/ are *like* /Java interfaces/ with /default methods/,
-  BUT they can actually do much more -- /traits/ can, for example,
-  * declare fields and maintain state.
+  *BUT* they can actually do much more -- /traits/ can, for example,
+  _declare fields_ and _maintain state_.
+
+  * =IMPORTANT=
+    You can
+    _do anything in a /trait definition/ that you can do in a /class
+    definition/,_
+    and
+    _the syntax, except the keyword, looks *exactly the same*._
 
 - =IMPORTANT=
-  You can do anything in a /trait definition/ that you can do in a
-  /class definition/, and the syntax, except the keyword, looks
-  _exactly the same_.
-
-- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
   * The *KEY DIFFERENCE* between /classes/ and /traits/:
     + whereas in /classes/, ~super~ calls are _statically bound_,
     + in /traits/, they are _dynamically bound_.
@@ -2922,27 +3249,32 @@ CLOSED: [2022-05-21 Sat 00:54]
       however, the method implementation to invoke for the ~super~ call
       _is *undefined* WHEN you define the /trait/._
 
-      RATHER, *the implementation to invoke will be DETERMINED anew each time
+      RATHER, *the implementation to invoke will be DETERMINED ANEW EACH TIME
       the /trait/ is mixed into a /CONCRETE class/.*
 
-    =TODO=
+  * =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
     This curious behavior of ~super~ is key to allowing /traits/ to work as
     /stackable modifications/, which will be described in _Section 11.3_.
     =TODO=
+    =TODO=
+    =TODO=
     The rules for resolving ~super~ calls will be given in _Section 11.4_.
 
-** TODO 11.2 Thin versus rich interfaces - 237
+** DONE 11.2 Thin versus rich interfaces - 237
+CLOSED: [2025-05-05 Mon 20:31]
 - One major use of /traits/:
   AUTOMATICALLY add /methods/ to a /class/ in terms of /methods/ the /class/
-  _already has_ -- that is, /traits/ can enrich a *THIN interface*, making it
+  *ALREADY has* -- that is, /traits/ can enrich a *THIN interface*, making it
   into a *RICH interface*.
 
 - *Thin* versus *rich* /interfaces/ represents a commonly faced *trade-off* in
-  object-oriented design.
+  /object-oriented design/.
 
   The trade-off is BETWEEN _the implementers_ AND _the clients of an interface_.
 
-  * A /rich interface/ has many /methods/, which make it *convenient for the
+  * A /rich interface/ has many /methods/, which make it *CONVENIENT for the
     caller.*
 
     _Clients_ can pick a method that exactly matches the functionality they
@@ -2957,125 +3289,99 @@ CLOSED: [2022-05-21 Sat 00:54]
     + _Clients_ calling into a /thin interface/, however, have to write more
       code.
 
-      Given the smaller selection of methods to call, they may have to choose a
-      less than perfect match for their needs and write extra code to use it.
+      Given the _smaller selection of methods to call,_
+      they may have to choose a less than perfect match for their needs and
+      write extra code to use it.
 
-- Adding a concrete method to a trait tilts the thin-rich trade-off heavily
-  towards rich interfaces, because it is is a one-time effort. You only need to
-  implement the concrete method once, in the trait itself, instead of needing to
-  reimplement it for every class that mixes in the trait. Thus, rich interfaces
-  are less work to provide in Scala than in a language without traits.
+- Adding a _CONCRETE method_ to a /trait/ tilts the _thin-rich trade-off_
+  heavily towards /rich interfaces/, because it is is a _one-time effort_.
 
-- To enrich an interface using traits, simply define a trait with a small number
-  of abstract methods—the thin part of the trait’s interface—and a potentially
-  large number of concrete methods, all implemented in terms of the abstract
-  methods. Then you can mix the enrichment trait into a class, implement the
-  thin portion of the interface, and end up with a class that has all of the
-  rich interface available.
+- To ENRICH an /interface/ using /traits/,
+  1. simply define a /trait/ with a small number of /abstract methods/ -- the
+     thin part of the trait's interface -- and
 
-CLOSED: [2017-10-12 Thu 03:17]
-=From Jian= Except the phase /Java interface/, *interface* by itself in this
-section is used to represent its general meaning, NOT something for a
-specific language.
+  2. a potentially large number of /concrete methods/, all implemented in terms
+     of the /abstract methods/.
 
-- One major use of /traits/ is to automatically add (concrete) /methods/ to a
-  /class/ that extends it.
+  3. Then you can
+     1) _MIX_ the /enrichment trait/ _INTO_ a /class/,
+     2) implement the thin portion of the interface, and
+     *END UP WITH* a /class/ that has all of the rich interface available.
 
-- Thin vs Rich:
-  Consider the trade-off between the _implementers_ and the _clients_ of an
-  interface.
+- A good example:
+  ~Ordered~
+  All other methods, ~>~, ~<~, ~<=~, and ~>~, in it use a single ~compare~
+  method.
 
-  + A *rich* interface
-    has _MANY_ /methods/, which make it convenient for the _callers (clients)_
-    -- they have more chance to find /methods/ that can fit their requirement
-    exactly.
+  This, trait ~Ordered~ allows you to enrich a class with comparison methods by
+  implementing only one method, ~compare~.
 
-  + A *thin* interface,
-    on the other hand, has _FEWER_ /methods/, and thus
-    * it is easier for the _implementers_ whoes load is light.
+  * Example:
+    #+begin_src scala
+      class Rational(n: Int, d: Int) extends Ordered[Rational]:
+        // ...
+        def compare(that: Rational) =
+          (this.numer * that.denom) - (that.numer * this.denom)
+    #+end_src
 
-    * more work are left for the _clients (clients)_, who call into a *thin*
-      interface, however, have to write more code -- comparing the the *rich*
-      interface, they have less chance to find /methods/ that can fit their
-      requirement exactly -- they can choose to implement the thin interface
-      required methods, or write a more fittable one -- either of them require
-      their own coding.
+- _BEWARE_:
+  the ~Ordered~ /trait/ does *NOT* define ~equals~ for you,
+  because it is unable to do so.
 
-- Unlike in Java, adding a /concrete method/ to a /Scala trait/ is a *one-time
-  effort* -- you only need to implement the /method/ once, in the /trait/
-  itself, instead of needing to reimplement it for every /class/ that mixes in
-  the /trait/.
+  The problem is that implementing ~equals~ in terms of ~compare~
+  _REQUIRES_ checking the type of the passed object, and
 
-  Thus, *rich* interfaces are _less_ work to provide in Scala than in a
-  language without /traits/.
+  * BECAUSE of /type erasure/,
+    ~Ordered~ itself CANNOT do this test.
 
-- =From Jian=
-  The discussion above about "Thin vs Rich" is a discussion in general.
-  For Scala, even the /rich interface (trait)/ doesn't add load to the
-  _implementer_, a reasonable ~trait~
+  Thus, you need to define ~equals~ yourself, even if you inherit ~Ordered~.
+  =TODO=
+  =TODO=
+  =TODO=
+  You can find out how to go about this in _Advanced Programming in Scala._
 
-  + has a *STILL* _small number_ of /abstract methods/ --
-    the part the implementer need to finish -- the coding load is still light.
+** DONE 11.3 Traits as stackable modifications - 239 =REVIEW=
+CLOSED: [2025-05-06 Tue 01:27]
+One major use of /traits/:
+_TURNING_ a /THIN interface/
+_INTO_ a /RICH interface/.
 
-    This is _the (still) thin part_ of the trait's interface
+Now turn to a second major use of /traits/:
+PROVIDING /stackable modifications/ to /classes/.
 
-    and
-
-  - defines a potentially _large number_ of /concrete methods/,
-    *ALL _implemented in terms of_ the /abstract methods/.*
-
-  - then you can mix the enrichment /trait/ into a /class/, *implement the thin
-    portion of the interface*, and end up with a /class/ that has all of the
-    rich interface available.
-
-** TODO 11.3 Traits as stackable modifications - 239 =RE-READ=
-- One major use of traits:
-  turning a thin interface into a rich one.
-
-- Now turn to a second major use of traits:
-  providing stackable modifications to classes.
-
-- Traits let you modify the methods of a class, and they do so in a way that
-  allows you to stack those modifications with each other (order matters).
+- /Traits/ let you _MODIFY_ the /methods/ of a /class/, and they do so in a way
+  that allows you to *stack those modifications with each other (order
+  matters)*.
 
 - As an example,
   _consider stacking modifications to a queue of integers_.
 
-  + Two basic operations to the queue (FIFO):
-    * ~put~
-    * ~get~
+  * Two basic operations to the queue (FIFO):
+    + ~put~
+    + ~get~
 
-  + Code:
+  * Code:
     #+BEGIN_SRC scala
       abstract class IntQueue {
         def get(): Int
         def put(x: Int)
       }
 
-      import scala.collection.mutable.ArrayBuffer
+      import scala.collection.mutable
 
       class BasicIntQueue extends IntQueue {
-        private val buf = new ArrayBuffer[Int]
+        private val buf = new mutable.ArrayBuffer[Int]
         def get() = buf.remove(0)
         def put(x: Int) = { buf += x }
       }
     #+END_SRC
 
-  + Given a class that implements such a queue, you could define traits to
+  * Given a /class/ that implements such a queue, you could define /traits/ to
     perform modifications such as these:
-    * ~Doubling~: double all integers that are put in the queue
-    * ~Incrementing~: increment all integers that are put in the queue
-    * ~Filtering~: filter out negative integers from a queue
+    + ~Doubling~: double all integers that are put in the queue
+    + ~Incrementing~: increment all integers that are put in the queue
+    + ~Filtering~: filter out negative integers from a queue
 
-    These THREE traits represent /modifications/, because they modify the
-    behavior of an underlying queue class rather than defining a full queue
-    class themselves.
-
-    The three are also /stackable/ -- you can select any of the three you
-    like, mix them into a class, and obtain a new class that has all of the
-    modifications you chose.
-
-  + The implementations of three traits.
     #+BEGIN_SRC scala
       trait Doubling extends IntQueue {
         abstract override def put(x: Int) = { super.put(2 * x) }
@@ -3091,34 +3397,42 @@ specific language.
         }
       }
     #+END_SRC
+    - These THREE /trait/ can only be _mixed into_ a /class/ that also _extends_
+      ~IntQueue~.
 
-    * If a /trait/ extends a class A, _ONLY_ classes that extends A can mix in
-      this /trait/. For instance, you can mix ~Doubling~ into ~BasicIntQueue~,
-      but NOT into ~Rational~.
+    - These THREE /traits/ represent _MODIFICATIONS_,
+      BECAUSE
+        they modify the behavior of an underlying queue /class/
+        RATHER THAN defining a full queue /class/ themselves.
 
-    * If a /trait/ can have ~super~ call on a method declared ~abstract~.
-      =TODO= =???=
-      - Such calls are illegal for normal /classes/ because they will
-        certainly fail at run time.
-        =From Jian= since the current method ~m~ is ~abstract~, the ~m~
-        method of the superclass is also ~abstract~.
+    - These THREE /traits/ are /stackable/ -- you can select any of the three
+      you like, mix them into a /class/, and obtain a new /class/ that has all
+      of the modifications you chose.
 
-      - For a trait, however, since ~super~ calls is dynamically bound, such a
-        call can actually succeed.
+  * The _second_ funny thing is that the /trait/, for instance, the ~Doubling~,
+    has a ~super~ call on a /method/ declared ~abstract~.
+    + Such calls are *illegal* for NORMAL /classes/
+      BECAUSE they will _CERTAINLY fail at run time._
 
-      In this example the ~super~ call in ~trait Doubling~ will work so long
-      as _the trait is mixed in after another trait or class that gives a
-      concrete definition to the method_.
+    + =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      For a /trait/, however, such a call can actually succeed.
+      Since ~super~ calls in a /trait/ are *dynamically bound*, the ~super~ call
+      in /trait/ ~Doubling~ will work SO LONG AS the /trait/ is _mixed in_
+      *after* another /trait/ or /class/ that gives a /concrete definition/ to
+      the /method/.
 
-      This arrangement is frequently needed with traits that implement stackable
-      modifications. To tell the compiler you are doing this on purpose, you
-      must mark such methods as ~abstract override~. _This combination of
-      modifiers is only allowed for members of traits, not classes_, and it
-      means that the trait must be mixed into some class that has a concrete
-      definition of the method in question.
+  * To tell the compiler you are doing this on purpose, you must mark such
+    methods as ~abstract override~. _This combination of modifiers_ is
+    *only allowed* for /members/ of /traits/,
+    *NOT classes*, and it means that
+    =IMPORTANT=
+    the /trait/ *MUST* be _mixed into_ some /class/ that _has a *CONCRETE
+    definition* of the /method/ in question._
 
-  + Run and check the result:
-    * Non-stacked
+  * Run and check the result:
+    + Non-stacked
       #+BEGIN_SRC scala
         class MyQueue extends BasicIntQueue with Doubling
 
@@ -3131,10 +3445,9 @@ specific language.
         // 20
       #+END_SRC
 
-    * Stacked
+    + Stacked
       #+BEGIN_SRC scala
-        val queue = (new BasicIntQueue
-                         with Incrementing with Filtering)
+        val queue = new BasicIntQueue with Incrementing with Filtering
         queue.put(-1)
         queue.put(0)
         queue.put(1)
@@ -3145,10 +3458,9 @@ specific language.
         // Int = 2
       #+END_SRC
 
-    * Stacked (different order)
+    + Stacked (different order)
       #+BEGIN_SRC scala
-        val queue = (new BasicIntQueue
-                         with Filtering with Incrementing)
+        val queue = new BasicIntQueue with Filtering with Incrementing
         queue.put(-1)
         queue.put(0)
         queue.put(1)
@@ -3161,27 +3473,52 @@ specific language.
         // Int = 2
       #+END_SRC
 
-  + Rules (roughly): =TODO= see the next section for details
-    + traits further to the right take effect first.
-      When you call a method on a class with mixins, the method in the trait
-      furthest to the right is called first.
+  * *The order of traits is significant*.
+    The precise rules depends on /the linearization rule/.
 
-    + If that method calls ~super~, it invokes the method in the next trait to
-      its left, and so on.
+    Roughly speaking
+    1. /traits/ _further to the right_ take effect first.
+      WHEN you call a /method/ on a /class/ with /mixins/,
+      the /method/ in the /trait/ _furthest to the right_ is called first.
 
-- Since _the order of traits is significant_,
-  you must keep eyes open for opportunities to arrange code as stackable
-  modifications.
+    2. If that method calls ~super~, it invokes the /method/ in the NEXT /trait/
+       _to its left_, and so on.
 
-- mixin :: a /trait/ that is _mixed into_ a /class/ (from footnote 2).
+- Overall, code written in this style gives you a great deal of flexibility.
+  You can define _sixteen_ (=from Jian= 3 + 6 + 6 + 1) DIFFERENT /classes/ by
+  mixing in these THREE /traits/ in different combinations and orders.
 
-** TODO 11.4 Why not multiple inheritance? - 243
-/Traits/ are a way to inherit from multiple class-like constructs, but they
-*differ* in important ways from the /multiple inheritance/ present in many
+  That's a lot of flexibility for a small amount of code, so you should keep
+  your eyes open for opportunities to arrange code as stackable modifications.
+
+- Since it is very flexible,
+  you must keep eyes open for opportunities to arrange code as _stackable
+  modifications_.
+
+- footnote 3: (=from Jian=) rephrased
+  * mixin :: a /trait/ that is _mixed into_ a /class/ (from footnote 3).
+
+** DONE 11.4 Why not multiple inheritance? - 243
+CLOSED: [2025-05-05 Mon 20:54]
+/Traits/ are a way to _inherit from_ MULTIPLE _class-like constructs_,
+BUT
+they *differ* in important ways from the /multiple inheritance/ present in many
 languages.
 
 - One _DIFFERENCE_ is especially important:
   the *interpretation* of ~super~.
+
+  * With /multiple inheritance/,
+    the /method/ called by a ~super~ call can _be DETERMINED right where the call
+    appears._
+
+  * With /traits/,
+    the /method/ called _is determined by a /linearization/ of the /classes/ and
+    /traits/ that are MIXED INTO a /class/._
+
+  =IMPORTANT=
+  This is the difference that _ENABLES_ the /stacking of modifications/
+  described in the previous section.
 
 - The precise order of the /linearization/ is described in the *language
   specification*.
@@ -3202,47 +3539,115 @@ languages.
 
   3. ~FourLegged~: ~FourLegged~ --> ~HasLegs~ ===> ~Furry~ ===> ~Animal~ --> ~AnyRef~ --> ~Any~
 
-** TODO 11.5 Trait parameters - 248
-** TODO 11.6 Conclusion - 250
-   
+** DONE 11.5 Trait parameters - 248
+CLOSED: [2025-05-05 Mon 22:18]
+_As of Scala 3, traits can take value parameters._
+
+- Listing 11.10 · Defining a trait parameter.
+  #+begin_src scala
+    trait Philosophical(message: String):
+      def philosophize = message
+  #+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  You *MUST specify* a /trait's parameter value/
+  WHEN DEFINING a /class/ that mixes in the /trait/.
+
+- /Trait parameters/ are evaluated immediately before the _trait initializes_.
+  * =TODO= =???=
+    footnote 5:
+    /Trait parameters/ in Scala 3 _REPLACES_ /early initializers/ in Scala 2.
+
+- As you use /parameterized traits/, you may notice that the rules for
+  /trait parameters/ are *slightly DIFFERENT than* for /class parameters/.
+
+  * In both cases, you can only initialize once.
+
+  * _HOWEVER_,
+    ALTHOUGH
+    EACH /class/ _CAN ONLY_ be extended by _ONE_ /subclass/ in a hierarchy,
+    a /trait/ can be MIXED IN _by MULTIPLE /subclasses/._
+
+    In that case, you must initialize the /trait/
+    WHEN defining the /class/ that MIXES IN the /trait/ *highest up in the
+    hierarchy*.
+
+    + Illustrate this by an example:
+
+      - Listing 11.11 · Supplying a trait parameter.
+        #+begin_src scala
+          class ProfoundAnimal extends Animal,
+            Philosophical("In the beginning was the deed.")
+        #+end_src
+
+      - Listing 11.12 · Not supplying a trait parameter.
+        #+begin_src scala
+          class Frog extends ProfoundAnimal, Philosophical
+        #+end_src
+
+      - A /trait/ *cannot* _pass parameters to_ its /parent traits/.
+        For example, consider /trait/ ~PhilosophicalAnimal~ that extends /trait/
+        ~Philosophical~:
+        #+begin_src scala
+          trait PhilosophicalAnimal extends Animal with Philosophical
+        #+end_src
+
+      - *DOSE NOT compile*
+        #+begin_src scala
+          class Frog extends PhilosophicalAnimal("I croak, therefore I am!")
+        #+end_src
+
+        * RIGHT WAYS:
+          #+begin_src scala
+            class Frog extends
+              Philosophical("I croak, therefore I am!"),
+              PhilosophicalAnimal
+          #+end_src
+
+          OR
+
+          #+begin_src scala
+            class Frog extends
+              PhilosophicalAnimal,
+              Philosophical("I croak, therefore I am!")
+          #+end_src
+
+** DONE 11.6 Conclusion - 250 - =IMPORTANT=
+CLOSED: [2025-05-05 Mon 22:34]
+- This chapter has shown you
+  * _HOW /traits/ work and
+    HOW to use them in several common idioms._
+
+    + You saw that /traits/ are _SIMILAR TO_ /multiple inheritance/.
+      _BUT_
+      because /traits/ interpret ~super~ using /linearization/,
+      they both
+      - _AVOID_ some of the difficulties of traditional /multiple inheritance/ and
+      - _ALLOW_ you to *stack behaviors*.
+
+    + You also saw the ~Ordered~ trait and learned how to write your own
+      enrichment traits.
+
+- Now that you have seen all of these facets, it is worth stepping back
+  and taking another look at /traits/ as a whole:
+
+  * /Traits/ do not merely support the idioms described in this chapter;
+    they are a _fundamental unit_ of code that *is REUSABLE through
+    /inheritance/.*
+
+    + As such, many experienced Scala programmers start with /traits/ when they
+      are at the early stages of implementation.
+
+    + Each /trait/ can hold *less than* an entire concept, a mere FRAGMENT of a
+      concept.
+
+      As the design solidifies, the fragments can be combined into more complete
+      concepts through /trait mixin/.
 
 ** ===========================
-** DONE 12 Traits - 257
- CLOSED: [2018-03-21 Wed 23:51]
-** ---------------------------
-** DONE 12.3 Example: Rectangular objects - 261
-CLOSED: [2017-10-12 Thu 01:21]
-
-** DONE 12.4 The ~Ordered~ trait - 264
-CLOSED: [2017-10-12 Thu 01:38]
-Do comparison manually:
-
-footnote 1: This example is based on the ~Rational~ class shown in Listing 6.5
-on page 151, with ~equals~, ~hashCode~, and modifications to ensure a
-_positive_ ~denom~ added.
-#+BEGIN_SRC scala
-  class Rational(n: Int, d: Int) {
-    def < (that: Rational) =
-      this.numer * that.denom < that.numer * this.denom
-
-    def > (that: Rational) = that < this
-
-    def <= (that: Rational) = (this < that) || (this == that)
-
-    def >= (that: Rational) = (this > that) || (this == that)
-  }
-#+END_SRC
-
-Use the ~Ordered~ trait
-#+BEGIN_SRC scala
-  class Rational(n: Int, d: Int) extends Ordered[Rational] {
-    //...
-    def compare(that: Rational) =
-      (this.numer * that.denom) - (that.numer * this.denom)
-  }
-#+END_SRC
-
-** DONE 12.7 To trait or not to trait? - 274 =IMPORTANT=
+** DONE _FROM OLD VERSION BOOK_ - 12.7 To trait or not to trait? - 274 =IMPORTANT= - =REVIEW=
 CLOSED: [2018-03-21 Wed 23:50]
 There is *NO* firm rules about the choice of using /trait/ or /abstract class/
 for a specific use case. ONLY guidelines:
@@ -3285,14 +3690,6 @@ for a specific use case. ONLY guidelines:
 
   You can always change it later, and in general using a /trait/ _keeps more
   options open_.
-
-** DONE 12.8 Conclusion - 275
-CLOSED: [2017-10-12 Thu 03:39]
-_Mix in multiple traits_ are similar to /multiple inheritance/.
-But because /traits/ interpret ~super~ using /linearization/, they both
-- _AVOID_ some of the difficulties of traditional multiple inheritance
-  and
-- _ALLOW_ you to stack behaviors.
 
 * DONE 12 Packages, Imports, and Exports - 251
 CLOSED: [2025-04-17 Thu 10:49]
@@ -4643,42 +5040,241 @@ CLOSED: [2025-04-19 Sat 15:07]
 - Along the way, you learned _a bit_ about
   HOW Scala's /type inference/ works.
 
-* TODO 15 Working with Other Collections - 335
-** 15.1 Sequences - 335
+* DONE 15 Working with Other Collections - 335
+CLOSED: [2025-05-06 Tue 23:35]
+Scala has a rich collection library. This chapter gives you a tour of the _most
+commonly used_ *collection types and operations*, showing just the parts you
+will use most frequently.
+
+- =TODO=
+  _Advanced Programming in Scala_ will
+  * provide a more comprehensive tour of what's available and
+  * show how Scala's composition constructs are used to provide such a rich API.
+
+** DONE 15.1 Sequences - 335
+CLOSED: [2025-05-02 Fri 22:17]
+/Sequence types/ let you work with groups of data _lined up IN ORDER_.
+
 *** Lists - 335
+- /Lists/ will also be discussed in _Advanced Programming in Scala_, which
+  provides insight into how lists are implemented in Scala.
+
 *** Arrays - 336
 *** List buffers - 337
+- ~mutable.ListBuffer~ provides constant time /append/ and /prepend/ operations.
+  * ~append~ operator: +=
+  * ~prepend~ operator: +=:
+
 *** Array buffers - 337
+- An ~mutable.ArrayBuffer~ is like an array, except that you can ADDITIONALLY
+  _ADD and REMOVE elements from the BEGINNING and END of the sequence._
+
+  * All Array operations are available, though they are a _little slower_ due to
+    a layer of wrapping in the implementation.
+
+  * The new _addition_ and _removal_ operations are *constant time on average*.
+    + =from Jian= amortized
+
 *** Strings (via ~StringOps~) - 338
 
-** 15.2 Sets and maps - 339
+** DONE 15.2 Sets and maps - 339
+CLOSED: [2025-05-02 Fri 22:58]
+- =IMPORTANT=
+  By default when you write ~Set~ or ~Map~ you get an *immutable* object.
+
 *** Using sets - 340
 *** Using maps - 342
-*** Default sets and maps - 344
+*** Default sets and maps - 344 - =REVIEW= =BENCHMARK=
+- The ~scala.collection.mutable.Set()~ /factory method/ returns a
+  ~scala.collection.mutable.HashSet~.
+
+- The ~scala.collection.mutable.HashMap()~ /factory method/ returns a
+  ~scala.collection.mutable.HashMap~.
+
+- The story for /immutable sets and maps/ is a bit *more involved*.
+  * The class returned by the ~scala.collection.immutable.Set()~ /factory method/,
+    for example, _depends on_ *how many elements you pass to it*, as shown in
+
+    Table 15.3 · Default immutable set implementations
+    |--------------------+---------------------------------------|
+    | Number of elements | Implementation                        |
+    |--------------------+---------------------------------------|
+    |                  0 | ~scala.collection.immutable.EmptySet~ |
+    |                  1 | ~scala.collection.immutable.Set1~     |
+    |                  2 | ~scala.collection.immutable.Set2~     |
+    |                  3 | ~scala.collection.immutable.Set3~     |
+    |                  4 | ~scala.collection.immutable.Set4~     |
+    |          5 or more | ~scala.collection.immutable.HashSet~  |
+
+  * Similarly, the ~scala.collection.immutable.Map()~ /factory method/ will return
+    a different class _depending on_ *how many key-value pairs you pass to it,* as
+    shown in Table 15.4.
+
+    Table 15.4 · Default immutable map implementations
+    |--------------------+---------------------------------------|
+    | Number of elements | Implementation                        |
+    |--------------------+---------------------------------------|
+    |                  0 | ~scala.collection.immutable.EmptyMap~ |
+    |                  1 | ~scala.collection.immutable.Map1~     |
+    |                  2 | ~scala.collection.immutable.Map2~     |
+    |                  3 | ~scala.collection.immutable.Map3~     |
+    |                  4 | ~scala.collection.immutable.Map4~     |
+    |          5 or more | ~scala.collection.immutable.HashMap~  |
+
 *** Sorted sets and maps - 345
+~TreeSet~ and ~TreeMap~
 
-** 15.3 Selecting mutable versus immutable collections - 346
-** 15.4 Initializing collections - 348
-*** Converting to array or list - 350
-*** Converting between mutable and immutable sets and maps - 351
+The order is determined by the ~Ordering~ trait, an implicit instance of which
+must be defined for the _element type_.
 
-** 15.5 Tuples - 351
-** 15.6 Conclusion - 353
+** DONE 15.3 Selecting mutable versus immutable collections - 346
+CLOSED: [2025-05-06 Tue 20:57]
+- When in doubt,
+  it is better to _start with_ an /immutable collection/ and
+  change it later, if you need to,
+  BECAUSE
+  /immutable collections/ can be *easier to reason about than* /mutable ones/.
+
+- BESIDES _being potentially easier to reason about,_
+
+  /immutable collections/ can usually be *stored more compactly than* /mutable
+  ones/
+  IF the number of elements stored in the collection is _SMALL_.
+
+  * For instance
+    an EMPTY /mutable map/ in its default representation of ~HashMap~ takes up
+    about _80 bytes_, and about _16 more_ are added for each entry that's added
+    to it.
+
+    An empty /immutable Map/ is a single object that's shared between all
+    references, so referring to it essentially *costs* just a _single pointer
+    field_.
+
+- For *SMALL* /maps/ and /sets/, the _immutable_ versions are *much more COMPACT
+  than* the /mutable ones/.
+  * Given that
+    _many collections are *small*,_
+    switching them to be _immutable_ can bring IMPORTANT
+    + _space savings_ and
+    + _performance advantages_.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  * GOAL :: To make it easier to switch from immutable to mutable collections,
+    and vice versa,
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  * SOLUTION :: Scala provides some /syntactic sugar/:
+    EVEN THOUGH /immutable sets and maps/ do *NOT support* a true ~+=~ method,
+    Scala gives a useful *alternate interpretation* to ~+=~ --
+    whenever you write ~a += b~, and ~a~ does *NOT support* a method named ~+=~,
+    Scala will try interpreting it as ~a = a + b~.
+    + Of course, ~a~ must be ~var~ if you want this _alternative interpretation_.
+
+    + Same for ~-=~ and ~++=~.
+
+- CONCLUSION:
+  Not all examples are quite that easy to convert, but the special treatment of
+  /methods/ _ending in an equals sign_ will often *REDUCE the amount of code that
+  needs changing.*
+
+** DONE 15.4 Initializing collections - 348 - =REVIEW=
+CLOSED: [2025-05-06 Tue 22:28]
+- Pass the initial elements to a /factory method/ on the /companion object/ of
+  your chosen collection -- ~apply~.
+
+- Another special situation is if you want to
+  _initialize a collection with another collection._
+  #+begin_src scala
+    import scala.collection.immutable.TreeSet
+
+    val treeSet = colors to TreeSet
+  #+end_src
+  The ~to~ /method/ _takes as parameter a /companion object/ of a /collection/._
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  You can use it to _convert_ *ANY* collection _to_ another.
+
+*** DONE Converting to array or list - 350
+CLOSED: [2025-05-06 Tue 22:25]
+- There are more specific than ~to~ /methods/ like:
+  ~treeSet.toList~ and ~treeSet.toArray~
+
+- When you invoke ~toList~ or ~toArray~ on a collection, the /order/ of the
+  elements in the resulting list or array will be the _SAME as the /order/ of
+  elements produced by an /iterator/ on that collection._
+
+- Q :: The difference between ~xs to List~ and ~xs.toList~?
+
+- A :: the implementation of ~toList~ may be /overridden/ by the /concrete
+  collection type/ of ~xs~ to provide
+  a *MORE EFFICIENT way* to convert its elements to a list _THAN_
+  the /default implementation/, which *copies* all the elements of the collection.
+  * For instance, the ~ListBuffer~ collection does override its ~toList~ method
+    with an implementation that runs in _constant time and space._
+
+- *KEEP IN MIND*,
+  * however, that conversion to lists or arrays _USUALLY_ *requires _COPYING all
+    of the elements_ of the collection*, and thus may be *slow* for large
+    collections.
+
+  * Further, many collections only have a few elements anyway, in which case
+    there is _ONLY a small speed penalty._
+
+*** DONE Converting between mutable and immutable sets and maps - 351
+CLOSED: [2025-05-06 Tue 22:28]
+#+begin_src scala
+  import scala.collection.mutable
+
+  treeSet                              // TreeSet(blue, green, red, yellow)
+  val mutaSet = treeSet to mutable.Set // mutable.HashSet(red, blue, green, yellow)
+  val immutaSet = mutaSet to Set       // Set(red, blue, green, yellow)
+#+end_src
+
+** DONE 15.5 Tuples - 351
+CLOSED: [2025-05-06 Tue 23:33]
+- Because tuples can combine objects of different types, tuples do not
+  inherit from Iterable.
+
+- This syntax gives multiple definitions of the same expression.
+  #+begin_src scala
+    val word, idx = longest
+    val word: (String, Int) = (quick,1)
+    val idx: (String, Int) = (quick,1)
+  #+end_src
+  Each /variable/ is _initialized with_ *its own evaluation of the expression*
+  on the right-hand side.
+
+  * =TODO=
+    =NEXT=
+    See Chapter 16 for some examples where /multiple definitions/ are
+    convenient.
+
+- As a note of WARNING, _tuples are almost too easy to use._
+  * Tuples are great when you combine data that has no meaning beyond “an A and
+    a B.”
+
+** DONE 15.6 Conclusion - 353
+CLOSED: [2025-05-06 Tue 23:35]
 
 * TODO 16 Mutable Objects - 355
-** 16.1 What makes an object mutable? - 355
-** 16.2 Reassignable variables and properties - 357
-** 16.3 Case study: Discrete event simulation - 361
-** 16.4 A language for digital circuits - 362
-** 16.5 The ~Simulation~ API - 365
-** 16.6 Circuit Simulation - 369
+** TODO 16.1 What makes an object mutable? - 355
+** TODO 16.2 Reassignable variables and properties - 357
+** TODO 16.3 Case study: Discrete event simulation - 361
+** TODO 16.4 A language for digital circuits - 362
+** TODO 16.5 The ~Simulation~ API - 365
+** TODO 16.6 Circuit Simulation - 369
 *** The ~Wire~ class - 369
 *** The ~inverter~ method - 372
 *** The ~andGate~ and ~orGate~ methods - 373
 *** Simulation output - 374
 *** Running the simulator - 374
 
-** 16.7 Conclusion - 376
+** TODO 16.7 Conclusion - 376
 
 * DONE 17 Scala's Hierarchy - 378 - =REVIEW=
 CLOSED: [2025-04-18 Fri 15:54]
@@ -5990,14 +6586,90 @@ CLOSED: [2025-04-21 Mon 15:58]
 ** 24.16 Conversions between Java and Scala collections - 586
 ** 24.17 Conclusion - 588
 
-* TODO 25 Assertions and Tests - 589
-** 25.1 Assertions - 589
-** 25.2 Testing in Scala - 591
-** 25.3 Informative failure reports - 592
-** 25.4 Tests as specifications - 594
-** 25.5 Property-based testing - 597
-** 25.6 Organizing and running tests - 599
-** 25.7 Conclusion - 600
+* DONE 25 Assertions and Tests - 589 - _NOTE_
+CLOSED: [2025-05-06 Tue 20:28]
+/Assertions/ and /tests/ are two important ways you can check that the software you
+write behaves as you expect.
+
+In this chapter, we'll show you
+_several options you have in Scala to write and run them._
+
+- =from Jian=
+  I should learn more test frameworks!
+
+** DONE 25.1 Assertions - 589
+CLOSED: [2025-05-06 Tue 14:58]
+- footnote 1: ~assert~ is defined in the ~Predef~ /singleton object/.
+
+- /Assertions/ in Scala are written as calls of a predefined method ~assert~.
+  * The expression ~assert(condition)~ throws an ~AssertionError~ if condition
+    does NOT hold.
+
+  * There's also a two-argument version of assert:
+    The expression ~assert(condition, explanation)~ tests condition and, if it
+    does not hold, throws an ~AssertionError~ that CONTAINS _the given
+    explanation_.
+
+    + The type of explanation is ~Any~, so you can pass any object as the explanation.
+      The ~assert~ method will call ~toString~ on it to get a string explanation to
+      place inside the ~AssertionError~.
+
+      For example, in the method named ~above~ of class ~Element~, shown in
+      Listing 10.13 on page 231, you might place an ~assert~ after the calls to
+      ~widen~ to make sure that the widened elements have _equal widths_. This is
+      shown in Listing 25.1.
+
+- The ~ensuring~ method can be used with any /result type/ because of an
+  /implicit conversion/.
+  * Listing 25.2 · Using ~ensuring~ to assert a function's result.
+    #+begin_src scala
+      private def widen(w: Int): Element =
+        if w <= width then
+          this
+        else {
+          val left = elem(' ', (w - width) / 2, height)
+          var right = elem(' ', w - width - left.width, height)
+          left beside this beside right
+        } ensuring (w <= _.width)
+    #+end_src
+
+  * ~ensuring~ calls ~assert~ in its implementation.
+
+- =TODO=
+  =from Jian= This doesn't work!!!
+  See https://docs.scala-lang.org/scala3/guides/migration/options-lookup.html
+
+  /Assertions/ can be enabled and disabled using the _JVM's_ ~-ea~ and ~-da~
+  /command line flags/.
+  * =from Jian=
+    Since this can be DISABLED, for the tests in code that we want to use as
+    preconditions or/and postconditions, we'd better use ~require~.
+    =???= Or any other tools???
+
+- =NEXT=
+  In the remainder of this chapter, we'll focus on the writing of /external
+  tests/, which provide their own test data and run _independently from the
+  application_.
+
+** TODO 25.2 Testing in Scala - 591
+You have many options for testing in Scala,
+from established Java tools, such as _JUnit_ and _TestNG_,
+to tools written in Scala, such as _ScalaTest_, _specs2_, and _ScalaCheck_.
+
+- =from Jian=
+  * Need a survey to all widely used Scala test frameworks.
+  * Compare them with each other and non-Scala famous test frameworks, like pytest.
+
+- For the remainder of this chapter, we'll give you a quick tour of these tools.
+  We'll START WITH _ScalaTest_.
+
+- xxx
+
+** TODO 25.3 Informative failure reports - 592
+** TODO 25.4 Tests as specifications - 594
+** TODO 25.5 Property-based testing - 597
+** TODO 25.6 Organizing and running tests - 599
+** TODO 25.7 Conclusion - 600
 
 * Glossary - 601
 * Bibliography - 617
