@@ -5261,9 +5261,114 @@ CLOSED: [2025-05-06 Tue 23:33]
 ** DONE 15.6 Conclusion - 353
 CLOSED: [2025-05-06 Tue 23:35]
 
-* TODO 16 Mutable Objects - 355
-** TODO 16.1 What makes an object mutable? - 355
-** TODO 16.2 Reassignable variables and properties - 357
+* DONE 16 Mutable Objects - 355 - =TODO: Case study=
+CLOSED: [2025-05-07 Wed 12:09]
+/Mutable objects/ often come up naturally
+WHEN you want to MODEL _objects in the real world that change over time._
+
+- This chapter
+  * EXPLAINS
+    + what /mutable objects/ are and
+    + what Scala provides in terms of syntax to express them.
+
+  * INTRODUCE
+    _a larger case study_ on discrete event simulation, which involves /mutable
+    objects/, as well as _building an internal DSL for defining digital circuits
+    to simulate._
+
+** DONE 16.1 What makes an object mutable? - 355
+CLOSED: [2025-05-07 Wed 10:59]
+- When you _invoke a method_ or _dereference a field_ on some /purely functional
+  object/, you will always get the *SAME result*.
+
+- For a /mutable object/, on the other hand, the result of a _method call_ or
+  _field access_ may *depend on*
+  what operations were previously performed on the object.
+  * A GOOD EXAMPLE of a /mutable object/ is a _bank account_.
+    + Listing 16.1 · A mutable bank account class.
+      #+begin_src scala
+        class BankAccount:
+          private var bal: Int = 0
+
+          def balance: Int = bal
+
+          def deposit(amount: Int): Unit =
+            require(amount > 0)
+            bal += amount
+
+          def withdraw(amount: Int): Boolean =
+            if amount > bal then false
+            else
+              bal = amount
+              true
+      #+end_src
+
+- /Mutation/ and ~var~'s usually go hand in hand, but things are *NOT ALWAYS so clear cut*.
+  * Operations can be forwarded to other objects that have /mutable state/.
+
+  * The reverse is also possible:
+    A /class/ might contain ~var~'s and still be _purely functional_.
+    + Example:
+      a /class/ that *caches* the result of an expensive operation in a /field/
+      _for optimization purposes_.
+
+      - Except for this speed gain, the one with or without /cache/ are exactly
+        the same.
+
+** DONE 16.2 Reassignable variables and properties - 357
+CLOSED: [2025-05-07 Wed 12:08]
+- You can perform _TWO fundamental operations_ on a /reassignable variable/:
+  * get its value or
+  * set it to a new value.
+
+- In Scala,
+  _EVERY ~var~ that is a /non-private member/ of some object_
+  *implicitly defines* a /getter/ and a /setter/ method with it.
+  * The name of the getter of ~var x~ is ~x~.
+  * The name of the setter of ~var x~ is ~x_=~.
+
+- The _accessibility_ of /getter/ and /setter/ of a /field/ is the *SAME* as the
+  _accessibility_ of this /field/.
+
+- Some languages have a _special syntactic construct_ for these /variable-like
+  quantities/ that are _NOT plain variables_ in that their /getter/ or /setter/
+  can be redefined.
+  * For instance, C# has /properties/, which fulfill this role.
+
+  * _Scala's convention_ of always interpreting a /variable/ as a pair of
+    /setter/ and /getter/ methods gives you the SAME capabilities as C#
+    properties *without requiring special syntax.*
+    =from Jian= and much less boilerplate!!!
+
+- =IMPORTANT=
+  /Properties/ can serve many different purposes.
+  * Examples:
+    + In the example shown in Listing 16.4, _the /setters/ enforced an /invariant/,_
+      thus *PROTECTING* the variable *FROM* being assigned ILLEGAL VALUES.
+
+    + You could also use a /property/ to *log* all accesses to /getters/ or
+      /setters/ of a variable.
+
+    + Or you could *integrate* variables *with* events,
+      for instance by _NOTIFYING_ some _subscriber methods_ *each time a
+      variable is modified*.
+
+- A /getter/ and a /setter/ *without* an ASSOCIATED /field/ is allowed!
+  * Example:
+    Listing 16.5 · Defining a getter and setter without an associated field.
+    #+begin_src scala
+      import scala.compiletime.uninitialized
+
+      class Thermometer:
+        var celsius: Float = uninitialized
+        def fahrenheit = celsius * 9 / 5 + 32
+        def fahrenheit_=(f: Float) =
+          celsius = (f - 32) * 5 / 9
+        override def toString = s"${fahrenheit}F/${celsius}C"
+    #+end_src
+    + ~uninitialized~ is used to set a default value, a /zero value/.
+      *The /zero value/ depends on the /field's type/*.
+
 ** TODO 16.3 Case study: Discrete event simulation - 361
 ** TODO 16.4 A language for digital circuits - 362
 ** TODO 16.5 The ~Simulation~ API - 365
@@ -5807,19 +5912,19 @@ In this chapter we showed you
 In the next chapter, you'll learn about /type parameterization/.
 
 * TODO 18 Type Parameterization - 394 - =READING=
-** 18.1 Functional queues - 394
-** 18.2 Information hiding - 397
+** TODO 18.1 Functional queues - 394
+** TODO 18.2 Information hiding - 397
 *** Private constructors and factory methods - 398
 *** An alternative: private classes - 399
 
-** 18.3 Variance annotations - 400
+** TODO 18.3 Variance annotations - 400
 *** Variance and arrays - 403
 
-** 18.4 Checking variance annotations - 405
-** 18.5 Lower bounds - 408
-** 18.6 Contravariance - 409
-** 18.7 Upper bounds - 413
-** 18.8 Conclusion - 415
+** TODO 18.4 Checking variance annotations - 405
+** TODO 18.5 Lower bounds - 408
+** TODO 18.6 Contravariance - 409
+** TODO 18.7 Upper bounds - 413
+** TODO 18.8 Conclusion - 415
 
 * DONE 19 Enums - 416 - =REVIEW=
 CLOSED: [2025-04-17 Thu 21:44]
@@ -6178,33 +6283,344 @@ CLOSED: [2025-04-17 Thu 20:45]
   * makes A COMMON IDIOM for _functional data modeling_ CONCISE, and
   * indicates that /EDTs/ and /ADTs/ are _IMPORTANT patterns_.
 
-* TODO 20 Abstract Members - 428
-** 20.1 A quick tour of abstract members - 428
-** 20.2 Type members - 429
-** 20.3 Abstract ~val~'s - 430
-** 20.4 Abstract ~var~'s - 430
-** 20.5 Initializing abstract ~val~'s - 432
-*** Trait parametric fields - 434
-*** Lazy vals - 435
+* DONE 20 Abstract Members - 428 - =REVIEW= =CASE-STUDY= =NOTE=
+CLOSED: [2025-05-07 Wed 15:12]
+- A /member/ of a /class/ or /trait/ is *abstract*
+  IF the /member/ does _NOT have a complete definition_ in the /class/ or
+  /trait/.
 
-** 20.6 Abstract types - 439
-** 20.7 Path-dependent types - 441
-** 20.8 Refinement types - 444
-** 20.9 Case study: Currencies - 445
-** 20.10 Conclusion - 453
+  * /Abstract members/ are intended to be implemented in /subclasses/ of the
+    /class/ in which they are declared.
+
+    This idea is found in many object-oriented languages.
+
+- For instance,
+  1. _Java_ lets you declare /abstract methods/.
+
+  2. _Scala_ goes beyond that and implements the idea in its full generality:
+     Besides methods, you can declare /abstract fields/ and even /abstract
+     types/ as members of /classes/ and /traits/.
+
+- In this chapter we'll describe all four kinds of abstract member:
+  * ~val~'s
+  * ~var~'s
+  * ~method~'s
+  * ~type~'s
+
+  Along the way we'll discuss
+  * /trait parametric fields/
+  * ~lazy val~'s
+  * /path-dependent types/
+
+** DONE 20.1 A quick tour of abstract members - 428
+CLOSED: [2025-05-07 Wed 13:03]
+Example:
+#+begin_src scala
+  trait Abstract:
+    type T
+    def transform(x: T): T
+    val initial: T
+    var current: T
+#+end_src
+
+** DONE 20.2 Type members - 429
+CLOSED: [2025-05-07 Wed 13:12]
+=from Jian= I think this can be improved!
+
+- Possible reasons of using a /type member/:
+  * define a short, descriptive _alias_ for a /type/ whose real name is more verbose,
+    or less obvious in meaning, than the alias.
+
+  * declare /abstract types/ that must be defined in /subclasses/.
+    =TODO=
+    This use, which was demonstrated in the previous section, will be described
+    in detail later in this chapter.
+
+- =from Jian=
+  Should compare /abstract type members/ with class/trait /type parameters/.
+
+** DONE 20.3 Abstract ~val~'s - 430
+CLOSED: [2025-05-07 Wed 13:33]
+- =from Jian=
+  =FIXME= The book should have an overview like this:
+
+  "Scala has *NO restriction* like "you can implement an abstract member only by
+  its same type of concrete members." Of course, you can't do whatever you want
+  in all scenarios. See below for discussion and explanation."
+
+  Or else, cognitive inertia can make people confused!
+
+- Code:
+  #+begin_src scala
+    val initial: String
+  #+end_src
+
+  or
+  #+begin_src scala
+    def initial: String
+  #+end_src
+  Client code would refer to both the ~val~ and the /method/ in exactly the same
+  way. _HOWEVER_,
+  * if ~initial~ is an ~abstract val~,
+    the client is guaranteed that ~obj.initial~ will yield the *SAME value EVERY
+    time it is referenced.*
+
+  * if ~initial~ were an ~abstract method~, that guarantee would *NOT HOLD*
+    because, in that case, ~initial~ could be implemented by a /concrete method/
+    that _returns a DIFFERENT value every time it's called._
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  From the explanation above, you know
+  * ~abstract val~ can only be implemented with concrete ~val~ definitions.
+
+  * ~abstract def~ can be implemented by both /concrete method definitions/ and
+    concrete ~val~ definitions.
+
+** DONE 20.4 Abstract ~var~'s - 430
+CLOSED: [2025-05-07 Wed 14:14]
+- Illustration example:
+  Listing 20.2 · Declaring abstract vars.
+  #+begin_src scala
+    trait AbstractTime:
+      var hour: Int
+      var minute: Int
+  #+end_src
+
+- =IMPORTANT=
+  ~var~'s declared as members of /classes/ come equipped with /getter/ and
+  /setter/ methods. *This holds for ~abstract var~'s as well*.
+
+  The code above is equivalent to
+  #+begin_src scala
+    trait AbstractTime:
+      def hour: Int
+      def hour_=(x: Int): Unit
+      def minute: Int
+      def minute_=(x: Int): Unit
+  #+end_src
+
+  This means when implementing it, it is not necessary for us to define to ~var~'s.
+  There are multiple ways to fulfill the requirement of this /trait/.
+  Here is a legal implementation:
+  #+begin_src scala
+    import scala.compiletime.uninitialized
+
+    class Time:
+      var h: Int = uninitialized
+      var minute: Int = uninitialized
+
+      def hour: Int = h
+      def hour_=(x: Int): Unit =
+        h = x
+  #+end_src
+
+** TODO 20.5 Initializing abstract ~val~'s - 432 - =REVIEW= =NOTE=
+*** DONE Trait parametric fields - 434
+CLOSED: [2025-05-07 Wed 14:40]
+/Trait parametric fields/, lets you compute _values for fields_ of a /trait/
+_BEFORE_
+the /trait/ itself is initialized.
+
+- =from Jian= Learn more from _the Chapter 11 Traits_.
+
+*** TODO Lazy vals - 435
+
+** DONE 20.6 Abstract types - 439
+CLOSED: [2025-05-07 Wed 15:00]
+- The rest of this chapter DISCUSSES
+  * what such an /abstract type declaration/ means and
+  * what it's good for.
+
+- Example:
+  #+begin_src scala
+    class Food
+
+    abstract class Animal:
+      def eat(food: Food): Unit
+  #+end_src
+
+  * You can't
+    #+begin_src scala
+      class Grass extends Food
+
+      class Cow extends Animal:
+        override def eat(food: Grass) = {} // This won't compile
+    #+end_src
+    + If you can, code pass typechecker but can have logic error can be built
+      like:
+      #+begin_src scala
+        class Food
+        abstract class Animal:
+          def eat(food: Food): Unit
+
+        class Grass extends Food
+        class Cow extends Animal
+          override def eat(food: Grass) = {} // This won't compile,
+                                             // but if it did,...
+
+        class Fish extends Food
+        val bessy: Animal = new Cow
+        bessy.eat(new Fish)      // ...you could feed fish to cows.
+      #+end_src
+
+  * The right way (use /abstract type/):
+    #+begin_src scala
+      class Food
+      abstract class Animal:
+        type SuitableFood <: Food
+        def eat(food: SuitableFood): Unit
+
+      class Grass extends Food
+      class Cow extends Animal:
+        type SuitableFood = Grass
+        override def eat(food: Grass) = {}
+    #+end_src
+    + Now you can't feed ~Fish~ to ~Cow~ as expected!
+
+** TODO 20.7 Path-dependent types - 441 - =REVIEW= =NOTE=
+** TODO 20.8 Refinement types - 444
+** TODO 20.9 Case study: Currencies - 445
+** TODO 20.10 Conclusion - 453
 
 * TODO 21 Givens - 455
-** 21.1 How it works - 455
-** 21.2 Parameterized given types - 459
-** 21.3 Anonymous givens - 464
-** 21.4 Parameterized givens as typeclasses - 465
-** 21.5 Given imports - 468
-** 21.6 Rules for context parameters - 469
+- OFTEN
+  the behavior of a function _depends on the context_ in which the function
+  is called.
+
+  * For example,
+    a function's behavior may _DEPEND ON contextual data_
+    such as
+    system properties,
+    security permissions,
+    an authenticated user,
+    a database transaction, or
+    a configured timeout.
+
+- A function may also _DEPEND ON_ contextual behavior -- an algorithm that makes
+  sense in the context where the function is called.
+
+  * For example,
+    a sort function may rely on a _comparison algorithm_ to determine how to order
+    elements while sorting.
+    DIFFERENT /contexts/ may call for DIFFERENT /comparison algorithms/.
+
+- Many techniques exist for getting such contextual information and behavior to
+  a function, but functional programming has traditionally had one answer: pass
+  everything as parameters.
+
+  * *UNFORTUNATELY*,
+    passing everything in as parameters can quickly
+    _LEAD TO_
+    repetitive, boilerplate code.
+
+- This chapter describes /context parameters/, which are often simply called
+  /givens/.
+
+** DONE 21.1 How it works - 455
+CLOSED: [2025-05-07 Wed 15:42]
+=IMPORTANT=
+Because the compiler selects /context parameters/ *by matching types of
+parameters* against /types/ of /given instances/,
+/context parameters/ should have *"rare" or "special" enough types* that
+accidental matches are unlikely.
+
+** DONE 21.2 Parameterized given types - 459
+CLOSED: [2025-05-07 Wed 16:04]
+=FIXME=
+type classes => typeclasses
+
+/Context parameters/ are perhaps _MOST OFTEN used to_ provide information about
+a /type/ mentioned explicitly in an _earlier parameter list_, similar to the
+/typeclasses/ of Haskell.
+
+This is an important way to achieve /ad hoc polymorphism/ when writing functions
+in Scala.
+
+- =IMPORTANT=
+  A good _HOME_ for "natural" givens:
+  the /companion object/ of _an "involved" type_.
+
+  =TODO=
+  =REPHRASE=
+  * For example,
+    a good home for a natural given instance of ~Ord[Int]~ would be the
+    /companion object/ for either ~Ord~ or ~Int~, the two types that are
+    _"involved" in type ~Ord[Int]~._
+
+    + IF the compiler does not find a ~given Ord[Int]~ in /lexical scope/,
+      it will as a second step look in those two /companion objects/.
+
+      Since you _can't change_ the ~Int~ /companion/, the best home is in the
+      ~Ord~ /companion/.
+
+- Alias given ::
+  #+begin_src scala
+    given intOrd: Ord[Int] =
+      new Ord[Int]:
+        def compare(x: Int, y: Int) =
+          if x == y then 0 else if x > y then 1 else 1
+  #+end_src
+
+  shorthand:
+  #+begin_src scala
+    given intOrd: Ord[Int] with
+      def compare(x: Int, y: Int) =
+        if x == y then 0 else if x > y then 1 else 1
+  #+end_src
+
+- =TODO= Learn more details about the Scala compiler transformation behavior!!!
+
+  * If a given declaration does _not take value parameters_:
+    then that /given/ is initialized the first time it's accessed, similar to a
+    ~lazy val~. That initialization is performed *in a thread-safe manner*.
+
+  * If a /given/ _does take parameters_:
+    then a *new* /given/ is created on _EVERY access_, much like how a ~def~
+    behaves.
+
+  Indeed, the Scala compiler
+  _TRANSFORMS_ /givens/ _TO_ ~lazy val~'s or ~def~'s, additionally marking them
+  as being available for /using parameters/.
+
+** DONE 21.3 Anonymous givens - 464
+CLOSED: [2025-05-07 Wed 16:16]
+Although you can think of a /given declaration/ as a special kind of ~lazy val~
+or ~def~, /givens/ *differ from* these _in an important aspect._
+
+- In code ~val age = 42~,
+  you provide a /term/, ~age~, and, based the value, the compiler inferred the
+  /type/ of that /term/, ~Int~.
+
+- With /context parameters/, it _goes the other way_:
+  You provide a /type/, and the compiler *synthesizes* a /term/ for you to
+  represent that /type/, based on the available /givens/, and uses that /term/
+  implicitly when the /type/ is required.
+
+  That is referred to as /term inference/, to distinguish it from /type
+  inference/.
+
+  * Because mostly we care about the /term/ of /givens/ instead of its name,
+    syntax for /anonymous givens/ is provided:
+    #+begin_src scala
+      given Ord[Int] with
+        def compare(x: Int, y: Int) =
+          if x == y then 0 else if x > y then -1 else 1
+    #+end_src
+
+** TODO 21.4 Parameterized givens as typeclasses - 465 - =TODO= =NOTE=
+- Add =NOTE=
+
+- anonymous parameter :: xxx
+
+** TODO 21.5 Given imports - 468 - =TODO= =NOTE=
+** TODO 21.6 Rules for context parameters - 469
 *** Naming a given - 471
 
-** 21.7 When multiple givens apply - 472
-** 21.8 Debugging givens - 474
-** 21.9 Conclusion - 476
+** TODO 21.7 When multiple givens apply - 472
+** TODO 21.8 Debugging givens - 474
+** TODO 21.9 Conclusion - 476
 
 * TODO 22 Extension Methods - 477
 ** 22.1 The basics - 477
