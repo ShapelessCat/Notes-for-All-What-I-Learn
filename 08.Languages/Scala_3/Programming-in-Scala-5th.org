@@ -6741,15 +6741,139 @@ CLOSED: [2025-05-07 Wed 20:55]
   * in Chapter 23 you will see several examples of using /givens/ for /typeclasses/.
 
 * TODO 22 Extension Methods - 477 - =READING=
-** 22.1 The basics - 477
-** 22.2 Generic extensions - 480
-** 22.3 Collective extensions - 481
-** 22.4 Using a typeclass - 484
-** 22.5 Extension methods for givens - 486
-** 22.6 Where Scala looks for extension methods - 490
-** 22.7 Conclusion - 491
+Scala provides a _MECHANISM_ for making it appear as if a function is defined as
+a /method/ on a /class/, when it is really defined _OUTSIDE_ the /class/.
 
-* TODO 23 Typeclasses - 493
+- Scala 3 introduced a new mechanism for this, /extension methods/, which
+  _REPLACES the /implicit classes/ approach of Scala 2._
+
+- This chapter will show you
+  * how to CREATE your own /extension methods/ and
+  * how to USE the /extension methods/ provided by others.
+
+** DONE 22.1 The basics - 477
+CLOSED: [2025-05-08 Thu 10:29]
+- Listing 22.1 · An /extension method/ for ~String~'s.
+  #+begin_src scala
+    extension (s: String)
+      def singleSpace: String =
+        s.trim.split("\\s+").mkString(" ")
+  #+end_src
+  * receiver :: the object referenced by the variable after ~extension~.
+  * applications :: uses of an /extension method/.
+
+- /Extension method definitions/ are rewritten *in place* to /methods/ that take
+  the /receiver/ directly as a parameter. If you paste the above definition in
+  the REPL, you'll see it tells you ~def singleSpace(s: String): String~.
+  * The only special thing about the rewritten method is that the compiler gives
+    it an _internal marker_ identifying it as an /extension method/.
+
+- The /extension methods/ approach, not like the /implicit class/ approach in
+  Scala 2, doesn't introduce /unecessary boxing/.
+  * It is guaranteed that call a /extension method/ from a /receiver/ give you
+    the *same performance* as passing the /receiver/ to a corresponding
+    non-extension method.
+
+** DONE 22.2 Generic extensions - 480
+CLOSED: [2025-05-08 Thu 10:31]
+Listing 22.3 · A generic extension method.
+#+begin_src scala
+  extension [T](xs: List[T])
+    def tailOption: Option[List[T]] =
+      if xs.nonEmpty then Some(xs.tail) else None
+#+end_src
+
+** DONE 22.3 Collective extensions - 481
+CLOSED: [2025-05-08 Thu 10:38]
+Listing 22.5 · Invoking a sibling extension method.
+#+begin_src scala
+  extension (n: Int)
+    def isMinValue: Boolean = n == Int.MinValue
+
+    def absOption: Option[Int] =
+      if !isMinValue then Some(n.abs) else None
+
+    def negateOption: Option[Int] =
+      if !isMinValue then Some(-n) else None
+#+end_src
+- sibling methods :: The /methods/ defined together in a /collective extension/.
+
+** DONE 22.4 Using a typeclass - 484
+CLOSED: [2025-05-08 Thu 11:07]
+- It is worth
+  looking in the _standard library_ to see if an APPROPRIATE /typeclass trait/
+  _already exists._ Here are some candidates:
+  * ~Numeric~: too general,
+    BECAUSE /given instances/ are provided for /types/ such as ~Double~ and
+    ~Float~ that are *NOT based on* /twos-complement arithmetic/.
+
+  * ~Integral~: too general,
+    BECAUSE
+    * although *NO* /given instances/ are provided for ~Float~ and ~Double~, (=from Jian= expected)
+    * a /given instance/ is provided for ~BigInt~, which does not overflow. (=from Jian= not expected)
+
+  Thus your best option is to define a _NEW_ /typeclass trait/ specifically for
+  /twos-complement integral types/
+
+  =TODO=
+  =TODO=
+  =TODO=
+  =from Jian= Look into the details of ~Numeric~ and ~Integral~, and try to
+  understand their designs!!!
+
+- Use one example to show the pattern:
+  * Listing 22.7 · A typeclass for twos-complement numbers.
+    #+begin_src scala
+      trait TwosComplement[N]:
+        def equalsMinValue(n: N): Boolean
+        def absOf(n: N): N
+        def negationOf(n: N): N
+
+      object TwosComplement:
+        given tcOfByte: TwosComplement[Byte] with
+          def equalsMinValue(n: Byte) = n == Byte.MinValue
+          def absOf(n: Byte) = n.abs
+          def negationOf(n: Byte) = (-n).toByte
+
+        given tcOfShort: TwosComplement[Short] with
+          def equalsMinValue(n: Short) = n == Short.MinValue
+          def absOf(n: Short) = n.abs
+          def negationOf(n: Short) = (-n).toShort
+
+        given tcOfInt: TwosComplement[Int] with
+          def equalsMinValue(n: Int) = n == Int.MinValue
+          def absOf(n: Int) = n.abs
+          def negationOf(n: Int) = -n
+
+        given tcOfLong: TwosComplement[Long] with
+          def equalsMinValue(n: Long) = n == Long.MinValue
+          def absOf(n: Long) = n.abs
+          def negationOf(n: Long) = -n
+    #+end_src
+
+  * Listing 22.8 · Using a typeclass in an extension.
+    #+begin_src scala
+      extension [N](n: N)(using tc: TwosComplement[N])
+        def isMinValue: Boolean = tc.equalsMinValue(n)
+        def absOption: Option[N] =
+          if !isMinValue then Some(tc.absOf(n)) else None
+        def negateOption: Option[N] =
+          if !isMinValue then Some(tc.negationOf(n)) else None
+    #+end_src
+
+  * Applications:
+    #+begin_src scala
+      Byte.MaxValue.negateOption // Some(127)
+      Byte.MinValue.negateOption // None
+      Long.MaxValue.negateOption // 9223372036854775807
+      Long.MinValue.negateOption // None
+    #+end_src
+
+** TODO 22.5 Extension methods for givens - 486 - =REIVEW= =NOTE=
+** TODO 22.6 Where Scala looks for extension methods - 490 - =REIVEW= =NOTE=
+** TODO 22.7 Conclusion - 491
+
+* TODO 23 Typeclasses - 493 - =START=
 - If you need to write a function that implements behavior useful for some types
   but not others, you have a few options in Scala.
 
