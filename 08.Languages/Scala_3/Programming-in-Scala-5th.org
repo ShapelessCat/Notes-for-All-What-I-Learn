@@ -6740,7 +6740,8 @@ CLOSED: [2025-05-07 Wed 20:55]
 
   * in Chapter 23 you will see several examples of using /givens/ for /typeclasses/.
 
-* TODO 22 Extension Methods - 477 - =READING=
+* DONE 22 Extension Methods - 477
+CLOSED: [2025-05-08 Thu 17:08]
 Scala provides a _MECHANISM_ for making it appear as if a function is defined as
 a /method/ on a /class/, when it is really defined _OUTSIDE_ the /class/.
 
@@ -6869,9 +6870,199 @@ CLOSED: [2025-05-08 Thu 11:07]
       Long.MinValue.negateOption // None
     #+end_src
 
-** TODO 22.5 Extension methods for givens - 486 - =REIVEW= =NOTE=
-** TODO 22.6 Where Scala looks for extension methods - 490 - =REIVEW= =NOTE=
-** TODO 22.7 Conclusion - 491
+** DONE 22.5 Extension methods for givens - 486 - =REIVEW=
+CLOSED: [2025-05-08 Thu 16:39]
+- BECAUSE
+  the main goal of the use cases like ~TwosComplement~ is to offer /extension
+  methods/ for users,
+  _it should be easy for users to decide when and if to enable them._
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  In such design scenarios, the *best place* for your extension is a /singleton
+  object/.
+
+  Listing 22.9 · Placing extension methods in a singleton.
+  #+begin_src scala
+    object TwosComplementOps:
+      extension [N](n: N)(using tc: TwosComplement[N])
+        def isMinValue: Boolean = tc.equalsMinValue(n)
+        def absOption: Option[N] =
+          if !isMinValue then Some(tc.absOf(n)) else None
+        def negateOption: Option[N] =
+          if !isMinValue then Some(tc.negationOf(n)) else None
+  #+end_src
+
+  Then the users can *import* the /extension methods/ to bring them into
+  /lexical scope/ (~import TwosComplementOps.*~), which will make them
+  applicable.
+
+- =IMPORTANT=
+  * In the ~TwosComplementOps~ case,
+    + The /extension methods/ represent the *main design goal* and
+    + the /typeclass/ plays a supporting role.
+
+  * But often it is the other way around:
+    + The /typeclass/ is the *main goal* and
+    + the /extension methods/ play a supporting role of _making the /typeclass/
+      easier to use_.
+
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+    In such situations, the *best home* for the /extension methods/ is in the
+    /typeclass trait/ itself.
+
+- Use case for illustration:
+  1. BACKGROUND:
+     in Chapter 21 an ~Ord~ /typeclass/ is defined for the purpose of making an
+     insertion sort method, ~isort~, more general.
+
+  2. Achievement:
+     the ~isort~ method can be used with any type ~T~ for which a /given
+     instance/ of ~Ord[T]~ is available.
+
+  3. New GOAL:
+     the addition of a few /extension methods/ would make the ~Ord~ /typeclass/
+     more pleasant to use.
+
+     - The existing code from Listing 21.1:
+       #+begin_src scala
+         def insert[T](x: T, xs: List[T])(using ord: Ord[T]): List[T] =
+           if xs.isEmpty || ord.lteq(x, xs.head) then x :: xs
+           else xs.head :: insert(x, xs.tail)
+       #+end_src
+       1) Use ~x <= xs.head~ instead of ~ord.lteq(x, xs.head)~ to make code more
+          natural and clearer:
+          Listing 22.10 · Placing extensions for ~Ord~ in a singleton.
+          #+begin_src scala
+            // (Not yet the best design)
+            object OrdOps:
+              extension [T](lhs: T)(using ord: Ord[T])
+                def < (rhs: T): Boolean = ord.lt(lhs, rhs)
+                def <= (rhs: T): Boolean = ord.lteq(lhs, rhs)
+                def > (rhs: T): Boolean = ord.gt(lhs, rhs)
+                def >= (rhs: T): Boolean = ord.gteq(lhs, rhs)
+          #+end_src
+
+       2) Rewrite the ~insert~ method with ~OrdOps~:
+          #+begin_src scala
+            def insert[T](x: T, xs: List[T])(using Ord[T]): List[T] =
+              import OrdOps.*
+              if xs.isEmpty || x <= xs.head then x :: xs
+              else xs.head :: insert(x, xs.tail)
+          #+end_src
+          Because the explicit usage or the context parameter disappear, we can
+          make it anonymous.
+
+       3) This approach works,
+          BUT
+          this /syntactic sugar/ would be nice to have _WHENEVER an instance of
+          ~Ord~ is available._
+
+          =IMPORTANT=
+          The *best home* of these /extension methods/ is not in a singleton
+          object like ~OrdOps~, but _in the ~Ord~ /typeclass trait/ itself._
+          This is also the place Scala searches /given instances/.
+
+          #+begin_src scala
+            trait Ord[T]:
+              def compare(x: T, y: T): Int
+              def lt(x: T, y: T): Boolean = compare(x, y) < 0
+              def lteq(x: T, y: T): Boolean = compare(x, y) <= 0
+              def gt(x: T, y: T): Boolean = compare(x, y) > 0
+              def gteq(x: T, y: T): Boolean = compare(x, y) >= 0
+
+              // (This is the best design)
+              extension (lhs: T)
+                def < (rhs: T): Boolean = lt(lhs, rhs)
+                def <= (rhs: T): Boolean = lteq(lhs, rhs)
+                def > (rhs: T): Boolean = gt(lhs, rhs)
+                def >= (rhs: T): Boolean = gteq(lhs, rhs)
+          #+end_src
+          * The implementation of these /extension methods/ are _simplified_ --
+            ~[T]~ and ~(using Ord[T])~ are removed,
+            BECAUSE ~T~ and /comparison methods/ are already in scope.
+
+       4) Rewrite the ~insert~ again, with the help of modified ~Ord~:
+          Listing 22.12 · Using an extension defined in a typeclass trait.
+          #+begin_src scala
+            def insert[T](x: T, xs: List[T])(using Ord[T]): List[T] =
+              if xs.isEmpty || x <= xs.head then x :: xs
+              else xs.head :: insert(x, xs.tail)
+          #+end_src
+
+** DONE 22.6 Where Scala looks for extension methods - 490 - =REIVEW=
+CLOSED: [2025-05-08 Thu 17:08]
+- When the compiler sees you are attempting to INVOKE a /method/ on an /object
+  reference/,
+
+  1. it first checks to see if that method is defined on the object's class
+     itself. Selects that method and does not look for an /extension method/.
+     * =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       footnote 6:
+       This is a general rule: If any fragment of code compiles as is, the Scala
+       compiler will not rewrite it to something else.
+
+  2. Otherwise, the _method call_ is a *candidate compiler error*.
+
+     Before reporting an error, however, the compiler will *search* for an
+     /extension method/ or /implicit conversion/ that will *heal* the /candidate
+     error/.
+
+     The compiler will *REPORT AN ERROR*
+     _ONLY IF_ it *FAILS TO FIND* an /extension method/ or /implicit conversion/
+     that it can apply to heal the candidate error.
+
+     * Scala divides /extension method/ search into *TWO phases*.
+
+       1) In the _first phase_ the compiler looks in /lexical scope/.
+
+       2) In the _second phase_ it looks in *THREE* places:
+          1. at the members of /given instances/ in /lexical scope/;
+          2. at the members of the /companion objects/ of the
+             1) /receiver's class/
+             2) /receiver's superclasses and supertraits/
+          3. at the members of /given instances/ in those SAME /companion objects/. =???= =TODO=
+
+       It also TRIES _TRANSFORMING_ /the type of the receiver/ WITH an /implicit
+       conversion/ as part of *phase two*.
+
+     * If the compiler finds _more than one_ applicable /extension method/ in
+       either phase, it will choose one that is *more specific*, similar to the
+       way it chooses an /overloaded method/ among alternatives.
+
+     * If it finds _two or more_ applicable /extension methods/ *at the same
+       level of specificity*, it will give a *compiler error* that includes a
+       list of the /ambiguous extensions/.
+
+- A definition can appear in /lexical scope/ in one of *THREE* ways:
+  It can be being
+  * defined directly
+  * imported
+  * inherited
+
+- For example,
+
+  * The ~absOption~ /extension method/ is _imported_:
+    #+begin_src scala
+      import TwosComplementOps.absOption
+      88.absOption // Some(88)
+    #+end_src
+    Thus the /extension method/ search for ~absOption~ is resolved *in phase one*.
+
+  * By contrast,
+    the search triggered by the use of ~<=~ in Listing 22.12 is resolved
+    *in phase two*.
+
+    The /extension method/ applied is the ~<=~ method shown in Listing 22.11. It
+    is invoked on the ~given Ord[T]~ passed as a /using parameter/.
+
+** DONE 22.7 Conclusion - 491
+CLOSED: [2025-05-08 Thu 17:08]
 
 * TODO 23 Typeclasses - 493 - =START=
 - If you need to write a function that implements behavior useful for some types
