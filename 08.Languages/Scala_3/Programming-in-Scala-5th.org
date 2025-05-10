@@ -7064,7 +7064,8 @@ CLOSED: [2025-05-08 Thu 17:08]
 ** DONE 22.7 Conclusion - 491
 CLOSED: [2025-05-08 Thu 17:08]
 
-* TODO 23 Typeclasses - 493 - =START=
+* DONE 23 Typeclasses - 493
+CLOSED: [2025-05-10 Sat 21:21]
 - If you need to write a function that implements behavior useful for some types
   but not others, you have a few options in Scala.
 
@@ -7366,7 +7367,127 @@ CLOSED: [2025-04-21 Mon 15:00]
   this service is needed *only for certain types,*
   which are otherwise *unrelated* to each other.
 
-** TODO 23.4 Multiversal equality - 505
+** DONE 23.4 Multiversal equality - 505 - =REVIEW=
+CLOSED: [2025-05-10 Sat 18:41]
+- universal equality :: the equality that can be checked between any ~Object~'s.
+  * /universal equality/ had one big _downside_: it masked bugs.
+    + This approach also _enabled_ Scala 2 to support /cooperative equality/,
+      whereby *different types* compare themselves for equality with other
+      /cooperating types/.
+      * For example, compare ~Int~ and ~Long~ without an explicit conversion.
+
+    + You may accidentally compare values of two different types that they are
+      always can't be equal.
+      Of course, you won't do comparison like ~"hello" == Option("hello")~ on
+      purpose, but if the RHS value was saved to a /variable/, you may not
+      notice you are doing a always-false equality check.
+      - Scala 2 compiler can't catch this issue.
+      - Scala 3 compiler can give you an error _at compile time_ with the help
+        of /multiversal equality/.
+
+- Scala 3 achieves this improvement in safety through a new feature called
+  /multiversal equality/.
+
+  * /Multiversal equality/ is a Scala 3 enhancement to the special compiler
+    treatment given to the ~==~ and ~!=~ methods in Scala 2:
+    1. The definitions of ~==~ and ~!=~, shown in Listing 23.10, are the same in
+       Scala 3 as in Scala 2.
+
+    2. ONLY the _compiler treatment_ of ~==~ and ~!=~ was changed in Scala 3 to
+       transform universal equality into /multiversal equality/.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  To understand /multiversal equality/ in Scala 3,
+  it is helpful to _understand the details of how Scala 2 implemented /universal
+  equality/._
+
+  * Here is how it worked on the JVM:
+    When the Scala 2 compiler encountered an invocation of ~==~ or ~!=~, it
+    1. Checked whether the types being compared were Java primitive types.
+
+    2. If so, the compiler emitted _SPECIAL Java bytecodes_ for EFFICIENT
+       _equality comparisons BETWEEN those /primitive types/._
+
+       Otherwise, if one side was a /primitive type/ but the other side was not,
+       it emitted code to *box* the /primitive value/. Now both operands were
+       /reference types/.
+
+    3. Next, the compiler emitted code that
+       first determined whether the left operand was ~null~.
+       + If so, the emitted code checked the right operand for ~null~ to determine
+         a ~Boolean~ result, ensuring that invocations of ~==~ or ~!=~ could
+         *never throw* ~NullPointerException~.
+
+       + Otherwise, the emitted code called ~equals~ on the left operand, which at
+         this point was known to be non-null, passing in the right operand.
+
+  * The Scala 3 compiler performs the *exact same* steps as Scala 2 --
+    *after*
+    making sure the comparison should be allowed by looking for a /given
+    instance/ of a /typeclass/ named ~CanEqual~.
+    #+begin_src scala
+      sealed trait CanEqual[-L, -R]
+    #+end_src
+    _Rather than_ offering an equality comparison service for types ~L~ and ~R~,
+    as you would normally expect from a /typeclass/,
+
+    ~CanEqual~ *just gives permission* to use ~==~ and ~!=~ for an equality
+    comparison of types ~L~ and ~R~.
+
+- *For /backwards compatibility/,*
+  the _Scala 3 compiler by default_ *ALLOWS* some /equality comparisons/,
+  even if a /given ~CanEqual~ instance/ of the required type is _NOT available_.
+
+  For an /equality comparison/ between TWO /types/ ~L~ and ~R~, if the compiler
+  finds no /given instance/ of type ~CanEqual[L, R]~ it will still allow the
+  comparison if any of the following conditions are true:
+
+  1. ~L~ and ~R~ are the SAME /type/.
+
+  2. Either ~L~ or ~R~ is a /subtype/ of the other, after being /lifted/.
+     * _footnote 4:_
+       To *lift* a /type/, the compiler
+       + REPLACES
+           references to /abstract types/ in /covariant positions/ of the /type/
+         BY
+           their /upper bound/ and
+
+       + REPLACES
+           /refinement types/ in /contravariant positions/ of the /type/
+         BY
+           their parent.
+
+  3. *No* /given reflexive ~CanEqual~ instance/ exists for either /type/ ~L~ or
+     ~R~, WHERE a /reflexive instance/ is one that *permits* a type to be
+     compared with itself, such as ~CanEqual[L, L]~.
+
+- Scala 3 provides /given instances/ for several /standard library types/,
+  INCLUDING a /reflexive instance/ for /strings/.
+  * This is why an equality comparison between ~String~ and ~Option[String]~ is
+    disallowed by default.
+
+- =IMPORTANT=
+  To get _full sanity checking_ of *ALL* equality comparisons in Scala 3,
+  even if NO /reflexive instances/ have been defined for the involved types,
+  you can *enable "strict equality."*
+  * compiler option: ~-language:strictEquality~
+  * Per source file: ~import scala.language.strictEquality~
+
+- Implement a /given reflective ~CanEqual~ instance/ for a type ~Apple~:
+  1. Manually:
+     #+begin_src scala
+       case class Apple(size: Int)
+       object Apple:
+         given canEq: CanEqual[Apple, Apple] = CanEqual.derived
+     #+end_src
+
+  2. /typeclass derivation/:
+     #+begin_src scala
+       case class Apple(size: Int) derives CanEqual // idiomatic
+     #+end_src
+
 ** DONE 23.5 Implicit conversions - 511
 CLOSED: [2025-04-21 Mon 15:58]
 - Their purpose of /implicit conversions/ was to help make code more clear and
@@ -7408,13 +7529,239 @@ CLOSED: [2025-04-21 Mon 15:58]
       conversions/, exists the ~scala.Predef~ object, which is implicitly
       imported into every Scala program.
 
-** TODO 23.6 Typeclass case study: JSON serialization - 514
-*** Importing an extension method - 516
-*** Serializing domain objects - 517
-*** Serializing lists - 519
-*** Putting it all together - 521
+** DONE 23.6 Typeclass case study: JSON serialization - 514 - =REVIEW=
+CLOSED: [2025-05-10 Sat 21:17]
+- In Section 23.1, we mentioned serialization as an example of the kind of
+  behavior that is widely applicable to otherwise unrelated types, and
+  therefore a good fit for typeclasses.
 
-** 23.7 Conclusion - 523
+- As a last example for this chapter, we'd like to _ILLUSTRATE_ using a
+  /typeclass/ to support /serialization to JSON/.
+
+  _To keep the example simple, we will only look at /serialization/,_
+  NOT /deserialization/, although normally both would be dealt with in the same
+  library.
+
+- Anything you want to _serialize to JSON_ *must* therefore be expressed in one
+  of those *FIVE* _data types_ that defined in _JSON data model_:
+  * strings
+  * numbers
+  * booleans
+  * arrays
+  * objects
+
+- You can't define a /trait/ and mix it into Scala standard library types
+  representing the above five data types in _JSON data model_:
+  * ~String~
+  * ~Int~, ~Long~,
+    + ~Float~, ~Double~, and other numeric types are not included in this
+      example just for the simplicity of this illustration example.
+  * ~Boolean~
+  * ~List~
+  * ANY /class instance/ that used to represent data
+
+- Steps:
+  1. Listing 23.13 · A JSON serializer typeclass.
+     #+begin_src scala
+       trait JsonSerializer[T]:
+         def serialize(o: T): String
+     #+end_src
+
+  2. To enable your users to invoke a ~toJson~ method on /serializable classes/,
+     you can define an /extension method/.
+
+     As discussed in Section 22.5, one _good place_ to provide such an /extension
+     method/ is in *the /typeclass trait/ itself.*
+
+     Listing 23.14 · A JSON serializer typeclass with an extension method.
+     #+begin_src scala
+       trait JsonSerializer[T]:
+         def serialize(o: T): String
+
+         extension (a: T)
+           def toJson: String = serialize(a)
+     #+end_src
+
+  3. A reasonable next step is to _define_ /given typeclass instances/ for Scala
+     types representing data types in JSON data model:
+
+     Listing 23.15 · JSON serializer companion object with givens.
+     #+begin_src scala
+       object JsonSerializer:
+         given stringSerializer: JsonSerializer[String] with
+           def serialize(s: String) = s"\"$s\""
+
+         given intSerializer: JsonSerializer[Int] with
+           def serialize(n: Int) = n.toString
+
+         given longSerializer: JsonSerializer[Long] with
+           def serialize(n: Long) = n.toString
+
+         given booleanSerializer: JsonSerializer[Boolean] with
+           def serialize(b: Boolean) = b.toString
+     #+end_src
+
+*** Importing an extension method - 516 - =IMPORTANT= =REVIEW=
+*TARGET*: It is useful to be able to _import_ an /extension method/ that
+_ADDS a ~toJson~ /method/ TO ANY /types/ ~T~ for which a ~JsonSerializer[T]~ is
+available._
+
+- Listing 23.14 is not enough,
+  BECAUSE it only makes ~toJson~ available for a type ~T~ if a ~given
+  JsonSerializer[T]~ is _in /scope/._
+
+  If _NO_ ~JsonSerializer[T]~ is _in /scope/,_ it will *NOT work*,
+  even if there is a ~JsonSerializer[T]~ *in* the /companion object/ for ~T~.
+  =from Jian= This is usually what we do.
+
+- Listing 23.16 · An extension method for convenient importing.
+  #+begin_src scala
+    object ToJsonMethods:
+      extension [T](a: T)(using jser: JsonSerializer[T])
+        def toJson: String = jser.serialize(a)
+  #+end_src
+
+  * Example:
+    #+begin_src scala
+      import ToJsonMethods.*
+
+      "tennis".toJson // "tennis"
+      10.toJson // 10
+      true.toJson // true
+    #+end_src
+
+- =IMPORTANT=
+  It is instructive to
+  _COMPARE_
+  the /extension method/ in the ~ToJsonMethods~ object, shown in Listing 23.16,
+  _WITH_ the one in the ~JsonSerializer~ trait, shown in Listing 23.14.
+
+  The /extension method/ in ~ToJsonMethods~ takes a ~JsonSerializer[T]~ as a
+  /using parameter/,
+  BUT the /extension method/ in ~JsonSerializers~ does NOT,
+  because it is by definition _ALREADY_ a member of a ~JsonSerializer[T]~.
+
+  Thus,
+  * whereas ~toJson~ in ~ToJsonMethods~ invokes ~serialize~ *on the passed
+    ~JsonSerializer~ reference*, named ~jser~,
+
+  * the ~toJson~ /method/ in ~trait JsonSerializer~ invokes ~serialize~ on
+    ~this~.
+
+*** Serializing domain objects - 517 - =???=
+Serialize /instances/ of certain /classes/ from your /domain model/ to JSON,
+JSON, including the address book shown in Listing 23.17.
+
+- A _good home_ for ~given JsonSerializer~'s for your /domain objects/ is in
+  their /companion objects/.
+
+- =???=
+  =???=
+  =???=
+  but rename it to ~asJson~. This renaming is *necessary* to avoid a conflict with
+  the like-named toJson extension method inherited from JsonSerializer, shown
+  in Listing 23.14.
+
+  Listing 23.18 · JSON serializers for Address and Phone.
+  #+begin_src scala
+    object Address:
+      given addressSerializer: JsonSerializer[Address] with
+        def serialize(a: Address) =
+          import ToJsonMethods.{toJson as asJson}
+          s"""|{
+              | "street": ${a.street.asJson},
+              | "city": ${a.city.asJson},
+              | "state": ${a.state.asJson},
+              | "zip": ${a.zip.asJson}
+              |}""".stripMargin
+
+    object Phone:
+      given phoneSerializer: JsonSerializer[Phone] with
+        def serialize(p: Phone) =
+          import ToJsonMethods.{toJson as asJson}
+          s"""|{
+              | "countryCode": ${p.countryCode.asJson},
+              | "phoneNumber": ${p.phoneNumber.asJson}
+              |}""".stripMargin
+  #+end_src
+  =from Jian=
+  =rank 0=
+  =NEED verification=
+  Rename from ~toJson~ to ~asJson~, and all types can use ~asJson~.
+  Or else, standard library types in ~object JsonSerializer~ has two ~toJson~
+  methods, one from ~object JsonSerializer~ and one from ~ToJsonMethods~.
+  This can make compiler raise a method resolution error, I guess.
+
+*** Serializing lists - 519
+isting 23.19 · Given JSON serializer for lists.
+#+begin_src scala
+  object JsonSerializer:
+    // givens for strings, ints, and booleans...
+    given listSerializer[T](using
+        JsonSerializer[T]): JsonSerializer[List[T]] with
+      def serialize(ts: List[T]) =
+        s"[${ts.map(t => t.toJson).mkString(", ")}]"
+#+end_src
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Using this /typeclass/ way, compiler can report errors of missing /given
+  instances/ *at compile time*.
+  * In Java, by contrast, if a deeply nested object does not
+    implement ~Serializable~, _you will get an exception *at runtime*._
+
+- One last point worth noting is that the reason ~toJson~ can be invoked in the
+  body of the function passed to ~map~ (the ~toJson~ in ~t => t.toJson~) is
+  because a ~given JsonSerializer[T]~ is _in scope_:
+  the /anonymous using parameter/ passed to ~listSerializer~.
+  * =IMPORTANT=
+    The /extension method/ used in this case, therefore, is the one declared in
+    the ~JsonSerializer~ /trait/ itself, shown in Listing 23.14.
+
+*** Putting it all together - 521
+Listing 23.20 · Given JSON serializers for Contact and AddressBook.
+#+begin_src scala
+  object Contact:
+    given contactSerializer: JsonSerializer[Contact] with
+      def serialize(c: Contact) =
+        import ToJsonMethods.{toJson as asJson}
+        s"""|{
+            | "name": ${c.name.asJson},
+            | "addresses": ${c.addresses.asJson},
+            | "phones": ${c.phones.asJson}
+            |}""".stripMargin
+
+  object AddressBook:
+    given addressBookSerializer: JsonSerializer[AddressBook] with
+      def serialize(a: AddressBook) =
+        import ToJsonMethods.{toJson as asJson}
+        s"""|{
+            | "contacts": ${a.contacts.asJson}
+            |}""".stripMargin
+#+end_src
+
+- A _real world JSON library_ would, of course, be far more complicated than
+  what you've seen here.
+
+  One thing you would most likely want to do is use /Scala's metaprogramming/
+  facilities to *automate* _the GENERATION of ~JsonSerializer~ /typeclass
+  instances/_ via /typeclass derivation/.
+
+** DONE 23.7 Conclusion - 523
+CLOSED: [2025-05-10 Sat 21:21]
+- /Typeclasses/ are a fundamental way to achieve /ad hoc polymorphism/ in Scala.
+
+- /Scala's syntactic sugar/ for /typeclasses/, /context bounds/, is an
+  indication of the importance of /typeclasses/ as a design approach in Scala.
+  * =from Jian=
+    Create a /syntactic sugar/ for it means it is very important!
+
+- You saw several _APPLICATIONS_ of /typeclasses/: for
+  * main methods,
+  * safe equality comparisons,
+  * implicit conversions, and
+  * JSON serialization.
 
 * TODO 24 Collections in Depth - 525
 ** 24.1 Mutable and immutable collections - 526
