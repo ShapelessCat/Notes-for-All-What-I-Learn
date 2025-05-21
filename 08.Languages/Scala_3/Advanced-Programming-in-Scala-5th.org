@@ -1,6 +1,6 @@
 #+TITLE: Advanced Programming in Scala (PrePrint)
 #+SUBTITLE: An in-depth guide to advanced features - Updated for Scala 3.6
-#+VERSION: 5th, PrePrint - 2025-02-07
+#+VERSION: 5th, PrePrint - 2025-05-20
 #+AUTHOR: Martin Odersky, Lex Spoon, Bill Venners
 #+STARTUP: entitiespretty
 #+STARTUP: indent
@@ -8,10 +8,10 @@
 
 * Contents - xi
 * List of Figures - xvi
-* Acknowledgments - xxiii
 * List of Tables - xviii
 * List of Listings - xix
-* TODO 1 Opaque Types - 27 - =READING=
+* Acknowledgments - xxiv
+* TODO 1 Opaque Types - 28 - =READING=
 - Although types help you _achieve goals at compile time,_
   classes -- the most common way to define types in Scala -- _have runtime
   overhead._
@@ -27,7 +27,7 @@
 
   Scala 3 introduced /opaque types/ for this purpose.
 
-** DONE 1.1 The performance cost of boxing - 27
+** DONE 1.1 The performance cost of boxing - 28
 CLOSED: [2025-04-13 Sun 19:18]
 =Review Later=
 =IMPORTANT=
@@ -72,7 +72,7 @@ CLOSED: [2025-04-13 Sun 19:18]
   3. needing to reload objects that had previously been evicted to make room for
      new allocations.
 
-** DONE 1.2 Use cases for zero-overhead types - 29
+** DONE 1.2 Use cases for zero-overhead types - 30
 CLOSED: [2025-04-13 Sun 19:50]
 - A /zero-overhead type/ can help you achieve
   1. /type safety/ goals at compile time
@@ -98,71 +98,71 @@ CLOSED: [2025-04-13 Sun 19:50]
 
     For example, ~IArray~ in Scala 3.
 
-** TODO 1.3 The ~AnyVal~ approach - 30 - =TODO: read ~AnyVal~ in book 1=
-- As described in Section 17.4 of Programming in Scala, Scala allows youto
+** TODO 1.3 The ~AnyVal~ approach - 31 - =TODO: read ~AnyVal~ in book 1=
+- As described in Section 17.4 of Programming in Scala, Scala allows you to
   define new AnyVal types. These types are defined as classes that ex- tend
-  AnyVal and follow certain rules. First, an AnyVal must wrap one (andonly
-  one) instance of some underlying type. Second, you can’t extend froman
+  AnyVal and follow certain rules. First, an AnyVal must wrap one (and only
+  one) instance of some underlying type. Second, you can’t extend from an
   AnyVal; they are implicitly final. Third, the only members you can
-  defineinside an AnyVal are methods. You can’t define inner classes inside
-  anAnyVal, nor can you define any field (other than by making the lone
-  classparameter of the underlying type public), nor can you define lazy vals.
-  Youcan mix in traits, but only if they are “universal.” A universal trait
-  extendsAny, has only methods as members, and contains no initialization
+  define inside an AnyVal are methods. You can’t define inner classes inside
+  an AnyVal, nor can you define any field (other than by making the lone
+  class parameter of the underlying type public), nor can you define lazy vals.
+  You can mix in traits, but only if they are “universal.” A universal trait
+  extends Any, has only methods as members, and contains no initialization
   code.
 
 - Wherever possible, instances of user-defined AnyVals are represented
-  atruntime by their underlying type, but under certain circumstances, they
-  willbe boxed. When boxed, they will be an instance of the AnyVal
-  wrappertype. Thus although user-defined AnyVals allow you to define types
-  thatmay have reduced boxing overhead at runtime, they do not guarantee
-  zeroboxing overhead. In exchange, AnyVals can be used in ways that a
-  trulyzero-overhead type could not.
+  at runtime by their underlying type, but under certain circumstances, they
+  will be boxed. When boxed, they will be an instance of the AnyVal
+  wrapper type. Thus although user-defined AnyVals allow you to define types
+  that may have reduced boxing overhead at runtime, they do not guarantee
+  zero boxing overhead. In exchange, AnyVals can be used in ways that a
+  truly zero-overhead type could not.
 
-- An AnyVal is compiled like an AnyRef with some extra static methods.For each
-  method declared in the AnyVal that isn’t inherited from a universaltrait
+- An AnyVal is compiled like an AnyRef with some extra static methods. For each
+  method declared in the AnyVal that isn’t inherited from a universal trait
   (these are called extractable methods), the compiler will create a
-  staticmethod that takes an extra parameter of the AnyVal’s underlying type.
-  Wherepossible, the compiler will use the underlying type rather than the
-  AnyValwrapper type to represent instances. When an extractable instance
-  method isinvoked while the instance is in its unboxed form, the compiler
-  invokes thestatic method instead, passing the underlying type as a
+  static method that takes an extra parameter of the AnyVal’s underlying type.
+  Where possible, the compiler will use the underlying type rather than the
+  AnyVal wrapper type to represent instances. When an extractable instance
+  method is invoked while the instance is in its unboxed form, the compiler
+  invokes the static method instead, passing the underlying type as a
   parameter.
 
-- The intent of the AnyVals design was to allow you to create a wrapperclass
-  that behaves like a regular class, but can sometimes be representedby its
+- The intent of the AnyVals design was to allow you to create a wrapper class
+  that behaves like a regular class, but can sometimes be represented by its
   underlying type, especially when extractable instance methods are
-  invoked.The motivating use case for this feature was the addition of
-  implicitclasses to Scala 2.10. An implicit class that extended AnyVal would
-  neverneed to box to invoke any extractable methods. This gave Scala’s
-  implicitconversions the same performance as enjoyed by extension methods in
-  otherlanguages. In Scala 3, however, implicit classes were replaced by the
-  specialextension method syntax described in Chapter 22 of Programming in
+  invoked. The motivating use case for this feature was the addition of
+  implicit classes to Scala 2.10. An implicit class that extended AnyVal would
+  never need to box to invoke any extractable methods. This gave Scala’s
+  implicit conversions the same performance as enjoyed by extension methods in
+  other languages. In Scala 3, however, implicit classes were replaced by the
+  special extension method syntax described in Chapter 22 of Programming in
   Scala.
 
-- AnyVals will be boxed in many situations. Universal traits allow you touse
+- AnyVals will be boxed in many situations. Universal traits allow you to use
   AnyVals via more abstract types, as you can with AnyRefs, but it
-  requiresboxing whenever an AnyVal is used from such a type. You can also
-  overridenon-final methods declared in Any on an AnyVal—equals, hashCode,
-  andtoString—but any invocation of these methods will require a box.
-  Typetests on AnyVals will perform as expected—both in isInstanceOf calls
+  requires boxing whenever an AnyVal is used from such a type. You can also
+  override non-final methods declared in Any on an AnyVal—equals, hashCode,
+  and toString—but any invocation of these methods will require a box.
+  Type tests on AnyVals will perform as expected—both in isInstanceOf calls
   and in typed and constructor patterns—but any such use will require
-  boxingthe AnyVal. Because any of these uses could happen on an AnyVal used
-  viaan abstract type, whenever an abstract type is instantiated to an AnyVal,
-  theAnyVal will be boxed. For example, if the type parameter of foldLeft
-  onList is instantiated as an AnyVal type, the AnyVal instance passed as
-  theinitial zero parameter to foldLeft will be boxed. Another example is
-  whenyou place an AnyVal into a collection such as a List. Each element of
-  thecollection will be boxed to the AnyVal form. This is also true of Arrays,
-  evenif the underlying type is a Java primitive: in a Java array of Scala
-  AnyVals,each element will be boxed.
+  boxing the AnyVal. Because any of these uses could happen on an AnyVal used
+  via an abstract type, whenever an abstract type is instantiated to an AnyVal,
+  the AnyVal will be boxed. For example, if the type parameter of foldLeft
+  on List is instantiated as an AnyVal type, the AnyVal instance passed as
+  the initial zero parameter to foldLeft will be boxed. Another example is
+  when you place an AnyVal into a collection such as a List. Each element of
+  the collection will be boxed to the AnyVal form. This is also true of Arrays,
+  even if the underlying type is a Java primitive: in a Java array of Scala
+  AnyVals, each element will be boxed.
 
-- In summary, AnyVals let you avoid boxing in some situations, but notothers.
-  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime,it
-  could give you worse performance than a corresponding AnyRef,which is just
-  boxed once. User-defined AnyVals successfully made implicitconversions via
-  implicit classes as efficient as extension methods in otherlanguages, but
-  there was still a need in Scala for a truly zero-overhead type.Scala 3’s
+- In summary, AnyVals let you avoid boxing in some situations, but not others.
+  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime, it
+  could give you worse performance than a corresponding AnyRef, which is just
+  boxed once. User-defined AnyVals successfully made implicit conversions via
+  implicit classes as efficient as extension methods in other languages, but
+  there was still a need in Scala for a truly zero-overhead type. Scala 3’s
   answer was opaque types.
 
 =from Jian=
@@ -234,15 +234,15 @@ types/ disappear after compilation.
   Java primitive: in a Java array of Scala ~AnyVal~'s, each element will be
   boxed.
 
-- In summary, AnyVals let you avoid boxing in some situations, but notothers.
-  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime,it
-  could give you worse performance than a corresponding AnyRef,which is just
-  boxed once. User-defined AnyVals successfully made implicitconversions via
-  implicit classes as efficient as extension methods in otherlanguages, but
-  there was still a need in Scala for a truly zero-overhead type.Scala 3’s
+- In summary, AnyVals let you avoid boxing in some situations, but not others.
+  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime, it
+  could give you worse performance than a corresponding AnyRef, which is just
+  boxed once. User-defined AnyVals successfully made implicit conversions via
+  implicit classes as efficient as extension methods in other languages, but
+  there was still a need in Scala for a truly zero-overhead type. Scala 3’s
   answer was opaque types.
 
-** DONE 1.4 The ~opaque type~ approach - 32
+** DONE 1.4 The ~opaque type~ approach - 33
 CLOSED: [2025-04-13 Sun 20:23]
 - Syntax:
   An /opaque type/ is declared _LIKE_ a /type alias/ with an extra modifier,
@@ -323,7 +323,7 @@ CLOSED: [2025-04-13 Sun 20:23]
     title(Text("Opaque Types"), Anchor("chap:otps"), Style("bold"))
   #+end_src
 
-** DONE 1.5 Extension methods on opaque types - 35
+** DONE 1.5 Extension methods on opaque types - 36
 CLOSED: [2025-04-13 Sun 20:40]
 - Every /opaque type/ is a /subtype/ of ~Any~, and you can call methods defined
   on ~Any~ -- such as ~equals~, ~hashCode~, and ~toString~ -- on an /opaque
@@ -362,7 +362,7 @@ CLOSED: [2025-04-13 Sun 20:40]
       cm.value                      // 106.68 (type Double)
     #+end_src
 
-** DONE 1.6 Bounds on opaque types - 36
+** DONE 1.6 Bounds on opaque types - 37
 CLOSED: [2025-04-13 Sun 21:02]
 - The DISTINCT /values/ of a /type/ are referred to as the /inhabitants of the
   type/.
@@ -425,7 +425,7 @@ CLOSED: [2025-04-13 Sun 21:02]
 - If you want to add new methods to ~NonEmptyString~ that don't exist on
   ~String~, define /extension methods/ on ~NonEmptyString~.
 
-** DONE 1.7 Peaking behind the curtain - 38
+** DONE 1.7 Peaking behind the curtain - 39
 CLOSED: [2025-04-14 Mon 00:37]
 - One _CONSEQUENCE_ of the _zero overhead promise_ for /opaque types/ is that
   there will be *NO information available about an /opaque type/ at runtime.*
@@ -483,8 +483,8 @@ CLOSED: [2025-04-14 Mon 00:37]
   /opaque types/ _NEVER cost a /box/,_
   BUT are *unable* to make ~isInstanceOf~ work as consistently with ~AnyRef~'s.
 
-** TODO 1.8 The ~Matchable~ trait - 39 - =TODO: read equality and multiversal equality first=
-** DONE 1.9 Conclusion - 44
+** TODO 1.8 The ~Matchable~ trait - 40 - =TODO: read equality and multiversal equality first=
+** DONE 1.9 Conclusion - 45
 CLOSED: [2025-04-14 Mon 01:38]
 /Opaque types/ allow you to get benefit of /compile time checking/ *WITHOUT* any
 _runtime performance cost_,
@@ -492,7 +492,7 @@ BUT don't fit well with Scala's tradition of allowing _pattern matches on
 ~Any~._ The ~Matchable~ /universal trait/ was added in Scala 3 to mitigate this
 issue.
 
-* DONE 2 Inlining - 45
+* DONE 2 Inlining - 46
 CLOSED: [2025-04-08 Tue 14:57]
 - This feature
   * _ENABLES_ the compiler to perform certain computations at compile time that
@@ -518,7 +518,7 @@ CLOSED: [2025-04-08 Tue 14:57]
      /literal constant types/, and
      _the dualism between inlining and factoring._ =TODO= =???=
 
-** DONE 2.1 Singleton types - 45
+** DONE 2.1 Singleton types - 46
 CLOSED: [2025-04-07 Mon 18:56]
 - inhabitants :: as mentioned in Section 1.6, one way to view types is as _sets_
   of values.
@@ -572,7 +572,7 @@ CLOSED: [2025-04-07 Mon 18:56]
   a ~val~ *CANNOT be reassigned*: _it will always refer to the same, single
   object_.
 
-** DONE 2.2 Literal singleton types - 49
+** DONE 2.2 Literal singleton types - 50
 CLOSED: [2025-04-07 Mon 20:07]
 - Scala 3 introduced /literal singleton types/, also called /literal constant
   types/.
@@ -583,7 +583,7 @@ CLOSED: [2025-04-07 Mon 20:07]
 
   * No need for ~.type~.
 
-** DONE 2.3 Inlined constants - 50
+** DONE 2.3 Inlined constants - 51
 CLOSED: [2025-04-07 Mon 20:42]
 - inlined constants :: ~val~'s declared as ~inline~.
   * All usage sites of an ~inline val~ will be rewritten in place to the
@@ -643,7 +643,7 @@ CLOSED: [2025-04-07 Mon 20:42]
   This will compile. BECAUSE through /constant folding and propagation/, the
   compiler will reduce the /initializer expression/ to 4.
 
-** DONE 2.4 Inline methods - 52
+** DONE 2.4 Inline methods - 53
 CLOSED: [2025-04-07 Mon 23:12]
 - define an /inline method/ :: You can also mark a ~def~ with the ~inline~
   modifier.
@@ -704,7 +704,7 @@ CLOSED: [2025-04-07 Mon 23:12]
   After inline of ~inlineParam~, the body will look as in the previous
   expansion.
 
-** DONE 2.5 Preserving semantics - 55
+** DONE 2.5 Preserving semantics - 56
 CLOSED: [2025-04-08 Tue 00:37]
 The Scala 3 compiler will ensure that the semantics of a method invocation will
 *NOT change* whether you add or remove an ~inline~ modifier to a ~def~.
@@ -755,7 +755,7 @@ The Scala 3 compiler will ensure that the semantics of a method invocation will
   decisions/ before inlining or remove ~inline~, we we see the output
   ="process purple Plum"=.
 
-** DONE 2.6 Partial evaluation - 56
+** DONE 2.6 Partial evaluation - 57
 CLOSED: [2025-04-08 Tue 00:51]
 When the compiler encounters an /inline method/, it will attempt to evaluate as
 much of the method's body as it can at compile time. Because the compiler may
@@ -796,7 +796,7 @@ called /partial evaluation/.
   The semantics of the ~if~ expression will be preserved whatever you make it is
   a good way to indicate that it is designed to be /partially evaluated/.
 
-** DONE 2.7 Inline methods and inheritance - 60
+** DONE 2.7 Inline methods and inheritance - 61
 CLOSED: [2025-04-08 Tue 11:57]
 - Because the compiler replaces /inline method invocations/ with their /method
   bodies/, *some limitations exist* in _how you can combine inline methods with
@@ -873,7 +873,7 @@ CLOSED: [2025-04-08 Tue 11:57]
     fruit.peel(3) // Peeled into 3 pieces
   #+end_src
 
-** DONE 2.8 Abstract methods can be inline - 61
+** DONE 2.8 Abstract methods can be inline - 62
 CLOSED: [2025-04-08 Tue 14:33]
 /inline abstract method/
 
@@ -909,7 +909,7 @@ CLOSED: [2025-04-08 Tue 14:33]
   Inline parameters can only be declared, therefore, in inline methods that
   don’t override non-inline methods.
 
-** DONE 2.9 Performance considerations - 63
+** DONE 2.9 Performance considerations - 64
 CLOSED: [2025-04-08 Tue 14:56]
 - Although inlining could potentially help your application's performance,
   it could also hurt it.
@@ -999,10 +999,10 @@ CLOSED: [2025-04-08 Tue 14:56]
       ipRes + bnpRes + ipRes + bnpRes
   #+end_src
 
-** DONE 2.10 Conclusion - 66
+** DONE 2.10 Conclusion - 67
 CLOSED: [2025-04-08 Tue 14:57]
 
-* TODO 3 Metapgrogramming - 67
+* TODO 3 Metapgrogramming - 68
 Scala 3 includes several features that facilitate metaprogramming.
 /Inline methods/, described in the previous chapter, are one example.
 
@@ -1010,7 +1010,7 @@ This chapter will introduce more _metaprogramming facilities_ of Scala 3,
 including /inline matches/, /transparent inlines/, and /other compile-time
 functionality/.
 
-** 3.1 Inline matches - 67
+** 3.1 Inline matches - 68
 - One of the language features introduced in Scala 3 that gives you new and
   powerful metaprogramming capabilities is ~inline match~.
 
@@ -1036,14 +1036,14 @@ functionality/.
     POSSIBLE ONLY at compile time. As a result, the semantics of the match
     expression *may be different* if you add or remove the ~inline~ modifier.
 
-** 3.2 Transparent inline methods - 71
-** 3.3 Constructor patterns in inline matches - 73
-** 3.4 Compiler errors from inline matches - 75
-** 3.5 Summoning in inline methods - 76
-** 3.6 Converting from type to term - 79
-** 3.7 Conclusion - 82
+** 3.2 Transparent inline methods - 72
+** 3.3 Constructor patterns in inline matches - 74
+** 3.4 Compiler errors from inline matches - 76
+** 3.5 Summoning in inline methods - 77
+** 3.6 Converting from type to term - 80
+** 3.7 Conclusion - 83
 
-* TODO 4 Type-level functions - 83 - =START HERE=
+* TODO 4 Type-level functions - 84 - =START HERE=
 At the CORE of /functional programming/ is the /function/, a way to _transform
 input into output._
 
@@ -1062,49 +1062,60 @@ input into output._
     + kinds :: the "type" of a /type/.
   * look at _the /variance/ of PARAMETER and RESULT /kinds/._
 
-** TODO 4.1 Value-level functions - 83
-- Scala 3 introduced several new flavors of function that operate at the
-  typelevel. To help you understand these, it can help to take another look at
-  Scala’svalue-level functions. These functions existed in Scala 2 and work
-  the samein Scala 3.
+** TODO 4.1 Value-level functions - 84
+- Scala 3 introduced several new flavors of function that operate at the type
+  level. To help you understand these, it can help to take another look at
+  Scala's value-level functions. These functions existed in Scala 2 and work the
+  same in Scala 3.
 
 - *Function types aren't functions*
 
-** TODO 4.2 Reasoning with substitution - 85
-** TODO 4.3 Substitution and currying - 87
+** TODO 4.2 Reasoning with substitution - 86
+** TODO 4.3 Substitution and currying - 88
 - The arrow symbol (=>) in Scala *associates to the right*.
 
-** TODO 4.4 Polymorphic functions - 88
+** TODO 4.4 Polymorphic functions - 89
 - *Types classify terms*
 
-** TODO 4.5 Viewing types as sets - 93
-** TODO 4.6 Covariant method result types - 96
-** TODO 4.7 Variance and function literals - 97
-** TODO 4.8 Viewing kinds as sets of types - 99 - =START HERE=
-** TODO 4.9 Monomorphic type members - 106
-** TODO 4.10 Polymorphic type members - 108
-** TODO 4.11 Type lambdas - 110
-*** Type lambdas in the type lattice - 112
+** TODO 4.5 Viewing types as set of values - 94
+** TODO 4.6 Covariant method result types - 97
+** TODO 4.7 Variance and function literals - 98
+** TODO 4.8 Viewing kinds as sets of types - 100 - =START HERE=
+** TODO 4.9 Monomorphic type members - 107
+** TODO 4.10 Polymorphic type members - 109
+** TODO 4.11 Type lambdas - 111
+*** Type lambdas in the type lattice - 113
 
-** TODO 4.12 Result kind inference - 113
-** TODO 4.13 Type lambdas subtyping - 117
-** TODO 4.14 Bringing it all together - 124
+** TODO 4.12 Result kind inference - 114
+** TODO 4.13 Type lambdas subtyping - 118
+** TODO 4.14 Bringing it all together - 125
 - *Type lambdas versus polymorphic function types*
 
-** TODO 4.15 Conclusion - 134
+** TODO 4.15 Conclusion - 135
 
-* TODO 5 Type constructors - 135 - =RANK 0 for reading=
-** 5.1 Monomorphic classes - 135
-** 5.2 Nonvariant polymorphic classes - 137
-** 5.3 Covariant and contravariant polymorphic classes - 142
-** 5.4 Parameterized types - 149
-** 5.5 Eta expansion at the type level - 150
-** 5.6 Variance of type constructors - 154
-** 5.7 Omnivariance - 160
-** 5.8 Inferred variance of type lambdas - 164
-** 5.9 Conclusion - 167
+* TODO 5 Type constructors - 136 - =RANK 0 for reading=
+** 5.1 Monomorphic classes - 136
+** 5.2 Nonvariant polymorphic classes - 138
+** 5.3 Covariant and contravariant polymorphic classes - 143
+** 5.4 Parameterized types - 150
+** 5.5 Eta expansion at the type level - 151
+** 5.6 Variance of type constructors - 155
+** 5.7 Omnivariance - 161
+** 5.8 Inferred variance of type lambdas - 166
+** 5.9 Conclusion - 168
 
-* TODO 6 Implementing Lists - 168
+* TODO 6 Abstracting with Kinds - 169
+** 6.1 Intervals as sets - 169
+** 6.2 Wildcard type arguments - 173
+** 6.3 Reasoning with substitution - 177
+** 6.4 Wildcard type arguments and variance - 185
+** 6.5 Abstract type members - 190
+** 6.6 Types as propositions - 195
+** 6.7 Wildcard capture - 203
+** 6.8 Type parameters versus abstract type members - 207
+** 6.9 Conclusion - 217
+
+* TODO 7 Implementing Lists - 218
 - Chapter 16 showed you how to use lists.
   This chapter “opens up the covers” and explains a bit about how lists are
   implemented in Scala.
@@ -1122,7 +1133,7 @@ input into output._
     system in general and its genericity concepts in particular.
       So studying class List will deepen your knowledge in these areas.
 
-** DONE 6.1 The ~List~ class in principle - 168
+** DONE 7.1 The ~List~ class in principle - 218
 CLOSED: [2018-03-20 Tue 02:19]
 - Scala ~List~'s is NOT built-in.
   They are defined by an /abstract class/ ~List~ in the ~scala~ package, which
@@ -1158,7 +1169,7 @@ CLOSED: [2018-03-20 Tue 02:19]
 
   They are all /abstract/ in ~List~
 
-*** DONE The ~Nil~ object - 169
+*** DONE The ~Nil~ object - 219
 CLOSED: [2018-03-20 Tue 02:10]
 #+BEGIN_SRC scala
   // Simplified
@@ -1175,7 +1186,7 @@ CLOSED: [2018-03-20 Tue 02:10]
 
 Here ~Nothing~ is NOT only reasonable but also guarantee the /convariance/.
 
-*** DONE The ~::~ class - 170
+*** DONE The ~::~ class - 220
 CLOSED: [2018-03-20 Tue 02:10]
 #+BEGIN_SRC scala
   final case class ::[B](head: B, private[scala] var tail: List[B]) extends List[B] {
@@ -1191,7 +1202,7 @@ CLOSED: [2018-03-20 Tue 02:10]
   // }
 #+END_SRC
 
-*** DONE Some more methods - 171
+*** DONE Some more methods - 221
 CLOSED: [2018-03-20 Tue 02:13]
 All other List methods can be written using the basic three. For instance:
 #+BEGIN_SRC scala
@@ -1211,7 +1222,7 @@ All other List methods can be written using the basic three. For instance:
     else         f(head) :: tail.map(f)
 #+END_SRC
 
-*** DONE List construction - 171
+*** DONE List construction - 221
 CLOSED: [2018-03-20 Tue 02:19]
 The list construction methods ~\colon{}\colon{}~ and ~:::~ are SPECIAL.
 Because they end in a colon, they are _bound to their right operand_.
@@ -1223,7 +1234,7 @@ Because they end in a colon, they are _bound to their right operand_.
     else                prefix.head :: prefix.tail ::: this
 #+END_SRC
 
-** DONE 6.2 The ~ListBuffer~ class - 174
+** DONE 7.2 The ~ListBuffer~ class - 224
 CLOSED: [2018-03-20 Tue 02:27]
 - ~List~ is inefficient on adding elements to the end of its tail.
   Try to use ~ListBuffer~.
@@ -1249,7 +1260,7 @@ CLOSED: [2018-03-20 Tue 02:27]
   append operation (~+=~) and the ~toList~ operation take (very short)
   constant time.
 
-** DONE 6.3 The ~List~ class in practice - 175
+** DONE 7.3 The ~List~ class in practice - 225
 CLOSED: [2018-03-20 Tue 03:47]
 - The implementations of list methods given in Section 22.1 are concise and
   clear, but _suffer from the same stack overflow problem_ as the /non-tail
@@ -1361,7 +1372,7 @@ CLOSED: [2018-03-20 Tue 03:47]
         and then do one ~toList~ operation at the end. In such cases, no
         copying is necessary.
 
-** DONE 6.4 Functional on the outside - 178
+** DONE 7.4 Functional on the outside - 228
 CLOSED: [2018-03-20 Tue 03:16]
 - You saw that ~List~'s are
   * purely functional on the "outside"
@@ -1395,7 +1406,7 @@ CLOSED: [2018-03-20 Tue 03:16]
   done in Java's pair of classes ~String~ and ~StringBuffer~ (or since Java
   5, the mostly used ~StringBuilder~) . This is *NOT* coincidence.
 
-** DONE 6.5 Conclusion - 179
+** DONE 7.5 Conclusion - 229
 CLOSED: [2018-03-20 Tue 03:24]
 This chapter talks about the implementation of the ~List~ in Scala.
 
@@ -1409,7 +1420,7 @@ This chapter talks about the implementation of the ~List~ in Scala.
   Somehow, imperative inside to speed up the common case where a buffer is
   discarded after ~toList~ has been called.
 
-* TODO 7 For Expressions Revisited - 180 - =RANK 0 for reading=
+* TODO 8 For Expressions Revisited - 230 - =RANK 0 for reading=
 - More generally,
   * ALL ~for~ expressions that ~yield~ a result are _translated_ by the
     compiler into combinations of invocations of the higher-order methods
@@ -1425,7 +1436,7 @@ This chapter talks about the implementation of the ~List~ in Scala.
      expressions can help you "grow" the Scala language into new application
      domains.
 
-** DONE 7.1 For expressions - 181
+** DONE 8.1 For expressions - 231
 CLOSED: [2017-10-21 Sat 21:52]
 Syntax: ~for ( seq ) yield expr~
 
@@ -1459,7 +1470,7 @@ Syntax: ~for ( seq ) yield expr~
     =From Jian= I don't think write a embeded structure in a flat form is a
     good idea.
 
-** DONE 7.2 The n-queens problem - 183
+** DONE 8.2 The n-queens problem - 233
 CLOSED: [2018-03-28 Wed 23:43]
 - Start numbering cells at one:
   * upper-left cell of N \times{} N board has coordinate (1, 1)
@@ -1507,16 +1518,16 @@ CLOSED: [2018-03-28 Wed 23:43]
        (q1._1 - q2._1).abs == (q1._2 - q2._2).abs // on diagonal
   #+END_SRC
 
-** DONE 7.3 Querying with ~for~ expressions - 186
+** DONE 8.3 Querying with ~for~ expressions - 236
 CLOSED: [2017-10-21 Sat 22:00]
 
-** DONE 7.4 Translation of ~for~ expressions - 188 =Re-READ=
+** DONE 8.4 Translation of ~for~ expressions - 238 =Re-READ=
 CLOSED: [2017-10-21 Sat 22:25]
-*** DONE Translating ~for~ expressions with one generator - 188
+*** DONE Translating ~for~ expressions with one generator - 238
 CLOSED: [2017-10-21 Sat 22:10]
 ~for (x <- expr1) yield expr2~  ------->  ~expr1.map(x => expr2)~
 
-*** DONE Translating ~for~ expressions starting with a generator and a filter - 188
+*** DONE Translating ~for~ expressions starting with a generator and a filter - 238
 CLOSED: [2017-10-21 Sat 22:10]
 ~for (x <- expr1 if expr2) yield expr3~
 ------->    ~for (x <- expr1 withFilter (x => expr2)) yield expr3~
@@ -1528,7 +1539,7 @@ CLOSED: [2017-10-21 Sat 22:10]
 Then translation continues with the second expression, which is again shorter
 by one element than the original one.
 
-*** DONE Translating ~for~ expressions starting with two generators - 189
+*** DONE Translating ~for~ expressions starting with two generators - 239
 CLOSED: [2017-10-21 Sat 22:10]
 ~for (x <- expr1; y <expr2; seq) yield expr3~
 ------->    ~expr1.flatMap (x => for (y <- expr2; seq) yield expr3)~
@@ -1548,7 +1559,7 @@ CLOSED: [2017-10-21 Sat 22:10]
             a1))))
   #+END_SRC
 
-*** DONE Translating patterns in generators - 190
+*** DONE Translating patterns in generators - 240
 CLOSED: [2017-10-21 Sat 22:15]
 ~for ((x1, ..., xn) <- expr1) yield expr2~
 ------->    ~expr1.map { case (x1, ..., xn) => expr2 }~
@@ -1568,7 +1579,7 @@ More general patterns,
 More than one patterns cases don't add much new insight, just omit them here.
 (More info about this in *Scala Language Specification*)
 
-*** DONE Translating definitions - 191
+*** DONE Translating definitions - 241
 CLOSED: [2017-10-21 Sat 22:21]
 ~for (x <- expr1; y = expr2; seq) yield expr3~
 Assume again that ~seq~ is a (possibly empty) sequence of /generators/,
@@ -1582,7 +1593,7 @@ Assume again that ~seq~ is a (possibly empty) sequence of /generators/,
   yield expr3
 #+END_SRC
 
-*** DONE Translating ~for~ loops - 191
+*** DONE Translating ~for~ loops - 241
 CLOSED: [2017-10-21 Sat 22:24]
 In principle, wherever the previous translation scheme used a ~map~ or a
 ~flatMap~ in the translation, the translation scheme for /for loops/ uses
@@ -1595,7 +1606,7 @@ just a ~foreach~.
 -------> ~expr1 withFilter (x => expr2) foreach (x =>
             expr3 foreach (y => body))~
 
-** DONE 7.5 Going the other way - 192
+** DONE 8.5 Going the other way - 242
 CLOSED: [2017-10-21 Sat 22:29]
 Every application of a ~map~, ~flatMap~, or ~filter~ can be represented as a
 /for expression/.
@@ -1616,7 +1627,7 @@ Every application of a ~map~, ~flatMap~, or ~filter~ can be represented as a
 Not surprisingly, the body of the above definitions (for expression) will be
 translated to higher order functions by Scala in the background.
 
-** DONE 7.6 Generalizing ~for~ - 193 =Re-Read the last some paragraph=
+** DONE 8.6 Generalizing ~for~ - 243 =Re-Read the last some paragraph=
 CLOSED: [2018-03-28 Wed 22:46]
 - Because the translation of ~for~ expressions only relies on the presence of
   methods ~map~, ~flatMap~, and ~withFilter~, it is possible to apply the
@@ -1691,10 +1702,10 @@ CLOSED: [2018-03-28 Wed 22:46]
 
 - TODO /monad/ related TODO =Learn More= =!!!=
 
-** DONE 7.7 Conclusion - 195
+** DONE 8.7 Conclusion - 245
 CLOSED: [2017-10-21 Sat 22:29]
 
-* TODO 8 The Architecture of Scala Collections - 196
+* TODO 9 The Architecture of Scala Collections - 246
 - This chapter describes _the architecture of the Scala collections framework_
   in detail.
   * Continuing the theme of Chapter 24,
@@ -1722,7 +1733,7 @@ CLOSED: [2017-10-21 Sat 22:29]
   constitute the building blocks of the framework, as well as the construction
   principles they support.
 
-** 8.1 Factoring out common operations - 196
+** 9.1 Factoring out common operations - 246
 - The main design objective of the collection library is to provide natural
   types to users while sharing as much implementation code as possible.
 
@@ -1752,27 +1763,29 @@ CLOSED: [2017-10-21 Sat 22:29]
     some collections, such as ~List~, are /strict/,
     while other collections, like ~View~ and ~LazyList~, are /non-strict/.
 
-*** Abstracting over collection types - 198
-*** Handling strictness - 201
-*** When strict evaluation is preferable or unavoidable - 204
+*** Abstracting over collection types - 248
+*** Handling strictness - 251
+*** When strict evaluation is preferable or unavoidable - 254
 
-** 8.2 Integrating new collections - 205
-*** Capped sequences - 205
-**** Capped collection, first version - 205
-**** Capped collection, second version - 208
-**** Capped collection, final version - 210
+** 9.2 Integrating new collections - 255
+*** Capped sequences - 255
+**** Capped collection, first version - 255
+**** Capped collection, second version - 258
+**** Capped collection, final version - 260
 
-*** RNA sequences - 210
-**** RNA strands class, first version - 213
-**** RNA strands class, second version - 216
-**** RNA strands class, final version - 218
+*** RNA sequences - 260
+**** RNA strands class, first version - 263
+**** RNA strands class, second version - 266
+**** RNA strands class, final version - 268
 
-*** Prefix maps - 221
-*** Summary - 228
+*** Prefix maps - 271
+**** Summary - 278
 
-** 8.3 Conclusion - 228
+*** Summary - 278
 
-* TODO 9 Extractors - 229 - =RANK 0 for reading=
+** 9.3 Conclusion - 278
+
+* TODO 10 Extractors - 279 - =RANK 0 for reading=
 This chapter explains
 - what /extractors/ are
 
@@ -1782,7 +1795,7 @@ This chapter explains
     if the patterns are _not decoupled from_ an object's representation, the
     default /extractors/ of /case classes/ are enough.
 
-** DONE 9.1 An example: extracting email addresses - 229
+** DONE 10.1 An example: extracting email addresses - 279
 CLOSED: [2020-09-25 Fri 01:01]
 - Compare
   + Access function:
@@ -1850,7 +1863,7 @@ CLOSED: [2020-09-25 Fri 01:01]
           /types/, where the /pattern/ need *NOT* follow the internal
           representation of the /type/.
 
-** DONE 9.2 Extractors - 230
+** DONE 10.2 Extractors - 280
 CLOSED: [2020-09-26 Sat 14:26]
 - extractor :: an /object/ that has a /method/ called ~unapply~ as one of its
                members.
@@ -1918,7 +1931,7 @@ CLOSED: [2020-09-26 Sat 14:26]
     // The generated `EMail` SHOULD be equal to the input `obj`
   #+END_SRC
 
-** DONE 9.3 Patterns with zero or one variables - 233
+** DONE 10.3 Patterns with zero or one variables - 283
 CLOSED: [2020-09-27 Sun 01:06]
 - Patterns with zero or one variables are special and not covered in the
   previous section:
@@ -1966,8 +1979,8 @@ CLOSED: [2020-09-27 Sun 01:06]
   You *MUSTN'T omit* the empty parameter list in ~UpperCase()~, otherwise
   the match would test for equality with /object/ ~UpperCase~!
 
-** DONE 9.4 Optionless extractors - 235
-** DONE 9.5 Variable argument extractors - 238
+** DONE 10.4 Optionless extractors - 285
+** DONE 10.5 Variable argument extractors - 288
 CLOSED: [2020-09-27 Sun 01:25]
 Sometimes, /extractors/ that extract FIXED NUMBER of element values are not
 flexible enough, and we also have /extractors/ that can support vararg matching
@@ -2035,8 +2048,8 @@ flexible enough, and we also have /extractors/ that can support vararg matching
         // subdoms: Seq[String] = WrappedArray(epfl, support)
       #+end_src
 
-** DONE 9.6 Optionlees variable argument extractors - 242
-** DONE 9.7 Extractors and sequence patterns - 244
+** DONE 10.6 Optionlees variable argument extractors - 292
+** DONE 10.7 Extractors and sequence patterns - 294
 CLOSED: [2020-09-27 Sun 01:38]
 /Sequence patterns/ are all implemented using /extractors/ in the standard
 Scala library:
@@ -2051,7 +2064,7 @@ Scala library:
 #+END_SRC
 Similar to ~Array~
 
-** DONE 9.8 Extractors versus case classes - 246
+** DONE 10.8 Extractors versus case classes - 296
 CLOSED: [2020-09-27 Sun 02:24]
 - Even though they are very useful,
   /case classes/ have one _SHORTCOMING_:
@@ -2102,7 +2115,7 @@ CLOSED: [2020-09-27 Sun 02:24]
   * You can do this because the syntax for /pattern matching/ is always the
     same, NO MATTER there are /extractors/ or /case classes/.
 
-** DONE 9.9 Regular expressions - 248
+** DONE 10.9 Regular expressions - 298
 CLOSED: [2020-09-27 Sun 04:29]
 One particularly useful application area of /extractors/ are /regular
 expressions/.
@@ -2110,7 +2123,7 @@ expressions/.
 - Like Java, Scala provides /regular expressions/ through a library,
   BUT /extractors/ make it *much nicer* to interact with them.
 
-*** DONE Forming regular expressions - 248
+*** DONE Forming regular expressions - 298
 CLOSED: [2020-09-27 Sun 04:17]
 - ~java.util.regex.Pattern~
 
@@ -2145,7 +2158,7 @@ CLOSED: [2020-09-27 Sun 04:17]
   StackOverflow question [[https://stackoverflow.com/questions/25632924/whats-the-difference-between-raw-string-interpolation-and-triple-quotes-in-scal][What's the difference between raw string interpolation and triple quotes in scala]]
   and the answer from *som-snytt*
 
-*** DONE Searching for regular expressions - 249
+*** DONE Searching for regular expressions - 300
 CLOSED: [2020-09-27 Sun 04:13]
 - ~regex findFirstIn str~
   Return an ~Option~ value
@@ -2173,7 +2186,7 @@ CLOSED: [2020-09-27 Sun 04:13]
     // None
   #+END_SRC
 
-*** DONE Extracting with regular expressions - 250
+*** DONE Extracting with regular expressions - 300
 CLOSED: [2020-09-27 Sun 04:11]
 Every ~Regex~ object in Scala defines an /extractor/.
   The /extractor/ is used to identify substrings that are matched by the
@@ -2204,7 +2217,7 @@ is a _zero variable pattern_.
 - *CAUTION*: =From Jian=
   An optional group that is not matched will bind ~null~ to the target variable.
 
-** DONE 9.10 Conclusion - 251 - =RE-READ=
+** DONE 10.10 Conclusion - 301 - =RE-READ=
 CLOSED: [2017-12-02 Sat 23:27]
 In this chapter you saw how to *generalize* /pattern matching/ with /extractors/.
 
@@ -2223,7 +2236,7 @@ In this chapter you saw how to *generalize* /pattern matching/ with /extractors/
 - /Extractors/ are one more element in your tool box that let you define
   flexible library abstractions.
 
-* TODO 10 Annotations - 252
+* TODO 11 Annotations - 302
 - annotations :: structured information added to program source code.
 
   * Like /comments/,
@@ -2244,7 +2257,7 @@ In this chapter you saw how to *generalize* /pattern matching/ with /extractors/
 
   _This chapter focuses on how to use annotations._
 
-** DONE 10.1 Why have annotations? - 252
+** DONE 11.1 Why have annotations? - 302
 CLOSED: [2017-10-21 Sat 18:59]
 - There are many things you can do with a program _other than_ compiling and
   running it. Some examples are:
@@ -2279,7 +2292,7 @@ CLOSED: [2017-10-21 Sat 18:59]
      method has no side effects.
      TODO =???=
 
-** DONE 10.2 Syntax of annotations - 253
+** DONE 11.2 Syntax of annotations - 303
 CLOSED: [2017-10-21 Sat 18:59]
 - Annotations can also be applied to an expression, as with the ~@unchecked~
   annotation for pattern matching (see Chapter 15). To do so, place a colon
@@ -2325,9 +2338,9 @@ CLOSED: [2017-10-21 Sat 18:59]
     // f: ()Unit
   #+END_SRC
 
-** DONE 10.3 Standard annotations - 255 - =TODO=
+** DONE 11.3 Standard annotations - 305 - =TODO=
 CLOSED: [2017-10-21 Sat 18:45]
-*** DONE Deprecation - 255
+*** DONE Deprecation - 305
 CLOSED: [2017-10-21 Sat 18:34]
 ~@deprecated~
 
@@ -2339,7 +2352,7 @@ CLOSED: [2017-10-21 Sat 18:34]
     def bigMistake() = //...
   #+END_SRC
 
-*** DONE Volatile fields - 256
+*** DONE Volatile fields - 306
 CLOSED: [2017-10-21 Sat 18:39]
 ~@volatile~
 
@@ -2354,8 +2367,8 @@ concurrent programs. The ~@volatile~ annotation helps in such cases.
   On the Java platform, however, you get the same behavior as if you wrote
   the field in Java code and marked it with the Java volatile modifier.
 
-*** TODO Binary serialization - 257
-*** DONE Automatic ~get~ and ~set~ methods - 258 =RE-READ=
+*** TODO Binary serialization - 307
+*** DONE Automatic ~get~ and ~set~ methods - 308 =RE-READ=
 CLOSED: [2017-10-21 Sat 18:45]
 Scala doesn't need ~get~ and ~set~ methods.
 Some platform-specific frameworks do expect ~get~ and ~set~ methods, however.
@@ -2368,24 +2381,24 @@ example, ~getCrazy~ and ~setCrazy~ for a field named ~crazy~.
 The generated ~get~ and ~set~ methods are ONLY available _AFTER_ a compilation
 pass completes.
 
-*** DONE Tailrec - 258
+*** DONE Tailrec - 308
 CLOSED: [2017-10-21 Sat 18:04]
 Use ~@tailrec~, and if the _optimization CANNOT be performed_, you will then
 get a warning together with an explanation of the reasons.
 
-*** DONE Unchecked - 258
+*** DONE Unchecked - 308
 CLOSED: [2017-10-21 Sat 18:06]
 ~@unchecked~
 
 Tell the compiler don't worry if the ~match~ expression seems to leave out some cases.
 TODO See Section 15.5 for details.
 
-*** TODO Native methods - 258
+*** TODO Native methods - 308
 ~@native~
 
 TODO =???=
 
-** TODO 10.4 Conclusion - 259
+** TODO 11.4 Conclusion - 309
 =TODO=
 Chapter 31 gives additional, Java-specific information on annotations. It
 covers annotations only available when targeting Java, additional meanings of
@@ -2393,7 +2406,7 @@ standard annotations when targeting Java, how to interoperate with Java-based
 annotations, and how to use Java-based mechanisms to define and process
 annotations in Scala.
 
-* TODO 11 Modular Programming Using Objects - 260 - =Re-READ=
+* TODO 12 Modular Programming Using Objects - 310 - =Re-READ=
 - In this chapter, we’ll discuss how you can use Scala's object-oriented
   features to *make a program more modular*:
   1. Show HOW *a simple /singleton object/ can be used as a module*.
@@ -2407,7 +2420,7 @@ annotations in Scala.
   3. Show a pragmatic technique for using /traits/ _to *divide* a /module/
      across MULTIPLE files_.
 
-** DONE 11.1 The problem - 261 =Re-Read= =Review=
+** DONE 12.1 The problem - 311 =Re-Read= =Review=
 CLOSED: [2018-03-19 Mon 02:19]
 - As a program grows in size, it becomes increasingly important to organize it
   in a modular way.
@@ -2442,25 +2455,25 @@ CLOSED: [2018-03-19 Mon 02:19]
   we'll show HOW to _use objects as modules_ to achieve the desired "in the
   large" modularity *without using an external framework*.
 
-** TODO 11.2 A recipe application - 262
-** TODO 11.3 Abstraction - 265
+** TODO 12.2 A recipe application - 312
+** TODO 12.3 Abstraction - 315
 - Use /abstract classes/
 
-** TODO 11.4 Splitting modules into traits - 268
+** TODO 12.4 Splitting modules into traits - 318
 - Split /every large abstract class/ to multiple /traits/.
 
-** TODO 11.5 Runtime linking - 270
-** TODO 11.6 Tracking module instances - 271
-** TODO 11.7 Conclusion - 273
+** TODO 12.5 Runtime linking - 320
+** TODO 12.6 Tracking module instances - 321
+** TODO 12.7 Conclusion - 323
 
-* TODO 12 Object Equality - 275
+* TODO 13 Object Equality - 325
 Define *object equality* is more tricky than it looks at first glance.
 
 =From Jian=
 This complexity comes from /subtyping/.
 This is NOT a problem of OOP, but a problem of OOP with /inheritance/.
 
-** DONE 12.1 Equality in Scala - 275
+** DONE 13.1 Equality in Scala - 325
 CLOSED: [2017-11-25 Sat 00:39]
 - As mentioned in Section 11.2, the definition of equality is _DIFFERENT_ in
   Scala and Java. Both of them has *TWO* equality comparison operators, but
@@ -2508,7 +2521,7 @@ CLOSED: [2017-11-25 Sat 00:39]
       if (null eq this) {null eq that} else {this equals that}
   #+END_SRC
 
-** DONE 12.2 Writing an equality method - 276
+** DONE 13.2 Writing an equality method - 326
 CLOSED: [2018-07-19 Thu 01:19]
 - footnote:
   All but the _third_ pitfall are described in the context of Java in the
@@ -2524,7 +2537,7 @@ CLOSED: [2018-07-19 Thu 01:19]
 
   4. Failing to define equals as an equivalence relation.
 
-*** DONE Pitfall #1: Defining ~equals~ with the wrong signature - 277
+*** DONE Pitfall #1: Defining ~equals~ with the wrong signature - 327
 CLOSED: [2017-11-25 Sat 00:54]
 Consider adding an /equality method/ to the following class of simple points:
 ~class Point(val x: Int, val y: Int)~
@@ -2602,7 +2615,7 @@ Consider adding an /equality method/ to the following class of simple points:
   HOWEVER, if you use a *wrong* /signature/, you just /overload/ ~==~,
   _rather than_ /override/ it, which is allowed.
 
-*** DONE Pitfall #2: Changing ~equals~ without also changing ~hashCode~ - 279
+*** DONE Pitfall #2: Changing ~equals~ without also changing ~hashCode~ - 329
 CLOSED: [2017-11-25 Sat 01:25]
 #+BEGIN_SRC scala
   val p1, p2 = new Point(1, 2)
@@ -2651,7 +2664,7 @@ CLOSED: [2017-11-25 Sat 01:25]
     When invoked on a collection or a tuple, it computes a mixed hash that
     is _sensitive to the hash codes of all the elements_ in the collection.
 
-*** DONE Pitfall #3: Defining ~equals~ in terms of mutable fields - 280
+*** DONE Pitfall #3: Defining ~equals~ in terms of mutable fields - 330
 CLOSED: [2017-11-25 Sat 01:35]
 You put an object into a ~HashSet~, this object is then put in a specific
 "hash bucket" according to its hash code. After modifing its mutable fields,
@@ -2680,7 +2693,7 @@ code object will mostly be equality checked in other "hash bucket".
      check equality *without* /hash code/, for example, use a name like
      ~equalContents~.
 
-*** DONE Pitfall #4: Failing to define ~equals~ as an equivalence relation - 282
+*** DONE Pitfall #4: Failing to define ~equals~ as an equivalence relation - 332
 CLOSED: [2018-07-19 Thu 01:19]
 - The /contract/ of the ~equals~ /method/ in ~scala.Any~ specifies that
   ~equals~ *must implement* _an equivalence relation on non-null objects_:
@@ -2813,7 +2826,7 @@ CLOSED: [2018-07-19 Thu 01:19]
     same behavior!
   * TODO =DETAILS=
 
-** DONE 12.3 Defining equality for parameterized types - 288
+** DONE 13.3 Defining equality for parameterized types - 338
 CLOSED: [2017-11-25 Sat 01:50]
 When /classes/ are parameterized, this scheme needs to be adapted a little
 bit. *This is special due to /type erasure/.*
@@ -2952,7 +2965,7 @@ bit. *This is special due to /type erasure/.*
     }
   #+END_SRC
 
-** DONE 12.4 Recipes for ~equals~ and ~hashCode~ - 292
+** DONE 13.4 Recipes for ~equals~ and ~hashCode~ - 342
 CLOSED: [2018-07-19 Thu 18:27]
 In this section, we'll provide *step-by-step recipes for creating ~equals~ and
 ~hashCode~ /methods/ that should suffice for _most situations_.*
@@ -3107,7 +3120,7 @@ Listing 30.5. This is a *modified version* of Listing 6.5 on page 151:
 
       In this way, you will /override/ ~hashCode~ with a ~val~ instead of a ~def~.
 
-** DONE 12.5 Conclusion - 298
+** DONE 13.5 Conclusion - 348
 CLOSED: [2018-07-19 Thu 00:54]
 - In retrospect, defining a correct implementation of ~equals~ has been
   *surprisingly subtle*.
@@ -3127,7 +3140,7 @@ CLOSED: [2018-07-19 Thu 00:54]
   That way, the Scala compiler will add ~equals~ and ~hashCode~ /methods/
   with the right properties *automatically*.
 
-* TODO 13 Combining Scala and Java - 299 - =RANK 0 for reading=
+* TODO 14 Combining Scala and Java - 349 - =RANK 0 for reading=
 This chapter describes two aspects of combining Java and Scala:
 
 - it discusses *how Scala is translated to Java*, which is especially important
@@ -3136,7 +3149,7 @@ This chapter describes two aspects of combining Java and Scala:
 - it discusses *the use of Java annotations in Scala*, an important feature if
   you want to use Scala with an existing Java framework.
 
-** DONE 13.1 Using Scala from Java - 299
+** DONE 14.1 Using Scala from Java - 349
 CLOSED: [2018-11-25 Sun 15:00]
 1. _Most of the time_ you can think of Scala _at the source code level_.
 
@@ -3149,7 +3162,7 @@ CLOSED: [2018-11-25 Sun 15:00]
    you will _need to know_ *what Scala code looks like from a Java point of
    view*.
 
-*** DONE General rules - 299
+*** DONE General rules - 349
 CLOSED: [2018-02-06 Tue 22:46]
 - Scala is implemented as a translation to standard Java bytecodes.
   *As much as possible*, Scala features map directly onto the equivalent
@@ -3198,7 +3211,7 @@ CLOSED: [2018-02-06 Tue 22:46]
   compiler uses by examining the “.class” files with tools like *javap*. Those
   are the general rules. Consider now some special cases.
 
-*** DONE Value types - 300
+*** DONE Value types - 350
 CLOSED: [2018-02-06 Tue 22:46]
 =From Jian= Review this concept (in Appendix A)
 Use ~Int~ as example,
@@ -3216,7 +3229,7 @@ Use ~Int~ as example,
   footnote:
   The implementation of /value types/ was discussed in details in Section 11.2
 
-*** DONE Singleton objects - 300 =Outdated Info= =Re-Read=
+*** DONE Singleton objects - 350 =Outdated Info= =Re-Read=
 CLOSED: [2018-11-25 Sun 15:00]
 =From Jian=
 Some information of this section is outdated!!!
@@ -3387,7 +3400,7 @@ Update required!
   * ~MODULE$~ was ~final~, but not ~final~ anymore.
     =from Jian= WHY??? I think ~final~ is more reasonable!!!
 
-*** DONE Traits as interfaces - 302 =Learn MORE!=
+*** DONE Traits as interfaces - 352 =Learn MORE!=
 CLOSED: [2018-02-06 Tue 22:46]
 - Compiling any trait creates a Java interface of the same name. This
   interface is usable as a Java type, and it lets you call methods on Scala
@@ -3400,13 +3413,13 @@ CLOSED: [2018-02-06 Tue 22:46]
   translated directly to a /Java interface/ with no other code to worry
   about. You actually _create a /Java interface/ in Scala syntax_.
 
-** DONE 13.2 Annotations - 302
+** DONE 14.2 Annotations - 352
 CLOSED: [2018-02-06 Tue 22:45]
 - Scala's general /annotations/ system is discussed in Chapter 27.
 
 - _This section discusses Java-specific aspects of /annotations/._
 
-*** DONE Additional effects from standard annotations - 302
+*** DONE Additional effects from standard annotations - 352
 CLOSED: [2018-02-06 Tue 21:38]
 - Several annotations cause the compiler to emit extra information when
   targeting the Java platform. When the compiler sees such an /annotation/,
@@ -3419,7 +3432,7 @@ CLOSED: [2018-02-06 Tue 21:38]
 
 - Serialization :: TODO
 
-*** DONE Exceptions thrown - 303
+*** DONE Exceptions thrown - 353
 CLOSED: [2018-02-06 Tue 21:38]
 - Scala has NO EQUIVALENT to Java's ~throws~ declarations on /methods/:
   Scala does NOT check that /thrown exceptions/ are caught.
@@ -3461,7 +3474,7 @@ CLOSED: [2018-02-06 Tue 21:38]
     }
   #+END_SRC
 
-*** DONE Java annotations - 304
+*** DONE Java annotations - 354
 CLOSED: [2018-02-06 Tue 21:38]
 - Existing annotations from Java frameworks can be used directly in Scala
   code.
@@ -3497,7 +3510,7 @@ CLOSED: [2018-02-06 Tue 21:38]
      ## OK (1 test)
    #+END_SRC
 
-*** DONE Writing your own annotations - 305
+*** DONE Writing your own annotations - 355
 CLOSED: [2018-02-06 Tue 22:45]
 - To make an /annotation/ that _is VISIBLE to /Java reflection/,_ you MUST
   + use Java notation
@@ -3586,7 +3599,7 @@ CLOSED: [2018-02-06 Tue 22:45]
   /arguments to annotations/. This means ~@serial(1234)~ is legal, but
   ~@serial(x * 2)~ is _NOT legal_.
 
-** DONE 13.3 Wildcard types - 307
+** DONE 14.3 Wildcard types - 357
 CLOSED: [2018-02-07 Wed 00:31]
 *ALL* /Java types/ have a Scala equivalent.
 This is necessary so that Scala code can access any legal Java class.
@@ -3690,7 +3703,7 @@ This is necessary so that Scala code can access any legal Java class.
   /abstract members/.* So you may as well use /abstract members/ to begin
   with.
 
-** DONE 13.4 Compiling Scala and Java together - 309
+** DONE 14.4 Compiling Scala and Java together - 359
 CLOSED: [2018-02-06 Tue 23:32]
 - For the most simplest cases (=From Jian= what I usually meet):
   Scala code depends on Java code or vise versa.
@@ -3725,7 +3738,7 @@ CLOSED: [2018-02-06 Tue 23:32]
     # Most expensive item = sprocket($4.99)
   #+END_SRC
 
-** DONE 13.5 Java 8 integration - 310
+** DONE 14.5 Java 8 integration - 360
 CLOSED: [2018-02-07 Wed 02:10]
 - Java 8 added a few IMPROVEMENTS to
   * _the Java language_
@@ -3740,7 +3753,7 @@ CLOSED: [2018-02-07 Wed 02:10]
     and
   * improve the *binary compatibility* of /traits/.
 
-*** DONE Lambda expressions and "SAM" types - 310
+*** DONE Lambda expressions and "SAM" types - 360
 CLOSED: [2018-02-07 Wed 01:14]
 - Before Scala 2.12 (before Java 8's support to /lambda expressions/), in the
   /SAM types/ position,
@@ -3793,7 +3806,7 @@ CLOSED: [2018-02-07 Wed 01:14]
       // res1: Int = 8
     #+END_SRC
 
-*** DONE Using Java 8 ~Stream~'s from Scala - 312
+*** DONE Using Java 8 ~Stream~'s from Scala - 362
 CLOSED: [2018-02-07 Wed 02:09]
 - NOTE
   *ONLY* /function literals/ will be adapted to /SAM types/,
@@ -3895,10 +3908,10 @@ CLOSED: [2018-02-07 Wed 02:09]
   /default methods/,* a new feature of Java 8.
   As a result, /Scala function types/ appear to Java as /SAMs/.
 
-** DONE 13.6 Conclusion - 313
+** DONE 14.6 Conclusion - 363
 CLOSED: [2018-02-07 Wed 02:10]
 
-* TODO 14 Futures and Concurrency - 314
+* TODO 15 Futures and Concurrency - 364
 - Java provides concurrency support built around /shared memory/ and /locking/.
     Although this support is sufficient, this approach turns out to be _quite
   DIFFICULT to get right in practice_.
@@ -3916,7 +3929,7 @@ CLOSED: [2018-02-07 Wed 02:10]
   transformations of immutable values_, *with no need to reason about shared
   memory and locks*.
 
-** DONE 14.1 Trouble in paradise - 314 =Re-Do=
+** DONE 15.1 Trouble in paradise - 364 =Re-Do=
 CLOSED: [2018-03-06 Tue 14:37]
 - The Java way:
   * Model:
@@ -3977,7 +3990,7 @@ CLOSED: [2018-03-06 Tue 14:37]
   Nevertheless, it is also based on /the shared data and locks models/, and
   it does NOT solve the fundamental difficulties of using that model!
 
-** DONE 14.2 Asynchronous execution and ~Try~'s - 316
+** DONE 15.2 Asynchronous execution and ~Try~'s - 366
 CLOSED: [2018-04-11 Wed 01:19]
 - Many operations on ~Future~ require an implicit /execution context/ that
   provides a strategy for executing functions asychronously.
@@ -4050,13 +4063,13 @@ CLOSED: [2018-04-11 Wed 01:19]
 
   #+END_SRC
 
-** DONE 14.3 Working with ~Future~'s - 319
+** DONE 15.3 Working with ~Future~'s - 369
 CLOSED: [2018-04-11 Wed 15:06]
 Scala's ~Future~ allows you to specify /transformations/ on ~Future~ results and
 obtain a new /future/ that represents the composition of the _two_ /asynchronous
 computations/: the original and the transformation.
 
-*** DONE Transforming ~Futures~ with ~map~ - 319
+*** DONE Transforming ~Futures~ with ~map~ - 369
 CLOSED: [2018-04-11 Wed 02:19]
 #+BEGIN_SRC scala
   import scala.concurrent.Future
@@ -4069,7 +4082,7 @@ CLOSED: [2018-04-11 Wed 02:19]
   // res6: Option[scala.util.Try[Int]] = Some(Success(43))
 #+END_SRC
 
-*** DONE Transforming ~Futures~ with ~for~ expressions - 320 =RE-READ=
+*** DONE Transforming ~Futures~ with ~for~ expressions - 370 =RE-READ=
 CLOSED: [2018-04-11 Wed 02:30]
 Because Scala's ~Future~ also declares a ~flatMap~ /method/, you can
 transform /futures/ using a ~for~ expression.
@@ -4110,7 +4123,7 @@ transform /futures/ using a ~for~ expression.
 - =FROM JIAN= Consider the code above, and find out the difference.
   Guess: check their forms of using ~flatMap~
 
-*** DONE Creating the ~Future~: ~Future.failed~, ~Future.successful~, ~Future.fromTry~, and ~Promises~ - 321
+*** DONE Creating the ~Future~: ~Future.failed~, ~Future.successful~, ~Future.fromTry~, and ~Promises~ - 371
 CLOSED: [2018-04-11 Wed 03:05]
 - The ~Future~ /companion object/ includes three /factory methods/ for
   creating already-completed /futures/:
@@ -4182,7 +4195,7 @@ CLOSED: [2018-04-11 Wed 03:05]
     The /promise/'s /future/ will thereafter mirror the completion status of
     the /future/ you passed to ~completeWith~.
 
-*** DONE Filtering: ~filter~ and ~collect~ - 322
+*** DONE Filtering: ~filter~ and ~collect~ - 372
 CLOSED: [2018-04-11 Wed 03:19]
 - The ~filter~ and ~collect~ /methods/ allow you to *ensure a property holds
   true* about a /future value/.
@@ -4245,7 +4258,7 @@ CLOSED: [2018-04-11 Wed 03:19]
     //   Future.collect partial function is not defined at: 42))
   #+END_SRC
 
-*** DONE Dealing with failure: ~failed~, ~fallBackTo~, ~recover~, and ~recoverWith~ - 324
+*** DONE Dealing with failure: ~failed~, ~fallBackTo~, ~recover~, and ~recoverWith~ - 374
 CLOSED: [2018-04-11 Wed 05:15]
 - Scala's /future/ provides ways to work with /futures/ that *fail*, including:
   * ~failed~
@@ -4360,7 +4373,7 @@ CLOSED: [2018-04-11 Wed 05:15]
       the original success (or failure) will pass through to the /future/
       returned by ~recoverWith~.
 
-*** DONE Mapping both possibilities: ~transform~ - 327
+*** DONE Mapping both possibilities: ~transform~ - 377
 CLOSED: [2018-04-11 Wed 11:27]
 - ~Future~'s ~transform~ /method/ accepts *two* functions with which to
   *transform* a /future/:
@@ -4441,7 +4454,7 @@ CLOSED: [2018-04-11 Wed 11:27]
       // res11: Option[scala.util.Try[Int]] = Some(Success(0))
     #+END_SRC
 
-*** TODO Combining futures: ~zip~, ~Future.foldLeft~, ~Future.reduceLeft~, ~Future.sequence~, and ~Future.traverse~ - 328
+*** TODO Combining futures: ~zip~, ~Future.foldLeft~, ~Future.reduceLeft~, ~Future.sequence~, and ~Future.traverse~ - 378
 =from Jian=
 *CAUTION* Include some errors -- Still use ~TraversableOnce~!!!!!!!!!!!!
 Already send errata report to artima!!!
@@ -4551,7 +4564,7 @@ structures like /functor/, /monoid/, and /monad/
     //   Some(Success(List(1, 2, 3)))
   #+END_SRC
 
-*** DONE Performing side-effects: ~foreach~, ~onComplete~, and ~andThen~ - 330
+*** DONE Performing side-effects: ~foreach~, ~onComplete~, and ~andThen~ - 380
 CLOSED: [2018-04-11 Wed 13:47]
 - ~foreach~
   Perform a side effect if a future completes successfully.
@@ -4621,7 +4634,7 @@ CLOSED: [2018-04-11 Wed 13:47]
   reported via the resulting future._
   TODO =???= =Details=
 
-*** DONE Other methods: ~flatten~, ~zipWith~, and ~transformWith~ - 332
+*** DONE Other methods: ~flatten~, ~zipWith~, and ~transformWith~ - 382
 CLOSED: [2018-04-11 Wed 15:06]
 - ~flatten~
   #+BEGIN_SRC scala
@@ -4662,7 +4675,7 @@ CLOSED: [2018-04-11 Wed 15:06]
     ~Try~ in your passed function as in ~transform~, ~transformWith~ allows
     you to yield a /future/.
 
-** DONE 14.4 Testing with ~Future~'s - 333
+** DONE 15.4 Testing with ~Future~'s - 383
 CLOSED: [2018-04-11 Wed 13:34]
 - Scala does allow you to *block* on a /future/ result when you need to.
   Scala's ~Await~ /object/ facilitates blocking to wait for future results.
@@ -4738,7 +4751,7 @@ CLOSED: [2018-04-11 Wed 13:34]
   _performed asynchronously_ once /futures/ complete. This approach will help
   you *make _maximum use_ of your /threads/.*
 
-** DONE 14.5 Conclusion - 335
+** DONE 15.5 Conclusion - 385
 CLOSED: [2018-04-11 Wed 15:10]
 - Concurrent programming gives you great power.
   It lets you *simplify* your code and take advantage of multiple processors.
@@ -4759,14 +4772,14 @@ CLOSED: [2018-04-11 Wed 15:10]
   It then showed you how to use these constructs as part of a general
   /futures/ style.
 
-* TODO 15 Combinator Parsing - 337
+* TODO 16 Combinator Parsing - 387
 - These building blocks of /parser combinators/ will map one to one to the
   constructions of a /context-free grammar/, to make them easy to understand.
 
 - The only non-Scala specific prerequisite for understanding this chapter:
   you know about /regular and context-free grammars/.
 
-** DONE 15.1 Example: Arithmetic expressions - 338
+** DONE 15.1 Example: Arithmetic expressions - 388
 CLOSED: [2018-03-05 Mon 15:53]
 - (Context-free) Grammar for arithmetic expressions:
   #+BEGIN_SRC text
@@ -4816,7 +4829,7 @@ CLOSED: [2018-03-05 Mon 15:53]
 
   5. The period (.) at the end of each production is ommitted in the code.
 
-** DONE 15.2 Running your parser - 340
+** DONE 15.2 Running your parser - 390
 CLOSED: [2018-03-05 Mon 16:35]
 - Run the parser:
   #+BEGIN_SRC scala
@@ -4850,7 +4863,7 @@ CLOSED: [2018-03-05 Mon 16:35]
     #            ˆ
   #+END_SRC
 
-** DONE 15.3 Basic regular expression parsers - 341
+** DONE 15.3 Basic regular expression parsers - 391
 CLOSED: [2018-03-05 Mon 19:35]
 - ~JavaTokenParsers~ provides some basic parsers for patterns in Java format.
 
@@ -4871,11 +4884,11 @@ CLOSED: [2018-03-05 Mon 19:35]
     }
   #+END_SRC
 
-** DONE 15.4 Another example: JSON - 342
+** DONE 15.4 Another example: JSON - 392
 CLOSED: [2018-03-05 Mon 19:35]
 ~JSON~ parser
 
-** DONE 15.5 Parser output - 344
+** DONE 15.5 Parser output - 394
 CLOSED: [2018-03-05 Mon 20:29]
 - ~stringLiteral~ from ~JavaTokenParsers~
 
@@ -4883,14 +4896,14 @@ CLOSED: [2018-03-05 Mon 20:29]
   combination form for parsers: ~ˆˆ~: ~P^^f~ returns ~f(P)~
     For example, ~floatingPointNumber ^^ (_.toDouble)~
 
-*** DONE Symbolic versus alphanumeric names - 756
-    CLOSED: [2018-03-05 Mon 20:29]
-    Symbolic names:
-    - cons: abstract and learn and remember before use
+*** DONE Symbolic versus alphanumeric names - 397
+CLOSED: [2018-03-05 Mon 20:29]
+Symbolic names:
+- cons: abstract and learn and remember before use
 
-    - pros: do not distract the reader
+- pros: do not distract the reader
 
-** DONE 15.6 Implementing combinator parsers - 350
+** DONE 15.6 Implementing combinator parsers - 400
 CLOSED: [2018-03-06 Tue 10:48]
 In the rest of this chapter you’ll take a look “under the hood” of the
 combinator parser library.
@@ -4910,216 +4923,216 @@ combinator parser library.
   =From Jian=
   Actually, ~abstract class Parser[T] extends (Input => ParseResult[T])~
 
-*** DONE Parser input - 761
-    CLOSED: [2017-11-23 Thu 01:21]
-    - Sometimes, a parser reads _a stream of tokens_ instead of _a raw sequence
-      of characters_.
-        A separate /lexical analyzer/ =???= is then used to convert _a stream of
-      raw characters_ into _a stream of tokens_.
+*** DONE Parser input - 401
+CLOSED: [2017-11-23 Thu 01:21]
+- Sometimes, a parser reads _a stream of tokens_ instead of _a raw sequence
+  of characters_.
+    A separate /lexical analyzer/ =???= is then used to convert _a stream of
+  raw characters_ into _a stream of tokens_.
 
-      The type of parser inputs is defined as follows:
-      ~type Input = Reader[Elem]~
-      The class ~Reader~ comes from the package ~scala.util.parsing.input~
+  The type of parser inputs is defined as follows:
+  ~type Input = Reader[Elem]~
+  The class ~Reader~ comes from the package ~scala.util.parsing.input~
 
-      A ~Reader~ is similar to a ~Stream~, but also keeps track of the positions
-      of all the elements it reads.
+  A ~Reader~ is similar to a ~Stream~, but also keeps track of the positions
+  of all the elements it reads.
 
-      + ~Elem~ is abstract, which is written in the ~Parsers~ trait as
-        ~type Elem~.
-          For instance, the subtraits of ~Parser~, ~RegexParsers~ and
-        ~JavaTokenParsers~ fix ~Elem~ to be equal to ~Char~.
+  + ~Elem~ is abstract, which is written in the ~Parsers~ trait as
+    ~type Elem~.
+      For instance, the subtraits of ~Parser~, ~RegexParsers~ and
+    ~JavaTokenParsers~ fix ~Elem~ to be equal to ~Char~.
 
-        It would also be possible to set ~Elem~ to some other type, such as the
-        type of /tokens/ returned from a separate /lexer/.
+    It would also be possible to set ~Elem~ to some other type, such as the
+    type of /tokens/ returned from a separate /lexer/.
 
-*** DONE Parser results - 761
-    CLOSED: [2017-11-23 Thu 01:32]
-    A parser might either _succeed_ or _fail_ on some given input.
-    Consequently class ~ParseResult~ has two subclasses for representing them:
-    #+BEGIN_SRC scala
-      sealed abstract class ParseResult[+T]
-      case class Success[T](result: T, in: Input)
-        extends ParseResult[T]
-      case class Failure(msg: String, in: Input)
-        extends ParseResult[Nothing]
-    #+END_SRC
-    - The type parameter ~T~ is arbitrary.
-      It represents the kinds of results returned by a given parser.
-      =IMPORTANT=
+*** DONE Parser results - 401
+CLOSED: [2017-11-23 Thu 01:32]
+A parser might either _succeed_ or _fail_ on some given input.
+Consequently class ~ParseResult~ has two subclasses for representing them:
+#+BEGIN_SRC scala
+  sealed abstract class ParseResult[+T]
+  case class Success[T](result: T, in: Input)
+    extends ParseResult[T]
+  case class Failure(msg: String, in: Input)
+    extends ParseResult[Nothing]
+#+END_SRC
+- The type parameter ~T~ is arbitrary.
+  It represents the kinds of results returned by a given parser.
+  =IMPORTANT=
 
-    - ~Success~: the field ~in~ is needed for chaining parsers.
+- ~Success~: the field ~in~ is needed for chaining parsers.
 
-    - ~Failure~: the field ~in~ is, of course, not used for chaining, but to
-      position the error message at the correct place in the input stream.
+- ~Failure~: the field ~in~ is, of course, not used for chaining, but to
+  position the error message at the correct place in the input stream.
 
-    - That ~ParseResult~'s are defined to be /covariant/ in the type parameter
-      ~T~.
+- That ~ParseResult~'s are defined to be /covariant/ in the type parameter
+  ~T~.
 
-*** DONE The ~Parser~ class - 762
-    CLOSED: [2017-11-23 Thu 03:04]
-    - The previous characterization of parsers as functions from inputs to parse
-      results was a bit oversimplified.
-        Parsers are acutally /subclass/ of ~Input => ParseResult[T]~, and this is
-      also why they have /methods/ like ~~~, ~|~, etc.
-      #+BEGIN_SRC scala
-        abstract class Parser[+T] extends (Input => ParseResult[T])
-        { p =>
-          // An unspecified method that defines
-          // the behavior of this parser.
-          def apply(in: Input): ParseResult[T]
-          def ~ ...
-          def | ...
-          ...
-        }
-      #+END_SRC
+*** DONE The ~Parser~ class - 402
+CLOSED: [2017-11-23 Thu 03:04]
+- The previous characterization of parsers as functions from inputs to parse
+  results was a bit oversimplified.
+    Parsers are acutally /subclass/ of ~Input => ParseResult[T]~, and this is
+  also why they have /methods/ like ~~~, ~|~, etc.
+  #+BEGIN_SRC scala
+    abstract class Parser[+T] extends (Input => ParseResult[T])
+    { p =>
+      // An unspecified method that defines
+      // the behavior of this parser.
+      def apply(in: Input): ParseResult[T]
+      def ~ ...
+      def | ...
+      ...
+    }
+  #+END_SRC
 
-    - ~Input => ParseResult[T]~ is equivalent to
-      ~scala.Function1[Input, ParseResult[T]]~, which means is should have an
-      ~apply~ /method/.
+- ~Input => ParseResult[T]~ is equivalent to
+  ~scala.Function1[Input, ParseResult[T]]~, which means is should have an
+  ~apply~ /method/.
 
-      The ~Parsers~ /class/ has an abstract ~apply~, and users need to implement
-      this /method/ when they implement a subclass or instance object of the
-      ~Parsers~.
+  The ~Parsers~ /class/ has an abstract ~apply~, and users need to implement
+  this /method/ when they implement a subclass or instance object of the
+  ~Parsers~.
 
-*** DONE Aliasing ~this~ - 763
-    CLOSED: [2017-11-23 Thu 03:18]
-    - The definition given in the last subsection
-      ~abstract class Parser[+T] extends ... { p =>~
+*** DONE Aliasing ~this~ - 404
+CLOSED: [2017-11-23 Thu 03:18]
+- The definition given in the last subsection
+  ~abstract class Parser[+T] extends ... { p =>~
 
-      A clause such as ~id =>~ immediately after the opening brace of a /class/
-      template defines the identifier ~id~ as an alias for ~this~ in the class.
+  A clause such as ~id =>~ immediately after the opening brace of a /class/
+  template defines the identifier ~id~ as an alias for ~this~ in the class.
 
-      From the alias point of view, it's like ~val id = this~. However, this is
-      not what exactly it is -- ~id~ will be considered as a normal identifier by
-      the compiler, and it cannot use the /private members/ of ~this~.
+  From the alias point of view, it's like ~val id = this~. However, this is
+  not what exactly it is -- ~id~ will be considered as a normal identifier by
+  the compiler, and it cannot use the /private members/ of ~this~.
 
-    - Aliasing can also be a good abbreviation when you need to access the ~this~
-      of an /outer class/. Here's an example:
-      #+BEGIN_SRC scala
-        class Outer { outer =>
-          class Inner {
-            println(Outer.this eq outer)  // prints: true
-          }
-        }
-      #+END_SRC
-      + The ~Outer.this~ is the Java way.
-      + The ~outer~ is the Scala way.
+- Aliasing can also be a good abbreviation when you need to access the ~this~
+  of an /outer class/. Here's an example:
+  #+BEGIN_SRC scala
+    class Outer { outer =>
+      class Inner {
+        println(Outer.this eq outer)  // prints: true
+      }
+    }
+  #+END_SRC
+  * The ~Outer.this~ is the Java way.
+  * The ~outer~ is the Scala way.
 
-*** DONE Single-token parsers - 764
-    CLOSED: [2018-03-06 Tue 10:02]
-    Trait ~Parsers~ defines a generic parser ~elem~ that can be used to parse any
-    single token:
-    #+BEGIN_SRC scala
-      def elem(kind: String, p: Elem => Boolean) =
-        new Parser[Elem] {
-          def apply(in: Input) =
-            if (p(in.first)) Success(in.first, in.rest)
-            else             Failure(kind + " expected", in)
-        }
-    #+END_SRC
-    + ~kind~ describing what kind of token should be parsed.
+*** DONE Single-token parsers - 405
+CLOSED: [2018-03-06 Tue 10:02]
+Trait ~Parsers~ defines a generic parser ~elem~ that can be used to parse any
+single token:
+#+BEGIN_SRC scala
+  def elem(kind: String, p: Elem => Boolean) =
+    new Parser[Elem] {
+      def apply(in: Input) =
+        if (p(in.first)) Success(in.first, in.rest)
+        else             Failure(kind + " expected", in)
+    }
+#+END_SRC
+- ~kind~ describing what kind of token should be parsed.
 
-*** DONE Sequential composition - 764
-    CLOSED: [2018-03-06 Tue 10:26]
-    - About ~
-      #+BEGIN_SRC scala
-        abstract class Parser[+T] extends (Input => ParserResult[T]) { p =>
-          // ...
+*** DONE Sequential composition - 405
+CLOSED: [2018-03-06 Tue 10:26]
+- About ~
+  #+BEGIN_SRC scala
+    abstract class Parser[+T] extends (Input => ParserResult[T]) { p =>
+      // ...
 
-          def ~ [U](q: => Parser[U]) = new Parser[T~U] {
-            def apply(in: Input) = p(in) match {
-              case Success(x, in1) =>
-                q(in1) match {
-                  case Success(y, in2) => Success(new ~(x, y), in2)
-                  case failure => failure
-                }
+      def ~ [U](q: => Parser[U]) = new Parser[T~U] {
+        def apply(in: Input) = p(in) match {
+          case Success(x, in1) =>
+            q(in1) match {
+              case Success(y, in2) => Success(new ~(x, y), in2)
               case failure => failure
             }
+          case failure => failure
         }
-      #+END_SRC
-      + ~[T~U]~ is the same as ~~[T, U]~
+    }
+  #+END_SRC
+  + ~[T~U]~ is the same as ~~[T, U]~
 
-    - Similarly, about <~ and ~>:
-      #+BEGIN_SRC scala
-        def <~ [U](q: => Parser[U]): Parser[T] =
-          (p~q) ˆˆ { case x~y => x }
+- Similarly, about <~ and ~>:
+  #+BEGIN_SRC scala
+    def <~ [U](q: => Parser[U]): Parser[T] =
+      (p~q) ˆˆ { case x~y => x }
 
-        def ~> [U](q: => Parser[U]): Parser[U] =
-          (p~q) ˆˆ { case x~y => y }
-      #+END_SRC
+    def ~> [U](q: => Parser[U]): Parser[U] =
+      (p~q) ˆˆ { case x~y => y }
+  #+END_SRC
 
-*** DONE Alternative composition - 765
-    CLOSED: [2018-03-06 Tue 10:28]
-    #+BEGIN_SRC scala
-      def | (q: => Parser[T]) = new Parser[T] {
-        def apply(in: Input) = p(in) match {
-          case s1 @ Success(_, _) => s1
-          case failure => q(in)
-        }
+*** DONE Alternative composition - 406
+CLOSED: [2018-03-06 Tue 10:28]
+#+BEGIN_SRC scala
+  def | (q: => Parser[T]) = new Parser[T] {
+    def apply(in: Input) = p(in) match {
+      case s1 @ Success(_, _) => s1
+      case failure => q(in)
+    }
+  }
+#+END_SRC
+
+- _CAUTION_:
+  Note that if ~P~ and ~Q~ _BOTH_ fail, then the failure message is
+  *determined by ~Q~.*
+  TODO This subtle choice is discussed later, in Section 33.9.
+
+*** DONE Dealing with recursion - 407
+CLOSED: [2018-03-06 Tue 10:31]
+Note that the ~q~ parameter in methods ~ and | is *by-name*.
+
+This makes it possible to write recursive parsers.
+
+If it's *by-value*, call them will lead to a stack overflow immediately.
+
+*** DONE Result conversion - 407
+CLOSED: [2018-03-06 Tue 10:34]
+- The parser ~P ^^ f~ succeeds exactly when ~P~ succeeds.
+
+- Definition of ~^^~:
+  #+BEGIN_SRC scala
+    def ˆˆ [U](f: T => U): Parser[U] = new Parser[U] {
+      def apply(in: Input) = p(in) match {
+        case Success(x, in1) => Success(f(x), in1)
+        case failure => failure
       }
-    #+END_SRC
+    }
+  #+END_SRC
 
-    - _CAUTION_:
-      Note that if ~P~ and ~Q~ _BOTH_ fail, then the failure message is
-      *determined by ~Q~.*
-      TODO This subtle choice is discussed later, in Section 33.9.
+*** DONE Parsers that don't read any input - 408
+CLOSED: [2018-03-06 Tue 10:44]
+Two useful parsers that do *NOT* consume any input:
+#+BEGIN_SRC scala
+  def success[T](v: T) = new Parser[T] {
+    def apply(in: Input) = Success(v, in)
+  }
 
-*** DONE Dealing with recursion - 766
-    CLOSED: [2018-03-06 Tue 10:31]
-    Note that the ~q~ parameter in methods ~ and | is *by-name*.
+  def failure(msg: String) = new Parser[Nothing] {
+    def apply(in: Input) = Failure(msg, in)
+  }
+#+END_SRC
 
-    This makes it possible to write recursive parsers.
+*** DONE Option and repetition - 408
+CLOSED: [2018-03-06 Tue 10:47]
+#+BEGIN_SRC scala
+  def opt[T](p: => Parser[T]): Parser[Option[T]] = (
+    p ˆˆ Some(_)
+      | success(None)
+  )
 
-    If it's *by-value*, call them will lead to a stack overflow immediately.
+  def rep[T](p: => Parser[T]): Parser[List[T]] = (
+    p~rep(p) ˆˆ { case x~xs => x :: xs }
+      | success(List.empty[T])
+  )
 
-*** DONE Result conversion - 766
-    CLOSED: [2018-03-06 Tue 10:34]
-    - The parser ~P ^^ f~ succeeds exactly when ~P~ succeeds.
+  def repsep[T](p: => Parser[T],
+                q: => Parser[Any]): Parser[List[T]] = (
+    p~rep(q~> p) ˆˆ { case r~rs => r :: rs }
+      | success(List.empty[T])
+  )
+#+END_SRC
 
-    - Definition of ~^^~:
-      #+BEGIN_SRC scala
-        def ˆˆ [U](f: T => U): Parser[U] = new Parser[U] {
-          def apply(in: Input) = p(in) match {
-            case Success(x, in1) => Success(f(x), in1)
-            case failure => failure
-          }
-        }
-      #+END_SRC
-
-*** DONE Parsers that don't read any input - 767
-    CLOSED: [2018-03-06 Tue 10:44]
-    Two useful parsers that do *NOT* consume any input:
-    #+BEGIN_SRC scala
-      def success[T](v: T) = new Parser[T] {
-        def apply(in: Input) = Success(v, in)
-      }
-
-      def failure(msg: String) = new Parser[Nothing] {
-        def apply(in: Input) = Failure(msg, in)
-      }
-    #+END_SRC
-
-*** DONE Option and repetition - 767
-    CLOSED: [2018-03-06 Tue 10:47]
-    #+BEGIN_SRC scala
-      def opt[T](p: => Parser[T]): Parser[Option[T]] = (
-        p ˆˆ Some(_)
-          | success(None)
-      )
-
-      def rep[T](p: => Parser[T]): Parser[List[T]] = (
-        p~rep(p) ˆˆ { case x~xs => x :: xs }
-          | success(List.empty[T])
-      )
-
-      def repsep[T](p: => Parser[T],
-                    q: => Parser[Any]): Parser[List[T]] = (
-        p~rep(q~> p) ˆˆ { case r~rs => r :: rs }
-          | success(List.empty[T])
-      )
-    #+END_SRC
-
-** DONE 15.7 String literals and regular expressions - 359
+** DONE 15.7 String literals and regular expressions - 409
 CLOSED: [2018-03-06 Tue 12:02]
 - The parsers of ~literal~ and ~regex~ come from the trait ~RegexParsers~, a
   subtrait of ~Parsers~.
@@ -5154,7 +5167,7 @@ CLOSED: [2018-03-06 Tue 12:02]
   ~whiteSpace~ ~val~. For instance, if you want white space not to be skipped
   at all, ~override val whiteSpace = "".r~
 
-** DONE 15.8 Lexing and parsing - 360
+** DONE 15.8 Lexing and parsing - 410
 CLOSED: [2018-03-06 Tue 12:30]
 - The task of syntax analysis is often split into two phases:
   1. The /lexer phase/ ::
@@ -5190,7 +5203,7 @@ CLOSED: [2018-03-06 Tue 12:30]
   But for simple parsers, the regular expression based approach shown
   previously in this chapter is usually sufficient.
 
-** DONE 15.9 Error reporting - 360
+** DONE 15.9 Error reporting - 410
 CLOSED: [2018-03-06 Tue 12:47]
 - Scala's parsing library implements a simple heuristic:
   among all failures, the one that occurred at the *latest position* in the
@@ -5258,7 +5271,7 @@ CLOSED: [2018-03-06 Tue 12:47]
     require threading the ~lastFailure~ value through every parser result, no
     matter whether this result is a ~Success~ or a ~Failure~.
 
-** DONE 15.10 Backtracking versus LL(1) - 362
+** DONE 15.10 Backtracking versus LL(1) - 412
 CLOSED: [2018-03-06 Tue 13:31]
 - The /parser combinators/ employ /backtracking/ to choose between different
   parsers in an alternative.
@@ -5316,7 +5329,7 @@ CLOSED: [2018-03-06 Tue 13:31]
 
   Another advantage is it's more efficient!
 
-** DONE 15.11 Conclusion - 364 =Re-Read=
+** DONE 15.11 Conclusion - 414 =Re-Read=
 CLOSED: [2018-03-06 Tue 14:01]
 - One downside of combinator parsers is that they are _not very efficient_, at
   least not when compared with parsers generated from special purpose tools
@@ -5362,7 +5375,7 @@ CLOSED: [2018-03-06 Tue 14:01]
   + the difference in speed would often not matter in practice, unless you
     want to parse very large inputs.
 
-* Glossary - 366
-* Bibliography - 382
-* About the Authors - 386
-* Index - 387
+* Glossary - 416
+* Bibliography - 432
+* About the Authors - 436
+* Index - 437
