@@ -2990,30 +2990,33 @@ CLOSED: [2020-10-28 Wed 22:42]
 #+END_SRC
 
 *** TODO Descriptors - 1226 - =TODO: NOTE=
-/descriptors/ provide an _alternative_ way to *intercept* /attribute access/;
-they are _STRONGLY RELATED TO_ the /properties/ discussed in the prior section.
+/descriptors/, previewed in Chapter 32, provide an _alternative_ way to
+*intercept* /attribute access/; they are _STRONGLY RELATED TO_ the /properties/
+discussed in the prior section.
 
 - A /property/ is a kind of /descriptor/, a simplified way to create a specific
   type of /descriptor/ that _runs method functions on attribute accesses._
 
 - /Descriptors/ are the _underlying implementation mechanism_ for a variety
-  of class tools, including both:
+  of _class tools_, including both:
   * /properties/
-  * /slots/ =TODO: ???=
-  * etc.
+  * /slots/ =TODO=
+  * play other internal roles in Python that we can safely skip here =TODO=
 
 - Functionally speaking,
   the /descriptor protocol/ allows us to route a specific attribute's _get_,
-  _set_, and _delete_ operations to methods of _a SEPARATE class's instance
+  _set_, and _delete_ operations to /methods/ of _a SEPARATE class's instance
   object_ that we provide.
 
   * This allows us to
-    insert code to be run automatically on attribute
+    _insert code_ to be run automatically on /attribute/
     + fetches
     + assignments,
     + intercept attribute deletions, and
     + provide documentation for the attributes if desired.
-    =TODO= =TODO= =TODO=
+    =TODO=
+    =TODO=
+    =TODO=
 
 - /Descriptors/:
   * They are created as *INDEPENDENT* /classes/, and
@@ -3027,69 +3030,92 @@ they are _STRONGLY RELATED TO_ the /properties/ discussed in the prior section.
     + the /instance/ of the /client class/ whose /attribute/ *references* the
       /descriptor object/.
 
-  Because of this,
-  they can *retain* and *use* state information of their own,
-  as well as /state/ information of the subject /instance/.
+  Because of this, they can
+  * *retain* and *use* state information of their own,
+  * as well as /state/ information of the subject /instance/.
 
-    For example, a /descriptor/ may call /methods/ *available* in the /client
-  class/, as well as /descriptor specific methods/ *it defines*.
+  For example, a /descriptor/ may call
+  * /methods/ *available* in the /client class/,
+  * as well as /descriptor-specific methods/ *it defines*.
 
 - /Properties/ really are just a convenient way to create a _SPECIFIC KIND_ of
   /descriptor/, and as we shall see =TODO=, they can be coded as /descriptors/
   directly.
 
-  UNLIKE /properties/,
+- *LIKE* a /property/,
+  * a /descriptor/ manages *a single, specific attribute*;
+  * although
+    + it can't catch all attribute accesses generically,
+    + it
+      - PROVIDES control over BOTH _fetch_ and _assignment_ accesses and
+      - ALLOWS us to
+        _change an attribute name_ freely from simple data to a computation
+        _WITHOUT_ breaking existing code.
+
+    If this sounds like /properties/, it's because it is:
+    =TODO=
+    as you shall see, /properties/ can be coded as /descriptors/ directly.
+
+- *UNLIKE* /properties/,
   /descriptors/ are broader in scope, and provide a more general tool.
 
   * For instance, because they are coded as normal classes,
-    /descriptors/ have their own state,
-    1. may participate in _descriptor inheritance hierarchies_,
-    2. can use _composition_ to aggregate objects, and
-    3. provide a natural structure for coding _internal methods_ and
+    1. /descriptors/ have their own /state/,
+    2. may participate in _descriptor inheritance hierarchies_,
+    3. can use _composition_ to *aggregate* objects, and
+    4. provide a natural structure for coding _internal methods_ and
        _attribute documentation strings_.
 
 **** DONE The Basics - 1227
 CLOSED: [2020-10-29 Thu 00:39]
-/descriptors/ are coded as *separate* /classes/ and provide *specially named*
-/accessor methods/ for the /attribute access operations/ they wish to _INTERCEPT_
--- *get*, *set*, and *deletion* methods in the /descriptor class/ are
-AUTOMATICALLY run when the attribute assigned to the /descriptor class
-instance/ is accessed in the corresponding way:
-#+begin_src python
-  class Descriptor:
-      "docstring goes here"
-      def __get__(self, instance, owner): ...  # Return attr value
-      def __set__(self, instance, value): ...  # Return nothing (None)
-      def __delete__(self, instance): ...      # Return nothing (None)
-#+end_src
-- /Classes/ with _ANY_ of these /methods/ are CONSIDERED /descriptors/,
-  * their /methods/ are special when one of their instances is assigned to
-    another class’s attribute -- when the attribute is accessed, they are
-    automatically invoked.
+- /Descriptors/
+  1. are coded as *separate* /classes/ and
+  2. provide *specially named* /accessor methods/ for the /attribute access
+     operations/ they wish to _INTERCEPT_ -- *get*, *set*, and *deletion*
+     /methods/ in the /descriptor class/ are AUTOMATICALLY run when the
+     /attribute/ _assigned to_ the /descriptor class instance/ is accessed in
+     the corresponding way.
+
+- The form of /descriptor/:
+  #+begin_src python
+    class Descriptor:
+        "docstring goes here"
+        def __get__(self, instance, owner): ...  # Return attr value
+        def __set__(self, instance, value): ...  # Return nothing (None)
+        def __delete__(self, instance): ...      # Return nothing (None)
+  #+end_src
+  /Classes/ with _ANY_ (=from Jian= NOT ALL) of these /methods/ are CONSIDERED
+  /descriptors/.
+
+- /Descriptor's methods/ are special
+  * _WHEN_
+    one of their /instances/ is *assigned to ANOTHER class's* /attribute/ --
+    when the /attribute/ is accessed, they are *AUTOMATICALLY invoked*.
 
   * If any of these /methods/ are _ABSENT_, it generally means that the
-    corresponding type of access is *not supported*.
+    corresponding type of access is *NOT supported*.
 
   * *Unlike /properties/,* however, omitting a ~__set__~ allows the /descriptor
-    attribute's name/ to be assigned and thus _redefined_ in an instance,
-    thereby *hiding* the /descriptor/ --
-    _to make an attribute *read-only*,_ you *must* define ~__set__~ to
-    _CATCH assignments_ and _RAISE an exception_.
+    attribute's name/ to be assigned and thus _redefined_ in an /instance/,
+    thereby *hiding* the /descriptor/. =from Jian= In usually, I THINK, NOT expected.
+    + _to make an attribute *read-only*,_ you *must* define ~__set__~ to
+      _CATCH assignments_ and _RAISE an exception_.
 
 - /Descriptors/ with ~__set__~ methods also have some special-case implications
   for inheritance that we'll largely defer until Chapter 40's coverage of
   /metaclasses/ and the _COMPLETE_ /inheritance specification/.
   =TODO= =TODO= =TODO=
+  =IMPORTANT=
   * In short, a /descriptor/ with a ~__set__~ is known formally as
     /data descriptor/, and is given *precedence OVER* other names located
     by /normal inheritance rules/.
 
   * The /inherited descriptor/ for name ~__class__~, for example, *overrides*
-    the SAME name IN an /instance's namespace dictionary/.
+    the SAME name IN an /instance's namespace dictionary/. =???= =TODO=
     + This also works to ensure that /data descriptors/ you code in your own
       /classes/ *take precedence over* others.
 
-***** DONE Descriptor method arguments - 1227
+***** DONE Descriptor method arguments - 1227 - =RE-NOTE=
 CLOSED: [2020-10-29 Thu 00:39]
 Before we code anything realistic, let's take a brief look at some
 _FUNDAMENTALS_.
@@ -3145,7 +3171,7 @@ _FUNDAMENTALS_.
   * The /descriptor/ knows it is being accessed directly when its /instance
     argument/ is ~None~.
 
-***** DONE Read-only descriptor - 1228
+***** DONE Read-only descriptor - 1228 - =RE-NOTE=
 CLOSED: [2020-10-29 Thu 00:17]
 - Example:
   #+begin_src python
@@ -4668,32 +4694,46 @@ function/. A label, for instance, might be added as follows:
 *** TODO Test Your Knowledge: Quiz - 1344
 **** TODO Test Your Knowledge: Answers - 1345
 
-** TODO 40. Metaclasses - 1355
-- In a sense, /metaclasses/ simply *extend* the _code-insertion model of
-  /decorators/._
+** TODO 40. Metaclasses and Inheritance - 1355
+- In a sense,
+  /metaclasses/ simply *extend* the _code-insertion model_ of /decorators/.
   * As we learned, /function decorators/ and /class decorators/ allow us to
-    *intercept and augment*
+    *INTERCEPT and AUGMENT*
     /function calls/ and /class instance creation calls/.
 
   * In a similar spirit, /metaclasses/ allow us to
-    *intercept and augment*
+    *INTERCEPT and AUGMENT*
     _class creation_ -- they provide an API for inserting extra logic to be
     run at the conclusion of a class statement, albeit _in different ways than
     /decorators/._
     + Accordingly, they provide a _general protocol_ for managing /class objects/
-      in a program.
+      in a program. =TODO=
 
 - In practice, /metaclasses/ allow us to
   GAIN a _high level of control_ OVER _how a set of /classes/ works_.
 
-- On the other hand, /metaclasses/ open the door to a variety of coding patterns
-  that may be difficult or impossible to achieve otherwise, and they are
-  especially of interest to programmers seeking to write _flexible APIs_ or
-  programming tools for others to use.
+- On the other hand,
+  /metaclasses/
+  OPEN THE DOOR TO
+  a variety of coding patterns that may be difficult or impossible to achieve
+  otherwise, and
+  * they are especially of interest to programmers (=from Jian= advanced
+    frameworks or tools maker) seeking to write _flexible APIs_ or _programming
+    tools_ for others to use.
 
-- Also /metaclasses/ can teach you much about /Python's class model/ in general
-  (as we'll see, they even impact /inheritance/), and are prerequisite to
-  understanding code that employs them.
+- Even if you don't fall into that (=from Jian= advanced frameworks or tools
+  maker) category, though, /metaclasses/ can teach you much about /Python's
+  class model/ in general (as we'll see, they even impact /inheritance/), and
+  are prerequisite to understanding code that employs them.
+  =TODO=
+
+- =from Jian=
+  My summary to the last paragraphs:
+  1. Provide you a new weapon that can be used to make better frameworks (with
+     flexible API) or tools.
+
+  2. As a side effect, through the process of learning and using /metaclasses/,
+     you can understand more about /Python's class model/.
 
 *** TODO To Metaclass or Not to Metaclass - 1356
 - /Metaclasses/ have a wide variety of potential roles.
@@ -4805,92 +4845,91 @@ function/. A label, for instance, might be added as follows:
     X.extra()
   #+end_src
 
-**** TODO Metaclasses Versus Class Decorators: Round 1 - 1361
+**** TODO Metaclasses Versus Class Decorators: Round 1 - 1361 - =NOTE=
+- Having said that, it's also important to note that the /class decorators/
+  described in the preceding chapter sometimes *overlap with* /metaclasses/ --
+  in terms of both utility and benefit.
+  * Like /metaclasses/, /class decorators/ can be used to manage both /classes/
+    and their later /instances/, and their syntax makes their usage
+    + similarly _explicit_ and
+    + arguably _more obvious_ than helper-function calls.
 
-*** TODO The Metaclass Model - 1364 - =START=
+*** TODO The Metaclass Model - =NOTE=
 Pre-knowledge of understanding /metaclasses/:
 - Python's type model
 - What happens at the end of a ~class~ statement
 
 As we'll see here, the two are intimately related.
 
-**** DONE Classes Are Instances of type - 1364
+**** DONE Classes Are Instances of type
 CLOSED: [2024-10-31 Thu 15:34]
-- As we've seen, /instances/ of /classes/
-  * have some _state information attributes_ of their own,
-  * but they also _inherit behavioral attributes_ from the /classes/ from
-    which they are made.
+- *PREREQUISITES*:
+  "The Python Object Model", which in turn assumes knowledge of the /MRO (method
+  resolution order)/ covered in _Chapter 31_ (You may want to review it).
+  1. Some of its conclusions are crucial to understanding metaclasses. Namely:
+     + /Instances/ are created from /classes/.
+     + /Classes/ are /instances/ of a /metaclass/.
+     + The ~type~ built-in is the *topmost* /metaclass/.
+     + /Metaclasses/ customize ~type~ _WITH_ normal ~class~ statements.
 
-- While we can get a lot done with such /instance objects/, /Python's type
-  model/ turns out to be a bit richer than I've formally described.
+  2. Summary:
+     In short,
+     /classes/ are /types/,
+     /types/ are /classes/, and
+     /metaclasses/ customize /types/.
 
-  * Really, there's a hole in the model we've seen thus far:
-    + Q :: if /instances/ are created from /classes/, what is it that creates
-      our /classes/?
+     Per _Chapter 32_, the relationship between /metaclasses/ and /classes/ is
+     subtly different from that between /classes/ and their /nonclass
+     instances/. The latter do not generate more /instances/, and while
+     attribute inheritance uses the same core mechanisms and MRO everywhere,
+     /classes/ search a /metaclass tree/ that /nonclass instances/ *DO NOT*.
 
-    + A :: It turns out that /classes/ are /instances/ of something, too:
-      - In Python 3.X,
-        /user-defined class objects/ are /instances/ of the object named ~type~,
-        which is itself a /class/.
+- It's easy to see this model's fundamentals in code:
+  #+begin_src python
+    type([]), type(type([]))            # List instance is created from list class
+    # (<class 'list'>, <class 'type'>)  # List class is created from type class
 
-      - In Python 2.X,
-        * /new-style classes/ inherit from ~object~, which is a /subclass/ of ~type~;
+    type(list), type(type)              # Same, but with type names
+    # (<class 'type'>, <class 'type'>)  # Type of type is type: top of hierarchy
+  #+end_src
 
-        * /classic classes/
-          + are /instances/ of ~type~ and
-          + are NOT created from a /class/.
-
-- =BEFORE=
-  We explored
-  1. the notion of /types/ in _Chapter 9_ and
-  2. the relationship of classes to types in _Chapter 32_,
-  but let's *REVIEW* the basics here so we can see how they apply to
-  /metaclasses/.
-  =TODO= NOTE
-
-- In fact, /classes/ are _NOT really a SEPARATE concept_ at all:
-  they are simply /user-defined types/, and ~type~ itself is defined by a
-  /class/.
-
-- =from Jian= Ignore notes for Python 2.X.
-
-**** DONE Metaclasses Are Subclasses of Type - 1366
+**** DONE Metaclasses Are Subclasses of Type
 CLOSED: [2024-10-31 Thu 16:02]
-- Because the notion of type is the same as class today, we can subclass type
-  with normal object-oriented techniques and class syntax to customize it.
+- Q :: Why would we care that /classes/ are /instances/ of a ~type~ /class/?
+- A :: It turns out that this is the _hook_ that _allows us to code
+  /metaclasses/._
+
+- Specifically, we can _CREATE_ /classes/ from /subclasses/ of ~type~ that
+  customize it
+  WITH NORMAL _object-oriented techniques_ and _class syntax_.
+
+  And these /type subclasses/ are known as /metaclasses/.
 
 - =IMPORTANT=
-  To control _the way classes are created_ and _augment their behavior,_ all we
-  need to do is specify that a /user-defined class/
-  *be created from*
-  /a user-defined metaclass/
-  *instead of*
-  the normal ~type~ class.
+  _Control the way /classes/ are *created* and *augment* their behavior:_
+  Specify that a /user-defined class/ be created from a /user-defined metaclass/
+  instead of the /normal and default ~type~ class/.
 
-- Notice that _this /type instance/ relationship_ is *NOT quite the SAME as*
-  /normal inheritance/.
+- =IMPORTANT=
+  /Metaclasses/ define a _SEPARATE, SECONDARY_ /inheritance tree/ available
+  * *only to* /classes/ and
+  * used as a *fallback* WHEN the normal /superclass/ search FAILS.
 
-  * /User-defined classes/ may also have /superclasses/ from which they and
-    their instances inherit attributes as usual.
-      As we've seen, /inheritance superclasses/ are listed in parentheses in the
-    class statement and show up in a _class's ~__bases__~ tuple._
+**** TODO Class Statement Call a type - =NOTE=
+*Subclassing* the ~type~ /class/ to CUSTOMIZE it is really
+ONLY _half of the /metaclass/ backstory._
 
-  * The ~type~ from which a /class/ is created,
-    though, and of which it is an /instance/, is a *DIFFERENT relationship*:
-    /Inheritance/ searches _/instance/ and /class/ namespace dictionaries,_
-    BUT
-    /classes/ may also acquire behavior from their ~type~ that is *NOT exposed
-    to* the _NORMAL inheritance search._
+ANOTHER HALF:
+We still need to somehow *ROUTE* a /class's creation/ to the /metaclass/ instead
+of the default ~type~.
 
-- To lay the groundwork for understanding this distinction,
-  =NEXT= the next section describes the procedure Python follows to implement
-  this instance-of type relationship
+- To comprehend the way that this is arranged, we also need to know
+  * Q :: HOW ~class~ statements do their business.
 
-**** TODO Class Statement Call a type
-**** TODO Class Statement Can Choose a type
-**** TODO Metaclass Method Protocol
+**** TODO Class Statement Can Choose a type - =NOTE=
+**** TODO Metaclass Method Protocol - =NOTE=
 
-*** TODO Coding Metaclasses - 1370
+*** TODO Coding Metaclasses - 1370 - =NOTE=
 **** A Basic Metaclass - 1371
 **** Customizing Construction and Initialization - 1372
 **** Other Metaclass Coding Techniques - 1373
@@ -4901,8 +4940,8 @@ CLOSED: [2024-10-31 Thu 16:02]
 ***** Adding methods to classes
 ***** Automatically decorating class methods
 
-*** TODO Inheritance: The Finale
-**** Metaclass Versus Superclass - 1381
+*** TODO Inheritance: The Finale - =START HERE=
+**** Metaclass Versus Superclass
 **** Metaclass Inheritance
 **** Python Inheritance Algorithm: The Simple Version
 ***** The descriptors deviation
