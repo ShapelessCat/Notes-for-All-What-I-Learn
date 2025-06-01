@@ -2,47 +2,350 @@
 #+SUBTITLE: Write Clean and Maintainable Code
 #+VERSION: 2021
 #+AUTHOR: Patrick Viafore
-#+STARTUP: overview
 #+STARTUP: entitiespretty
+#+STARTUP: indent
+#+STARTUP: overview
 
 * Preface - xi
+** Who Should Read This Book - xii
+- xxx
+
+- While I will be covering many advanced Python topics, the goal of this book is
+  not to
+be a how-to for using all of Python’s features. Instead, the features
+  are a backdrop for
+a larger conversation about robustness and how your
+  choices impact maintainability.
+At times I will discuss strategies that you
+  should rarely use, if at all. That is because I
+want to illustrate first
+  principles of robustness; the journey of understanding why and
+how we make
+  decisions in code is more important than knowing what tools to use in
+an
+  optimal scenario. In practice, the optimal scenario is a rare occurence. Use
+  the
+principles in this book to draw your own conclusions from your codebase.
+
+- This book is not a reference book.
+  You might call it a discussion book.
+
+- A system can be robust in many different ways. It can be security hardened,
+  scalable,
+fault-tolerant, or less likely to introduce new errors. Each one of
+  these facets of
+robustness warrants a full book; this book is focused on
+  preventing the developers
+who inherit your code from creating new faults in
+  your system. I will show you
+how to communicate to future developers, how to
+  make their lives easier through architectural patterns, and how to catch
+  errors in your codebase before they make it
+into production.
+
+  _This book zeroes in on the robustness of your Python codebase, not the
+  robustness of your system as a whole._
+
+- Ideal readers include:
+  * Developers currently working in a large codebase, looking to find better
+    ways to communicate with their colleagues
+
+  * Primary codebase maintainers, looking for ways to help lessen the burden of
+    future maintainers
+
+  * Self-taught developers who can write Python really well but need to better
+    understand why we do the things we do
+
+  * Software engineering graduates who need a reminder of practical advice for
+    development
+
+  * Senior developers looking for a way to tie their design rationale to first
+    principles of robustness
+
+** About This Book - xiii
+** Conventions Used in This Book - xv
+** Using Code Examples - xv
+** O’Reilly Online Learning - xvi
+** How to Contact Us - xvi
+** Acknowledgments - xvii
+
 * 1. Introduction to Robust Python - 1
+This book is all about making your Python *more manageable*.
+
+- You'll be taking a hard look at _how you write code,_ and
+- you'll learn _the /implications/ of your decisions._
+
+- From C. A. R. Hoare:
+  #+begin_quote
+  There are two ways of constructing a software design: One way is to make it so
+  simple that there are obviously no deficiencies, and the other way is to make
+  it so complicated that there are no obvious deficiencies. The first method is
+  far more difficult.
+  #+end_quote
+  * This book is about developing systems the first way.
+
+- In this chapter we're going to cover what /robustness/ means and why you
+  should care about it.
+
+  We'll go through
+  1. How your communication method _implies_ certain benefits and drawbacks, and
+  2. How best to represent your intentions.
+
+  You'll learn
+  * how to evaluate whether your code is written in an obvious way, and
+  * what you can do to fix it.
+
 ** Robustness - 2
+- *The Importance of Clean Code*
+
 *** Why Does Robustness Matter? - 4
 
-** What’s Your Intent? - 5
+** What's Your Intent? - 5
 *** Asynchronous Communication - 8
+
+- *Self-Documenting Code*
 
 ** Examples of Intent in Python - 12
 *** Collections - 12
+- *Dynamic Versus Static Indexing*
+
 *** Iteration - 15
 *** Law of Least Surprise - 17
 
 ** Closing Thoughts - 18
 
 * Part I. Annotating Your Code with Types
-* 2. Introduction to Python Types - 23
-** What’s in a Type? - 23
+/Types/ are a fundamental underpinning of any programming language.
+
+Python books and tutorials often miss out on the fundamental discussion about
+when to use types appropriately.
+_That's where I’ll start._
+
+* DONE 2. Introduction to Python Types - 23
+CLOSED: [2025-05-31 Sat 21:34]
+1. start by talking about _WHAT a /type/ actually is_ and _WHY that matters_.
+2. then move on to _HOW the Python language's decisions about its type system
+   affects the robustness of your codebase._
+
+** What's in a Type? - 23 - =NOTE=
+- The author consider a type to have a very simple definition:
+  a communication method.
+
+- The author break the representation down into two different facets:
+  * Mechanical representation
+    Types communicate behaviors and constraints to _the Python language itself_.
+
+  * Semantic representation
+    Types communicate behaviors and constraints to _other developers_.
+
+=NEXT= Let's go learn a little more about each representation.
+
 *** Mechanical Representation - 24
+- Type information gives Python what it needs to know to make sense of all the
+  ones and zeroes (the only language the hardware can understand).
+
+- Example: print out the memory of variables
+  #+begin_src python
+    from ctypes import string_at
+    from sys import getsizeof
+    from binascii import hexlify
+
+    a = 0b01010000_01000001_01010100
+    print(a)
+    # >>> 5259604
+
+    # prints out the memory of the variable
+    print(hexlify(string_at(id(a), getsizeof(a))))
+    # >>> b'0100000000000000607c054995550000010000000000000054415000'
+
+    text = "PAT"
+    print(hexlify(string_at(id(text), getsizeof(text))))
+    # >>>b'0100000000000000a00f0649955500000300000000000000375c9f1f02acdbe4e5379218b77f0000000000000000000050415400'
+  #+end_src
+  * These hex strings display the contents of the memory containing a /Python object/.
+
+  * NOTE:
+    + A little-endian machine.
+    + Not guaranteed to run on other Python implementations such as Jython or PyPy.
+
 *** Semantic Representation - 25
 
-** Typing Systems - 28
-*** Strong Versus Weak - 28
-*** Dynamic Versus Static - 30
-*** Duck Typing - 31
+** DONE Typing Systems - 28
+CLOSED: [2025-05-31 Sat 21:17]
+*** DONE Strong Versus Weak - 28
+CLOSED: [2025-05-31 Sat 21:16]
+- Languages toward the stronger side of the spectrum tend to
+  restrict the use of operations to the types that support them.
 
-** Closing Thoughts - 33
-* 3. Type Annotations - 35
+  In other words, if you _BREAK_ the /semantic representation/ of the /type/,
+  you are told (sometimes quite loudly) through a /compiler error/ or a /runtime
+  error/.
+  * Languages such as Haskell, TypeScript, and Rust are all considered /strongly
+    typed/.
+
+  * Languages such as JavaScript, Perl, and older versions of C are /weakly
+    typed/.
+
+- Python falls toward the stronger side of the spectrum.
+  There are very few implicit conversions that happen between types.
+  #+begin_src python
+    [] + {}
+    # TypeError: can only concatenate list (not "dict") to list
+
+    {} + []
+    # TypeError: unsupported operand type(s) for +: 'dict' and list
+  #+end_src
+
+  compared with JavaScript
+  #+begin_src javascript
+    [] + {}
+    // "[object Object]"
+
+    {} + []
+    // 0
+  #+end_src
+
+  * *Are Weakly Typed Languages Inherently Not Robust?*
+    + =from Jian= Yes!
+    + =from the author= No, some explanation
+
+*** DONE Dynamic Versus Static - 30
+CLOSED: [2025-05-31 Sat 21:17]
+- *Are Dynamically Typed Languages Inherently Not Robust?*
+  * =from Jian= Yes!
+  * =from the author= No, some explanation
+
+*** DONE Duck Typing - 31
+CLOSED: [2025-05-31 Sat 21:06]
+- /Duck typing/ is the ability to use objects and entities in a programming
+  language as long as they _adhere_ to some /interface/.
+  * Q :: So how does this play into robustness?
+  * A :: It turns out that duck typing is *a double-edged sword*.
+    + It can increase robustness
+      - BECAUSE
+        it *increases* /composability/ (we'll learn more about composability in
+        _Chapter 17_) -- building up a library of solid abstractions able to
+        handle a multitude of types lessens the need for complex special cases.
+
+      - HOWEVER, =IMPORTANT=, =IMPORTANT=, =IMPORTANT=
+        if duck typing is overused, you start to break down assumptions that a
+        developer can rely upon. When updating code, it's not simple enough to
+        just make the changes; you must look at all calling code and make sure
+        that the types passed into your function satisfy your new changes as
+        well.
+
+- The often mentioned quote about /duck type/ is not clear!
+  #+begin_quote
+  If it walks like a duck and it quacks like a duck, then it must be a duck.
+  #+end_quote
+
+  A better version from the author as a conclusion of this section:
+  #+begin_quote
+  If it walks like a duck and quacks like a duck, and you are looking for things
+  that walk and quack like ducks, then you can treat it as if it were a duck.
+  #+end_quote
+
+- =from Jian=
+  When using /duck typing/, I prefer a clear /interface/ (from a ~class~,
+  usually abstract), not just some convention!
+
+** DONE Closing Thoughts - 33
+CLOSED: [2025-05-31 Sat 21:34]
+- /Types/
+  * are a PILLAR of _clean_, _maintainable_ code and
+  * serve as a _communication tool_ to other developers.
+
+  If you take care with /types/, you communicate a great deal,
+  creating *less burden for FUTURE maintainers.*
+
+- =NEXT=
+  The rest of Part I will show you how to use types to enhance a codebase's
+  robustness.
+
+- Python is dynamically and strongly typed.
+  * /strongly typed/:
+    a boon for us -- Python will notify us about errors when we use incompatible
+    types.
+
+  * /dynamically typed/:
+    its nature is something we will *have to overcome* in order to write better
+    code.
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  These language choices *shape* how Python code is written and
+  you should keep them in mind as you write your code.
+
+- =NEXT=
+  Next chapter:
+  1. talk about /type annotations/
+  2. /type annotations/ is our primary communication method of behaviors to
+     future developers. They
+     * help *overcome the limitations* of a /dynamically typed language/ and
+     * allow you to enforce intentions throughout a codebase.
+
+* TODO 3. Type Annotations - 35
+#+begin_quote
+I've learned a painful lesson that for small programs dynamic typing is great.
+For large programs you have to have a more disciplined approach and it helps if
+the language actually gives you that discipline, rather than telling you "Well,
+you can do whatever you want."
+#+end_quote
+FROM
+Guido van Rossum. "A Language Creators' Conversation." PuPPy (Puget Sound
+Programming Python) Annual Benefit 2019. https://oreil.ly/1xf01.
+
 ** What Are Type Annotations? - 36
+- *Type Annotations Before Python 3.5*
+  =from Jian=
+  I won't use Python 3.5.
+
+- *WARNING/CAUTION*:
+  _If you aren't going to follow the /type annotation/,
+  you are setting yourself up for problems_
+  if the original code changes in a way that is incompatible with the types that
+  you are using (such as expecting a certain function to work with that type).
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+
+- =MISSING NOTE=
+  ~def find_workers_available_for_time(open_time: datetime.datetime):~
+  =TODO=
+  =TODO=
+  =TODO=
+
+- *NOTE*:
+  =from Jian=
+  A better name is also important and can reveal the EXPECTED /type/ of a
+  variable.
+
+- *NOTE*:
+  In Python 3.8 and earlier, /built-in collection types/ such as ~list~,
+  ~dict~, /set/, did NOT allow bracket syntax such as ~list[Cookbook]~.
+  Need ~Dict~, ~List~, which accpet bracket syntax.
+
+  From Python 3.9+ on, /collection type/ like ~List~ is no longer useful -- we
+  can use ~list[T]~.
+
 ** Benefits of Type Annotations - 40
 *** Autocomplete - 40
 *** Typecheckers - 40
+mypy
+
 *** Exercise: Spot the Bug - 41
 
 ** When to Use Type Annotations - 43
 ** Closing Thoughts - 44
 
-* 4. Constraining Types - 45
+* TODO 4. Constraining Types - 45
 ** Optional Type - 46
 ** Union Types - 51
 *** Product and Sum Types - 53
@@ -53,7 +356,7 @@
 ** Final Types - 59
 ** Closing Thoughts - 60
 
-* 5. Collection Types - 61
+* TODO 5. Collection Types - 61
 ** Annotating Collections - 61
 ** Homogeneous Versus Heterogeneous Collections - 63
 ** TypedDict - 67
@@ -64,7 +367,7 @@
 
 ** Closing Thoughts - 76
 
-* 6. Customizing Your Typechecker - 79
+* TODO 6. Customizing Your Typechecker - 79
 ** Configuring Your Typechecker - 79
 *** Configuring mypy - 80
 *** Mypy Reporting - 83
@@ -75,7 +378,7 @@
 *** Pyright - 91
 
 ** Closing Thoughts - 93
-* 7. Adopting Typechecking Practically - 95
+* TODO 7. Adopting Typechecking Practically - 95
 ** Trade-offs - 96
 ** Breaking Even Earlier - 97
 *** Find Your Pain Points - 97
