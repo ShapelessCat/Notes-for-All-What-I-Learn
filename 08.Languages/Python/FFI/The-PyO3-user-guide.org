@@ -1,20 +1,20 @@
 #+TITLE: The PyO3 user guide
-#+LINK: pyo3.rs
+#+LINK: https://pyo3.rs
 #+VERSION: v0.25.0
 #+STARTUP: entitiespretty
 #+STARTUP: indent
 #+STARTUP: overview
 
 * Introduction
-  Welcome to the PyO3 user guide! This book is a companion to [[https://docs.rs/pyo3][PyO3's API docs]].
-  It contains examples and documentation to explain all of PyO3's use cases in
-  detail.
+Welcome to the PyO3 user guide! This book is a companion to [[https://docs.rs/pyo3][PyO3's API docs]].
+It contains examples and documentation to explain all of PyO3's use cases in
+detail.
 
-  - The rough order of material in this user guide is as follows:
-    * Getting started
-    * Wrapping Rust code for use from Python
-    * How to use Python code from Rust
-    * Remaining topics which go into advanced concepts in detail
+- The rough order of material in this user guide is as follows:
+  * Getting started
+  * Wrapping Rust code for use from Python
+  * How to use Python code from Rust
+  * Remaining topics which go into advanced concepts in detail
 
 ** Usage
 - Requires Rust 1.63 or greater.
@@ -71,19 +71,180 @@
 ** License
 
 * 1. Getting started
-* 2. Using Rust from Python
+** Installation
+** Rust
+** Python
+** Virtualenvs
+*** Building
+
+** Starting a new project
+** Adding to an existing project
+*** Cargo.toml
+*** pyproject.toml
+*** Running code
+*** Maturin Import Hook
+
+* TODO 2. Using Rust from Python
+This chapter of the guide is dedicated to explaining
+*HOW TO* WRAP _Rust code_ INTO /Python objects/.
+
+- PyO3 uses Rust's /procedural macros/ to provide a powerful yet simple API to
+  DENOTE what _Rust code_ should MAP INTO /Python objects/.
+
+- PyO3 can create *THREE* types of /Python objects/:
+  * Python /modules/, via the ~#[pymodule]~ macro
+  * Python /functions/, via the ~#[pyfunction]~ macro
+  * Python /classes/, via the ~#[pyclass]~ macro (plus ~#[pymethods]~ to define
+    /methods/ for those /classes/)
+
 ** 2.1. Python modules
+You can create a /module/ using ~#[pymodule]~:
+#+begin_src rust
+  use pyo3::prelude::*;
+
+  #[pyfunction]
+  fn double(x: usize) -> usize {
+      x * 2
+  }
+
+  /// This module is implemented in Rust.
+  #[pymodule]
+  fn my_extension(m: &Bound<'_, PyModule>) -> PyResult<()> {
+      m.add_function(wrap_pyfunction!(double, m)?)
+  }
+#+end_src
+
+- The ~#[pymodule]~ /procedural macro/ takes care of exporting the initialization
+  function of your /module/ to Python.
+
+- The _module's name_ *defaults to* the name of the Rust function.
+  You can *override* the _module name_ by using ~#[pyo3(name = "custom_name")]~:
+  #+begin_src rust
+    use pyo3::prelude::*;
+
+    #[pyfunction]
+    fn double(x: usize) -> usize {
+        x * 2
+    }
+
+    #[pymodule(name = "custom_name")]
+    fn my_extension(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add_function(wrap_pyfunction!(double, m)?)
+    }
+  #+end_src
+
+- The _name of the module_ *must match* the name of the ~.so~ or ~.pyd~ file.
+  Otherwise,
+  you will get an _import error_ in Python with the following message:
+  #+begin_src text
+    ImportError: dynamic module does not define module export function (PyInit_name_of_your_module)
+  #+end_src
+
+- To *import* the /module/, either:
+  * copy the /shared library/ as described in [[https://pyo3.rs/v0.25.0/building-and-distribution#manual-builds][Manual builds]], or
+  * use a tool, e.g. ~maturin develop~ with maturin or ~python setup.py develop~
+    with [[https://github.com/PyO3/setuptools-rust][setuptools-rust]].
+
+**** Documentation
+**** Python submodules
+**** Declarative modules
+
 ** 2.2. Python functions
+**** Function options
+**** Per-argument options
+**** Advanced function patterns
+***** Calling Python functions in Rust
+***** Calling Rust functions in Python
+***** Accessing the FFI functions
+
+**** ~#[pyfn]~ shorthand
+
 *** 2.2.1. Function signatures
+**** Using ~#[pyo3(signature = (...))]~
+**** Making the function signature available to Python
+***** Overriding the generated signature
+
 *** 2.2.2. Error handling
+**** Representing Python exceptions
+**** Raising an exception from a function
+**** Custom Rust error types
+**** Foreign Rust error types
 
 ** 2.3. Python classes
-*** 2.3.1. Class customizations
-**** 2.3.1.1. Basic object customization
-**** 2.3.1.2. Emulating numeric types
-**** 2.3.1.3. Emulating callable objects
+**** Defining a new class
+***** Restrictions
+****** No lifetime parameters
+****** No generic parameters
+****** Must be thread-safe
 
-*** 2.3.2. Thread safety
+**** Constructor
+**** Adding the class to a module
+**** Bound and interior mutability
+***** frozen classes: Opting out of interior mutability
+
+**** Customizing the class
+***** Return type
+
+**** Inheritance
+**** Object properties
+***** Object properties using ~#[pyo3(get, set)]~
+***** Object properties using ~#[getter]~ and ~#[setter]~
+
+**** Instance methods
+**** Class methods
+***** Constructors which accept a class argument
+
+**** Static methods
+**** Class attributes
+**** Classes as function arguments
+**** Method arguments
+***** Method receivers and lifetime elision
+
+**** ~#[pyclass]~ enums
+***** Simple enums
+***** Complex enums
+
+**** Implementation details
+
+*** 2.3.1. Class customizations
+***** Magic Methods handled by PyO3
+****** Basic object customization
+****** Iterable objects
+******* Returning a value from iteration
+
+****** Awaitable objects
+****** Mapping & Sequence types
+****** Descriptors
+****** Numeric types
+****** Buffer objects
+****** Garbage Collector Integration
+
+**** 2.3.1.1. Basic object customization
+***** String representations
+****** Accessing the class name
+
+***** Hashing
+***** Comparisons
+***** Truthyness
+***** Final code
+
+**** 2.3.1.2. Emulating numeric types
+****** Fixing our constructor
+****** Unary arithmetic operations
+****** Support for the ~complex()~, ~int()~ and ~float()~ built-in functions.
+****** Final code
+***** Appendix: Writing some unsafe code
+
+**** 2.3.1.3. Emulating callable objects
+****** Example: Implementing a call counter
+****** Pure Python implementation
+****** What is the ~AtomicU64~ for?
+
+*** 2.3.2. ~#[pyclass]~ thread safety
+**** Making ~#[pyclass]~ types thread-safe
+***** Using atomic data structures
+***** Using locks
+***** Wrapping unsynchronized data
 
 * 3. Calling Python from Rust
 ** 3.1. Python object types
@@ -91,28 +252,180 @@
 ** 3.3. Calling Python functions
 ** 3.4. Executing existing Python code
 
-* 4. Type conversions
+* TODO 4. Type conversions
 ** 4.1. Mapping of Rust types to Python types
-** 4.2. Conversion traits
+*** Argument Types
+**** Using Rust library types vs Python-native types
 
-* 5. Using async and await
+*** Returning Rust values to Python
+
+** 4.2. Conversion traits
+*** ~.extract()~ and the ~FromPyObject~ trait
+**** Deriving ~FromPyObject~
+**** Deriving ~FromPyObject~ for structs
+**** Deriving ~FromPyObject~ for tuple structs
+**** Deriving ~FromPyObject~ for wrapper types
+**** Deriving ~FromPyObject~ for enums
+**** ~#[derive(FromPyObject)]~ Container Attributes
+**** ~#[derive(FromPyObject)]~ Field Attributes
+
+*** ~IntoPyObject~
+**** derive macro
+***** ~#[derive(IntoPyObject)]~ / ~#[derive(IntoPyObjectRef)]~ Field Attributes
+
+**** manual implementation
+**** ~BoundObject~ for conversions that may be ~Bound~ or ~Borrowed~
+
+* 5. Using ~async~ and ~await~
 * 6. Parallelism
 * 7. Supporting Free-Threaded Python
-* 8. Debugging
-* 9. Features reference
-* 10. Performance
-* 11. Advanced topics
-* 12. Building and distribution
+* TODO 8. Debugging
+** Macros
+** Running with Valgrind
+** Getting a stacktrace
+** Setting breakpoints in your Rust code
+*** Common setup
+*** Debugger specific setup
+*** Using VS Code
+*** Advanced Debugging Configurations
+*** Debugging from Jupyter Notebooks
+
+** Thread Safety and Compiler Sanitizers
+
+* TODO 9. Features reference
+** Features for extension module authors
+*** ~extension-module~
+*** ~abi3~
+*** The ~abi3-pyXY~ features
+*** ~generate-import-lib~
+
+** Features for embedding Python in Rust
+*** ~auto-initialize~
+
+** Advanced Features
+*** ~experimental-async~
+*** ~experimental-inspect~
+*** ~gil-refs~
+*** ~py-clone~
+*** ~pyo3_disable_reference_pool~
+*** macros
+*** ~multiple-pymethods~
+*** ~nightly~
+*** ~resolve-config~
+
+** Optional Dependencies
+*** ~anyhow~
+*** ~arc_lock~
+*** ~bigdecimal~
+*** ~chrono~
+*** ~chrono-tz~
+*** ~either~
+*** ~eyre~
+*** ~hashbrown~
+*** ~indexmap~
+*** ~jiff-02~
+*** ~lock_api~
+*** ~num-bigint~
+*** ~num-complex~
+*** ~num-rational~
+*** ~ordered-float~
+*** ~parking-lot~
+*** ~rust_decimal~
+*** ~time~
+*** ~serde~
+*** ~smallvec~
+*** ~uuid~
+
+* TODO 10. Performance
+** ~extract~ versus ~downcast~
+** Access to Bound implies access to GIL token
+** Calling Python callables (~__call__~)
+** Disable the global reference pool
+
+* TODO 11. Advanced topics
+** FFI
+
+* TODO 12. Building and distribution
+*** Configuring the Python version
+**** Advanced: config files
+
+*** Building Python extension modules
+**** Packaging tools
+**** Manual builds
+***** Bazel builds
+***** Platform tags
+***** macOS
+
+**** The ~extension-module~ feature
+**** ~Py_LIMITED_API/abi3~
+***** Minimum Python version for ~abi3~
+***** Building ~abi3~ extensions without a Python interpreter
+***** Missing features
+
+*** Embedding Python in Rust
+**** Dynamically embedding the Python interpreter
+**** Statically embedding the Python interpreter
+**** Import your module when embedding the Python interpreter
+
+*** Cross Compiling
+
 ** 12.1. Supporting multiple Python versions
+*** Conditional compilation for different Python versions
+**** Using ~pyo3-build-config~
+**** Common usages of ~pyo3-build-cfg~ flags
 
-* 13. Useful crates
+*** Checking the Python version at runtime
+
+* TODO 13. Useful crates
 ** 13.1. Logging
-** 13.2. Tracing
-** 13.3. Using async and await
+*** Using ~pyo3-log~ to send Rust log messages to Python
+*** The Python to Rust direction
 
-* 14. FAQ and troubleshooting
+** 13.2. Tracing
+*** pyo3-tracing-subscriber ([[https://docs.rs/pyo3-tracing-subscriber][documentation]])
+*** pyo3-python-tracing-subscriber ([[https://docs.rs/pyo3-python-tracing-subscriber][documentation]])
+
+** 13.3. Using async and await
+*** Additional Information
+
+* TODO 14. FAQ and troubleshooting
+- Q :: I'm experiencing deadlocks using PyO3 with ~std::sync::OnceLock~,
+  `std::sync::LazyLock`, ~lazy_static~, and ~once_cell~!
+
+- Q :: I can't run ~cargo test~; or I can't build in a Cargo workspace: I'm having
+  linker issues like "Symbol not found" or "Undefined reference to
+  _PyExc_SystemError"!
+
+- Q :: I can't run ~cargo test~: my crate cannot be found for tests in =tests/=
+  directory!
+
+- Q :: Ctrl-C doesn't do anything while my Rust code is executing!
+
+- Q :: ~#[pyo3(get)]~ clones my field!
+
+- Q :: I want to use the ~pyo3~ crate re-exported from dependency but the
+  proc-macros fail!
+
+- Q :: I'm trying to call Python from Rust but I get ~STATUS_DLL_NOT_FOUND~ or
+  ~STATUS_ENTRYPOINT_NOT_FOUND~!
+
 * Appendix A: Migration guide
 * Appendix B: Trait bounds
-* Appendix C: Python typing hints
+* TODO Appendix C: Typing and IDE hints for your Python package
+** Introduction to =pyi= files
+*** What do the PEPs say?
+
+** How to do it?
+*** Including =pyi= files in your PyO3/Maturin build package
+**** If you do not have other Python files
+**** If you need other Python files
+***** =__init__.py= content
+***** =py.typed= requirement
+***** =my_project.pyi= content
+
+*** Supporting Generics
+**** Runtime Behaviour
+**** Advanced Users
+
 * CHANGELOG
 * Contributing
