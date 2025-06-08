@@ -11,7 +11,7 @@
 ** about this book - xvi
 ** about the author - xxii
 ** about the cover illustration - xxiii
-* DONE PART 1 GETTING STARTED WITH MODERN FORTRAN - 1
+* DONE PART 1 Getting started with Modern Fortran - 1
 CLOSED: [2024-09-05 Thu 20:56]
 In this part, you'll get a taste of Fortran and a gentle introduction into the
 language.
@@ -75,8 +75,15 @@ CLOSED: [2024-08-31 Sat 15:28]
 CLOSED: [2024-08-31 Sat 15:28]
 - In the context of programming languages, Fortran is all of the following:
   * *Compiled*
+
   * *Statically typed*
+    #+begin_src fortran
+      real :: pi     ! pi must be declared before use
+      pi = 3.141592  ! pi remains a "real" number until the program halts.
+    #+end_src
+
     + manifest typing :: explicitly declare the variables before their use.
+
     + strong typing :: the compiler will raise an error if a procedure is invoked
       with an argument of the wrong type.
       - While /static typing/ helps the compiler to generate efficient programs,
@@ -90,6 +97,27 @@ CLOSED: [2024-08-31 Sat 15:28]
     + functional
 
   * *Parallel* =TODO: REREAD=
+    #+begin_src fortran
+      program hello_coarrays
+
+        implicit none
+
+        integer :: a[*] ! Each image declares a local copy of an integer "a."
+        integer :: i
+
+        a = this_image() ! Each image assigns its number (1, 2, 3, etc.) to "a."
+
+        if (this_image() == 1) then ! Only image 1 will enter this if block.
+           do i = 1, num_images()   ! Iterates from 1 to the total number of images
+              ! For each remote image, image 1 will get the value of "a" on that image
+              ! and print it to the screen.
+              print *, 'Value on image', i, 'is', a[i]
+           end do
+        end if
+
+      end program hello_coarrays
+    #+end_src
+
     + Parallel processes can be running
       on the same processing core (threadbased parallelism),
       on different cores that share RAM (shared-memory parallelism), or
@@ -137,6 +165,14 @@ CLOSED: [2024-08-31 Sat 15:28]
 - Despite being a decades-old technology, Fortran has several attractive features
   that make it indispensable, even compared to more recent languages:
   * Array-oriented
+    #+begin_src fortran
+      do j = 1, jm
+        do i = 1, im
+          c(i, j) = a(i, j) * b(i, j)
+        end do
+      end do
+    #+end_src
+
     + For example, in Fortran, multiple two vectors to get a result matrix can be
       represented in ~c = a * b~.
 
@@ -206,7 +242,7 @@ programs.
   1. You'll be able to solve problems in less time.
   2. You'll be able to solve problems that can’t fit onto a single computer.
 
-*** TODO 1.7 Think parallel! - 14 - =RE-READ=
+*** TODO 1.7 Think parallel! - 14 - =RE-READ= - =START HERE=
 - All parallel problems fall into two categories:
   * Embarrassingly parallel
   * Nonembarrassingly parallel
@@ -776,12 +812,12 @@ CLOSED: [2024-09-05 Thu 19:01]
 *** DONE 2.7 Further reading - 52
 CLOSED: [2024-09-05 Thu 20:54]
 
-* TODO PART 2 CORE ELEMENTS OF FORTRAN - 55
+* TODO PART 2 Core elements of Fortran - 55
 - This part covers the _core elements_ of Fortran:
-  * procedures,
-  * modules,
-  * arrays, and
-  * I/O.
+  * procedures
+  * modules
+  * arrays
+  * I/O
 
 - Chapter 3,
   * /functions/
@@ -790,35 +826,62 @@ CLOSED: [2024-09-05 Thu 20:54]
 
 - Chapter 4,
   /module/ and
-  how to use them to _organize_ your data and procedures in reusable and
-  portable components.
+  how to use them to _organize_ your data and /procedures/
+  in reusable and portable components.
 
 - Chapter 5
-  covers arrays, the fundamental Fortran data structure.
+  covers /arrays/, the fundamental Fortran data structure.
   * You'll learn
-    + _HOW TO_ declare, initialize, and use arrays, as well as
-    + _HOW TO_ leverage whole-array arithmetic to greatly simplify your code.
+    + _HOW TO_
+      1. declare
+      2. initialize
+      3. use
+      /arrays/, as well as
+    + _HOW TO_ leverage /whole-array arithmetic/ to greatly SIMPLIFY your code.
 
 - Chapter 6
   covers I/O.
   You'll learn
-  + _HOW TO_ read and write data from the standard input, output, and error streams,
-  + _HOW TO_ read from and write to files on disk.
-  + _HOW TO_ format numerical data as text.
+  * _HOW TO_
+    *read and write* data
+    _FROM_ the
+    + /standard input/
+    + /standard output/
+    + /error streams/
+
+  * _HOW TO_
+    *read from and write to*
+    _files_ on disk.
+
+  * _HOW TO_ *format* numerical data as text.
 
   Practice these skills by writing a minimal note-taking app for the command line.
 
 ** DONE 3 Writing reusable code with functions and subroutines - 57
 CLOSED: [2024-09-07 Sat 20:46]
 - This chapter covers
-  * What /procedures/ are and why we use them
-  * How /procedures/ break down into two kinds: /functions/ and /subroutines/
+  * _WHAT /procedures/ are_ and _WHY we use them_
+  * _HOW_ /procedures/ break down into two kinds: /functions/ and /subroutines/
   * Writing /procedures/ that don't cause /side effects/
   * Writing /procedures/ that work on both /scalars/ and /arrays/
 
 *** DONE 3.1 Toward higher app complexity - 58
 CLOSED: [2024-09-06 Fri 20:26]
 **** 3.1.1 Refactoring the tsunami simulator - 58
+Listing 3.1 Time integration loop from the minimal working tsunami simulator
+#+begin_src fortran
+  time_loop: do n = 1, num_time_steps
+        dh(1) = h(1) - h(grid_size)
+        do concurrent (i = 2:grid_size)
+           dh(i) = h(i) - h(i - 1)
+        end do
+
+        do concurrent (i = 1:grid_size)
+           h(i) = h(i) - c * dh(i) / dx * dt
+        end do
+  end do time_loop
+#+end_src
+
 **** 3.1.2 Revisiting the cold front problem - 61
 - *Experiment a bit*
 
@@ -1527,7 +1590,7 @@ CLOSED: [2024-09-08 Sun 00:09]
 *** 6.5 New Fortran elements, at a glance - 169
 **** Summary
 
-* TODO PART 3 ADVANCED FORTRAN USE - 171
+* TODO PART 3 Advanced Fortran use - 171
 ** 7 Going parallel with Fortran coarrays - 173
 *** 7.1 Why write parallel programs? - 174
 *** 7.2 Processing real-world weather buoy data - 175
@@ -1653,7 +1716,7 @@ O
 
 *** 10.6 New Fortran elements, at a glance - 290
 
-* TODO PART 4 THE FINAL STRETCH - 291
+* TODO PART 4 The Final stretch - 291
 ** 11 Interoperability with C: Exposing your app to the web - 293
 *** 11.1 Interfacing C: Writing a minimal TCP client and server - 294
 **** Introducing networking to Fortran - 295
