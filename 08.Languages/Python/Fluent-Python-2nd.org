@@ -843,275 +843,275 @@
 *** TODO Further Reading - 158
 
 ** TODO 5. Data Class Builders - 163
-   - data class ::
-     a *simple* /class/ that is just
-     + a bunch of /fields/
-     + with LITTLE OR NO extra funcionality
+- data class ::
+  a *simple* /class/ that is just
+  * a bunch of /fields/
+  * with LITTLE OR NO extra funcionality
 
-   - Python offers a few ways to build /data classes/, and ~dataclass~ is the name
-     of a /Python decorator/ that supports it.
-       This chapter covers _THREE different class builders_ that you may use as
-     shortcuts to write /data classes/:
-     + ~collections.namedtuple~: the simplest way—since Python _2.6_;
+- Python offers a few ways to build /data classes/, and ~dataclass~ is the name
+  of a /Python decorator/ that supports it.
+    This chapter covers _THREE different class builders_ that you may use as
+  shortcuts to write /data classes/:
+  * ~collections.namedtuple~: the simplest way—since Python _2.6_;
 
-     + ~typing.NamedTuple~: an alternative that allows /type annotations/ on the
-       fields -- since Python _3.5_; class syntax supported since _3.6_;
+  * ~typing.NamedTuple~: an alternative that allows /type annotations/ on the
+    fields -- since Python _3.5_; class syntax supported since _3.6_;
 
-     + ~@dataclasses.dataclass~: a /class decorator/ that allows *more customization
-       than previous alternatives*, adding lots of options and potential complexity
-       -- since Python _3.7_.
+  * ~@dataclasses.dataclass~: a /class decorator/ that allows *more customization
+    than previous alternatives*, adding lots of options and potential complexity
+    -- since Python _3.7_.
 
-   - TODO ??? TODO
-     After covering those class builders, we will discuss why Data Class is also
-     the name of a code smell: a coding pattern that may be a symptom of poor
-     object-oriented design.
+- TODO ??? TODO
+  After covering those class builders, we will discuss why Data Class is also
+  the name of a code smell: a coding pattern that may be a symptom of poor
+  object-oriented design.
 
-   - The chapter ends with a section on a very different topic, but still closely
-     related to _record-like data_: the ~struct~ module, designed to PARSE and
-     BUILD *packed binary records* that you may find in legacy flat-file _databases_,
-     _network protocols_, and _file headers_.
-     TODO ??? TODO
+- The chapter ends with a section on a very different topic, but still closely
+  related to _record-like data_: the ~struct~ module, designed to PARSE and
+  BUILD *packed binary records* that you may find in legacy flat-file _databases_,
+  _network protocols_, and _file headers_.
+  TODO ??? TODO
 
-   - NOTE TODO TODO TODO TODO TODO TODO
-     ~typing.TypeDict~ (since Python _3.8_) may seem like another /data class
-     builder/ -- it's described right after ~typing.NamedTuple~ in the ~typing~
-     module documentation, and uses similar syntax.
-       However, ~TypedDict~ does not build concrete classes that you can
-     instantiate. It's just a way to write /static annotations/ for variables and
-     function arguments that are expected to accept plain dictionaries with a
-     fixed set of keys and a specific type for the value mapped to each key.
+- NOTE TODO TODO TODO TODO TODO TODO
+  ~typing.TypeDict~ (since Python _3.8_) may seem like another /data class
+  builder/ -- it's described right after ~typing.NamedTuple~ in the ~typing~
+  module documentation, and uses similar syntax.
+    However, ~TypedDict~ does not build concrete classes that you can
+  instantiate. It's just a way to write /static annotations/ for variables and
+  function arguments that are expected to accept plain dictionaries with a
+  fixed set of keys and a specific type for the value mapped to each key.
 
 *** DONE What's New in This Chapter - 164
-    CLOSED: [2020-04-27 Mon 02:52]
-    This chapter is new in Fluent Python 2nd edition.
-    - The sections _"Classic Named Tuples"_ and _"Structs and Memory Views"_ appeared
-      in chapters 2 and 4 in the 1st edition,
+CLOSED: [2020-04-27 Mon 02:52]
+This chapter is new in Fluent Python 2nd edition.
+- The sections _"Classic Named Tuples"_ and _"Structs and Memory Views"_ appeared
+  in chapters 2 and 4 in the 1st edition,
 
-    - but _the rest of the chapter is completely new._
+- but _the rest of the chapter is completely new._
 
 *** DONE Overview of Data Class Builders - 164
-    CLOSED: [2020-04-26 Sun 20:38]
-    - The /data class builders/ covered in this chapter provide the necessary
-      ~__init__~, ~__repr__~, and ~__eq__~ /methods/ *automatically*, as well as
-      other useful features.
-      + =from Jian= Just be similar to /case classes/ in Scala.
+CLOSED: [2020-04-26 Sun 20:38]
+- The /data class builders/ covered in this chapter provide the necessary
+  ~__init__~, ~__repr__~, and ~__eq__~ /methods/ *automatically*, as well as
+  other useful features.
+  + =from Jian= Just be similar to /case classes/ in Scala.
 
-    - NOTE
-      None of the class builders discussed here depend on inheritance to do
-      their work.
-      + Both ~collections.namedtuple~ and ~typing.NamedTuple~
-        build /classes/ that are /tuple/ /subclasses/.
+- NOTE
+  None of the class builders discussed here depend on inheritance to do
+  their work.
+  + Both ~collections.namedtuple~ and ~typing.NamedTuple~
+    build /classes/ that are /tuple/ /subclasses/.
 
-      + ~@dataclass~ is a /class decorator/ that does _NOT affect the /class
-        hierarchy/ in any way_.
+  + ~@dataclass~ is a /class decorator/ that does _NOT affect the /class
+    hierarchy/ in any way_.
 
-      + Each of them use *different* _metaprogramming techniques_ to _INJECT /methods/
-        and /data attributes/ INTO the class under construction_.
+  + Each of them use *different* _metaprogramming techniques_ to _INJECT /methods/
+    and /data attributes/ INTO the class under construction_.
 
-    - Use ~namedtuple~
+- Use ~namedtuple~
+  #+begin_src python
+    from collections import namedtuple
+
+
+    Coordinate = namedtuple('Coordinate', 'lat long')
+    issubclass(Coordinate, tuple)  # True
+    moscow = Coordinate(55.756, 37.617)
+    moscow  # Coordinate(lat=55.756, long=37.617)
+    moscow == Coordinate(lat=55.756, long=37.617)  # True
+  #+end_src
+
+- Use ~typing.NamedTuple~
+  + Before Python 3.6, no extra funcionality:
+    #+begin_src python
+      from typing
+
+
+      Coordinate = typing.NamedTuple('Coordinate', [('lat', float),  ('long', float)])
+      issubclass(Coordinate, tuple)  # True
+      Coordinate.__annotations__
+      # {'lat': <class 'float'>, 'long': <class 'float'>}
+    #+end_src
+
+    * *TIP*
+      Another (more readable) syntax for ~typing.NamedTuple~
       #+begin_src python
-        from collections import namedtuple
-
-
-        Coordinate = namedtuple('Coordinate', 'lat long')
-        issubclass(Coordinate, tuple)  # True
-        moscow = Coordinate(55.756, 37.617)
-        moscow  # Coordinate(lat=55.756, long=37.617)
-        moscow == Coordinate(lat=55.756, long=37.617)  # True
+        Coordinate = typing.NamedTuple('Coordinate', lat=float, long=float)
       #+end_src
 
-    - Use ~typing.NamedTuple~
-      + Before Python 3.6, no extra funcionality:
-        #+begin_src python
-          from typing
+  + Since Python 3.6,
+    ~typing.NamedTuple~ can also be used in a ~class~ statement, with /type
+    annotations/ written as described in *PEP 526 -- Syntax for Variable
+    Annotations*.
+    * This is much MORE READABLE, and
+      makes it easy to _override methods_ or _add new ones_.
 
-
-          Coordinate = typing.NamedTuple('Coordinate', [('lat', float),  ('long', float)])
-          issubclass(Coordinate, tuple)  # True
-          Coordinate.__annotations__
-          # {'lat': <class 'float'>, 'long': <class 'float'>}
-        #+end_src
-
-        * *TIP*
-          Another (more readable) syntax for ~typing.NamedTuple~
-          #+begin_src python
-            Coordinate = typing.NamedTuple('Coordinate', lat=float, long=float)
-          #+end_src
-
-      + Since Python 3.6,
-        ~typing.NamedTuple~ can also be used in a ~class~ statement, with /type
-        annotations/ written as described in *PEP 526 -- Syntax for Variable
-        Annotations*.
-        * This is much MORE READABLE, and
-          makes it easy to _override methods_ or _add new ones_.
-
-        * Example 5-2 is the same ~Coordinate~ class, with a pair of ~float~ attributes
-          and a custom ~__str__~ to display a coordinate formatted like 55.8°N, 37.6°E:
-          #+begin_src python
-            from typing import NamedTuple
-
-            class Coordinate(NamedTuple):
-
-                lat: float
-                long: float
-
-                def __str__(self):
-                    ns = 'N' if self.lat >= 0 else 'S'
-                    we = 'E' if self.long >= 0 else 'W'
-                    return f"{abs(self.lat):.1f}°{ns}, {abs(self.long):.1f}°{we}"
-          #+end_src
-          - *WARNING*
-            Although ~NamedTuple~ appears in the class statement as a superclass, it’s
-            actually not. typing.NamedTuple uses the advanced functionality of a
-            metaclass2 to customize the creation of the user’s class. Check this out:
-            #+begin_src python
-              issubclass(Coordinate, typing.NamedTuple)  # False
-              issubclass(Coordinate, tuple)              # True
-            #+end_src
-            In the ~__init__~ /method/ *generated* by ~typing.NamedTuple~, the /fields/
-            appear as parameters _in the SAME ORDER they appear in the /class statement/._
-
-    - Use ~dataclass~
-      _Like ~typing.NamedTuple~, the /dataclass decorator/ supports *PEP 526* syntax to
-      declare instance attributes._ The /decorator/ reads the variable annotations
-      and automatically generates methods for your class.
-      #+begin_src python
-        from dataclasses import dataclass
-
-
-        @dataclass(frozen=True)
-        class Coordinate:
-            lat: float
-            long: float
-      #+end_src
-      + Note that the body of the classes in Example 5-2 and Example 5-3 are
-        identical—the difference is in the class statement itself.
-
-      + The ~@dataclass~ /decorator/ does *NOT depend on* /inheritance/ or a
-        /metaclass/, so it should not interfere with your own use of these
-        mechanisms.
-        #+begin_src python
-          issubclass(Coordinate, typing.NamedTuple)  # False
-          issubclass(Coordinate, tuple)              # False
-          issubclass(Coordinate, object)             # True
-        #+end_src
-
-**** Main Features - 167
-     The different data class builders have a lot of common. Here we’ll discuss
-     the main features they share. Table 5-1 summarizes.
-     - Table 5-1. =IMPORTANT= =RE-READ=
-       Selected features compared accross the THREE /data class builders/. ~x~
-       stands for an instance of a /data class/ of that kind.
-
-*** DONE Classic Named Tuples - 169
-    CLOSED: [2020-04-27 Mon 02:52]
-    - *TIP*
-      + EACH /instance/ of a /class/ built by ~namedtuple~ takes *EXACTLY the SAME
-        amount of memory* a ~tuple~ because the /field names/ are stored in the
-        /class/ (rather than in each /instance/).
-
-      + They use *LESS memory than a regular object (=from Jian= /class/ based
-        object?)* because they do *NOT* store attributes as key-value pairs in
-        one ~__dict__~ for EACH /instance/.
-
-    - Besides the methods a ~tuple~ has, a ~namedtuple~ also has ~_fields~ /class
-      attribute/, the /class method/ ~_make(iterable)~, and the /instance method/
-      ~_asdict()~.
-      + ~._asdict()~ is useful to serialize the data in JSON format, for example.
-        TODO =LEARN MORE= TODO
-
-    - *WARNING*
-      + The ~_asdict()~ /method/ returned an ~OrderedDict~ in
-        _Python 2.7_, and in _Python 3.1 TO 3.7_.
-
-      + Since _Python 3.8_, a regular ~dict~ is returned -- which is probably fine
-        now that we *can rely on* _key insertion order_ (because of the new
-        implementation of ~dict~).
-
-      + If you must have an ~OrderedDict~ when you use _Python 3.8+_, the ~_asdict~
-        documentation recommends building one from the result:
-        ~OrderedDict(x._asdict())~.
-
-    - Since Python 3.7, namedtuple accepts the ~defaults~/ keyword-only argument/
-      providing an /iterable/ of _N default values for each of the N *rightmost*
-      fields_ of the /class/.
-      + Example 5-6 show how to define a ~Coordinate~ ~namedtuple~ with a ~default~
-        value for a reference field:
-        #+begin_src python
-          Coordinate = namedtuple('Coordinate', 'lat long reference', defaults=['WGS84'])
-          Coordinate(0, 0)            # Coordinate(lat=0, long=0, reference='WGS84')
-          Coordinate._field_defaults  # {'reference': 'WGS84'}
-        #+end_src
-
-    - There are straight forward ways to add methods to ~typing.NamedTuple~ and
-      ~@dataclass~ annotated /class/. For ~namedtuple~, we can also do this, but
-      must with some hack. See below!
-
-    - *HACKING A NAMEDTUPLE TO INJECT A METHOD*
-      Define a function and then assign it to a /class attribute/.
-      #+begin_src python
-        Card = collections.nametuple('Card', ['rank', 'suit'])
-
-        # Attach a class attribute with values for each suit.
-        Card.suit_values = dict(spades=3, hearts=2, diamonds=1, clubs=0)
-
-        def spades_high(card):
-            rank_value = FrenchDeck.ranks.index(card.rank)
-            suit_value = card.suit_values[card.suit]
-            return rank_value * len(card.suit_values) + suit_value
-
-        # Attach the spades_high function to the Cards class.
-        # It becomes a method named overall_rank.
-        Card.overall_rank = spades_high
-
-        lowest_card = Card('2', 'clubs')
-        highest_card = Card('A', 'spades')
-
-        lowest_card.overall_rank()  # 0
-        highest_card.overall_rank()  # 51
-      #+end_src
-      + =from Jian=
-        From the observation, the ~overall_rank~ use ~self~ as the ~card~ for
-        ~spades_high~. ~overall_rank~ is an /instance method/.
-        * TODO Learn more about this!
-          1. Can ~spades_high~ take more parameters?
-          2. Do the parameters _except the first one_ are considered as normal
-             /method parameters/?
-
-*** DONE Typed Named Tuples - 172
-    CLOSED: [2020-04-27 Mon 02:58]
-    - Example 5-8. ~typing.NamedTuple~
+    * Example 5-2 is the same ~Coordinate~ class, with a pair of ~float~ attributes
+      and a custom ~__str__~ to display a coordinate formatted like 55.8°N, 37.6°E:
       #+begin_src python
         from typing import NamedTuple
 
-
         class Coordinate(NamedTuple):
+
             lat: float
             long: float
-            reference: str = 'WGS84'
+
+            def __str__(self):
+                ns = 'N' if self.lat >= 0 else 'S'
+                we = 'E' if self.long >= 0 else 'W'
+                return f"{abs(self.lat):.1f}°{ns}, {abs(self.long):.1f}°{we}"
       #+end_src
+      - *WARNING*
+        Although ~NamedTuple~ appears in the class statement as a superclass, it’s
+        actually not. typing.NamedTuple uses the advanced functionality of a
+        metaclass2 to customize the creation of the user’s class. Check this out:
+        #+begin_src python
+          issubclass(Coordinate, typing.NamedTuple)  # False
+          issubclass(Coordinate, tuple)              # True
+        #+end_src
+        In the ~__init__~ /method/ *generated* by ~typing.NamedTuple~, the /fields/
+        appear as parameters _in the SAME ORDER they appear in the /class statement/._
 
-    - /Classes/ built by ~typing.NamedTuple~ _do NOT have any methods BEYOND_
-      those that ~collections.namedtuple~ also generates -- and those that are
-      inherited from ~tuple~.
-      + _The Only difference AT RUNTIME_ is the presence of the ~__attributes__~
-        /class field/ -- _which Python completely ignores AT RUNTIME._
+- Use ~dataclass~
+  _Like ~typing.NamedTuple~, the /dataclass decorator/ supports *PEP 526* syntax to
+  declare instance attributes._ The /decorator/ reads the variable annotations
+  and automatically generates methods for your class.
+  #+begin_src python
+    from dataclasses import dataclass
 
-    - *WARNING*
-      + BEFORE Python 3.8, classes built with ~typing.NamedTuple~ also have a
-        ~_field_types~ /attribute/.
 
-      + SINCE Python 3.8, that /attribute/ is *deprecated* in favor of ~__annotations__~
-        which has the same information and is the _canonical place_ to find /type
-        hints/ in Python objects that have them.
+    @dataclass(frozen=True)
+    class Coordinate:
+        lat: float
+        long: float
+  #+end_src
+  + Note that the body of the classes in Example 5-2 and Example 5-3 are
+    identical—the difference is in the class statement itself.
+
+  + The ~@dataclass~ /decorator/ does *NOT depend on* /inheritance/ or a
+    /metaclass/, so it should not interfere with your own use of these
+    mechanisms.
+    #+begin_src python
+      issubclass(Coordinate, typing.NamedTuple)  # False
+      issubclass(Coordinate, tuple)              # False
+      issubclass(Coordinate, object)             # True
+    #+end_src
+
+**** Main Features - 167
+The different data class builders have a lot of common. Here we’ll discuss
+the main features they share. Table 5-1 summarizes.
+- Table 5-1. =IMPORTANT= =RE-READ=
+  Selected features compared accross the THREE /data class builders/. ~x~
+  stands for an instance of a /data class/ of that kind.
+
+*** DONE Classic Named Tuples - 169
+CLOSED: [2020-04-27 Mon 02:52]
+- *TIP*
+  . EACH /instance/ of a /class/ built by ~namedtuple~ takes *EXACTLY the SAME
+    amount of memory* a ~tuple~ because the /field names/ are stored in the
+    /class/ (rather than in each /instance/).
+
+  . They use *LESS memory than a regular object (=from Jian= /class/ based
+    object?)* because they do *NOT* store attributes as key-value pairs in
+    one ~__dict__~ for EACH /instance/.
+
+- Besides the methods a ~tuple~ has, a ~namedtuple~ also has ~_fields~ /class
+  attribute/, the /class method/ ~_make(iterable)~, and the /instance method/
+  ~_asdict()~.
+  . ~._asdict()~ is useful to serialize the data in JSON format, for example.
+    TODO =LEARN MORE= TODO
+
+- *WARNING*
+  . The ~_asdict()~ /method/ returned an ~OrderedDict~ in
+    _Python 2.7_, and in _Python 3.1 TO 3.7_.
+
+  . Since _Python 3.8_, a regular ~dict~ is returned -- which is probably fine
+    now that we *can rely on* _key insertion order_ (because of the new
+    implementation of ~dict~).
+
+  . If you must have an ~OrderedDict~ when you use _Python 3.8+_, the ~_asdict~
+    documentation recommends building one from the result:
+    ~OrderedDict(x._asdict())~.
+
+- Since Python 3.7, namedtuple accepts the ~defaults~/ keyword-only argument/
+  providing an /iterable/ of _N default values for each of the N *rightmost*
+  fields_ of the /class/.
+  . Example 5-6 show how to define a ~Coordinate~ ~namedtuple~ with a ~default~
+    value for a reference field:
+    #+begin_src python
+      Coordinate = namedtuple('Coordinate', 'lat long reference', defaults=['WGS84'])
+      Coordinate(0, 0)            # Coordinate(lat=0, long=0, reference='WGS84')
+      Coordinate._field_defaults  # {'reference': 'WGS84'}
+    #+end_src
+
+- There are straight forward ways to add methods to ~typing.NamedTuple~ and
+  ~@dataclass~ annotated /class/. For ~namedtuple~, we can also do this, but
+  must with some hack. See below!
+
+- *HACKING A NAMEDTUPLE TO INJECT A METHOD*
+  Define a function and then assign it to a /class attribute/.
+  #+begin_src python
+    Card = collections.nametuple('Card', ['rank', 'suit'])
+
+    # Attach a class attribute with values for each suit.
+    Card.suit_values = dict(spades=3, hearts=2, diamonds=1, clubs=0)
+
+    def spades_high(card):
+        rank_value = FrenchDeck.ranks.index(card.rank)
+        suit_value = card.suit_values[card.suit]
+        return rank_value * len(card.suit_values) + suit_value
+
+    # Attach the spades_high function to the Cards class.
+    # It becomes a method named overall_rank.
+    Card.overall_rank = spades_high
+
+    lowest_card = Card('2', 'clubs')
+    highest_card = Card('A', 'spades')
+
+    lowest_card.overall_rank()  # 0
+    highest_card.overall_rank()  # 51
+  #+end_src
+  * =from Jian=
+    From the observation, the ~overall_rank~ use ~self~ as the ~card~ for
+    ~spades_high~. ~overall_rank~ is an /instance method/.
+    + TODO Learn more about this!
+      1. Can ~spades_high~ take more parameters?
+      2. Do the parameters _except the first one_ are considered as normal
+         /method parameters/?
+
+*** DONE Typed Named Tuples - 172
+CLOSED: [2020-04-27 Mon 02:58]
+- Example 5-8. ~typing.NamedTuple~
+  #+begin_src python
+    from typing import NamedTuple
+
+
+    class Coordinate(NamedTuple):
+        lat: float
+        long: float
+        reference: str = 'WGS84'
+  #+end_src
+
+- /Classes/ built by ~typing.NamedTuple~ _do NOT have any methods BEYOND_
+  those that ~collections.namedtuple~ also generates -- and those that are
+  inherited from ~tuple~.
+  * _The Only difference AT RUNTIME_ is the presence of the ~__attributes__~
+    /class field/ -- _which Python completely ignores AT RUNTIME._
+
+- *WARNING*
+  * BEFORE Python 3.8, classes built with ~typing.NamedTuple~ also have a
+    ~_field_types~ /attribute/.
+
+  * SINCE Python 3.8, that /attribute/ is *deprecated* in favor of
+    ~__annotations__~ which has the same information and is the _canonical
+    place_ to find /type hints/ in Python objects that have them.
 
 *** TODO Type Hints 101 - 173
-    - /Type hints/ -- a.k.a. /type annotations/
+- /Type hints/ -- a.k.a. /type annotations/
 
-    - NOTE
-      TODO No complete info for this Early Release version.
-      Talk about type hints for function signatures and advanced annotations in
-      the future.
+- NOTE
+  TODO No complete info for this Early Release version.
+  Talk about type hints for function signatures and advanced annotations in
+  the future.
 
 **** DONE No Runtime Effect - 173
      CLOSED: [2020-04-26 Sun 20:55]
@@ -1195,17 +1195,17 @@
 
 *** TODO More About ~@dataclass~ - 179
 **** Field Options - 180
-     - WARNING
+- WARNING
 
 **** Post-init Processing - 183
-     - NOTE
+- NOTE
 
 **** Typed Class Attributes - 185
 **** Initialization Variables That Are Not Fields - 186
 **** ~@dataclass~ Example: Dublin Core Resource Record - 187
 
 *** TODO Data class as a Code Smell - 190
-    - *CODE SMELL*
+- *CODE SMELL*
 
 **** TODO Data Class as Scaffolding - 191
 **** TODO Data Class as Intermediate Representation - 191
@@ -1217,7 +1217,7 @@
 
 *** TODO Chapter Summary - 195
 *** TODO Further Reading - 196
-    - *SOAPBOX*
+- *SOAPBOX*
 
 ** TODO 6. Object References, Mutability, and Recycling - 201
 *** What's New in This Chapter - 202
@@ -1572,7 +1572,78 @@ CLOSED: [2024-11-13 Wed 20:14]
 
 * TODO Part IV. Control Flow
 ** 17. Iterators, Generators, and Classic Coroutines - 593
-** 18. with, match, and else Blocks - 657
+/Iteration/ is fundamental to data processing: programs apply computations to
+data series, from pixels to nucleotides.
+
+If the data _doesn't fit in memory_, we need to fetch the items lazily - one at
+a time and on demand. That's what an /iterator/ does.
+
+This chapter shows how /the ~Iterator~ design pattern/ is built into the Python
+language so *you NEVER NEED to code it by hand.*
+
+- Every standard collection in Python is /iterable/.
+  * iterable :: an object that provides an /iterator/
+
+  * Python uses /iterator/ to support operations like:
+    + ~for~ loops
+    + List, dict, and set comprehensions
+    + Unpacking assignments
+    + Construction of collection instances
+
+- This chapter covers the following topics:
+  * How Python uses the ~iter()~ /built-in function/ to handle /iterable
+    objects/
+
+  * How to implement the /classic Iterator pattern/ in Python
+
+  * How the /classic Iterator pattern/ can be replaced by a /generator function/
+    or /generator expression/
+  * How a /generator function/ works in detail, with line-by-line descriptions
+
+  * Leveraging the _general-purpose_ /generator functions/ in the standard
+    library
+
+  * Using ~yield from~ expressions to *combine* /generators/
+
+  * Why /generators/ and /classic coroutines/ look alike
+    BUT are _used in very different ways_ and *should not be mixed*
+
+*** What's New in This Chapter - 594
+*** A Sequence of Words - 594
+*** Why Sequences Are Iterable: The iter Function - 596
+**** Using iter with a Callable - 598
+
+*** Iterables Versus Iterators - 599
+*** Sentence Classes with ~__iter__~ - 603
+**** Sentence Take #2: A Classic Iterator - 603
+**** Don't Make the Iterable an Iterator for Itself - 605
+**** Sentence Take #3: A Generator Function - 606
+**** How a Generator Works - 607
+
+*** Lazy Sentences - 610
+**** Sentence Take #4: Lazy Generator - 610
+**** Sentence Take #5: Lazy Generator Expression - 611
+
+*** When to Use Generator Expressions - 613
+*** An Arithmetic Progression Generator - 615
+**** Arithmetic Progression with ~itertools~ - 618
+
+*** Generator Functions in the Standard Library - 619
+*** Iterable Reducing Functions - 630
+*** Subgenerators with yield from - 632
+**** Reinventing chain - 633
+**** Traversing a Tree - 634
+
+*** Generic Iterable Types - 639
+*** Classic Coroutines - 641
+**** Example: Coroutine to Compute a Running Average - 643
+**** Returning a Value from a Coroutine - 646
+**** Generic Type Hints for Classic Coroutines - 650
+
+*** Chapter Summary - 652
+*** Further Reading - 652
+
+** 18. ~with~, ~match~, and ~else~ Blocks - 657
 ** 19. Concurrency Models in Python - 695
 ** 20. Concurrent Executors - 743
 ** 21. Asynchronous Programming - 775
