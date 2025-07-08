@@ -1883,6 +1883,19 @@ parameters/.
         return d, m
   #+end_src
 
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =from Jian=
+  The author doesn't mention one feature, which is confusing at first glance,
+  but it is not new. It is only looks wierd when combined with /positional-only
+  parameters/, though *actually NOTHING WRONG!!!*
+  #+begin_src python
+    def f(a: int = 3, /):
+        return a + 1
+  #+end_src
+  */positional-only parameters/ can have default values*.
+
 *** DONE Packages for Functional Programming - 243
 CLOSED: [2025-07-06 Sun 11:58]
 **** The ~operator~ Module - 243
@@ -1971,7 +1984,8 @@ Example 7-18
 CLOSED: [2025-07-06 Sun 12:10]
 *** TODO Further Reading - 250
 
-** TODO 8. Type Hints in Functions - 253
+** DONE 8. Type Hints in Functions - 253
+CLOSED: [2025-07-08 Tue 13:21]
 =IMPORTANT=
 =from Jian=
 When reading anything about /type hints/, just learn the fact and usage.
@@ -2073,70 +2087,685 @@ CLOSED: [2025-07-06 Sun 19:23]
   * /Nomical typing/
     The view adopted by C++, Java, and C#, supported by annotated Python.
 
-*** TODO Types Usable in Annotations - 266
-**** The ~Any~ Type - 266
+*** DONE Types Usable in Annotations - 266
+CLOSED: [2025-07-08 Tue 12:56]
+**** DONE The ~Any~ Type - 266
+CLOSED: [2025-07-06 Sun 19:42]
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  =from Jian=
+  From this section, the example from the author, it seems use ~object~ as a
+  parameter type is problematic, but actually the author doesn't mean it.
+  SEE
+  the Python official _type documentation_ - _Type System Reference_ -
+  [[https://typing.python.org/en/latest/reference/best_practices.html][Typing Best Practices]]
+  #+begin_quote
+  If a function accepts every possible ~object~ as an argument, for example
+  because it's only passed to str(), use ~object~ instead of ~Any~ as type
+  annotation.
+  #+end_quote
+  ~object~ parameter type always needs the usage of ~isinstance()~ in the body
+  of function.
+
+- But ~Any~ is a *magic type* that sits at the /top/ and the /bottom/ of the
+  type hierarchy.
+  * =from Jian=
+    In Scala, ~Any~ is at the /top/ of the /type hierarchy/, more like the
+    ~object~ in Python, and need to work together with ~instanceOf~.
+
 ***** Subtype-of versus consistent-with - 267
+In a /gradual type system/, there is another relationship: /consistent-with/,
+which applies wherever /subtype-of/ applies, _with special provisions for type
+~Any~._
 
-**** Simple Types and Classes - 269
+The rules for /consistent-with/ are:
+=from Jian= An enrichment of /subtype-of/
+1. Given T1 and a /subtype/ T2, then T2 is /consistent-with/ T1 (Liskov
+   substitution).
+2. Every type is consistent-with ~Any~:
+   you can pass objects of every type to an argument declared of type ~Any~.
+3. ~Any~ is consistent-with every type:
+   you can always pass an object of type ~Any~ where an argument of another type
+   is expected.
+
+**** DONE Simple Types and Classes - 269
+CLOSED: [2025-07-06 Sun 19:45]
 - *int Is Consistent-With complex*
+  1. No /nominal subtype relationship/ between the built-in type ~int~, ~float~,
+     and ~complext~.
 
-**** ~Optional~ and ~Union~ Types - 270
+  2. BUT PEP 484 declares that
+     1) ~int~ is consistent-with ~float~
+     2) ~float~ is consistent-with ~complex~
+
+**** DONE ~Optional~ and ~Union~ Types - 270
+CLOSED: [2025-07-06 Sun 19:47]
 - *Better Syntax for Optional and Union in Python 3.10*
+  * PEP 604 -- Complementary syntax for ~Union[]~
 
-**** Generic Collections - 271
+- Example:
+  The ~ord~ built-in /function's signature/ is a simple example of ~Union~ -- it
+  accepts ~str~ or ~bytes~, and returns an ~int~:
+  ~def ord(c: Union[str, bytes]) -> int: ...~
+  * footnote 8:
+    To be more precise, ~ord~ *only accepts* ~str~ or ~bytes~ with ~len(s) ==
+    1~. But the /type system/ currently *can't express* this constraint.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *If possible, avoid creating functions that return ~Union~ types,*
+  * Rationale:
+    as they _put an extra burden on the user_ -- forcing them to check the type
+    of the returned value at runtime to know what to do with it.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  ~Union[]~ requires at least two /types/.
+  /Nested ~Union~ types/ have the *SAME effect* as a _flattened_ ~Union~.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  ~Union~ is more useful with /types/ that are *NOT consistent* among themselves.
+  * For example:
+    ~Union[int, float]~ is redundant because ~int~ is consistent -- with ~float~.
+    If you just use ~float~ to annotate the parameter, it will accept ~int~
+    values as well.
+
+**** DONE Generic Collections - 271
+CLOSED: [2025-07-06 Sun 20:14]
+- Most Python collections are heterogeneous.
+  However, in practice that's not very useful -- if you don't know enough type
+  info of an element, you can't operate them through their own methods.
+
+- PEP 585—Type Hinting Generics In Standard Collections lists collections from
+  the standard library accepting generic type hints.
+
+- The following list shows only those collections that use the simplest form of
+  generic /type hint/, in the form of ~container[item]~:
+  * list
+  * collections.deque
+  * abc.Sequence
+  * abc.MutableSequence
+  * set
+  * abc.Container
+  * abc.Set
+  * abc.MutableSet
+  * frozenset
+  * abc.Collection
+
+- =NEXT=
+  ~tuple~ and /mapping/ types support more complex /type hints/.
+
+- Challenges from ~array.array~
+  =TODO=
+  =NOTE= page 272
+
 - *Legacy Support and Deprecated Collection Types*
+  (You may skip this box if you only use Python 3.9 or later.)
 
-**** Tuple Types - 274
+**** DONE Tuple Types - 274
+CLOSED: [2025-07-06 Sun 20:26]
 ***** Tuples as records - 274
+~tuple[str, float, str]~
+
 ***** Tuples as records with named fields - 275
+#+begin_src python
+  from typing import NamedTuple
+
+  from geolib import geohash as gh # type: ignore
+
+
+  PRECISION = 9
+
+
+  class Coordinate(NamedTuple):
+      lat: float
+      lon: float
+
+
+  def geohash(lat_lon: Coordinate) -> str:
+      return gh.encode(*lat_lon, PRECISION)
+#+end_src
+=IMPORTANT=
+=IMPORTANT=
+=IMPORTANT=
+As explained in _"Overview of Data Class Builders" on page 164_,
+~typing.NamedTuple~ is a factory for ~tuple~ /subclasses/, so ~Coordinate~ is
+/consistent-with/ ~tuple[float, float]~ BUT *the reverse is not true* -- after
+all, ~Coordinate~ has extra methods added by ~NamedTuple~, like ~._asdict()~,
+and could also have /user-defined methods/.
+
 ***** Tuples as immutable sequences - 275
+~tuple[int, ...]~
 
-**** Generic Mappings - 276
-**** Abstract Base Classes - 278
+**** DONE Generic Mappings - 276
+CLOSED: [2025-07-07 Mon 10:52]
+**** DONE Abstract Base Classes - 278 - =FURTHER DISCUSSION=
+CLOSED: [2025-07-07 Mon 11:17]
+#+begin_quote
+Be conservative in what you send, be liberal in what you accept.
+    -- Postel's law, a.k.a. the Robustness Principle
+#+end_quote
+
+- *Ideally, a function should accept arguments of those abstract types and not
+  concrete types.* -- This gives more flexibility to the caller.
+
+- *The return value of a function is always a concrete object, so the return type
+  hint should be a concrete type.*
+
 ***** The fall of the numeric tower - 279
+- The ~numbers~ package defines the so-called /numeric tower/ described in *PEP
+  3141 - A Type Hierarchy for Numbers*. The tower is *linear hierarchy* of ABCs,
+  with ~Number~ at the top:
+  1. ~Number~
+  2. ~Complex~
+  3. ~Real~
+  4. ~Rational~
+  5. ~Integral~
 
-**** ~Iterable~ - 280
+- PEP 484 rejects the ~numbers~ ABCs and dictates that the built-in types
+  ~complex~, ~float~, and ~int~ should be treated as special cases, as explained
+  in "int Is Consistent-With complex" on page 269.
+
+- =NEXT=
+  We'll come back to this issue in “The numbers ABCs and Numeric Protocols”
+  on page 478, in _Chapter 13_, which is devoted to contrasting /protocols/ and
+  /ABCs/.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  In practice, if you want to annotate numeric arguments for static type
+  checking, you have a few options:
+  1. Use one of the _concrete types_ ~int~, ~float~, or ~complex~ -- as
+     recommended by PEP 488.
+
+  2. Declare a union type like ~float | Decimal | Fraction~.
+
+  3. If you want to avoid hardcoding _concrete types_, use /numeric protocols/
+     like ~SupportsFloat~, covered in _"Runtime Checkable Static Protocols"_ on
+     page 468.
+     =NEXT=
+
+- =NEXT=
+  The upcoming section "Static Protocols" on page 286 is a prerequisite for
+  understanding the /numeric protocols/.
+
+**** DONE ~Iterable~ - 280
+CLOSED: [2025-07-07 Mon 14:59]
+- One example of the ~Iterable~ argument appears in the ~math.fsum~ function
+  from the standard library:
+  #+begin_src python
+    def fsum(__seq: Iterable[float]) -> float:
+  #+end_src
+
 - *Stub Files and the Typeshed Project*
+  =TODO=
+  =TODO=
+  =TODO= learn more!!!
 
 - *Explicit TypeAlias in Python 3.10*
+  _PEP 613 -- Explicit Type Aliases_ introduced a special type, ~TypeAlias~, to
+  make the assignments that create /type aliases/ more visible and easier to
+  /type check/.
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *Starting with Python 3.10,* this is the preferred way to create /type
+  aliases/:
+  #+begin_src python
+    from typing import TypeAlias
+
+    FromTo: TypeAlias = tuple[str, str]
+  #+end_src
 
 ***** ~abc.Iterable~ versus ~abc.Sequence~
+- ~abc.Iterable~ can be infinite which is a potential danger.
+  However, this gives the caller the option of providing input data as a
+  /generator/ instead of a _prebuilt sequence_, potentially saving a lot of
+  memory if the number of input items is large.
 
-**** Parameterized ~Generics~ and ~TypeVar~ - 282
+- ~abc.Sequence~ must have length.
+
+- Like ~abc.Sequence~, ~abc.Iterable~ is best used as a /parameter type/.
+  *It's too vague as a /return type/.*
+  A function should be more precise about the /concrete type/ it returns.
+
+- Closely related to ~Iterable~ is the ~Iterator~ type, used as a /return type/.
+  =NEXT=
+  We'll get back to it in Chapter 17, which is about /generators/ and /classic
+  iterators/.
+
+**** DONE Parameterized ~Generics~ and ~TypeVar~ - 282
+CLOSED: [2025-07-08 Tue 10:36]
 - *Why Is ~TypeVar~ Needed?*
+  The authors of _PEP 484_ wanted to introduce /type hints/ by adding the
+  ~typing~ module and *not changing anything else in the language.*
+
+  * With clever metaprogramming they could make the ~[]~ operator work on classes
+    like ~Sequence[T]~.
+
+  * But the name of the ~T~ variable inside the brackets *must be defined
+    somewhere* -- *OTHERWISE* the Python interpreter would need deep changes to
+    support /generic type notation/ as special use of ~[]~.
+
+  That's _why the ~typing.TypeVar~ constructor is needed:_
+  to introduce the variable name in the current namespace.
 
 ***** Restricted ~TypeVar~ - 284
+~TypeVar~ accepts extra /positional arguments/ to *restrict* the /type
+parameter/.
+
+- Example:
+  #+begin_src python
+    from collections.abc import Iterable
+    from decimal import Decimal
+    from fractions import Fraction
+    from typing import TypeVar
+
+    NumberT = TypeVar('NumberT', float, Decimal, Fraction)
+
+    def mode(data: Iterable[NumberT]) -> NumberT:
+  #+end_src
+  That's better than before, and it was the /signature/ for mode in the
+  =statistics.pyi= stub file on _typeshed_ on May 25, 2020.
+  =from Jian=
+  Improved by the author of this book by applying ~bound=~. Mentioned in the
+  footnote of next section.
+
+- However, the ~statistics.mode~ documentation includes this example:
+  #+begin_src python
+    mode(["red", "blue", "blue", "red", "green", "red", "red"])
+    # 'red'
+  #+end_src
+  Add ~str~ to ~NumberT~:
+  ~NumberT = TypeVar('NumberT', float, Decimal, Fraction, str)~ is a way, but
+  ~NumberT~ is badly misnamed if it accepts ~str~.
+  Also, we can't keep listing types forever, as we realize ~mode~ can deal with
+  them.
+
+  Better solution is in the next seciton.
+
 ***** Bounded ~TypeVar~ - 284
-***** The ~AnyStr~ predefined type variable - 286
+Looking at the body of mode in Example 8-17, we see that _the ~Counter~ class is
+used for ranking._ ~Counter~ is based on ~dict~, therefore the element type of the
+~data~ /iterable/ must be *hashable*. We can use ~HashableT~ below instead of
+using the previous ~NumberT~.
+#+begin_src python
+HashableT = TypeVar('HashableT', bound=Hashable)
+#+end_src
+This is better than ~def mode(data: Iterable[Hashable]) -> Hashable:~, because
+in the way of bounding with ~Hashable~ but using a ~TypeVar~, ~mode~ return
+/concrete types/, while ~-> Hashable~ doesn't and it is not convenient for
+the callers of this function.
 
-**** Static Protocols - 286
-**** ~Callable~ - 291
+- To summarize:
+  * A /restricted type variable/ will be set to _one of the types named in the
+    ~TypeVar~ declaration._
+
+  * A /bounded type variable/ will be set to _the /inferred type/ of the
+    expression_ - as long as _the /inferred type/ is consistent-with the
+    boundary declared in the ~bound=~ keyword argument of ~TypeVar~._
+
+- =NEXT=
+  More on variance in Chapter 15.
+
+***** The ~AnyStr~ predefined type variable - 286 - _Deprecated since 3.13_
+~AnyStr = TypeVar('AnyStr', bytes, str)~
+A predefined ~TypeVar~ in the ~typing~ module.
+
+- =from Jian=
+  In ~typing~:
+  Deprecated since version 3.13, will be removed in version 3.18.
+
+  Use ~class A[T: (str, bytes)]: ...~ instead of importing ~AnyStr~.
+
+**** DONE Static Protocols - 286
+CLOSED: [2025-07-08 Tue 12:56]
+- *NOTE:*
+  In object-oriented programming, the concept of a "protocol" as an *informal
+  interface* is *as old as Smalltalk,* and is an essential part of Python from
+  the beginning.
+
+  _HOWEVER_, in the context of /type hints/, a /protocol/ is a ~typing.Protocol~
+  /subclass/ defining an interface that a type checker can verify.
+
+  =NEXT= Both kinds of protocols (dynamic and static) are covered in Chapter 13.
+  This is just a brief introduction in the context of function annotations.
+
+- _PEP 544 -- Protocols: Structural subtyping (static duck typing)_
+  a protocol type is defined by specifying one or more methods, and the type
+  checker verifies that those methods are implemented where that protocol type
+  is required.
+
+- _Implement a protocol_ *DON'T need* to /inherit/, /register/, or /declare any
+  relationship/ with _the /class/ that defines the /protocol/._
+
+  =IMPORTANT=
+  It's up to the /type checker/ to find the available /protocol/ types and
+  enforce their usage.
+
+- A key ADVANTAGE of a /protocol type/ over /ABCs/ is that a type doesn't need
+  any special declaration to be _consistent-with a /protocol type/._
+  =from Jian=
+  Just an "advantage" in Python only. Other languages support "ad hoc
+  polymorphism".
+
+- Example:
+  1. Example 8-20. =comparable.py=: definition of /a ~SupportsLessThan~
+     ~Protocol~ type/
+     #+begin_src python
+       from typing import Protocol, Any
+
+
+       class SupportsLessThan(Protocol):
+           def __lt__(self, other: Any) -> bool: ...
+     #+end_src
+
+  2. Example 8-21. =top.py=: definition of the top function using a ~TypeVar~ with
+     ~bound=SupportsLessThan~
+     #+begin_src python
+       from collections.abc import Iterable
+       from typing import TypeVar
+
+       from comparable import SupportsLessThan
+
+
+       LT = TypeVar('LT', bound=SupportsLessThan)
+
+
+       def top(series: Iterable[LT], length: int) -> list[LT]:
+           ordered = sorted(series, reverse=True)
+           return ordered[:length]
+     #+end_src
+
+   3. Example 8-22. =top_test.py=: partial listing of the test suite for ~top~
+      #+begin_src python
+        from collections.abc import Iterator
+        from typing import TYPE_CHECKING
+
+        import pytest
+
+        from top import top
+
+        # several lines omitted
+
+        def test_top_tuples() -> None:
+            fruit = 'mango pear apple kiwi banana'.split()
+            series: Iterator[tuple[int, str]] = (
+                (len(s), s) for s in fruit)
+            length = 3
+            expected = [(6, 'banana'), (5, 'mango'), (5, 'apple')]
+            result = top(series, length)
+            if TYPE_CHECKING:
+                reveal_type(series)
+                reveal_type(expected)
+                reveal_type(result)
+            assert result == expected
+
+        # intentional type error
+        def test_top_objects_error() -> None:
+            series = [object() for _ in range(4)]
+            if TYPE_CHECKING:
+                reveal_type(series)
+            with pytest.raises(TypeError) as excinfo:
+                top(series, 3)
+            assert "'<' not supported" in str(excinfo.value)
+      #+end_src
+      * =IMPORTANT=
+        =IMPORTANT=
+        =IMPORTANT=
+        ~reveal_type()~ *cannot be called* _at runtime_, because it is *NOT* a
+        regular function but a Mypy debugging facility -- that's why there is no
+        ~import~ for it.
+
+        Mypy will output one debugging message for each ~reveal_type()~
+        pseudofunction call, showing the /inferred type/ of the argument.
+
+- Now we can _make /duck typing/ explicit_ for /static type checkers/. That's
+  why it makes sense to say that ~typing.Protocol~ gives us /static duck
+  typing/.
+
+**** DONE ~Callable~ - 291
+CLOSED: [2025-07-08 Tue 10:49]
+- There is *NO syntax* to annotate /optional or keyword argument types/.
+
+- If you need a /type hint/ to match a function with a *flexible signature*,
+  _REPLACE the whole parameter list WITH ~...~,_ like this:
+  #+begin_src python
+    Callable[..., ReturnType]
+  #+end_src
+
 ***** Variance in ~Callable~ types - 292
+Example 8-24. Illustrating variance.
+#+begin_src python
+  from collections.abc import Callable
 
-**** ~NoReturn~ - 294
 
-*** TODO Annotating Positional Only and Variadic Parameters - 295
-*** TODO Imperfect Typing and Strong Testing - 296
+  def update(
+          probe: Callable[[], float],
+          display: Callable[[float], None]
+  ) -> None:
+      temperature = probe()
+      # imagine lots of control code here
+      display(temperature)
+
+
+  def probe_ok() -> int:
+      return 42
+
+
+  def display_wrong(temperature: int) -> None:
+      print(hex(temperature))
+
+
+  update(probe_ok, display_wrong) # type error
+
+
+  def display_ok(temperature: complex) -> None:
+      print(temperature)
+
+
+  update(probe_ok, display_ok) # OK
+#+end_src
+
+**** DONE ~NoReturn~ - 294
+CLOSED: [2025-07-08 Tue 10:54]
+This is a special type used only to annotate the return type of functions that
+*never return*.
+
+- _USUALLY_, they exist to raise exceptions.
+  There are dozens of such functions in the standard library.
+
+- Example (stub, in typeshed):
+  #+begin_src python
+    def exit(__status: object = ...) -> NoReturn: ...
+  #+end_src
+
+- =NEXT=
+  In Chapter 24, Example 24-6 uses ~NoReturn~ in the ~__flag_unknown_attrs~, a
+  method designed to produce a user-friendly and comprehensive error message,
+  and then raise ~AttributeError~.
+
+*** DONE Annotating Positional Only and Variadic Parameters - 295
+CLOSED: [2025-07-06 Sun 20:35]
+Illustration code from "Positional-Only Parameters" on page 242:
+#+begin_src python
+  def tag(name, /, *content: str, class_: str | None = None, **attrs: str):
+#+end_src
+- The type of ~content~ in the body of function is ~tuple[str, ...]~
+
+- The type of ~attr~ in the body of function is ~dict[str, str]~.
+
+- =historical=
+  Before supporting the ~/~ parameter syntax introduced in Python 3.8,
+  _The PEP 484_ convention is to prefix each /positional-only parameter/ name
+  with *two underscores*.
+
+*** DONE Imperfect Typing and Strong Testing - 296
+CLOSED: [2025-07-06 Sun 20:48]
+- Even in the contexts where they are most beneficial, static typing cannot be
+  trusted as the ultimate arbiter of correctness. It's not hard to find:
+
+- Also, if we are forced to _type check everything_, we lose some of the
+  expressive power of Python:
+  =from Jian= in another words, *Python type system is weak!*
+  * Some handy features can't be statically checked;
+    + for example,
+      /argument unpacking/ like ~config(**settings)~.
+
+  * Advanced features like /properties/, /descriptors/, /metaclasses/, and
+    /metaprogramming in general/ are _poorly supported_ or _beyond comprehension
+    for type checkers._
+
+  * /Type checkers/ *lag behind* Python releases, rejecting or even crashing
+    while analyzing code with new language features -- for more than a year in
+    some cases.
+
+- =from Jian=
+  Rephrase some paragraphs in this section and add some of my understanding:
+  Python type system is weak and the language is too dynamic.
+  It can't express many constraints, for example, integers in a range.
+
 *** TODO Chapter Summary - 297
 *** TODO Further Reading - 298
 - *Soapbox*
+  =from Jian= Forget about this Soapbox, which is meaningless.
 
 ** TODO 9. Decorators and Closures - 303
-*** What's New in This Chapter - 304
-*** Decorators 101 - 304
-*** When Python Executes Decorators - 306
-*** Registration Decorators - 308
-*** Variable Scope Rules - 308
+- The end goal of this chapter is to explain exactly
+  *HOW /function decorators/ work,*
+  FROM the simplest /registration decorators/
+  TO the rather more complicated _parameterized ones._
+  1. However, before we reach that goal we need to cover:
+     * HOW Python evaluates _decorator syntax_
+     * HOW Python decides whether a variable is _local_
+     * WHY closures exist and HOW they work
+     * WHAT problem is solved by ~nonlocal~
+
+  2. With this grounding, we can tackle further /decorator/ topics:
+     * Implementing a well-behaved /decorator/
+     * Powerful /decorators/ in the standard library: ~@cache~, ~@lru_cache~,
+       and ~@singledispatch~
+     * Implementing a /parameterized decorator/
+
+*** DONE What's New in This Chapter - 304
+CLOSED: [2025-07-08 Tue 18:34]
+- The /caching decorator/ ~functools.cache~ -- new in _Python 3.9_ -- is simpler
+  than the traditional ~functools.lru_cache~, so I present it first.
+  The latter is covered in "Using ~lru_cache~" on page 323, including the
+  simplified form added in _Python 3.8_.
+
+- "Single Dispatch Generic Functions" on page 324 was expanded and now uses
+  /type hints/, the preferred way to use ~functools.singledispatch~ since
+  _Python 3.7_.
+
+- "Parameterized Decorators" on page 329 now includes a class-based
+  example, Example 9-27.
+
+- I moved Chapter 10, "Design Patterns with First-Class Functions" to the end of
+  Part II to improve the flow of the book.
+  "Decorator-Enhanced Strategy Pattern" on page 353 is now in that chapter,
+  along with other variations of the /Strategy design pattern/ using callables.
+
+- We start with a very gentle introduction to /decorators/, and then proceed
+  with the rest of the items listed in the chapter opening.
+
+*** DONE Decorators 101 - 304
+CLOSED: [2025-07-08 Tue 18:58]
+- decorator :: a /callable/ that takes another function as an argument (the
+  decorated function).
+  * A decorator may perform some processing with the decorated function, and
+    + RETURNS it or
+    + REPLACES it WITH ANOTHER /function/ or /callable object/.
+
+- footnote 2: /class decorators/ are covered in _Chapter 24_.
+
+- Strictly speaking, /decorators/ are just /syntactic sugar/.
+
+- Three essential facts make a good summary of decorators:
+  * A /decorator/ is a /function/ or another /callable/.
+  * A /decorator/ may replace the decorated function with a different one.
+  * /Decorators/ are executed _IMMEDIATELY when a /module/ is loaded._
+
+*** DONE When Python Executes Decorators - 306
+CLOSED: [2025-07-08 Tue 19:02]
+A key feature of /decorators/ is that they run right after the /decorated
+function/ is defined. That is usually _at import time_ (i.e., when a /module/ is
+loaded by Python).
+
+*** DONE Registration Decorators - 308
+CLOSED: [2025-07-08 Tue 19:05]
+We will see a /registration decorator/ applied in "Decorator-Enhanced Strategy
+Pattern" on page 353 _(Chapter 10)_.
+
+*** TODO Variable Scope Rules - 308 - =NOTE=
 - *Comparing Bytecodes*
 
-*** Closures - 311
-*** The ~nonlocal~ Declaration - 315
-**** Variable Lookup Logic - 316
+*** TODO Closures - 311 - =NOTE=
+*** DONE The ~nonlocal~ Declaration - 315
+CLOSED: [2025-07-08 Tue 20:29]
+- Example 9-13. Calculate a running average without keeping all history (fixed
+  with the use of ~nonlocal~)
+  #+begin_src python
+    def make_averager():
+        count = 0
+        total = 0
 
-*** Implementing a Simple Decorator - 317
+        def averager(new_value):
+            nonlocal count, total
+            count += 1
+            total += new_value
+            return total / count
+
+        return averager
+  #+end_src
+  * If omitting the ~nonlocal~ keyword, we will see:
+    #+begin_src text
+      Traceback (most recent call last):
+        ...
+      UnboundLocalError: local variable 'count' referenced before assignment
+    #+end_src
+
+**** Variable Lookup Logic - 316
+=IMPORTANT=
+=IMPORTANT=
+=IMPORTANT=
+When a function is defined, the /Python bytecode compiler/ determines how to
+fetch a /variable/ ~x~ that appears in it, based on these rules:
+- If there is a ~global x~ declaration, ~x~ comes from and is assigned to the
+  ~x~ global variable module.
+  * footnote 4:
+    Python does *NOT have* a /program global scope/,
+    *ONLY* /module global scopes/.
+
+- If there is a ~nonlocal x~ declaration, ~x~
+  _comes from_ and _is assigned to_
+  the ~x~ /local variable/ of the nearest surrounding function
+  WHERE ~x~ is defined.
+
+- If ~x~ is a parameter or is assigned a value in the function body, then ~x~ is
+  the /local variable/.
+
+- If ~x~ _is referenced_ BUT _is NOT assigned_ and _is not a parameter_:
+  * ~x~ will be looked up in the /local scopes/ of the surrounding function
+    bodies (/nonlocal scopes/).
+  * If not found in /surrounding scopes/, it will be read from the /module
+    global scope/.
+  * If not found in the /global scope/, it will be read from
+    ~__builtins__.__dict__~.
+
+*** TODO Implementing a Simple Decorator - 317
 **** How It Works - 318
 
-*** Decorators in the Standard Library - 320
+- ~functools.wraps~
+
+*** TODO Decorators in the Standard Library - 320
 **** Memoization with ~functools.cache~ - 320
 - *Stacked Decorators*
 
@@ -2144,13 +2773,13 @@ CLOSED: [2025-07-06 Sun 19:23]
 **** Single Dispatch Generic Functions - 324
 ***** Function singledispatch - 325
 
-*** Parameterized Decorators - 329
+*** TODO Parameterized Decorators - 329
 **** A Parameterized Registration Decorator - 329
 **** The Parameterized Clock Decorator - 332
 **** A Class-Based Clock Decorator - 335
 
-*** Chapter Summary - 336
-*** Further Reading - 336
+*** TODO Chapter Summary - 336
+*** TODO Further Reading - 336
 - *Soapbox*
 
 ** TODO 10. Design Patterns with First-Class Functions - 341
@@ -2382,7 +3011,7 @@ first, but has its uses.
   *This conclusion is wrong!* It can't demonstrate!
   Just pick a good modern static typing language!!!
 
-*** DONE TypedDict - 526
+*** DONE ~TypedDict~ - 526
 CLOSED: [2024-11-13 Wed 20:14]
 - For runtime checking of JSON-like structures using type hints, check out the
   *pydantic* package on PyPI.
@@ -2835,3 +3464,4 @@ Library. Three of those attributes appeared several times in this book already:
 ** Further Reading - 961
 
 * Index - 963
+
