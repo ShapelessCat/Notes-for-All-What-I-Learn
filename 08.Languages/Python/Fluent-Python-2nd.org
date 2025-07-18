@@ -1049,34 +1049,352 @@ CLOSED: [2020-04-22 Wed 01:55]
 *** TODO Further Reading - 71
 
 ** TODO 3. Dictionaries and Sets - 77 - =START HERE 2=
+- =NOTE= =TODO=
+
 - ~__builtins__.__dict__~ stores *ALL built-in* /types/, /objects/, and
   /functions/.
 
+- =NOTE= =TODO=
+
 *** TODO What's New in This Chapter - 78
-*** TODO Modern ~dict~ Syntax - 78
-**** TODO ~dict~ Comprehensions - 79
-**** TODO Unpacking Mappings - 80
-**** TODO Merging Mapping with ~|~ - 80
+- Most changes in this second edition cover new features related to /mapping
+  types/:
+  * "Modern dict Syntax" on page 78 covers
+    + /ENHANCED unpacking syntax/ and
+    + different ways of _merging mappings_ --
+      INCLUDING the ~|~ and ~|=~ operators supported by ~dict~'s _since Python
+      3.9._
 
-*** TODO Pattern Matching with Mappings - 81
-*** TODO Standard API of Mapping Types - 83
-**** TODO Whhat Is Hashable - 84
-**** TODO Overview of Common Mapping Methods - 85
-***** Handling Missing Keys with setdefault - 68
+  * "Pattern Matching with Mappings" on page 81 illustrates handling mappings
+    with ~match/case~, _since Python 3.10._
 
-**** TODO Inserting or Updating Mutable Values - 87
+  * "~collections.OrderedDict~" on page 95 now focuses on the small but still
+    relevant differences between ~dict~ and ~OrderedDict~ -- considering that
+    ~dict~ *keeps the _key insertion order_ since Python 3.6.*
 
-*** TODO Automatic Handling of Missing Keys - 90
-**** defaultdict: Another Take on Missing Keys - 90
+  * New sections on the /view objects/ returned by ~dict.keys~, ~dict.items~,
+    and ~dict.values~:
+    + "Dictionary Views" on page 101 and
+    + "Set Operations on dict Views" on page 110.
+
+- The underlying implementation of dict and set still relies on hash tables, but
+  the dict code has two important optimizations that save memory and preserve
+  the insertion order of the keys in dict. “Practical Consequences of How dict
+  Works” on page 102 and “Practical Consequences of How Sets Work” on page 107
+  summarize what you need to know to use them well.
+
+- =NOTE=:
+  After adding more than 200 pages in this second edition, I moved the optional
+  section "Internals of sets and dicts" to the [[fluentpython.com][fluentpython.com]] companion
+  website. The updated and expanded 18-page post includes explanations and
+  diagrams about:
+  * The hash table algorithm and data structures, starting with its use in set,
+    which is simpler to understand.
+  * The memory optimization that preserves key insertion order in dict instances
+    (since Python 3.6).
+  * The key-sharing layout for dictionaries holding instance attributes—the
+    __dict__ of user-defined objects (optimization implemented in Python 3.3).
+
+*** DONE Modern ~dict~ Syntax - 78
+CLOSED: [2025-07-09 Wed 15:35]
+The next sections describe _advanced syntax features_ to *build*, *unpack*, and
+*process* /mappings/.
+
+**** DONE ~dict~ Comprehensions - 79
+CLOSED: [2025-07-09 Wed 15:31]
+**** DONE Unpacking Mappings - 80
+CLOSED: [2025-07-09 Wed 15:31]
+#+begin_src python
+  ## 1
+  def dump(**kwargs):
+      return kwargs
+
+
+  dump(**{'x': 1}, y=2, **{'z': 3})
+  # {'x': 1, 'y': 2, 'z': 3}
+
+
+  ## 2
+  {'a': 0, **{'x': 1}, 'y': 2, **{'z': 3, 'x': 4}}
+  # {'a': 0, 'x': 4, 'y': 2, 'z': 3}
+#+end_src
+In the ~## 2~ case, duplicate keys are allowed --
+later occurrences *overwrite* previous ones -- see the value mapped to ~x~ in
+the example.
+
+**** DONE Merging Mapping with ~|~ - 80
+CLOSED: [2025-07-09 Wed 15:32]
+~|~ and ~|=~
+
+- *Tip*:
+  If you need to maintain code to run on Python 3.8 or earlier,
+  the _"Motivation"_ section of
+  _PEP 584—Add Union Operators To dict_ provides a good summary of other ways to
+  merge mappings.
+
+*** DONE Pattern Matching with Mappings - 81
+CLOSED: [2025-07-10 Thu 11:15]
+- Patterns for mappings look like ~dict~ literals, but they can match instances
+  of _ANY *actual or virtual* /subclass/ of ~collections.abc.Mapping~._
+  * footnote 1:
+    =IMPORTANT=
+    A /virtual subclass/
+
+    + ANY /class/ registered by calling the ~.register()~ method of an ~ABC~,
+      =TODO=
+      =TODO=
+      =TODO=
+      =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      as explained in "A Virtual Subclass of an ABC" on page 460.
+
+    + A /type/ implemented via _Python/C API_ is also eligible if a specific
+      marker bit is set. See ~Py_TPFLAGS_MAPPING~.
+
+- Example 3-2. creator.py: get_creators() extracts names of creators from mediarecords
+  #+begin_src python
+    def get_creators(record: dict) -> list:
+        match record:
+            case {'type': 'book', 'api': 2, 'authors': [*names]}:
+                return names
+            case {'type': 'book', 'api': 1, 'author': name}:
+                return [name]
+            case {'type': 'book'}:
+                raise ValueError(f"Invalid 'book' record: {record!r}")
+            case {'type': 'movie', 'director': name}:
+                return [name]
+            case _:
+                raise ValueError(f'Invalid record: {record!r}')
+  #+end_src
+
+- In contrast with /sequence patterns/, /mapping patterns/ *succeed on partial
+  matches.*
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  There is _NO NEED_ to use ~**extra~ to match extra key-value pairs,
+  BUT
+  if you want to _capture_ them as a ~dict~, you can prefix one variable with ~**.~
+  * _RESTRICTION_:
+    + It MUST BE _the *last* in the pattern_, and
+    + ~**_~ is forbidden because it would be redundant.
+
+- =TODO= =RE-READ=
+  In _"Automatic Handling of Missing Keys"_ on page 90 we'll study ~defaultdict~
+  and other mappings where key lookups via ~__getitem__~ (i.e., ~d[key]~)
+  succeed because missing items are created on the fly.
+
+  * *In the context of pattern matching,*
+    a ~match~ succeeds _only if_ the subject already has the required keys at
+    the top of the match statement.
+    #+begin_src python
+      s = [('yellow', 1), ('blue', 2), ('yellow', 3), ('blue', 4), ('red', 1)]
+      d = defaultdict(list)
+      for k, v in s:
+          d[k].append(v)
+
+
+      match d:
+          case {'missing': _}:
+              print('missing')
+          case {'yellow': _}:
+              print('yellow')
+          case _:
+              print('...')
+
+      # yellow
+    #+end_src
+
+- *TIP*
+  The automatic handling of missing keys is not triggered because /pattern
+  matching/ *always uses* the ~d.get(key, sentinel)~ method --
+  =IMPORTANT=
+  where the *default sentinel* is a _special marker value_ that cannot occur in
+  user data.
+
+*** TODO Standard API of Mapping Types - 83 - =REVIEW=
+The ~collections.abc~ module provides the ~Mapping~ and ~MutableMapping~
+ABCs describing the interfaces of ~dict~ and similar types.
+
+- Figure 3-1. Simplified UML class diagram for the ~MutableMapping~ and its
+  /superclasses/ from ~collections.abc~ (inheritance arrows point from
+  /subclasses/ to /superclasses/; names in italic are /abstract classes/ and
+  /abstract methods/).
+  =IMPORTANT=
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  To implement a *custom mapping*, it's easier to extend ~collections.UserDict~,
+  or to wrap a ~dict~ _by composition_, instead of *subclassing* these ~ABC~'s.
+
+  The ~collections.UserDict~ /class/ and all _concrete mapping classes_ in the
+  standard library encapsulate the basic ~dict~ in their implementation, which
+  in turn is built on a hash table. Therefore, they all share the limitation
+  that *the keys must be hashable*. If you need a refresher, the next section
+  explains.
+
+**** DONE What Is Hashable - 84 - =IMPORTANT= - =REVIEW=
+CLOSED: [2025-07-10 Thu 12:08]
+~__hash__()~
+
+- /Numeric types/ and /flat immutable types/ ~str~ and ~bytes~ are all
+  /hashable/.
+
+  * /Container types/ are /hashable/
+    IF
+    + they are immutable and
+    + all contained objects are also /hashable/.
+
+- A ~frozenset~ is always /hashable/,
+  BECAUSE
+  every element it contains must be /hashable/ by definition.
+
+- The /hash code/ of an object may be _DIFFERENT depending on_
+  * the version of Python,
+  * the machine architecture, and
+  * because of a /salt/ added to the hash computation for *security reasons*.
+    + footnote 3:
+      _See PEP 456 -- Secure and interchangeable hash algorithm_ to learn about
+      the security implications and solutions adopted.
+
+- =IMPORTANT=
+  The /hash code/ of a correctly implemented object is
+  _GUARANTEED_ to be *constant only within _one Python process_.*
+
+- /User-defined types/ are *hashable by default*
+  BECAUSE their hash code is their ~id()~, and the ~__eq__()~ method inherited
+  from the ~object~ class simply compares /the ~object~ IDs/.
+
+- If an object implements a custom ~__eq__()~ that takes into account its
+  _internal state_,
+  it will be hashable *only if* its ~__hash__()~ always returns the same /hash
+  code/.
+
+  * In practice, this REQUIRES that ~__eq__()~ and ~__hash__()~
+    *only take into account instance attributes that never change during the
+    life of the object.*
+
+**** TODO Overview of Common Mapping Methods - 85 - =IMPORTANT= - =REVIEW=
+Table 3-1.
+
+**** DONE Inserting or Updating Mutable Values - 87
+CLOSED: [2025-07-10 Thu 13:50]
+- ~a_dict.setdefault(word, []).append(location)~
+  is equivalent to
+  #+begin_src python
+    if key not in a_dict:
+        a_dict[key] = []
+    a_dict[key].append(new_value)
+  #+end_src
+
+- =NEXT=
+  A related issue, _handling missing keys on any lookup (and not only when
+  inserting),_ is the subject of the next section.
+
+*** DONE Automatic Handling of Missing Keys - 90
+CLOSED: [2025-07-11 Fri 12:28]
+- Sometimes it is convenient to have /mappings/ that
+  _RETURN_ some made-up value when a missing key is searched.
+
+  There are two main approaches to this:
+  * One is to use a ~defaultdict~ instead of a plain ~dict~.
+  * The other is to *subclass* /dict/ or any other /mapping type/ and add a
+    ~__missing__~ method.
+
+- Both solutions are covered next.
+
+**** ~defaultdict~: Another Take on Missing Keys - 90
+- If no ~default_factory~ is provided, the usual ~KeyError~ is raised for
+  missing keys.
+
+- *CAUTION*
+  The ~default_factory~ of a ~defaultdict~ is only invoked to provide default
+  values for ~__getitem__~ calls, and not for the other methods. For example,
+  * if dd is a ~defaultdict~, and ~k~ is a missing key, ~dd[k]~ will call the
+    ~default_factory~ to create a default value,
+
+  * but ~dd.get(k)~ still returns ~None~, and ~k~ in dd is ~False~.
+
+- The mechanism that makes ~defaultdict~ work by calling ~default_factory~ is
+  the ~__missing__~ special method, a feature that we discuss next.
+
 **** The ~__missing__~ Method - 91
-**** Inconsistent Usage of ~__missing__~ in the Standard Library - 94
+**** Inconsistent Usage of ~__missing__~ in the Standard Library - 94 - =RE-READ=
+- Consider the following scenarios, and _how the MISSING KEY lookups are
+  affected_:
+  =TODO=
+  =REVIEW=
+  * ~dict~ subclass
+  * ~collections.UserDict~ subclass
+  * ~abc.Mapping~ subclass with the simplest possible ~__getitem__~
+  * ~abc.Mapping~ subclass with ~__getitem__~ calling ~__missing__~
 
-*** TODO Variations of dict - 95
-**** ~collections.OrderedDict~ - 95
-**** ~collections.ChainMap~ - 95
-**** ~collections.Counter~ - 96
-**** ~shelve.Shelf~ - 97
-**** Subclassing ~UserDict~ Instead of ~dict~ - 97
+*** TODO Variations of ~dict~ - 95
+**** TODO ~collections.OrderedDict~ - 95 - =NOTE=
+**** DONE ~collections.ChainMap~ - 95
+CLOSED: [2025-07-11 Fri 12:37]
+#+begin_src python
+  from collections import ChainMap
+
+
+  d1 = dict(a=1, b=3)
+  d2 = dict(a=2, b=4, c=6)
+
+  chain = ChainMap(d1, d2)
+
+  chain['a'] # 1
+  chain['c'] # 6
+
+  chain['c'] = -1
+
+  d1  # {'a': 1, 'b': 3, 'c': -1}
+  d2  # {'a': 2, 'b': 4, 'c': 6}
+#+end_src
+
+A ~ChainMap~ instance holds _a list of mappings_ that can be searched *as one*.
+
+- The lookup is performed on each input mapping in the order it appears in the
+  constructor call, and it returns the first one it sees.
+
+- The ~ChainMap~ instance does
+  * *not copy* the input mappings,
+  * but *holds* references to them.
+
+- The insertion only affect the _FIRST_ input mapping.
+
+**** DONE ~collections.Counter~ - 96
+CLOSED: [2025-07-11 Fri 12:46]
+~collections.Counter~ is a mapping that holds an integer count for each key.
+
+- Updating an existing key adds to its count.
+
+  This can be used to count instances of hashable objects or as a multiset
+  (discussed later in this section).
+
+- ~Counter~ implements the ~+~ and ~-~ operators to combine tallies, and other
+  useful methods such as ~most_common([n])~, which returns an ordered list of
+  tuples with the ~n~ most common items and their counts.
+
+- Example: Here is ~Counter~ used to count letters in words
+  #+begin_src python
+    ct = collections.Counter('abracadabra')
+    ct # Counter({'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1})
+
+    ct.update('aaaaazzz')
+    ct # Counter({'a': 10, 'z': 3, 'b': 2, 'r': 2, 'c': 1, 'd': 1})
+
+    ct.most_common(3) # [('a', 10), ('z', 3), ('b', 2)]
+  #+end_src
+  =CAUTION=
+  =IMPORTANT=
+  Note that the ~'b'~ and ~'r'~ keys are tied in third place, but
+  ~ct.most_common(3)~ shows only three counts, no ~'r'~.
+
+**** TODO ~shelve.Shelf~ - 97
+**** TODO Subclassing ~UserDict~ Instead of ~dict~ - 97
 
 *** DONE Immutable Mappings - 99
 CLOSED: [2017-09-08 Fri 20:16]
@@ -1109,7 +1427,7 @@ the original map)
 #+END_SRC
 
 *** TODO Dictionary Views - 101
-*** TODO Practical Consequences of How dict Works - 102
+*** TODO Practical Consequences of How ~dict~ Works - 102
 *** TODO Set Theory - 103
 **** Set Literals - 105
 **** Set Comprehensions - 106
@@ -1117,7 +1435,7 @@ the original map)
 *** TODO Practical Consequences of How Sets Work - 107
 **** Set Operations - 107
 
-*** TODO Set Operations on dict Views - 110
+*** TODO Set Operations on ~dict~ Views - 110
 *** TODO Chapter Summary
 *** TODO Further Reading
 

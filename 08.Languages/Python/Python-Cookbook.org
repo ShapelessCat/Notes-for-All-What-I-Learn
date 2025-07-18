@@ -35,13 +35,13 @@
 ** 9.25. Disassembling Python Byte Code - 392
 
 * 10. Modules and Packages - 397
-  This chapter focuses on common programming techniques involving /modules/ and
-  /packages/, such as
-  - how to *organize* /packages/
-  - *splitting* large /modules/ *into* multiple files
-  - *creating* /namespace packages/
-  - Recipes that allow you to *customize* the operation of _the ~import~ statement_
-    itself are also given
+This chapter focuses on common programming techniques involving /modules/ and
+/packages/, such as
+- how to *organize* /packages/
+- *splitting* large /modules/ *into* multiple files
+- *creating* /namespace packages/
+- Recipes that allow you to *customize* the operation of _the ~import~ statement_
+  itself are also given
 
 ** 10.1. Making a Hierarchical Package of Modules - 397
 *** Problem
@@ -397,315 +397,371 @@
 *** Discussion
 
 * 12. Concurrency - 485
-  - Python has long supported _DIFFERENT approaches_ to /concurrent programming/,
-    including
-    + programming with threads
-    + launching subprocesses
-    + various tricks involving /generator functions/ =???= =TODO=
+- Python has long supported _DIFFERENT approaches_ to /concurrent programming/,
+  including
+  * programming with threads
+  * launching subprocesses
+  * various tricks involving /generator functions/
 
-  - In this chapter, recipes related to various aspects of concurrent programming
-    are presented, including
-    + common /thread programming/ techniques
-    + approaches for /parallel processing/.
+- In this chapter, _recipes_ related to various aspects of /concurrent
+  programming/ are presented, including
+  * COMMON /thread programming/ techniques
+  * approaches for /parallel processing/.
 
-  - As experienced programmers know, /concurrent programming/ is fraught with
-    potential peril.
-      Thus, a _MAJOR FOCUS_ of this chapter is on recipes that tend to lead to
-    more *reliable* and *debuggable* code.
+- As experienced programmers know, /concurrent programming/ is fraught with
+  potential peril. Thus, a _MAJOR FOCUS_ of this chapter:
+  _on recipes that tend to lead to more *reliable* and *debuggable* code._
 
 ** TODO 12.1. Starting and Stopping Threads - 485 - _???_ =TODO=
 *** Problem - 485
-    You want to *create* and *destroy* /threads/ for _concurrent execution_ of code.
+You want to *create* and *destroy* /threads/ for _concurrent execution_ of code.
 
 *** Solution - 485
-    - The ~threading~ library can be used to execute _ANY_ /Python callable/ in
-      its own /thread/. To do this, you
-      1. create a ~Thread~ /instance/
-      2. supply the /callable/ that you wish to execute as a target.
+- The ~threading~ library can be used to execute _ANY_ /Python callable/ in its
+  own /thread/. To do this, you
+  1. create a ~Thread~ /instance/
+  2. supply the /callable/ that you wish to execute as a /target/.
 
-    - Here is a simple example:
+- Here is a simple example:
+  #+begin_src python
+    # Code to execute in an independent thread
+    import time
+    from threading import Thread
+
+
+    def countdown(n):
+        while n > 0:
+            print('T-minus', n)
+            n -= 1
+            time.sleep(5)
+            # Create and launch a thread
+            t = Thread(target=countdown, args=(10,))
+            t.start()
+  #+end_src
+
+- /Threads/ are executed in their own /system-level thread/ (e.g., a /POSIX
+  thread/ or /Windows threads/) that is FULLY _managed by the HOST OS_.
+
+- Once started, /threads/ run *independently*
+  UNTIL the _target function_ returns.
+
+- You can *query* a /thread instance/ to see if it's still running:
+  #+begin_src python
+    if t.is_alive():
+        print('Still running')
+    else:
+        print('Completed')
+  #+end_src
+
+- You can also request to /join/ with a /thread/, which *WAITS* for it to
+  _terminate_: ~t.join()~
+
+- The interpreter remains running until all /threads/ terminate.
+  For /long-running threads/ or _background tasks_ that run forever, you should
+  consider *making the /thread/ /daemonic/.* For example:
+  #+begin_src python
+    t = Thread(target=countdown, args=(10,), daemon=True)
+    t.start()
+  #+end_src
+  * /Daemonic threads/ *can't* be /joined/.
+    However, they are *destroyed* AUTOMATICALLY _when the /main thread/
+    terminates._
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Beyond the two operations shown (~.start()~ and ~.join()~),
+  there *aren't* many other things you can do with /threads/.
+  * For example, there are *NO* operations to
+    + *terminate* a /thread/
+    + *signal* a /thread/,
+    + *adjust* its scheduling,
+    + *perform* any other high-level operations.
+
+  * If you want these features, *you need to build them yourself.*
+    =TODO= =HOWTO= =???=
+
+- If you want to be able to *terminate* /threads/, the /thread/ *MUST* be
+  programmed to poll for exit at selected points. =???= =TODO=
+  * For example, you might put your /thread/ in a /class/ such as this:
+    #+begin_src python
+      class CountdownTask:
+          def __init__(self):
+              self._running = True
+
+          def terminate(self):
+              self._running = False
+
+          def run(self, n):
+              while self._running and n > 0:
+                  print('T-minus', n)
+                  n -= 1
+                  time.sleep(5)
+
+      if __name__ == '__main__':
+          c = CountdownTask()
+          t = Thread(target=c.run, args=(10,))
+          t.start()
+          # ...
+          c.terminate()  # Signal termination
+          t.join()       # Wait for actual termination (if needed)
+    #+end_src
+
+- =IMPORTANT=
+  _Polling for /thread/ termination_ can be tricky to coordinate if /threads/
+  perform /blocking operations/ such as I/O.
+  * For example, a /thread/ blocked indefinitely on an I/O operation may never
+    return to check if it's been killed. To correctly deal with this case,
+    you'll need to carefully program /thread/ to utilize timeout loops.
+    + For example:
       #+begin_src python
-        # Code to execute in an independent thread
-        import time
+        class IOTask:
+            def terminate(self):
+                self._running = False
 
-
-        def countdown(n):
-            while n > 0:
-                print('T-minus', n)
-                n -= 1
-                time.sleep(5)
-                # Create and launch a thread
-                from threading import Thread
-                t = Thread(target=countdown, args=(10,))
-                t.start()
+            def run(self, sock):
+                # sock is a socket
+                sock.settimeout(5)  # Set timeout period
+                while self._running:
+                    # Perform a blocking I/O operation w/ timeout
+                    try:
+                        data = sock.recv(8192)
+                        break
+                    except socket.timeout:
+                        continue
+                    # Continued processing
+                    # ...
+                # Terminated
+                return
       #+end_src
-
-    - /Threads/ are executed in their own /system-level thread/ (e.g., a /POSIX
-      thread/ or /Windows threads/) that is FULLY _managed by the HOST OS_.
-
-    - Once started, /threads/ run *independently* UNTIL the _target function_ returns.
-
-    - You can *query* a /thread instance/ to see if it's still running:
-      #+begin_src python
-        if t.is_alive():
-            print('Still running')
-        else:
-            print('Completed')
-      #+end_src
-
-    - You can also request to /join/ with a /thread/, which *waits* for it to
-      _terminate_: ~t.join()~
-
-    - The interpreter remains running until all /threads/ terminate. For /long-running
-      threads/ or _background tasks_ that run forever, you should consider *making the
-      /thread/ /daemonic/.* For example:
-      #+begin_src python
-        t = Thread(target=countdown, args=(10,), daemon=True)
-        t.start()
-      #+end_src
-      + /Daemonic threads/ *can't* be /joined/.
-        However, they are *destroyed* AUTOMATICALLY _when the /main thread/
-        terminates._
-
-    - Beyond the two operations shown (~.start()~ and ~.join()~),
-      there *aren't* many other things you can do with /threads/.
-      + For example, there are *NO* operations to
-        * *terminate* a /thread/
-        * *signal* a /thread/,
-        * *adjust* its scheduling,
-        * *perform* any other high-level operations.
-
-      + If you want these features, *you need to build them yourself.*
-        =TODO= =HOWTO= =???=
-
-    - If you want to be able to *terminate* /threads/, the /thread/ *MUST* be
-      programmed to poll for exit at selected points. =???= =TODO=
-      + For example, you might put your /thread/ in a /class/ such as this:
-        #+begin_src python
-          class CountdownTask:
-              def __init__(self):
-                  self._running = True
-
-              def terminate(self):
-                  self._running = False
-
-              def run(self, n):
-                  while self._running and n > 0:
-                      print('T-minus', n)
-                      n -= 1
-                      time.sleep(5)
-
-          if __name__ == '__main__':
-              c = CountdownTask()
-              t = Thread(target=c.run, args=(10,))
-              t.start()
-              # ...
-              c.terminate()  # Signal termination
-              t.join()       # Wait for actual termination (if needed)
-        #+end_src
-
-    - =TODO= =TODO= =TODO= =???= =???= =???=
-    - _Polling for /thread/ termination_ can be tricky to coordinate if /threads/
-      perform /blocking operations/ such as I/O.
-      + For example, a /thread/ blocked indefinitely on an I/O operation may never
-        return to check if it's been killed. To correctly deal with this case,
-        you'll need to carefully program /thread/ to utilize timeout loops.
-        * For example:
-          #+begin_src python
-            class IOTask:
-                def terminate(self):
-                    self._running = False
-
-                def run(self, sock):
-                    # sock is a socket
-                    sock.settimeout(5)  # Set timeout period
-                    while self._running:
-                        # Perform a blocking I/O operation w/ timeout
-                        try:
-                            data = sock.recv(8192)
-                            break
-                        except socket.timeout:
-                            continue
-                        # Continued processing
-                        # ...
-                    # Terminated
-                    return
-          #+end_src
 
 *** Discussion - 487
+Due to a /global interpreter lock (GIL)/, Python threads are restricted to an
+execution model that only allows one thread to execute in the interpreter at
+any given time.
+
+For this reason, Python threads should generally not be used for computationally
+intensive tasks where you are trying to achieve parallelism on multiple CPUs.
+They are much better suited for I/O handling and handling concurrent execution
+in code that performs blocking operations (e.g., waiting for I/O, waiting for
+results from a database, etc.).
+
+- Sometimes you will see /threads/ defined via _inheritance from_ the ~Thread~
+  class. For example:
+  #+begin_src python
+    from threading import Thread
+
+
+    class CountdownThread(Thread):
+        def __init__(self, n):
+            super().__init__()
+            self.n = 0
+
+        def run(self):
+            while self.n > 0:
+            print('T-minus', self.n)
+            self.n -= 1
+            time.sleep(5)
+
+
+    c = CountdownThread(5)
+    c.start()
+  #+end_src
+  * Although this works,
+    it introduces an _extra dependency_ between the code and the ~threading~
+    library.
+
+    That is, you can only use the resulting code in the context of /threads/,
+    WHEREAS
+    the technique shown earlier involves writing code with no explicit
+    dependency on ~threading~.
+
+    By freeing your code of such dependencies, it becomes usable in other
+    contexts that may or may not involve threads. For instance, you might be
+    able to execute your code in a separate process using the multiprocessing
+    module using code like this:
+    #+begin_src python
+      import multiprocessing
+
+
+      c = CountdownTask(5)
+      p = multiprocessing.Process(target=c.run)
+      p.start()
+      # ...
+    #+end_src
 
 ** DONE 12.2. Determining If a Thread Has Started - 488
-   CLOSED: [2020-10-07 Wed 02:12]
+CLOSED: [2020-10-07 Wed 02:12]
 *** Problem - 488
-    You've launched a thread, but want to know _when_ it actually starts running.
+You've launched a thread, but want to know _when_ it actually starts running.
 
 *** Solution - 488
-    - A key feature of /threads/ is that they execute
-      + *independently*
-      + *nondeterministically*.
+- A key feature of /threads/ is that they execute
+  * *independently*
+  * *nondeterministically*.
 
-    - This can present a tricky synchronization problem:
-      if other /threads/ in the program need to know if a /thread/ has reached a
-      certain point in its execution before carrying out further operations.
-      To solve such problems, use the ~Event~ object from the ~threading~ library.
+- This can present a tricky synchronization problem:
+  if other /threads/ in the program need to know if a /thread/ has reached a
+  certain point in its execution before carrying out further operations.
+  To solve such problems, use the ~Event~ object from the ~threading~ library.
 
-    - ~Event~ /instances/ are similar to a _"sticky" flag_ that allows /threads/
-      to wait for something to happen.
-      1. Initially, an /event/ is *set* to ~0~.
+- ~Event~ /instances/ are similar to a _"sticky" flag_ that allows /threads/
+  to wait for something to happen.
+  1. Initially, an /event/ is *set* to ~0~.
 
-      2. If the /event/ is *unset* and a /thread/ *waits* on the /event/, it will
-         *block (i.e., go to sleep) until* the /event/ gets *set*.
+  2. If the /event/ is *unset* and a /thread/ *waits* on the /event/, it will
+     *block (i.e., go to sleep) until* the /event/ gets *set*.
 
-      3. A /thread/ that *sets* the /event/ will *wake up* _ALL_ of the /threads/
-         that happen to be *waiting* (if any).
+  3. A /thread/ that *sets* the /event/ will *wake up* _ALL_ of the /threads/
+     that happen to be *waiting* (if any).
 
-      4. If a /thread/ *waits* on an /event/ that has *ALREADY been set*, it merely
-         moves on, continuing to execute.
+  4. If a /thread/ *waits* on an /event/ that has *ALREADY been set*, it merely
+     moves on, continuing to execute.
 
-    - Here is some sample code that uses an ~Event~ to coordinate the startup of
-      a /thread/:
-      #+begin_src python
-        from threading import Thread, Event
-        import time
+- Here is some sample code that uses an ~Event~ to coordinate the startup of
+  a /thread/:
+  #+begin_src python
+    from threading import Thread, Event
+    import time
 
 
-        # Code to execute in an independent thread
-        def countdown(n, started_evt):
-            print('countdown starting')
-            started_evt.set()
-            while n > 0:
-                print('T-minus', n)
-                n -= 1
-                time.sleep(5)
+    # Code to execute in an independent thread
+    def countdown(n, started_evt):
+        print('countdown starting')
+        started_evt.set()
+        while n > 0:
+            print('T-minus', n)
+            n -= 1
+            time.sleep(5)
 
-        if __main__ == '__name__':
-            # Create the event object that will be used to signal startup
-            started_evt = Event()
+    if __main__ == '__name__':
+        # Create the event object that will be used to signal startup
+        started_evt = Event()
 
-            # Launch the thread and pass the startup event
-            print('Launching countdown')
-            t = Thread(target=countdown, args=(10, started_evt))
-            t.start()
+        # Launch the thread and pass the startup event
+        print('Launching countdown')
+        t = Thread(target=countdown, args=(10, started_evt))
+        t.start()
 
-            # Wait for the thread to start
-            started_evt.wait()
-            print('countdown is running')
-      #+end_src
-      + When you run this code, the ="countdown is running"= message will always
-        appear after the ="countdown starting"= message.
-          This is coordinated by the /event/ that makes the /main thread/ _wait
-        until_ the ~countdown()~ function has first printed the startup message.
+        # Wait for the thread to start
+        started_evt.wait()
+        print('countdown is running')
+  #+end_src
+  * When you run this code, the ="countdown is running"= message will always
+    appear after the ="countdown starting"= message.
+      This is coordinated by the /event/ that makes the /main thread/ _wait
+    until_ the ~countdown()~ function has first printed the startup message.
 
 *** Discussion - 489
-    - ~Event~ /objects/ are BEST used for *one-time* /events/.
-      That is, you create an /event/, /threads/ _wait_ for the /event/ to be
-      *set*, and *once set*, the ~Event~ is _discarded_.
-      + Although it is possible to _clear_ an /event/ using its ~clear()~ /method/,
-        safely clearing an /event/ and _waiting_ for it to be _set_ again is tricky
-        to coordinate, and can lead to _missed_ /events/, /deadlock/, or other
-        problems (in particular, you *CAN'T GUARANTEE* that a request to _clear_
-        an /event/ after setting it will execute *BEFORE* a _released_ /thread/
-        cycles back to _wait_ on the /event/ again).
+- ~Event~ /objects/ are BEST used for *one-time* /events/.
+  That is, you create an /event/, /threads/ _wait_ for the /event/ to be
+  *set*, and *once set*, the ~Event~ is _discarded_.
+  * Although it is possible to _clear_ an /event/ using its ~clear()~ /method/,
+    safely clearing an /event/ and _waiting_ for it to be _set_ again is tricky
+    to coordinate, and can lead to _missed_ /events/, /deadlock/, or other
+    problems (in particular, you *CAN'T GUARANTEE* that a request to _clear_
+    an /event/ after setting it will execute *BEFORE* a _released_ /thread/
+    cycles back to _wait_ on the /event/ again).
 
-    - If a /thread/ is going to *repeatedly* signal an /event/ over and over, you're
-      probably better off using a ~Condition~ /object/ *INSTEAD*.
-      + For example,
-        this code implements a periodic timer that other /threads/ can monitor to
-        see whenever the timer expires:
-        #+begin_src python
-          import threading
-          import time
-
-
-          class PeriodicTimer:
-              def __init__(self, interval):
-                  self._interval = interval
-                  self._flag = 0
-                  self._cv = threading.Condition()
-
-              def start(self):
-                  t = threading.Thread(target=self.run)
-                  t.daemon = True
-                  t.start()
-
-              def run(self):
-                  '''Run the timer and notify waiting threads after each interval'''
-                  while True:
-                      time.sleep(self._interval)
-                      with self._cv:
-                          self._flag ^= 1
-                          self._cv.notify_all()
-
-              def wait_for_tick(self):
-                  '''Wait for the next tick of the timer'''
-                  with self._cv:
-                      last_flag = self._flag
-                      while last_flag == self._flag:
-                          self._cv.wait()
+- If a /thread/ is going to *repeatedly* signal an /event/ over and over, you're
+  probably better off using a ~Condition~ /object/ *INSTEAD*.
+  * For example,
+    this code implements a periodic timer that other /threads/ can monitor to
+    see whenever the timer expires:
+    #+begin_src python
+      import threading
+      import time
 
 
-          if __main__ == '__name__':
-              # Example use of the timer
-              ptimer = PeriodicTimer(5)
-              ptimer.start()
+      class PeriodicTimer:
+          def __init__(self, interval):
+              self._interval = interval
+              self._flag = 0
+              self._cv = threading.Condition()
 
-              # Two threads that synchronize on the timer
-              def countdown(nticks):
-                  while nticks > 0:
-                      ptimer.wait_for_tick()
-                      print('T-minus', nticks)
-                      nticks -= 1
-
-              def countup(last):
-                  n = 0
-                  while n < last:
-                      ptimer.wait_for_tick()
-                      print('Counting', n)
-                      n += 1
-
-              threading.Thread(target=countdown, args=(10,)).start()
-              threading.Thread(target=countup, args=(5,)).start()
-        #+end_src
-
-    - A critical feature of ~Event~ objects is that they *wake* _ALL_ /waiting threads/.
-        If you are writing a program where you only want to wake up a *single*
-      /waiting thread/, it is probably better to use a ~Semaphore~ or ~Condition~
-      object instead.
-      + For example, consider this code involving /semaphores/:
-        #+begin_src python
-          # Worker thread
-          def worker(n, sema):
-              # Wait to be signaled
-              sema.acquire()
-              # Do some work
-              print('Working', n)
-
-          # Create some threads
-          sema = threading.Semaphore(0)
-          nworkers = 10
-          for n in range(nworkers):
-              t = threading.Thread(target=worker, args=(n, sema,))
+          def start(self):
+              t = threading.Thread(target=self.run)
+              t.daemon = True
               t.start()
-        #+end_src
 
-    - If you run this, a /pool of threads/ will start, but nothing happens because
-      they're all *blocked* _waiting to acquire_ the /semaphore/.
-        _Each time_ the /semaphore/ is _released_, *ONLY ONE* ~worker~ will
-      _wake up and run_. For example:
-      #+begin_src python
-        sema.release()  # Working 0
-        sema.release()  # Working 1
-      #+end_src
+          def run(self):
+              '''Run the timer and notify waiting threads after each interval'''
+              while True:
+                  time.sleep(self._interval)
+                  with self._cv:
+                      self._flag ^= 1
+                      self._cv.notify_all()
 
-    - Writing code that involves a lot of *TRICKY synchronization* between
-      /threads/ is likely to make your head explode.
-      =from Jian= this is a imperative way to manage /threads/, which can work,
-                  but complicated.
+          def wait_for_tick(self):
+              '''Wait for the next tick of the timer'''
+              with self._cv:
+                  last_flag = self._flag
+                  while last_flag == self._flag:
+                      self._cv.wait()
 
-      + A more sane approach is to *thread* /threads/ as *communicating tasks*
-        * using /queues/ (=TODO= described in the next recipe.)
-          OR
-        * as /actors/ (=TODO= described in Recipe 12.10.)
+
+      if __main__ == '__name__':
+          # Example use of the timer
+          ptimer = PeriodicTimer(5)
+          ptimer.start()
+
+          # Two threads that synchronize on the timer
+          def countdown(nticks):
+              while nticks > 0:
+                  ptimer.wait_for_tick()
+                  print('T-minus', nticks)
+                  nticks -= 1
+
+          def countup(last):
+              n = 0
+              while n < last:
+                  ptimer.wait_for_tick()
+                  print('Counting', n)
+                  n += 1
+
+          threading.Thread(target=countdown, args=(10,)).start()
+          threading.Thread(target=countup, args=(5,)).start()
+    #+end_src
+
+- A critical feature of ~Event~ objects is that they *wake* _ALL_ /waiting threads/.
+    If you are writing a program where you only want to wake up a *single*
+  /waiting thread/, it is probably better to use a ~Semaphore~ or ~Condition~
+  object instead.
+  * For example, consider this code involving /semaphores/:
+    #+begin_src python
+      # Worker thread
+      def worker(n, sema):
+          # Wait to be signaled
+          sema.acquire()
+          # Do some work
+          print('Working', n)
+
+      # Create some threads
+      sema = threading.Semaphore(0)
+      nworkers = 10
+      for n in range(nworkers):
+          t = threading.Thread(target=worker, args=(n, sema,))
+          t.start()
+    #+end_src
+
+- If you run this, a /pool of threads/ will start, but nothing happens because
+  they're all *blocked* _waiting to acquire_ the /semaphore/.
+    _Each time_ the /semaphore/ is _released_, *ONLY ONE* ~worker~ will
+  _wake up and run_. For example:
+  #+begin_src python
+    sema.release()  # Working 0
+    sema.release()  # Working 1
+  #+end_src
+
+- Writing code that involves a lot of *TRICKY synchronization* between
+  /threads/ is likely to make your head explode.
+  =from Jian= this is a imperative way to manage /threads/, which can work,
+              but complicated.
+
+  * A more sane approach is to *thread* /threads/ as *communicating tasks*
+    + using /queues/ (=TODO= described in the next recipe.)
+      OR
+    + as /actors/ (=TODO= described in Recipe 12.10.)
 
 ** TODO 12.3. Communicating Between Threads - 491
 *** Problem - 491
@@ -853,103 +909,103 @@
 ** 13.9. Finding Files by Name - 550
 ** 13.10. Reading Configuration Files - 552
 ** DONE 13.11. Adding Logging to Simple Scripts - 555
-   CLOSED: [2020-10-03 Sat 00:36]
+CLOSED: [2020-10-03 Sat 00:36]
 *** DONE Problem - 555
-    CLOSED: [2020-10-03 Sat 00:35]
-    You want scripts and simple programs to _write diagnostic information_
-    *TO* _log files_.
+CLOSED: [2020-10-03 Sat 00:35]
+You want scripts and simple programs to _write diagnostic information_
+*TO* _log files_.
 
 *** DONE Solution - 555
-    CLOSED: [2020-10-03 Sat 00:36]
-    The easiest way: use the logging module in the standard library.
+CLOSED: [2020-10-03 Sat 00:36]
+The easiest way: use the logging module in the standard library.
 
-    - Example:
-      Here the logging configuration is hardcoded directly into the program.
-      This is not flexible -- change the configuration need to change the code.
-      #+begin_src python
-        import logging
+- Example:
+  Here the logging configuration is hardcoded directly into the program.
+  This is not flexible -- change the configuration need to change the code.
+  #+begin_src python
+    import logging
 
 
-        def main():
-            # Configure the logging system
-            logging.basicConfig(
-                filename='app.log',
-                level=logging.ERROR
-            )
-
-            # Variables (to make the calls that follow work)
-            hostname = 'www.python.org'
-            item = 'spam'
-            filename = 'data.csv'
-            mode = 'r'
-
-            # Example logging calls (insert into your program)
-            logging.critical('Host %s unknown', hostname)
-            logging.error("Couldn't find %r", item)
-            logging.warning('Feature is deprecated')
-            logging.info('Opening file %r, mode=%r', filename, mode)
-            logging.debug('Got here')
-
-        if __name__ == '__main__':
-            main()
-      #+end_src
-    -
-
-    - Example:
-      Change the output or level of output:
-      #+begin_src python
+    def main():
+        # Configure the logging system
         logging.basicConfig(
             filename='app.log',
-            level=logging.WARNING,
-            format='%(levelname)s:%(asctime)s:%(message)s'
+            level=logging.ERROR
         )
-      #+end_src
 
-    - Example:
-      Configure logging system from a configuration file:
-      + Use ~logging.config.fileConfig('logconfig.ini')~ in code
+        # Variables (to make the calls that follow work)
+        hostname = 'www.python.org'
+        item = 'spam'
+        filename = 'data.csv'
+        mode = 'r'
 
-      + Configuration file =logconfig.ini=
-        #+begin_src text
-          [loggers]
-          keys=root
+        # Example logging calls (insert into your program)
+        logging.critical('Host %s unknown', hostname)
+        logging.error("Couldn't find %r", item)
+        logging.warning('Feature is deprecated')
+        logging.info('Opening file %r, mode=%r', filename, mode)
+        logging.debug('Got here')
 
-          [handlers]
-          keys=defaultHandler
+    if __name__ == '__main__':
+        main()
+  #+end_src
+-
 
-          [formatters]
-          keys=defaultFormatter
+- Example:
+  Change the output or level of output:
+  #+begin_src python
+    logging.basicConfig(
+        filename='app.log',
+        level=logging.WARNING,
+        format='%(levelname)s:%(asctime)s:%(message)s'
+    )
+  #+end_src
 
-          [logger_root]
-          level=INFO
-          handlers=defaultHandler
-          qualname=root
+- Example:
+  Configure logging system from a configuration file:
+  + Use ~logging.config.fileConfig('logconfig.ini')~ in code
 
-          [handler_defaultHandler]
-          class=FileHandler
-          formatter=defaultFormatter
-          args=('app.log', 'a')
+  + Configuration file =logconfig.ini=
+    #+begin_src text
+      [loggers]
+      keys=root
 
-          [formatter_defaultFormatter]
-          format=%(levelname)s:%(name)s:%(message)s
-        #+end_src
+      [handlers]
+      keys=defaultHandler
+
+      [formatters]
+      keys=defaultFormatter
+
+      [logger_root]
+      level=INFO
+      handlers=defaultHandler
+      qualname=root
+
+      [handler_defaultHandler]
+      class=FileHandler
+      formatter=defaultFormatter
+      args=('app.log', 'a')
+
+      [formatter_defaultFormatter]
+      format=%(levelname)s:%(name)s:%(message)s
+    #+end_src
 
 *** DONE Discussion - 557
-    CLOSED: [2020-10-03 Sat 00:36]
-    - Simply make sure that you execute the ~basicConfig()~ call prior to making
-      any logging calls, and your program will generate logging output.
+CLOSED: [2020-10-03 Sat 00:36]
+- Simply make sure that you execute the ~basicConfig()~ call prior to making
+  any logging calls, and your program will generate logging output.
 
-    - Show logging messages in /standard error/ INSTEAD OF a file:
-      don't supply any filename information to ~basicConfig()~.
+- Show logging messages in /standard error/ INSTEAD OF a file:
+  don't supply any filename information to ~basicConfig()~.
 
-    - ~basicConfig()~ can *only* be called *once* in your program.
-      *Change* the configuration _later_ need to
-      ~logging.getLogger().level = logging.DEBUG~
-      1. obtain the /root logger/
-      2. make changes to it directly
+- ~basicConfig()~ can *only* be called *once* in your program.
+  *Change* the configuration _later_ need to
+  ~logging.getLogger().level = logging.DEBUG~
+  1. obtain the /root logger/
+  2. make changes to it directly
 
-    - You can learn advanced customizations in "Logging Cookbook".
-      =from Jian= Official documentations
+- You can learn advanced customizations in "Logging Cookbook".
+  =from Jian= Official documentations
 
 ** TODO 13.12. Adding Logging to Libraries - 558
 *** Problem - 558
