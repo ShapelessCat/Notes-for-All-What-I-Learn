@@ -6016,69 +6016,122 @@ In the next chapter, you'll learn about /type parameterization/.
 
 * TODO 18 Type Parameterization - 394 - =READING=
 - In this chapter, we'll
-  * explain the details of /type parameterization/ in Scala.
-  * Along the way we'll demonstrate some of the techniques for information
-    hiding introduced in Chapter 12 by using a concrete example: the design of a
-    class for purely functional queues.
+  * Explain the details of /type parameterization/ in Scala.
+  * Along the way
+    we'll _DEMONSTRATE_ some of the techniques for information hiding introduced
+    in Chapter 12 by using a concrete example: _the design of a /class/ for
+    *purely functional queues*._
 
-- /Type parameterization/ allows you to write /generic classes and traits/.
+- /Type parameterization/ allows you to
+  _write *generic* /classes/ and /traits/._
 
-- /Variance/ defines _inheritance relationships_ of /parameterized types/,
+- Java, for the compatibility reason, allows /raw types/.
+  By contrast, Scala supports /type parameters/ from its very beginning and no
+  need to support /raw types/.
+
+- /Variance/ defines _inheritance relationships_ of /parameterized types/.
 
 - The chapter contains _THREE parts_:
-  * The first part DEVELOPS
-    a data structure for purely functional queues.
+  1. DEVELOPS
+     a data structure for /purely functional queues/.
 
-  * The second part DEVELOPS
-    techniques to *hide* internal representation details of this structure.
+  2. DEVELOPS
+     techniques to *hide* internal representation details of this structure.
 
-  * The final part EXPLAINS
+  * EXPLAINS
     + /variance of type parameters/ and
-    + how it *interacts with* /information hiding/.
+    + how it *interacts with* /information hiding/. =TODO: ???=
 
-** TODO 18.1 Functional queues - 394 - =TO-BE-CONTINUE= - =MISSING NOTE=
+** DONE 18.1 Functional queues - 394
+CLOSED: [2025-07-30 Wed 12:29]
 - A /functional queue/ is a data structure with _THREE operations_:
   * ~head~ returns the first element of the queue
   * ~tail~ returns a queue without its first element
   * ~enqueue~ returns a _NEW_ queue with a given element appended at the end
 
-- A /functional queue/ *does NOT change* its contents when an element is appended.
+- A /functional queue/ *does NOT change* its contents when an element is appended,
+  just return a *new* queue.
 
-- fully persistent data structures :: old versions remain available even after
+- Fully persistent data structures :: old versions remain available even after
   extensions or modifications.
 
 - ONE GOAL:
   * Q :: How can this be implemented efficiently?
   * A :: Ideally, a /functional (immutable) queue/ should _NOT_ have a
-    fundamentally higher overhead than an /imperative (mutable) one/.
+         fundamentally higher overhead than an /imperative (mutable) one/.
 
-    That is, all three operations, ~head~, ~tail~, and ~enqueue~, should operate
-    in *constant time*.
+         That is, all three operations, ~head~, ~tail~, and ~enqueue~, should
+         operate in *constant time*.
 
-- Listing 18.1 · A basic functional queue.
-  #+begin_src scala
-    class Queue[T](
-      private val leading: List[T],
-      private val trailing: List[T]
-    ):
-      private def mirror =
-        if leading.isEmpty then
-          new Queue(trailing.reverse, Nil)
-        else
-          this
+- Two inspiring but inefficient implementations:
+  * backed by an enqueue-order ~List~
+    #+begin_src scala
+      class SlowAppendQueue[T](elems: List[T]): // Not efficient
+        def head = elems.head // constant time
+        def tail = new SlowAppendQueue(elems.tail) // constant time
+        def enqueue(x: T) = SlowAppendQueue(elems ::: List(x)) // proportional to the number of elements
+    #+end_src
 
-      def head = mirror.leading.head
+  * backed by an reversed-enqueue-order ~List~
+    #+begin_src scala
+      class SlowHeadQueue[T](smele: List[T]): // Not efficient
+        // smele is elems reversed
+        def head = smele.last // proportional to the number of elements
+        def tail = new SlowHeadQueue(smele.init) // proportional to the number of elements
+        def enqueue(x: T) = SlowHeadQueue(x :: smele) // constant time
+    #+end_src
 
-      def tail =
-        val q = mirror
-        new Queue(q.leading.tail, q.trailing)
+- Combine the two inefficient implementations, and split elements in two
+  ~List~'s -- ~leading~ and ~trailing~, and the contents of the whole queue are
+  at each instant equal to ~leading ::: trailing.reverse~.
 
-      def enqueue(x: T) =
-        new Queue(leading, x :: trailing)
-  #+end_src
+  * Listing 18.1 · A basic functional queue.
+    #+begin_src scala
+      class Queue[T](
+        private val leading: List[T],
+        private val trailing: List[T]
+      ):
+        private def mirror =
+          if leading.isEmpty then
+            new Queue(trailing.reverse, Nil)
+          else
+            this
+
+        def head = mirror.leading.head
+
+        def tail =
+          val q = mirror
+          new Queue(q.leading.tail, q.trailing)
+
+        def enqueue(x: T) =
+          new Queue(leading, x :: trailing)
+    #+end_src
+    + The longer the queue gets, the less often ~mirror~ is called.
+    + Assuming that ~head~, ~tail~, and ~enqueue~ operations appear with about
+      the same frequency, the /amortized complexity/ is hence *constant* for
+      each operation. So functional queues are *asymptotically just as efficient
+      as mutable ones*.
+
+- Now, there are some *CAVEATS* that need to be attached to this argument.
+  1. the discussion was _only about /asymptotic behavior/;_
+     the constant factors might well be somewhat different.
+
+  2. the argument rested on the fact that ~head~, ~tail~ and ~enqueue~ are
+     called with about the *same frequency* -- FOR INSTANCE, if ~head~ is called
+     much more often than the other two operations, the argument is not valid,
+     as each call to head might involve a costly re-organization of the list
+     with ~mirror~.
+
+     =TODO=
+     =IMPORTANT=
+     =NEXT=
+     The second caveat can be avoided; it is possible to design functional
+     queues so that in a sequence of successive ~head~ operations only the first
+     one might require a re-organization. You will find out at the end of this
+     chapter how this is done.
 
 ** DONE 18.2 Information hiding - 397
-CLOSED: [2025-05-14 Wed 16:00]
+CLOSED: [2025-07-30 Wed 13:06]
 The implementation of ~Queue~ shown in Listing 18.1 is now quite good _with
 regards to efficiency._
 
@@ -6096,6 +6149,13 @@ Listing 18.2 · Hiding a primary constructor by making it private.
 
 and then
 
+use /auxiliary constructor:
+#+begin_src scala
+  def this() = this(Nil, Nil)
+
+  def this(elems: T*) = this(elems.toList, Nil)
+#+end_src
+
 Listing 18.3 · An apply factory method in a companion object.
 #+begin_src scala
   object Queue:
@@ -6103,7 +6163,16 @@ Listing 18.3 · An apply factory method in a companion object.
     def apply[T](xs: T*) = new Queue[T](xs.toList, Nil)
 #+end_src
 
-*** An alternative: private classes - 399 - =IMPORTANT= =REVIEW=
+*** An alternative: private classes - 399 - =REVIEW=
+=IMPORTANT=
+=IMPORTANT=
+=IMPORTANT=
+This exposes to clients the same information as before, but using a different
+technique.
+
+_INSTEAD OF_ hiding individual constructors and methods,
+this version *hides the WHOLE implementation /class/.*
+
 Listing 18.4 · Type abstraction for functional queues.
 #+begin_src scala
   trait Queue[T]:
@@ -6137,10 +6206,11 @@ Listing 18.4 · Type abstraction for functional queues.
 
 ** DONE 18.3 Variance annotations - 400
 CLOSED: [2025-05-15 Thu 12:42]
-- ~Queue~ is a /type constructor/, or called /higher kinded type/ or /generic trait/.
+- ~Queue~ is a /type constructor/, or called /higher kinded type/ or /generic
+  trait/.
 
 - /Classes/ and /traits/ that take /type parameters/ are *generic*, _BUT_ the
-  /types/ they generate are *parameterized*, NOT *generic*.
+  /types/ they generate are *parameterized*, NOT *generic*. =IMPORTANT=
   * The term _"generic"_ means that you are defining many specific /types/ with
     one _generically written_ /class/ or /trait/.
 
@@ -6167,7 +6237,6 @@ CLOSED: [2025-05-15 Thu 12:42]
     _this /subtyping/ is /sound/._
 
 - /cotravariant subtyping/
-  =TODO=
 
 - variance :: whether a /type parameter/ is /covariant/, /contravariant/, or
   /nonvariant/.
@@ -6178,10 +6247,13 @@ CLOSED: [2025-05-15 Thu 12:42]
 - =STARTING HERE=
   In a purely functional world, many types are naturally /convariant/.
   =from Jian= Of course, you need the /variance annotations/.
-  However, the situation changes once you introduce *mutable* data.
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  _However, the situation changes once you introduce *mutable* data._
 
   * Example:
-    Listing 18.5 · A nonvariant (rigid) Cell class.
+    Listing 18.5 · A nonvariant (rigid) ~Cell~ class.
     #+begin_src scala
       class Cell[T](init: T):
         private var current = init
@@ -6215,7 +6287,7 @@ CLOSED: [2025-05-15 Thu 12:42]
         you cannot do with a ~Cell~ of ~String~:
         You *cannot* use ~set~ with an ~Int~ argument on a ~Cell~ of ~String~,
       for example.
-      * In fact, were you to pass the covariant version of Cell to the Scala
+      * In fact, were you to pass the covariant version of ~Cell~ to the Scala
         compiler, you would get a compile-time error:
         #+begin_src scala
 
@@ -6227,7 +6299,10 @@ CLOSED: [2025-05-15 Thu 12:42]
             |    in type T of value x
         #+end_src
 
-*** Variance and arrays - 403
+*** Variance and arrays - 403 - =REVIEW=
+=IMPORTANT=
+=IMPORTANT=
+=IMPORTANT=
 - /Arrays/ are treated as /covariant/ in _Java_.
   * some operations can compile but lead to runtime error.
 
@@ -6247,7 +6322,8 @@ CLOSED: [2025-05-15 Thu 12:42]
       /covariance/. *For compatibility reasons,* thought, it has persisted in
       Java to this day.
 
-- Scala *DOESN'T* treat its /arrays/ as /covariant/.
+- Scala treat its /arrays/ as /nonvariant (rigid)/, which is different from
+  /Java's arrays/.
   * It should be rare, but sometimes it is necessary to interact with _legacy
     methods_ in Java that use an ~Object~ array as a means to emulate a /generic
     array/. You can do
@@ -6262,6 +6338,7 @@ CLOSED: [2025-05-15 Thu 12:42]
 
       val a2: Array[Object] = a1.asInstanceOf[Array[Object]]
     #+end_src
+
     The /cast/ is _always legal at compile-time,_ and
     =from Jian= because no restriction to this kind of /cast/.
 
@@ -6272,12 +6349,18 @@ CLOSED: [2025-05-15 Thu 12:42]
     + But you might get ~ArrayStore~ /exceptions/ afterwards, again _just as you
       would in Java._
 
+    =from Jian= This is a good INTERVIEW QUESTION!!!
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+
 ** TODO 18.4 Checking variance annotations - 405
-- So far, all violations of type soundness involved some _reassignable field_ or
-  array element.
-  _HOWEVER_, _reassignable fields_ are a _SPECIAL CASE_ of the rule that
-  DISALLOWS /type parameters/ annotated with + from being used as /method
-  parameter types/.
+- So far, all _VIOLATIONS_ of /type soundness/ involved some _reassignable
+  field_ or array element.
+  * _HOWEVER_,
+    _reassignable fields_ are a _SPECIAL CASE_ of the rule that
+    DISALLOWS /type parameters/ annotated with + from being used as /method
+    parameter types/.
 
 - *The fast track*
   Below are the details. If you don't care, just skip it. The compiler can help
@@ -6286,8 +6369,12 @@ CLOSED: [2025-05-15 Thu 12:42]
   However, these details are useful for library developers!!!
 
 - =IMPORTANT=
-  To verify correctness of variance annotations, the Scala compiler classifies
-  all positions in a class or trait body as positive, negative, or neutral.
+  To
+  _VERIFY correctness of variance annotations,_
+  the Scala compiler classifies all positions in _a class or trait body_ as
+  * positive
+  * negative
+  * neutral
 
 ** TODO 18.5 Lower bounds - 408
 ** TODO 18.6 Contravariance - 409

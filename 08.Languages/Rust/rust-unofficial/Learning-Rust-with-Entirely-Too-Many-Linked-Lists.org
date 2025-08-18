@@ -9,6 +9,13 @@
 
 Should use _Rust 2018 edition or newer editions_.
 
+=WHY THIS BOOK EXISTS?=
+I fairly frequently get asked how to implement a /linked list/ in Rust. The
+answer honestly _depends on_ what your requirements are, and it's obviously not
+super easy to answer the question on the spot.
+_As such I've decided to write this book to comprehensively answer the question
+once and for all._
+
 - In this series I will teach you _BASIC_ and _ADVANCED_ Rust programming entirely
   by having you implement *6* linked lists. In doing so, you should learn:
   * The following /pointer types/:
@@ -43,10 +50,26 @@ Should use _Rust 2018 edition or newer editions_.
     + ~UnsafeCell~
     + /variance/
 
-- _Linked lists are so truly awful that you deal with all of these concepts
+- _Linked lists are so truly AWFUL that you deal with all of these concepts
   in making them real._
 
-** An Obligatory Public Service Announcement
+- Here's what we're going to be making:
+  1. A Bad Singly-Linked Stack
+  2. An Ok Singly-Linked Stack
+  3. A Persistent Singly-Linked Stack
+  4. A Bad But Safe Doubly-Linked Deque
+  5. An Unsafe Singly-Linked Queue
+  6. TODO: An Ok Unsafe Doubly-Linked Deque
+  7. Bonus: A Bunch of Silly Lists
+
+- Let's get started and make our project:
+  #+begin_src shell
+    cargo new --lib lists
+    cd lists
+  #+end_src
+  We'll put each list in a separate file so that we don't lose any of our work.
+
+** An Obligatory Public Service Announcement - =TODO: take notes=
 *** Performance doesn't always matter
 *** They have O(1) split-append-insert-remove if you have a pointer there
 *** I can't afford amortization
@@ -59,7 +82,7 @@ Should use _Rust 2018 edition or newer editions_.
 
 ** Take a Breath
 
-* 2. A Bad Stack
+* 2. A Bad Singly-Linked Stack
 This one's gonna be by far the longest, as we need to introduce basically all of
 Rust, and are gonna build up some things "the hard way" to better understand the
 language.
@@ -70,9 +93,7 @@ language.
     pub mod first;
   #+end_src
 
-** 2.1. Layout - =RE-READ=
-*Basic Data Layout*
-
+** 2.1. Basic Data Layout - =RE-READ=
 ** 2.2. New
 #+begin_src rust
   impl List {
@@ -83,6 +104,14 @@ language.
 #+end_src
 
 ** 2.3. Ownership 101
+Later we'll see that the rule about mutation _can be bypassed_ in certain cases.
+
+This is why /shared references/ aren't called _immutable references_.
+
+Really, /mutable references/ could be called /unique references/,
+BUT we've found that *RELATING /ownership/ TO /mutability/* gives the right
+intuition 99% of the time.
+
 ** 2.4. Push
 ** 2.5. Pop
 ** 2.6. Testing
@@ -91,9 +120,7 @@ language.
 
 ** 2.8. Final Code
 
-* 3. An Ok Stack
-*A Ok Singly-Lsnked Stack*
-
+* 3. An Ok Singly-Linked Stack
 ** 3.1. Option
 *Using Option*
 
@@ -106,8 +133,24 @@ language.
 ** 3.6. IterMut
 ** 3.7. Final Code
 
-* 4. A Persistent Stack
-*A Persistent Singly-Linked Stack*
+* 4. A Persistent Singly-Linked Stack
+Alright, we've mastered the art of /mutable singly-linked stacks/.
+
+Let's move from /single ownership/ to /shared ownership/ by writing a
+/persistent immutable singly-linked list/.
+
+- In the process we'll largely just become familiar with ~Rc~ and ~Arc~, but
+  this will set us up for the next list which will change the game.
+
+- Add a new file called ~third.rs~:
+  #+begin_src rust
+    // in lib.rs
+
+    pub mod first;
+    pub mod second;
+    pub mod third;
+  #+end_src
+  No copy-pasta this time. This is a clean room operation.
 
 ** 4.1. Layout
 ** 4.2. Basics
@@ -115,25 +158,126 @@ language.
 ** 4.4. Arc
 ** 4.5. Final Code
 
-* 5. A Bad Safe Deque
+* 5. A Bad but Safe Doubly-Linked Deque
+- Now that we've seen ~Rc~ and heard about /interior mutability/, this gives an
+  interesting thought...
+
+  maybe we can *mutate* through an ~Rc~. And if that's the case, maybe we can
+  implement a /doubly-linked list/ *totally safely*!
+
+  * =from Jian= This paragraph show the train of thought
+
+- In the process we'll become familiar with /interior mutability/, and probably
+  learn the hard way that *safe doesn't mean correct*.
+  =IMPORTANT=
+  Doubly-linked lists are hard, and I always make a mistake somewhere.
+
+- Let's add a new file called =fourth.rs=:
+  #+begin_src rust
+    // in lib.rs
+
+    pub mod first;
+    pub mod second;
+    pub mod third;
+    pub mod fourth;
+  #+end_src
+  * This will be another clean-room operation, though as usual we'll probably
+    find some logic that applies verbatim again.
+
+- =IMPORTANT=
+  *Disclaimer*:
+  _this chapter is basically a DEMONSTRATION that this is *a very BAD idea*._
+
 ** 5.1. Layout
-** 5.2. Building
-*Building Up*
+- The key to our design is the ~RefCell~ type. The heart of ~RefCell~ is a pair
+  of methods:
+  #+begin_src rust :eval no-export
+    fn borrow(&self) -> Ref<'_, T>;
+    fn borrow_mut(&self) -> RefMut<'_, T>;
+  #+end_src
+
+  The _RULES_ for ~borrow~ and ~borrow_mut~ are *exactly* those of ~&~ and ~&mut~:
+  * you can call ~borrow~ as _many times_ as you want,
+  * but ~borrow_mut~ requires _exclusivity_.
+
+- RATHER THAN _enforcing this statically_,
+  ~RefCell~ _enforces them at runtime_.
+
+  * If you break the rules, ~RefCell~ will just panic and crash the program.
+
+  * Q :: Why does it return these ~Ref~ and ~RefMut~ things?
+  * A :: Well, they basically behave _like ~Rc~'s but for borrowing_.
+    They also _KEEP the ~RefCell~ borrowed UNTIL they go out of /scope/._
+    We'll get to that later. - =IMPORTANT= =SOON IN THIS CHAPTER=
+
+- Code:
+  #+begin_src rust
+    use std::rc::Rc;
+    use std::cell::RefCell;
+
+    pub struct List<T> {
+        head: Link<T>,
+        tail: Link<T>,
+    }
+
+    type Link<T> = Option<Rc<RefCell<Node<T>>>>;
+
+    struct Node<T> {
+        elem: T,
+        next: Link<T>,
+        prev: Link<T>,
+    }
+  #+end_src
+  * =from Jian=
+    ~last~ is a better name than ~tail~, because in the context of linked list,
+    *tail* often means the part after *head*, not the last node. However, in
+    this code, *tail* means the last node.
+
+** 5.2. Building Up
+1. ~new~ is still trivial:
+   #+begin_src rust
+     impl<T> Node<T> {
+         fn new(elem: T) -> Rc<RefCell<Self>> {
+             Rc::new(RefCell::new(Node {
+                 elem: elem,
+                 prev: None,
+                 next: None,
+             }))
+         }
+     }
+
+     impl<T> List<T> {
+         pub fn new() -> Self {
+             List { head: None, tail: None }
+         }
+     }
+   #+end_src
+
+2. Now let's try to WRITE
+   _pushing onto the front_ of the list.
+
+   * In particular we now need to specially handle some boundary cases around
+     empty lists.
+     + Most operations will only touch the /head/ or /tail/ pointer.
+     + However when transitioning to or from the _empty list_, we need to edit
+       both at once.
+
+   * An easy way for us to validate if our methods make sense is if we maintain
+     the following /invariant/:
+     * each node should have exactly two pointers to it.
+     * Each node in the middle of the list is pointed at by its predecessor and
+       successor,
+     * while the nodes on the ends are pointed to by the list itself.
+
 *** When to choose interior mutability
 **** Introducing inherited mutability roots to shared types
 
-** 5.3. Breaking
-*Breaking Down*
-
-** 5.4. Peek
-*Peeking*
-
-** 5.5. Symmetric Cases
-*Symmetric Junk*
-
+** 5.3. Breaking Down
+** 5.4. Peeking
+** 5.5. Symmetric Junk
 ** 5.6. Iteration
-*** IntoIter
-*** Iter
+*** ~IntoIter~
+*** ~Iter~
 
 ** 5.7. Final Code
 
