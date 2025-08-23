@@ -99,25 +99,46 @@ CLOSED: [2025-04-13 Sun 19:50]
     For example, ~IArray~ in Scala 3.
 
 ** TODO 1.3 The ~AnyVal~ approach - 32 - =TODO: read ~AnyVal~ in book 1=
-- As described in Section 17.4 of Programming in Scala, Scala allows you to
-  define new AnyVal types. These types are defined as classes that ex- tend
-  AnyVal and follow certain rules. First, an AnyVal must wrap one (and only
-  one) instance of some underlying type. Second, you can’t extend from an
-  AnyVal; they are implicitly final. Third, the only members you can
-  define inside an AnyVal are methods. You can’t define inner classes inside
-  an AnyVal, nor can you define any field (other than by making the lone
-  class parameter of the underlying type public), nor can you define lazy vals.
-  You can mix in traits, but only if they are “universal.” A universal trait
-  extends Any, has only methods as members, and contains no initialization
-  code.
+- As described in Section 17.4 of _Programming in Scala_, Scala allows you to
+  define /new ~AnyVal~ types/ as /classes/ that
+  extend ~AnyVal~ and
+  follow certain rules:
+  1. An ~AnyVal~ must wrap *one (and only one)* /instance/ of some _underlying
+     type._
 
-- Wherever possible, instances of user-defined AnyVals are represented
-  at runtime by their underlying type, but under certain circumstances, they
-  will be boxed. When boxed, they will be an instance of the AnyVal
-  wrapper type. Thus although user-defined AnyVals allow you to define types
-  that may have reduced boxing overhead at runtime, they do not guarantee
-  zero boxing overhead. In exchange, AnyVals can be used in ways that a
-  truly zero-overhead type could not.
+  2. You can't extend from an ~AnyVal~ /subclass/; they are *implicitly final*.
+     =from Jian= I modified the statement in the book to make this meaning more
+     explicit -- the original one is
+
+  3. The *ONLY members* you can define inside an ~AnyVal~ are /methods/.
+
+     * You
+       + _CAN'T_ define /inner classes/ inside an ~AnyVal~,
+       + _NOR_ can you define any field (_other than_ by making the lone class
+         parameter of the underlying type public),
+       + _NOR_ can you define /lazy vals/.
+
+     * You
+       can _mix in traits_,
+       BUT only if they are *universal* -- this concept is listed below.
+
+- Universal trait ::
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  Any /trait/ that
+  2) extends ~Any~
+  3) has only /methods/ as members, and
+  4) contains _no initialization code._
+
+- =TODO=
+  Wherever possible, instances of user-defined ~AnyVal~'s are represented at
+  runtime by their underlying type, but under certain circumstances, they will
+  be boxed. When boxed, they will be an instance of the AnyVal wrapper type.
+  Thus although user-defined AnyVals allow you to define types that may have
+  reduced boxing overhead at runtime, they do not guarantee zero boxing
+  overhead. In exchange, AnyVals can be used in ways that a truly zero-overhead
+  type could not.
 
 - An AnyVal is compiled like an AnyRef with some extra static methods. For each
   method declared in the AnyVal that isn’t inherited from a universal trait
@@ -129,47 +150,82 @@ CLOSED: [2025-04-13 Sun 19:50]
   invokes the static method instead, passing the underlying type as a
   parameter.
 
-- The intent of the AnyVals design was to allow you to create a wrapper class
-  that behaves like a regular class, but can sometimes be represented by its
-  underlying type, especially when extractable instance methods are
-  invoked. The motivating use case for this feature was the addition of
-  implicit classes to Scala 2.10. An implicit class that extended AnyVal would
-  never need to box to invoke any extractable methods. This gave Scala’s
-  implicit conversions the same performance as enjoyed by extension methods in
-  other languages. In Scala 3, however, implicit classes were replaced by the
-  special extension method syntax described in Chapter 22 of Programming in
-  Scala.
+- *Intent* and *the original motivating use case*:
+  1. The *intent* of the ~AnyVal~'s design was to allow you to create a /wrapper
+     class/ that
+     1) _behaves like a regular class,_
+     2) BUT can sometimes be _represented by_ its _underlying type_, especially
+        when /extractable instance methods/ are invoked.
 
-- AnyVals will be boxed in many situations. Universal traits allow you to use
-  AnyVals via more abstract types, as you can with AnyRefs, but it
-  requires boxing whenever an AnyVal is used from such a type. You can also
-  override non-final methods declared in Any on an AnyVal—equals, hashCode,
-  and toString—but any invocation of these methods will require a box.
-  Type tests on AnyVals will perform as expected—both in isInstanceOf calls
-  and in typed and constructor patterns—but any such use will require
-  boxing the AnyVal. Because any of these uses could happen on an AnyVal used
-  via an abstract type, whenever an abstract type is instantiated to an AnyVal,
-  the AnyVal will be boxed. For example, if the type parameter of foldLeft
-  on List is instantiated as an AnyVal type, the AnyVal instance passed as
-  the initial zero parameter to foldLeft will be boxed. Another example is
-  when you place an AnyVal into a collection such as a List. Each element of
-  the collection will be boxed to the AnyVal form. This is also true of Arrays,
-  even if the underlying type is a Java primitive: in a Java array of Scala
-  AnyVals, each element will be boxed.
+  2. The /motivating use case/ for this feature was the addition of /implicit
+     classes/ to Scala 2.10.
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+     An /implicit class/ that extended ~AnyVal~ would *never need to box* to
+     invoke any extractable methods.
 
-- In summary, AnyVals let you avoid boxing in some situations, but not others.
-  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime, it
-  could give you worse performance than a corresponding AnyRef, which is just
-  boxed once. User-defined AnyVals successfully made implicit conversions via
-  implicit classes as efficient as extension methods in other languages, but
-  there was still a need in Scala for a truly zero-overhead type. Scala 3’s
-  answer was opaque types.
+     =IMPORTANT=
+     =IMPORTANT=
+     =IMPORTANT=
+     This gave /Scala's implicit conversions/ the _SAME performance_ as enjoyed
+     by /extension methods/ in other languages.
+     *In Scala 3, HOWEVER*, /implicit classes/ were *replaced by* the special
+     /extension method syntax/ described in Chapter 22 of Programming in Scala.
+
+- ~AnyVal~'s will be boxed in many situations:
+  =IMPORTANT=
+  =CAUTION=
+  =CAUTION=
+  =CAUTION=
+  =IMPORTANT=
+  * /Universal traits/ allow you to use ~AnyVal~'s via more /abstract types/, as
+    you can with ~AnyRef~'s, but it _requires boxing_ whenever an ~AnyVal~ is
+    used from such a type.
+
+  * You can also /override/ non-final methods declared in ~Any~ on an ~AnyVal~
+    -- ~equals~, ~hashCode~, and ~toString~ -- BUT *any invocation of these
+    methods will require a /box/.*
+
+  * /Type tests/ on ~AnyVal~'s will perform as expected -- BOTH
+      in ~isInstanceOf~ calls and
+      in typed and constructor patterns --
+    BUT any such use will require /boxing the ~AnyVal~./
+
+    Because any of these uses could happen
+    on an ~AnyVal~ used via an abstract type, whenever an abstract type is
+    instantiated to an AnyVal, the AnyVal will be boxed. For example, if the
+    type parameter of foldLeft on List is instantiated as an AnyVal type, the
+    AnyVal instance passed as the initial zero parameter to foldLeft will be
+    boxed. Another example is when you place an AnyVal into a collection such as
+    a List. Each element of the collection will be boxed to the AnyVal form.
+    This is also true of Arrays, even if the underlying type is a Java
+    primitive: in a Java array of Scala AnyVals, each element will be boxed.
+
+- In summary,
+  ~AnyVal~'s let you avoid boxing in some situations, but not others.
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  If an ~AnyVal~ is REPEATEDLY /boxed/ and /unboxed/ throughout its lifetime, it
+  could give you *worse performance than* a corresponding ~AnyRef~, which is
+  just *boxed once*.
+
+  User-defined ~AnyVal~'s successfully made /implicit conversions/ via /implicit
+  classes/ as efficient as /extension methods/ in other languages,
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  _BUT_ there was still *a need in Scala for a TRULY /zero-overhead type/.*
+  Scala 3's answer was /opaque types/.
 
 =from Jian=
 In Scala 2, I, also including others, I guess, combine /value classes/ and
 /universal traits/, and use them as the role of /opaque types/ today.
 After reading this chapter, it is clear that /opaque types/ is a better way,
-EXECPT that it can't do something reflectively during /runtime/ -- /opaque
+_EXECPT_ that it can't do something reflectively during /runtime/ -- /opaque
 types/ disappear after compilation.
 
 - /Value classes/ in current Scala:
@@ -189,58 +245,6 @@ types/ disappear after compilation.
      * You can *mix in* /traits/, but only if they are "universal."
        + universal trait :: a /trait/ extends ~Any~, has only /methods/ as
          members, and _contains *NO* initialization code._ =???=
-
-- Wherever possible, instances of user-defined AnyVals are represented at
-  runtime by their underlying type, but under certain circumstances, they will
-  be boxed. When boxed, they will be an instance of the AnyVal wrapper type.
-  Thus although user-defined AnyVals allow you to define types that may have
-  reduced boxing overhead at runtime, they do not guarantee zero boxing
-  overhead. In exchange, AnyVals can be used in ways that a truly zero-overhead
-  type could not.
-
-- An ~AnyVal~ is compiled like an ~AnyRef~ with some extra static methods.
-  For each method declared in the ~AnyVal~ that isn’t inherited from a universal
-  trait (these are called extractable methods), the compiler will create a
-  static method that takes an extra parameter of the ~AnyVal~'s underlying type.
-  Where possible, the compiler will use the underlying type rather than the
-  ~AnyVal~ wrapper type to represent instances. When an extractable instance
-  method is invoked while the instance is in its unboxed form, the compiler
-  invokes the static method instead, passing the underlying type as a parameter.
-
-- The intent of the ~AnyVal~'s design was to allow you to create a wrapper class
-  that behaves like a regular class, but can sometimes be represented by its
-  underlying type, especially when extractable instance methods are invoked. The
-  motivating use case for this feature was the addition of implicit classes to
-  Scala 2.10. An implicit class that extended ~AnyVal~ would never need to box to
-  invoke any extractable methods. This gave Scala's implicit conversions the
-  same performance as enjoyed by extension methods in other languages. In Scala
-  3, however, implicit classes were replaced by the special extension method
-  syntax described in Chapter 22 of Programming in Scala.
-
-- AnyVals will be boxed in many situations. Universal traits allow you to use
-  AnyVals via more abstract types, as you can with AnyRefs, but it requires
-  boxing whenever an AnyVal is used from such a type. You can also override
-  non-final methods declared in Any on an AnyVal—equals, hashCode, and
-  toString—but any invocation of these methods will require a box. Type tests on
-  AnyVals will perform as expected—both in isInstanceOf calls and in typed and
-  constructor patterns—but any such use will require boxing the AnyVal. Because
-  any of these uses could happen on an AnyVal used via an abstract type,
-  whenever an abstract type is instantiated to an ~AnyVal~, the ~AnyVal~ will be
-  boxed. For example, if the type parameter of foldLeft on List is instantiated
-  as an AnyVal type, the AnyVal instance passed as the initial zero parameter to
-  foldLeft will be boxed. Another example is when you place an AnyVal into a
-  collection such as a List. Each element of the collection will be boxed to the
-  AnyVal form. This is also true of Arrays, even if the underlying type is a
-  Java primitive: in a Java array of Scala ~AnyVal~'s, each element will be
-  boxed.
-
-- In summary, AnyVals let you avoid boxing in some situations, but not others.
-  If an AnyVal is repeatedly boxed and unboxed throughout its lifetime, it
-  could give you worse performance than a corresponding AnyRef, which is just
-  boxed once. User-defined AnyVals successfully made implicit conversions via
-  implicit classes as efficient as extension methods in other languages, but
-  there was still a need in Scala for a truly zero-overhead type. Scala 3’s
-  answer was opaque types.
 
 ** DONE 1.4 The ~opaque type~ approach - 34
 CLOSED: [2025-04-13 Sun 20:23]
@@ -1002,15 +1006,31 @@ CLOSED: [2025-04-08 Tue 14:56]
 ** DONE 2.10 Conclusion - 68
 CLOSED: [2025-04-08 Tue 14:57]
 
-* TODO 3 Metapgrogramming - 69
-Scala 3 includes several features that facilitate metaprogramming.
-/Inline methods/, described in the previous chapter, are one example.
+* DONE 3 Metapgrogramming - 69 - _TODO: NOTE_
+CLOSED: [2025-08-19 Tue 23:01]
+No matter which programming language you are using, you may at times find
+yourself writing _repetitive, error-prone code._
+_/Metaprogramming/ is well-suited for these situations._
 
-This chapter will introduce more _metaprogramming facilities_ of Scala 3,
-including /inline matches/, /transparent inlines/, and /other compile-time
-functionality/.
+- _TRADITIONALLY_, /metaprogramming/ has been accomplished done by writing a
+  /code generator/: a program that runs as part of your build and outputs source
+  code that then gets compiled alongside the source code you wrote by hand.
 
-** 3.1 Inline matches - 69
+  * You can certainly take this _TRADITIONAL APPROACH_ when programming with
+    Scala 3, but Scala 3 offers a powerful alternative: *you can write code
+    generators _WITHIN_ the language itself.*
+
+- Scala 3 includes several features that facilitate metaprogramming.
+  /Inline methods/, described in the previous chapter, are one example.
+
+  This chapter will introduce more _metaprogramming facilities_ of Scala 3,
+  including
+  * /inline matches/
+  * /transparent inlines/
+  * /other compile-time functionality/
+
+** DONE 3.1 Inline matches - 69
+CLOSED: [2025-08-19 Tue 12:00]
 - One of the language features introduced in Scala 3 that gives you new and
   powerful metaprogramming capabilities is ~inline match~.
 
@@ -1018,30 +1038,143 @@ functionality/.
     ~inline match~ *differs in a significant way.*
 
   * Like an ~inline if~, an ~inline match~ will
-    + either be REDUCED at compile time,
+    + either _be REDUCED at compile time,_
     + or if that's not possible, result in a _compiler error_.
 
   * But there's a big difference:
     =IMPORTANT=
     =IMPORTANT=
     =IMPORTANT=
-    ~inline if~ is designed to preserve semantics; ~inline match~ is *not*.
+    ~inline if~ is designed to *preserve semantics*;
+    ~inline match~ is *not*.
 
-    Because ~inline if~ is aimed at /partial evaluation/, the compiler ensures the
-    if expression semantics will be the same whether you add or remove an ~inline~
-    modifier.
+    + Because ~inline if~ is aimed at /partial evaluation/, the compiler ensures
+      the if expression semantics will be the same whether you add or remove an
+      ~inline~ modifier.
 
-    BY CONTRAST,
-    ~inline match~ is aimed at unlocking metaprogramming capabilities that are
-    POSSIBLE ONLY at compile time. As a result, the semantics of the match
-    expression *may be different* if you add or remove the ~inline~ modifier.
+    + BY CONTRAST,
+      ~inline match~ is AIMED AT *unlocking metaprogramming capabilities* that
+      are POSSIBLE ONLY at compile time.
+      =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
+      As a result, the /semantics of the match expression/
+      *may be different* _IF_ you add or remove the ~inline~ modifier.
 
-** 3.2 Transparent inline methods - 73
-** 3.3 Constructor patterns in inline matches - 75
-** 3.4 Compiler errors from inline matches - 77
-** 3.5 Summoning in inline methods - 78
-** 3.6 Converting from type to term - 81
-** 3.7 Conclusion - 84
+- scrutinee of a match :: the /variable/ or /expression/ on which you are
+  matching.
+  * such as the ~s~ in ~s match~.
+
+- Listing 3.1 · An inline method with an inline match.
+  #+begin_src scala
+    inline def sigBitsInlineMatch(s: String): Int =
+      inline s match
+        case "Byte" => 8
+        case "Short" => 16
+        case "Int" => 32
+        case "Long" => 64
+        case "Float" => 32
+        case "Double" => 64
+        case _ => -1 // Use Int -1 as default result
+  #+end_src
+  * This /inline match/ includes a _VALID default case_, meaning you won't get a
+    compiler error during evaluation.
+
+  * Note from Jian:
+    Since this uses /inline syntax/ that only works with compile-time knowledge,
+    any input not matching the specific cases exactly and literally before the
+    catch-all case ~case _ => -1~ will trigger the /catch-all case/.
+
+    For example:
+    + Input ~"Byte"~ matches the first branch
+    + Input ~"Byte": String~ would fall to the default case
+      This behavior is *different from* the method without ~inline~ modifier:
+
+      Listing 3.2 · The corresponding method with a regular match.
+      #+begin_src scala
+        inline def sigBitsRegularMatch(s: String): Int =
+          s match
+             case "Byte" => 8
+             case "Short" => 16
+             case "Int" => 32
+             case "Long" => 64
+             case "Float" => 32
+             case "Double" => 64
+             case _ => -1 // Use Int -1 as default result
+      #+end_src
+      Both ~"Byte"~ and ~"Byte": String~ go into the first branch ~case ~"Byte"
+      => 9~.
+
+- Listing 3.3 · An inline match with typed patterns.
+  #+begin_src scala
+    inline def zeroForElemType[T](xs: List[T]): AnyVal =
+      inline xs match
+        case byte: List[Byte] => 0.toByte
+        case short: List[Short] => 0.toShort
+        case long: List[Long] => 0L
+        case float: List[Float] => 0.0f
+        case double: List[Double] => 0.0
+        case _ => 0 // Use an Int as default result
+
+    zeroForElemType(List(1.0, 2.0, 3.0)) // 0.0: Double
+    zeroForElemType(List(1L, 2L, 3L)) // 0: Long
+    zeroForElemType(List(1, 2, 3)) // 0: Int
+  #+end_src
+  Unlike a _regular match_, an _inline match_ *can tell the difference* between a
+  ~List[Double]~ and a ~List[Int]~, even though both are instances of trait
+  ~List[A]~, whose /type parameter/, ~A~, will be *erased* by the compiler and
+  therefore _unknown at runtime._
+
+- Note that ~isInstanceOf~ in the condition of an ~inline if~ does *NOT
+  compile*, and ~inline match~ can be used to resolve this:
+  #+begin_src scala
+    inline def whatIsGood(av: AnyVal): String =
+      inline av match
+        case _: Byte => "Byte"
+        case _ => "Other"
+  #+end_src
+
+** TODO 3.2 Transparent inline methods - 73
+Another powerful metaprogramming feature of Scala 3 is /transparent inline
+methods/, which enable you to _refine the /types/ of your program AT COMPILE
+TIME._
+
+- _By default,_
+  the Scala compiler performs _inlining_ *after* /the typer phase/,
+  * the typer phase :: the phase in which it decides on all types in the
+    program. When the compiler performs inlining after this phase, it cannot
+    change the types.
+
+- _By contrast,_
+  the compiler will _inline_ /transparent methods/ *before* /the typer phase/,
+  when it is still possible to refine the types.
+
+  This allows the type of the inlined code to be more specific. To indicate you
+  want this compiler behavior, you put the soft modifier ~transparent~ in front
+  of ~inline def~.
+
+- Listing 3.5 · A transparent inline method.
+  #+begin_src scala
+    transparent inline def transparentInlineDef(s: String): AnyVal =
+      inline s match
+        case "Byte" => 1.toByte
+        case "Short" => 1.toShort
+        case "Long" => 1L
+        case "Float" => 1.0f
+        case "Double" => 1.0
+        case _ => 1 // Use an Int as default result
+
+
+    transparentInlineDef("Byte") // 1.toByte: Byte
+    transparentInlineDef("Float") // 1.0f: Float
+    transparentInlineDef("Other") // 1: Int
+  #+end_src
+
+** TODO 3.3 Constructor patterns in inline matches - 75
+** TODO 3.4 Compiler errors from inline matches - 77
+** TODO 3.5 Summoning in inline methods - 78
+** TODO 3.6 Converting from type to term - 81
+** TODO 3.7 Conclusion - 84
 
 * TODO 4 Type-level functions - 85 - =START HERE=
 At the CORE of /functional programming/ is the /function/, a way to _transform
@@ -1062,13 +1195,31 @@ input into output._
     + kinds :: the "type" of a /type/.
   * look at _the /variance/ of PARAMETER and RESULT /kinds/._
 
-** TODO 4.1 Value-level functions - 85
-- Scala 3 introduced several new flavors of function that operate at the type
-  level. To help you understand these, it can help to take another look at
-  Scala's value-level functions. These functions existed in Scala 2 and work the
-  same in Scala 3.
+** DONE 4.1 Value-level functions - 85 - NOTE
+CLOSED: [2025-08-21 Thu 18:44]
+Scala 3 introduced several new flavors of /function/ that operate
+_at the type level._
+To help you understand these, it can help to take another look at Scala's
+/value-level functions/. These functions existed in Scala 2 and work the same
+in Scala 3.
 
-- *Function types aren't functions*
+- Scala offers _TWO distinct ways_ to write /value-level functions/:
+  * /methods/ (or "defs") and
+  * /function literals/
+
+- =TODO=
+  Note for details!!!
+
+- Q :: Why does Scala have these two ways to describe a /function/:
+  * /method/
+  * /function literal/?
+
+- A :: Because it is convenient to have concise syntax
+  * dedicated to writing /named functions/
+    + convenient when you plan to invoke them many times.
+
+  * for defining a function that you aren't forced to name
+    + useful when you only plan to use them once.
 
 ** TODO 4.2 Reasoning with substitution - 87
 ** TODO 4.3 Substitution and currying - 89
