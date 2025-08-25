@@ -6374,11 +6374,70 @@ CLOSED: [2025-05-15 Thu 12:42]
 
 ** TODO 18.4 Checking variance annotations - 405
 - So far, all _VIOLATIONS_ of /type soundness/ involved some _reassignable
-  field_ or array element.
+  field_ or _array element_.
   * _HOWEVER_,
-    _reassignable fields_ are a _SPECIAL CASE_ of the rule that
+    _reassignable fields_ are a *SPECIAL CASE* of the rule that
     DISALLOWS /type parameters/ annotated with + from being used as /method
     parameter types/.
+
+    However, the following example shows that
+    1. you can "engineer" an _unsound situation_
+    2. EVEN IF there is *no* _reassignable field_.
+
+- To set up the example,
+  1. _ASSUME_ that /queues/ as defined in _Listing 18.4_ are /covariant/.
+  2. Then, create a /subclass/ of /queues/ that
+     1) /specializes/ the /element type/ to ~Int~ and
+     2) /overrides/ the ~enqueue~ /method/:
+        #+begin_src scala
+          class StrangeIntQueue extends Queue[Int]:
+            override def enqueue(x: Int) =
+              println(math.sqrt(x))
+              super.enqueue(x)
+        #+end_src
+
+        Now, you can write a _counterexample_ in two lines:
+        #+begin_src scala
+          val x: Queue[Any] = new StrangeIntQueue
+          x.enqueue("abc")
+        #+end_src
+        =IMPORTANT=
+        Each line is valid by theirself.
+        However, taken together, these two lines have the effect of applying a
+        square root method to a string, which makes no sense.
+
+  Clearly it's NOT JUST /mutable fields/ that _make /covariant types/
+  *unsound*._
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *The problem is more general.*
+  It turns out that as soon as
+  a /generic parameter type/ appears _AS_ the type of a /method parameter/, the
+  _containing /class/ or /trait/_ may *NOT* be /covariant/ in that /type
+  parameter/.
+
+  For /queues/, the ~enqueue~ method _violates_ this condition:
+  #+begin_src scala
+    class Queue[+T]:
+      def enqueue(x: T) =
+  #+end_src
+  Running a modified queue class like the one above through a Scala compiler
+  would yield:
+  #+begin_src text
+    17 | def enqueue(x: T) =
+       |             ˆˆˆˆ
+       | covariant type T occurs in contravariant position
+       | in type T of value x
+  #+end_src
+
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  * _Reassignable fields_ are special cases:
+    in Scala, /setter/ are always generated for mutable fields --
+    ~def x_=(value: T)~ for ~x~.
 
 - *The fast track*
   Below are the details. If you don't care, just skip it. The compiler can help
@@ -6393,6 +6452,8 @@ CLOSED: [2025-05-15 Thu 12:42]
   * positive
   * negative
   * neutral
+
+- =NOTE=
 
 ** TODO 18.5 Lower bounds - 408
 ** TODO 18.6 Contravariance - 409
