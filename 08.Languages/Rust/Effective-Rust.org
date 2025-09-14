@@ -420,23 +420,325 @@ CLOSED: [2024-12-17 Tue 00:38]
 
 ** TODO Item 4: Prefer idiomatic ~Error~ types - 25 - =TODO: take notes=
 The last Item stopped short of discussing
-_HOW BEST TO HANDLE the variety of different error types ~E~ that arise as the
+_HOW BEST TO HANDLE the variety of *DIFFERENT* ERROR TYPES ~E~ that arise as the
 second type argument of a ~Result<T, E>~;_
-that's the subject of this Item
+that's the subject of this Item.
 
 *This is relevant only when there are a variety of _DIFFERENT error types_ in
-play.*
+play.* -- there's a decision to make about whether the _suberror type_
+information should be preserved.
 
-*** The Error Trait - 26
-*** Minimal Errors - 26
-*** Nested Errors - 29
-Library ~thiserror~
+*** DONE The ~Error~ Trait - 26
+CLOSED: [2025-09-09 Tue 19:25]
+The relevant trait ~std::error::Error~.
 
-*** Trait Objects - 31
-Library ~anyhow~
+- The ~E~ /type parameter/ for a ~Result~ *doesn't have to be* a type that
+  implements ~Error~,
+  BUT
+  it's a common convention that allows wrappers to express appropriate /trait
+  bounds/ -- so *PREFER to _implement_ ~Error~ for your error types.*
 
-*** Libraries Versus Applications - 33
-*** Things to Remember - 33
+  * The first thing to notice is that the only *hard requirement* for ~Error~
+    types is the /trait bounds/:
+    _any type that implements ~Error~ also *HAS TO IMPLEMENT* the following
+    traits:_
+    + The ~Display~ trait, meaning that it can be ~format!~'ed with ~{}~
+    + The ~Debug~ trait, meaning that it can be ~format!~'ed with ~{:?}~
+
+    In other words, it should be possible to *display* ~Error~ types to both the
+    _user_ and the _programmer_.
+
+- The _ONLY (*NONDEPRECATED*)_ /method/ in the trait is ~source()~, which allows
+  an ~Error~ type to expose an _inner, nested error_.
+  * This method is _optional_ -- it comes with a default implementation
+    (Item 13) returning ~None~, indicating that _inner error_ information isn't
+    available.
+
+- =from Jian=
+  Update the info in footnote:
+  From version *1.81.0*, ~Error~ has been moved to the ~core~ module, and can be
+  used in a ~no_std~ environment.
+  * In the source code we can see:
+    ~#![stable(feature = "error_in_core", since = "1.81.0")]~
+
+*** DONE Minimal Errors - 26
+CLOSED: [2025-09-09 Tue 19:25]
+- IF
+    nested error information _isn't needed_,
+  then an implementation of the ~Error~ type need _NOT_ be much more than a
+  ~String~.
+  * ~String~ can be the ~E~ of ~Result~.
+  * ~String~ doesn't implement ~Error~, and it can't because of /orphan rule/.
+
+- Use /newtype pattern/ to create new type from ~String~, and implement ~Error~
+  on for it, provided that ~Debug~ and ~Display~ are implemented too.
+  #+begin_src rust
+    #[derive(Debug)]
+    pub struct MyError(String);
+
+    impl std::fmt::Display for MyError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
+    impl std::error::Error for MyError {}
+
+    pub fn find_user(username: &str) -> Result<UserId, MyError> {
+        let f = std::fs::File::open("/etc/passwd").map_err(|e| {
+            MyError(format!("Failed to open password file: {:?}", e))
+        })?;
+        // ...
+    }
+  #+end_src
+  * For convenience, it may make sense to implement the ~From<String>~ trait to
+    allow string values to be easily converted into ~MyError~ instances (Item
+    5):
+    #+begin_src rust
+      impl From<String> for MyError {
+          fn from(msg: String) -> Self {
+              Self(msg)
+          }
+      }
+    #+end_src
+
+    WHEN it encounters the /question mark operator (~?~)/, the compiler will
+    *automatically apply* any relevant ~From~ trait implementations that are
+    needed to reach _the destination error return type._
+
+    This allows further minimization of previous code:
+    #+begin_src rust
+      pub fn find_user(username: &str) -> Result<UserId, MyError> {
+          let f = std::fs::File::open("/etc/passwd")
+              .map_err(|e| format!("Failed to open password file: {:?}", e))?;
+          // ...
+      }
+    #+end_src
+
+    + The error path here covers the following steps:
+      - ~File::open~ returns an error of /type/ ~std::io::Error~.
+      - ~format!~ converts this to a ~String~, using the ~Debug~ implementation
+        of ~std::io::Error~.
+      - ~?~ makes the compiler look for and use a ~From~ implementation that can
+        take it from ~String~ to ~MyError~.
+
+*** DONE Nested Errors - 29
+CLOSED: [2025-09-12 Fri 12:17]
+The alternative scenario is where the content of _nested errors_ is
+*IMPORTANT enough that it should be PRESERVED and made available to the caller.*
+
+- =from Jian= related library: ~thiserror~.
+
+- Illustration use case:
+  Consider a library function that
+  _attempts to return the first line of a file as a string, as long as the line
+  is not too long._
+
+  A moment’s thought reveals (at least) three distinct types of failure that
+  could occur:
+  * The file might not exist or might be inaccessible for reading.
+  * The file might contain data that isn't valid UTF-8 and so can't be converted
+    into a ~String~.
+  * The file might have a first line that is too long.
+
+- Use ~enum~ definition to express them:
+  #+begin_src rust
+    #[derive(Debug)]
+    pub enum MyError {
+        Io(std::io::Error),
+        Utf8(std::string::FromUtf8Error),
+        General(String),
+    }
+  #+end_src
+  * Implement ~std::fmt::Display~ for it.
+    #+begin_src rust
+      impl std::fmt::Display for MyError {
+          fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+              match self {
+                  MyError::Io(e) => write!(f, "IO error: {}", e),
+                  MyError::Utf8(e) => write!(f, "UTF-8 error: {}", e),
+                  MyError::General(s) => write!(f, "General error: {}", s),
+              }
+          }
+      }
+    #+end_src
+
+  * Implement ~std::error::Error~ for it.
+    #+begin_src rust
+      use std::error::Error;
+
+      impl Error for MyError {
+          fn source(&self) -> Option<&(dyn Error + 'static)> {
+              match self {
+                  MyError::Io(e) => Some(e),
+                  MyError::Utf8(e) => Some(e),
+                  MyError::General(_) => None,
+              }
+          }
+      }
+    #+end_src
+
+  * Use this error, and implement the ~first_line~ function.
+    #+begin_src rust
+      use std::io::BufRead; // for `.read_until()`
+
+      /// Maximum supported line length.
+      const MAX_LEN: usize = 1024;
+
+      /// Return the first line of the given file.
+      pub fn first_line(filename: &str) -> Result<String, MyError> {
+          let file = std::fs::File::open(filename).map_err(MyError::Io)?;
+          let mut reader = std::io::BufReader::new(file);
+
+          // (A real implementation could just use `reader.read_line()`)
+          let mut buf = vec![];
+          let len = reader.read_until(b'\n', &mut buf).map_err(MyError::Io)?;
+          let result = String::from_utf8(buf).map_err(MyError::Utf8)?;
+          if result.len() > MAX_LEN {
+              return Err(MyError::General(format!("Line too long: {}", len)));
+          }
+          Ok(result)
+      }
+    #+end_src
+
+  * It's also a good idea to implement the ~From~ trait for all of the suberror
+    types (Item 5):
+    #+begin_src rust
+      impl From<std::io::Error> for MyError {
+          fn from(e: std::io::Error) -> Self {
+              Self::Io(e)
+          }
+      }
+
+      impl From<std::string::FromUtf8Error> for MyError {
+          fn from(e: std::string::FromUtf8Error) -> Self {
+              Self::Utf8(e)
+          }
+      }
+    #+end_src
+    + This prevents library users from suffering under /the orphan rules/
+      themselves:
+      they aren't allowed to implement ~From~ on ~MyError~,
+      BECAUSE both the trait and the struct are external to them.
+
+    + Better still, implementing ~From~ allows for even more concision,
+      BECAUSE
+      the question mark operator will
+      *AUTOMATICALLY PERFORM any necessary ~From~ conversions, removing the need
+      for ~.map_err()~:*
+      #+begin_src rust
+        use std::io::BufRead; // for `.read_until()`
+
+        /// Maximum supported line length.
+        pub const MAX_LEN: usize = 1024;
+
+        /// Return the first line of the given file.
+        pub fn first_line(filename: &str) -> Result<String, MyError> {
+            let file = std::fs::File::open(filename)?; // `From<std::io::Error>`
+            let mut reader = std::io::BufReader::new(file);
+            let mut buf = vec![];
+            let len = reader.read_until(b'\n', &mut buf)?; // `From<std::io::Error>`
+            let result = String::from_utf8(buf)?; // `From<string::FromUtf8Error>`
+            if result.len() > MAX_LEN {
+                return Err(MyError::General(format!("Line too long: {}", len)));
+            }
+            Ok(result)
+        }
+      #+end_src
+
+    + This can help simplify ~first_line~ further: .....
+
+- Writing a _COMPLETE error type_ can involve a fair amount of boilerplate,
+  which makes it a good candidate for automation via a ~derive~ macro (Item 28).
+  Consider using the ~thiserror~ crate from David Tolnay, which provides a
+  high-quality, widely used implementation of just such a macro.
+
+  * The code generated by ~thiserror~ is also
+    _careful to avoid making any this error types visible in the generated API,_
+    which in turn means that the concerns associated with Item 24 don't apply.
+
+*** TODO Trait Objects - 31
+- =from Jian= related library: ~anyhow~.
+
+- The approaches we learned from previous sections:
+  * The first approach (=from Jian= from the "Minimal Errors" section) to
+    _NESTED errors_
+    1. threw away all of the suberror detail,
+    2. just preserving some _string output_ (~format!("{:?}", err)~).
+
+  * The second approach (=from Jian= from the "Nested Errors" section)
+    1. PRESERVED the _FULL type information_ for ALL possible suberrors
+    2. BUT required a _FULL enumeration_ of ALL possible types of suberror.
+
+- Q :: Is there a middle ground between these two approaches,
+  1. preserving suberror information
+  2. without needing to manually include every possible error type?
+
+- A :: Encoding the suberror information as a /trait object/
+  1. AVOIDS the need for an ~enum~.
+  2. BUT erases the details of the specific underlying error types.
+     * The /receiver/ of such an object would have access to the methods of the
+       ~Error~ trait and its /trait bounds/ -- ~source()~, ~Display::fmt()~, and
+       ~Debug::fmt()~, in turn -- but *WOULDN'T know the original static type of
+       the suberror:*
+
+- Example:
+  #+begin_src rust
+    #[derive(Debug)]
+    pub enum WrappedError {
+        Wrapped(Box<dyn Error>),
+        General(String),
+    }
+
+    impl std::fmt::Display for WrappedError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::Wrapped(e) => write!(f, "Inner error: {}", e),
+                Self::General(s) => write!(f, "{}", s),
+            }
+        }
+    }
+  #+end_src
+
+- =TODO=
+- =TODO=
+- =TODO=
+
+*** DONE Libraries Versus Applications - 33
+CLOSED: [2025-09-12 Fri 12:11]
+- _Library code errors:_
+  Code that's written for a library can't predict the environment in which the
+  code is used, so it's preferable to emit concrete, detailed error information
+  and leave the caller to figure out how to use that information.
+  *This leans toward the enum-style nested errors* described previously (and
+  also avoids a dependency on anyhow in the public API of the library, see Item
+  24).
+
+- _Application code errors:_
+  However, application code typically needs to concentrate more on *how to
+  present errors to the user.* It also potentially has to cope with all of the
+  different error types emitted by all of the libraries that are present in its
+  dependency graph (Item 25).
+  As such, *a more _dynamic_ error type (such as anyhow::Error) makes error
+  handling _simpler_ and more _consistent_ across the application.*
+
+*** DONE Things to Remember - 33
+CLOSED: [2025-09-11 Thu 22:47]
+- The standard ~Error~ trait requires little of you, so prefer to implement it
+  for your error types.
+
+- When dealing with /heterogeneous underlying error types/, decide whether it's
+  necessary to preserve those types.
+  * If not, consider using ~anyhow~ to wrap suberrors _in application code._
+
+  * If so, encode them in an enum and provide conversions.
+    Consider using ~thiserror~ to help with this.
+
+- Consider using the ~anyhow~ crate for convenient idiomatic error handling
+  _in application code._
+
+- It's your decision, but whatever you decide, encode it in the type system
+  (Item 1).
 
 ** DONE Item 5: Understand type conversions - 34
 CLOSED: [2024-12-26 Thu 16:02]
