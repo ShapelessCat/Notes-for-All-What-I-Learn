@@ -418,7 +418,8 @@ CLOSED: [2024-12-17 Tue 00:38]
 
 *** Things to Remember - 25
 
-** TODO Item 4: Prefer idiomatic ~Error~ types - 25 - =TODO: take notes=
+** DONE Item 4: Prefer idiomatic ~Error~ types - 25
+CLOSED: [2025-09-15 Mon 11:11]
 The last Item stopped short of discussing
 _HOW BEST TO HANDLE the variety of *DIFFERENT* ERROR TYPES ~E~ that arise as the
 second type argument of a ~Result<T, E>~;_
@@ -657,7 +658,8 @@ The alternative scenario is where the content of _nested errors_ is
     _careful to avoid making any this error types visible in the generated API,_
     which in turn means that the concerns associated with Item 24 don't apply.
 
-*** TODO Trait Objects - 31
+*** DONE Trait Objects - 31
+CLOSED: [2025-09-15 Mon 11:10]
 - =from Jian= related library: ~anyhow~.
 
 - The approaches we learned from previous sections:
@@ -699,10 +701,27 @@ The alternative scenario is where the content of _nested errors_ is
         }
     }
   #+end_src
+  It turns out that this is possible, but it's *surprisingly subtle*.
+  * Part of the difficulty comes from the _object safety constraints on trait
+    objects (Item 12)_,
+  * but _Rust's coherence rules_ also come into play, which (roughly) say that
+    there can be at most one implementation of a trait for a type.
 
-- =TODO=
-- =TODO=
-- =TODO=
+- A _putative_ ~WrappedError~ type would naively be expected to implement both of
+  the following:
+  * The ~Error~ /trait/, because it is an error itself.
+  * The ~From<Error>~ trait, to allow suberrors to be easily wrapped.
+    + The above implementation can't do this because of /Rust's coherence rules/.
+
+- David Tolnay's ~anyhow~ is a crate that has already solved these problems (by
+  adding an extra level of indirection via ~Box~) and that adds other helpful
+  features (such as stack traces) besides.
+  =from Jian=
+  =TODO=
+  =TODO=
+  =TODO=
+  ~anyhow~ isn't a big crate. I should go through it and understand all
+  important details! This can be a good practice!!!
 
 *** DONE Libraries Versus Applications - 33
 CLOSED: [2025-09-12 Fri 12:11]
@@ -989,54 +1008,75 @@ CLOSED: [2024-12-27 Fri 15:10]
 ** TODO Item 7: Use builders for complex types - 45
 ** TODO Item 8: Familiarize yourself with reference and pointer types - 51 - =Only Partial Note=
 - _For programming in general_,
-  a /reference/ is a way to indirectly access some data structure, separately
+  a /reference/ is a way to _INDIRECTLY access_ some data structure, separately
   from whatever variable owns that data structure.
 
   * _In practice_,
     this is usually implemented as a /pointer/: a number whose value is the
     _address in memory_ of the data structure.
 
-- A modern CPU will typically police a few constraints on /pointers/ -
+- A modern CPU will typically POLICE a few _constraints_ on /pointers/ -
   the _memory address_
-  * should be in a *VALID range of memory (whether virtual or physical)* and
+  * should be in a *VALID range of memory (whether /virtual/ or /physical/)* and
   * *MAY* need to be *aligned* (e.g., a 4-byte integer value might be accessible
     _only if_ its address is a multiple of 4).
+    =from Jian= Why *MAY*, not *MUST*???
 
 - However, _higher-level programming languages_ usually *encode more information
   about /pointers/ in their _type systems_.*
 
   * In C-derived languages, including Rust, /pointers/ have a /type/ that indicates
-    + what kind of data structure is expected to be present at the pointed-to
-      memory address.
+    + what _kind_ of /data structure/ is expected to be present at the
+      pointed-to memory address.
 
     This allows the code to INTERPRET
     the CONTENTS of memory _at that address_ and _in the memory following that
     address_.
 
-- This *BASIC* level of /pointer/ information -
-  _putative memory location_ and
-  _expected data structure layout_ - is represented in Rust as a /raw pointer/.
+- This *BASIC* level of /pointer/ information --
+  * _putative memory location_ and
+  * _expected data structure layout_
+  -- is represented in Rust as a /raw pointer/.
 
-  However, _safe Rust_ code does *NOT use* /raw pointers/, because Rust provides
-  richer reference and pointer types that provide additional safety guarantees
-  and constraints.
+  However, _safe Rust_ code does *NOT use (=from Jian= dereference)* /raw pointers/,
+  because Rust provides richer reference and pointer types that provide
+  additional safety guarantees and constraints.
+  * =from Jian=
+    Create /raw pointers/ in _safe Rust_ is allowed, because it is just taking
+    note of a memory address. It doesn't actually do anything with the data at
+    that address -- it doesn't read it, write to it, or affect its lifecycle.
+    It's just a number representing a location.
 
 - This Item discusses the /reference and pointer types/ used in _safe Rust_.
-  * =TODO= /raw pointers/ are relegated to _Item 16_ (which discusses unsafe code).
+  * =TODO= /raw pointers/ are relegated to _Item 16_ (which discusses /unsafe code/).
 
 *** DONE Rust References - 52
-CLOSED: [2024-12-26 Thu 23:06]
+CLOSED: [2025-09-15 Mon 12:55]
 - The most ubiquitous _pointer-like type_ in Rust is the /reference/, with a
-  type that is written as ~&T~ for some type ~T~. Although this is *a pointer
-  value under the covers*, the compiler _ENSURES that various rules around its
-  use are observed_:
+  type that is written as ~&T~ for some type ~T~.
+
+  Although this is *a pointer value under the covers*, the compiler _ENSURES
+  that various rules around its use are observed_:
   * it MUST ALWAYS point to a _valid_, _correctly aligned_ instance of the
     relevant type ~T~,
     whose /lifetime/ (_Item 14_) extends beyond its use, and
     it must satisfy the /borrow checking rules/ (_Item 15_).
 
     + These additional constraints are always implied by the term /reference/ in
-      Rust, and so the bare term pointer is generally rare.
+      Rust, and so the bare term /pointer/ is generally rare.
+      - =from Jian=
+        =IMPORTANT=
+        =IMPORTANT=
+        =IMPORTANT=
+        This is VERY =IMPORTANT= in concept and communication!!!
+        We should
+        * call ~&T~ and ~&mut T~ /references/,
+        * call ~*const T~ and ~*mut T~ /raw pointers/,
+        * call others pointers, which follow rules in Rust (not the same as the
+          rules for /references/) like ~Box<T>~, ~Rc<T>~, ~RefCell<T>~, /smart
+          pointers/.
+
+        I hope I could learn this earlier!!!
 
     + /C++'s reference/ is similar, but no /lifetimes/.
       #+Comment: Undesired behavior
@@ -1057,13 +1097,12 @@ CLOSED: [2024-12-26 Thu 23:06]
       #+end_src
 
 - The compiler
-  CONVERTS Rust code that uses /references/
-  INTO machine code that uses simple /pointers/, which are _eight bytes in size
+  _CONVERTS_ Rust code that uses /references/
+  _INTO_ machine code that uses simple /pointers/ -- _eight bytes in size
   on a 64-bit platform (which this Item assumes throughout)_.
 
-- A /Rust reference/ CAN refer to items that are located either on the /stack/
-  or on the /heap/.
-
+- A /Rust reference/ CAN refer to items that are located on the /stack/
+  or on the /heap/ (with the help of ~Box<T>~).
   * Rust allocates items _on the stack BY DEFAULT,_
     BUT the ~Box<T>~ pointer type (roughly equivalent to C++'s
     ~std::unique_ptr<T>~) FORCES /allocation/ to occur on the /heap/, which in
@@ -1075,16 +1114,35 @@ CLOSED: [2024-12-26 Thu 23:06]
       let box_pt = Box::new(Point { x: 10, y: 20 });
     #+end_src
 
-*** TODO Pointer Traits - 54
-- ~DeRef~
+    =from Jian=
+    The complete code of using a /reference/ and refer to items on the /heap/
+    with the help of ~Box<T>~:
+    #+begin_src rust
+      let box_pt = Box::new(Point { x: 10, y: 20 });
+      let ref_to_heap_item = &*box_pt;
+    #+end_src
+
+    or
+    #+begin_src rust
+      let mut b = Box::new(42);
+      let r: &mut i32 = &mut *b; // mutable reference to the heap i32
+      ,*r += 1;
+      println!("{}", r); // 43
+    #+end_src
+
+*** DONE Pointer Traits - 54 - =TODO: Take Note=
+CLOSED: [2025-09-16 Tue 10:46]
+- ~Deref~ and ~DerefMut~
 - ~AsRef~ and ~AsMut~
 
 *** TODO Fat Pointer Types - 56
 Rust has _TWO_ *built-in* /fat pointer types/:
-/slices/ and /trait objects/.
+- /slices/
+- /trait objects/
 
-These are types that *ACT AS* /pointers/
-BUT _HOLD *ADDITIONAL* information_ about the thing they are pointing to.
+These are types that
+- *ACT AS* /pointers/
+- BUT _HOLD *ADDITIONAL* information_ about the thing they are pointing to.
 
 **** Slices - 56
 **** Trait objects - 58
@@ -1507,7 +1565,20 @@ particularly with respect to concision and clarity.
   to change as you become more familiar with the functional style.
 
 * TODO 2. Traits - 77
-** Item 10: Familiarize yourself with standard traits - 77
+- The second core pillar of Rust's type system is the use of /traits/,
+  which allow the encoding of behavior that is common across distinct types.
+  * A /trait/ is roughly equivalent to an /interface type/ in other languages,
+    BUT
+    they are also tied to Rust's /generics/ (_Item 12_), to ALLOW _interface
+    reuse without runtime overhead_.
+
+- The Items in this chapter
+  * describe the STANDARD /traits/ that the _Rust compiler_ and the _Rust
+    toolchain_ make available, and
+
+  * provide advice on _HOW TO design and use_ trait-encoded behavior.
+
+** TODO Item 10: Familiarize yourself with standard traits - 77
 Rust encodes key behavioral aspects of its type system in the type system
 itself, through a collection of fine-grained standard traits that describe those
 behaviors (see Item 2)
@@ -1621,7 +1692,7 @@ CLOSED: [2024-12-27 Fri 00:06]
 CLOSED: [2024-12-27 Fri 00:09]
 =Review=
 
-** Item 11: Implement the ~Drop~ trait for RAII patterns - 89
+** TODO Item 11: Implement the ~Drop~ trait for RAII patterns - 89
 ** DONE Item 12: Understand the trade-offs between generics and trait objects - 93
 CLOSED: [2024-08-28 Wed 23:16]
 - _Item 2_ described the use of traits to encapsulate behavior in the type system,
