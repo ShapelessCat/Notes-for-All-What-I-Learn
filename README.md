@@ -3,7 +3,7 @@
 All my notes for technical book reading.
 Most of these notes are only outlines -- too many things need to learn, and some of them are low priority.
 
-__183 directories, 574 files__:
+__201 directories, 681 files__:
 
 ```text
 .
@@ -25,16 +25,16 @@ __183 directories, 574 files__:
 │   ├── Quicksort.org
 │   ├── The-Algorithm-Design-Manual-2nd.org
 │   └── Think-Data-Structures.org
-├── 00.Understand_Computers
+├── 01.Understand_Computers
 │   └── The-Secret-Life-of-Programs.org
-├── 01.Theory
-│   ├── Algebra-Driven_Design.org
-│   ├── CSAPP3rd.org
+├── 02.Theory
+│   ├── Algebra-Driven-Design.org
 │   ├── Category_Theory
 │   │   ├── Category-Theory-for-Programmers-Scala-Edition.org
 │   │   ├── Category-Theory-in-Context.tm
 │   │   └── Conceptual-Mathematics.tm
 │   ├── Code.org
+│   ├── CSAPP3rd.org
 │   ├── DSL
 │   │   └── DSLs-in-Action.org
 │   ├── Extended_BNF.org
@@ -44,6 +44,7 @@ __183 directories, 574 files__:
 │   │   ├── Programming-Language-and-Lambda-Calculi_by_Matthias-Felleisen_Matthew-Flatt.tm
 │   │   └── The-Calculi-Of-Lambda-Conversion.org
 │   ├── Mathematical-Logic-Part-I.tm
+│   ├── Modern-Mathematics.org
 │   ├── Optics-by-Example.org
 │   ├── Paradigms-of-Artificial-Intelligence-Programming.org
 │   ├── Parsing-Techniques-2nd.tm
@@ -66,72 +67,99 @@ __183 directories, 574 files__:
 │   ├── Understanding-Computation.org
 │   └── UniMath
 │       └── Symmetry.tm
-├── 02.Ruminations
-│   ├── 97-Things-Every-Programmer-Should-Know.org
-│   ├── A-Philosophy-of-Software-Design.org
-│   ├── Elements-of-Information-Theory-2nd.org
-│   └── Working-Effectively-with-Legacy-Code.org
 ├── 03.DevOps
-│   ├── Arch_Linux
+│   ├── Ansible
+│   │   └── Ansible-Up-and-Running-3rd.org
+│   ├── Arch_Linux_Family
 │   │   └── package-management.org
 │   ├── Configuration_File_Formats
 │   │   ├── HOCON
+│   │   │   ├── Ciris.org
 │   │   │   ├── Config.org
-│   │   │   └── HOCON.org
+│   │   │   ├── HOCON.org
+│   │   │   └── PureConfig.org
 │   │   ├── Markdown
 │   │   │   └── GitHub-Flavored-Markdown-Spec.org
-│   │   ├── TOML
-│   │   │   └── TOML.org
-│   │   └── YAML
+│   │   └── TOML
+│   │       └── TOML.org
+│   ├── Continuous_Integration_and_Delivery
+│   │   ├── GitHub-Actions-in-Action.org
+│   │   ├── Learning-GitHub-Actions.org
+│   │   └── pre-commit.org
+│   ├── curl-Official-Document.org
 │   ├── Postman
 │   │   └── Postman-Official-Document.org
 │   ├── Programming_Etiquette
 │   │   └── Conventional-Commits.org
-│   ├── System_Management
+│   ├── Release-It.org
+│   ├── System_Administration
 │   │   ├── Learn-Powershell-Core-6.0.org
 │   │   ├── Learn-Windows-Powershell-in-A-Month-of-Lunches-3rd.org
 │   │   ├── PowerShell-for-SYSADMINS.org
 │   │   ├── The-Unix-Person's-Guide-to-Powershell.org
 │   │   ├── Unix-and-Linux-System-AdminHandbook-4th.org
 │   │   └── Windows-PowerShell-in-Action-3rd.org
+│   ├── Time-Management-for-System-Administrators.org
+│   ├── tmux
+│   │   └── tmux-3_Productive_Mouse-Free_Development.org
 │   ├── Version_Control
-│   │   └── Git
-│   │       ├── Got-Git_CN.org
-│   │       ├── Pragmatic-Guide-to-Git.org
-│   │       ├── Pro-Git-2.1.308.org
-│   │       ├── Rys-Git-Tutorial.org
-│   │       ├── Version-Control-with-Git-3rd.org
-│   │       └── Writing-on-GitHub.org
-│   ├── Virtualization_and_Container
-│   │   ├── Docker-Crash-Course-for-busy-DevOps-and-Developers.org
-│   │   ├── Docker-and-Kubernetes_The-Practical-Guide_2024-Edition.org
-│   │   ├── Kubernetes-Up_and_Running-3rd.org
-│   │   ├── Learning-Helm.org
-│   │   ├── Podman-in-Action.org
-│   │   └── the-Docker-Book-18.03.org
-│   └── curl-Official-Document.org
+│   │   ├── Git
+│   │   │   ├── Got-Git_CN.org
+│   │   │   ├── Pragmatic-Guide-to-Git.org
+│   │   │   ├── Pro-Git.org
+│   │   │   ├── Rys-Git-Tutorial.org
+│   │   │   ├── Version-Control-with-Git-3rd.org
+│   │   │   └── Writing-on-GitHub.org
+│   │   └── Jujutsu
+│   │       ├── Jujutsu-docs.org
+│   │       └── Steve's-Jujutsu-Tutorial.org
+│   └── Virtualization_and_Container
+│       ├── Docker-and-Kubernetes_The-Practical-Guide_2024-Edition.org
+│       ├── Docker-Crash-Course-for-busy-DevOps-and-Developers.org
+│       ├── Docker-Up_and_Running-3rd.org
+│       ├── Helm
+│       │   ├── Helm-Docs.org
+│       │   ├── Learning-Helm.org
+│       │   └── Managing-Kubernetes-Resources-Using-Helm-2nd.org
+│       ├── Kubernetes-Up_and_Running-3rd.org
+│       ├── minikube-documentation.org
+│       ├── Podman-in-Action.org
+│       └── the-Docker-Book-18.03.org
 ├── 04.Architecture_and_OS
+│   ├── Computer-Architecture_from-the-stone-age-to-the-quantum-age.org
 │   ├── Computer-Architecture-6th.org
 │   ├── Computer-Organization-and-Design-5th.org
+│   ├── Digital-Design-and-Computer-Architecture_RISC-V_Edition.org
+│   ├── The-Elements-of-Computing-Systems-2nd.org
 │   ├── The-Elements-of-Computing-Systems.org
 │   └── xv6.org
-├── 05.Compiler_and_Static_Analysis
+├── 05.Concurrency_and_Parallel
+│   ├── Java-Concurrency-in-Practice.org
+│   ├── Learning-Concurrent-Programming-in-Scala-2nd.org
+│   ├── Parallel-and-Concurrent-Programming-in-Haskell.org
+│   ├── Programming-with-POSIX-Threads.org
+│   ├── pthreads-Programming.org
+│   ├── Seven-Concurrency-Models-in-Seven-Weeks.org
+│   └── The-Art-of-Multiprocessor-Programming-Revised.org
+├── 06.Compiler_and_Static_Analysis
 │   ├── Abstract_Interpretation
 │   │   └── Introduction-to-Abstract-Interpretation.tm
 │   ├── Engineering-a-Compiler-2nd.org
+│   ├── Language_Server_Protocol
+│   │   └── Language-Server-Protocol-Specification.org
+│   ├── Linkers_and_Loaders.org
 │   ├── LLVM
 │   │   ├── LLVM-Language-Reference-Manual.org
 │   │   └── LLVM-Tutorial.org
-│   ├── Language_Server_Protocol
-│   │   └── Language-Server-Protocol-Specification.org
 │   ├── Modern-Compiler-Implementation-in-ML.org
 │   ├── Program-Analysis_An-Appetizer.org
-│   └── Static-Single-Assignment-Book.org
-├── 06.Language_Virtual_Machine
+│   ├── Static-Single-Assignment-Book.org
+│   └── Writing-A-C-Compiler.org
+├── 07.Language_Virtual_Machine
 │   ├── CLR
-│   │   ├── Standard-ECMA-335-6th.org
 │   │   ├── dotNET-Core-in-Action.org
-│   │   └── dotNET-IL-Assembler.org
+│   │   ├── dotNET-IL-Assembler.org
+│   │   └── Standard-ECMA-335-6th.org
 │   ├── JVM
 │   │   ├── ASM-4-Guide.org
 │   │   ├── Decompiling-Java.org
@@ -141,37 +169,12 @@ __183 directories, 574 files__:
 │   │   ├── Virtual-Machines.org
 │   │   └── VisualVM-Documentation.org
 │   └── Principles-of-Computer-Organization-and-Assembly-Language.org
-├── 07.Concurrency_and_Parallel_and_Distributed
-│   ├── Actors_a-Model-of-Concurrent-Computation-in-Distributed-Systems.org
-│   ├── Java-Concurrency-in-Practice.org
-│   ├── Learning-Concurrent-Programming-in-Scala-2nd.org
-│   ├── Parallel-and-Concurrent-Programming-in-Haskell.org
-│   ├── Programming-with-POSIX-Threads.org
-│   ├── Seven-Concurrency-Models-in-Seven-Weeks.org
-│   ├── The-Art-of-Multiprocessor-Programming-Revised.org
-│   └── pthreads-Programming.org
-├── 08.Web
-│   ├── HTTP
-│   │   ├── HTTP-the-Definitive-Guide.org
-│   │   ├── Learning-HTTP2.org
-│   │   └── RFC7230-HTTP1.1.org
-│   ├── Monadic-Design-Patterns-for-the-Web.org
-│   ├── RESTful
-│   │   ├── Architectural-Styles-and-the-Design-of-Network-based-Software-Architectures.org
-│   │   ├── Learn-API-Doc.org
-│   │   ├── OpenAPI-Sepcification.org
-│   │   ├── REST-API-Design-Rulebook.org
-│   │   ├── RESTful-Web-APIs.org
-│   │   ├── RESTful-Web-Services-with-Scala.org
-│   │   └── Web-Design_the-Missing-Link-Ebook.org
-│   ├── Reactive-Web-Applications.org
-│   ├── Spring-in-Action-5th.org
-│   └── Webassembly
-│       └── WebAssembly-Specification-Release1.0.org
-├── 09.Languages
+├── 08.Languages
 │   ├── Assembly_and_C
 │   │   ├── Assembly-Language-Step-by-Step3rd.org
+│   │   ├── Effective-C-2nd.org
 │   │   ├── Managing-Projects-with-GNU-Make.org
+│   │   ├── Modern-C-2024.org
 │   │   ├── Modern-C.org
 │   │   └── The-Art-of-64bit-Assembly-Language.org
 │   ├── C#
@@ -185,8 +188,8 @@ __183 directories, 574 files__:
 │   │   ├── Practical-Common-Lisp.org
 │   │   └── The-Art-of-the-Metaobject-Protocol.org
 │   ├── Elixir_and_Erlang
-│   │   ├── Elixir-Official-Guides.org
 │   │   ├── Elixir-in-Action-2nd.org
+│   │   ├── Elixir-Official-Guides.org
 │   │   ├── Erlang_Official_Documentation
 │   │   │   └── Getting-Started-with-Erlang.org
 │   │   ├── Learn-You-Some-Erlang-for-Great-Good.org
@@ -197,6 +200,9 @@ __183 directories, 574 files__:
 │   │   ├── An-Introduction-to-Programming-in-Emacs-Lisp.org
 │   │   ├── Learn-Elisp.org
 │   │   └── Practical-Emacs.org
+│   ├── Fortran
+│   │   ├── Modern-Fortran-Explained.org
+│   │   └── Modern-Fortran.org
 │   ├── Go
 │   │   ├── A-Tour-of-Go.org
 │   │   ├── Concurrency-in-Go.org
@@ -226,30 +232,30 @@ __183 directories, 574 files__:
 │   │   │   ├── Java9-Recipes.org
 │   │   │   └── Modern-Java-Recipes.org
 │   │   ├── Core_Java
-│   │   │   ├── Core-Java-SE-9-for-The-Impatient.org
-│   │   │   └── Core-Java_Volume_1_and_2-11th.org
+│   │   │   ├── Core-Java_Volume_1_and_2-11th.org
+│   │   │   └── Core-Java-SE-9-for-The-Impatient.org
 │   │   ├── Functional-Programing-in-Java.org
-│   │   ├── JUnit-in-Action_3rd.org
-│   │   ├── Java-13-Revealed-2nd.org
-│   │   ├── Java-Network-Programming-4th.org
-│   │   ├── Java-Puzzlers.org
-│   │   ├── Java-Threads-3rd.org
-│   │   ├── Java-by-Comparison.org
-│   │   ├── Java-the-Legend.org
-│   │   ├── Java8-Lambdas.org
 │   │   ├── Java_in_Action
 │   │   │   ├── Java8-in-Action.org
 │   │   │   └── Modern-Java-in-Action.org
+│   │   ├── Java-13-Revealed-2nd.org
+│   │   ├── Java-by-Comparison.org
+│   │   ├── Java-Network-Programming-4th.org
+│   │   ├── Java-Puzzlers.org
+│   │   ├── Java-the-Legend.org
+│   │   ├── Java-Threads-3rd.org
+│   │   ├── Java8-Lambdas.org
+│   │   ├── JUnit-in-Action_3rd.org
 │   │   ├── Libraries
 │   │   │   ├── Java-Generics-and-Collections.org
 │   │   │   ├── Java-IO-NIO-and-NIO2.org
 │   │   │   └── Java-Threads_3rd.org
 │   │   ├── Logging
-│   │   │   ├── SLF4J.org
-│   │   │   └── sematext-BLOG-logging
-│   │   │       ├── Java-Logging-Frameworks-Comparison_Log4j_vs_Logback_vs_Log4j2_vs_SLF4j_Differences.org
-│   │   │       ├── Java-Logging-Tutorial_Basic-Concepts-to-Help-You-Get-Started.org
-│   │   │       └── SLF4J-Tutorial_Example-of-How-to-Configure-it-for-Logging-Java-Applications.org
+│   │   │   ├── sematext-BLOG-logging
+│   │   │   │   ├── Java-Logging-Frameworks-Comparison_Log4j_vs_Logback_vs_Log4j2_vs_SLF4j_Differences.org
+│   │   │   │   ├── Java-Logging-Tutorial_Basic-Concepts-to-Help-You-Get-Started.org
+│   │   │   │   └── SLF4J-Tutorial_Example-of-How-to-Configure-it-for-Logging-Java-Applications.org
+│   │   │   └── SLF4J.org
 │   │   ├── MetaProgramming
 │   │   │   ├── Java-Reflection-in-Action.org
 │   │   │   └── Trail_The-Reflection-API.org
@@ -269,8 +275,10 @@ __183 directories, 574 files__:
 │   │   ├── Eloquent-JavaScript-2nd.org
 │   │   ├── Eloquent-JavaScript-3nd.org
 │   │   ├── JavaScript-with-Promises.org
-│   │   ├── Understanding-ECMAScript6.org
-│   │   └── the-Road-to-Learn-React.org
+│   │   ├── nodejs
+│   │   │   └── NodeJS-Official-Document.org
+│   │   ├── the-Road-to-Learn-React.org
+│   │   └── Understanding-ECMAScript6.org
 │   ├── Kotlin
 │   │   └── Kotlin-in-Action.org
 │   ├── Lua
@@ -278,59 +286,83 @@ __183 directories, 574 files__:
 │   ├── MoonBit
 │   │   └── MoonBit.org
 │   ├── OCaml
-│   │   ├── Real-World-OCaml-2nd.org
-│   │   └── opam-2.0-documentation.org
+│   │   ├── opam-2.0-documentation.org
+│   │   └── Real-World-OCaml-2nd.org
 │   ├── Prolog
 │   │   ├── Learn-Prolog-Now.org
+│   │   ├── Logic-Programming-with-Prolog-2nd.org
+│   │   ├── Programmer-Passport_Prolog.org
 │   │   └── The-Art-of-Prolog-2nd.org
 │   ├── Python
 │   │   ├── Concurrency
 │   │   │   ├── Learning-Concurrency-in-Python.org
 │   │   │   ├── Mastering-Concurrency-in-Python.org
+│   │   │   ├── Python-Concurrency-with-asyncio.org
 │   │   │   └── Using-Asyncio-in-Python.org
 │   │   ├── Effective-Python-2nd.org
-│   │   ├── Environment_Management
-│   │   │   └── Conda-docs.org
+│   │   ├── FFI
+│   │   │   ├── Maturin-User-Guide.org
+│   │   │   ├── Speed-Up-Your-Python-with-Rust.org
+│   │   │   └── The-PyO3-user-guide.org
 │   │   ├── Fluent-Python-2nd.org
 │   │   ├── Fluent-Python.org
-│   │   ├── High-Performance-Python-2nd.org
+│   │   ├── Hypermodern-Python-Tooling.org
 │   │   ├── Learning-Python-5th.org
+│   │   ├── Learning-Python-6th_partial-for-speed.org
 │   │   ├── Libraries
-│   │   │   └── Requests_HTTP-for-Humans.org
-│   │   ├── Linters
-│   │   │   └── Flake8.org
+│   │   │   ├── Pydantic.org
+│   │   │   ├── Requests_HTTP-for-Humans.org
+│   │   │   ├── Using-Matplotlib.org
+│   │   │   └── wrapt.org
+│   │   ├── Logging
+│   │   │   ├── loguru.org
+│   │   │   └── structlog.org
 │   │   ├── Official_Documentation
 │   │   │   ├── Debugging-and-Profiling.org
 │   │   │   ├── Python-HOWTOs.org
-│   │   │   ├── Python_Enhancement_Proposals
-│   │   │   │   ├── Packaging_PEPs
-│   │   │   │   └── Typing_PEPs
+│   │   │   ├── The_Python_Standard_Library
+│   │   │   │   ├── Development_Tools
+│   │   │   │   │   ├── typing.org
+│   │   │   │   │   └── unittest.org
+│   │   │   │   ├── File_and_Directory_Access
+│   │   │   │   │   └── pathlib.org
+│   │   │   │   └── Networking_and_Interprocess_Communication
+│   │   │   │       └── asyncio-Asynchronous-IO.org
 │   │   │   ├── The-Python-Language-Reference.org
-│   │   │   ├── The-Python-Tutorial.org
-│   │   │   └── The_Python_Standard_Library
-│   │   │       ├── Development_Tools
-│   │   │       │   ├── typing.org
-│   │   │       │   └── unittest.org
-│   │   │       ├── File_and_Directory_Access
-│   │   │       │   └── pathlib.org
-│   │   │       └── Networking_and_Interprocess_Communication
-│   │   │           └── asyncio-Asynchronous-IO.org
+│   │   │   └── The-Python-Tutorial.org
+│   │   ├── Performance
+│   │   │   ├── Fast-Python.org
+│   │   │   └── High-Performance-Python-3rd.org
 │   │   ├── Programming-Python-4th.org
 │   │   ├── Python-Cookbook.org
-│   │   ├── Python-Testing-with-pytest.org
 │   │   ├── Real_Python
 │   │   │   └── Speed-Up-Your-Python-Program-with-Concurrency.org
 │   │   ├── Robust-Python.org
 │   │   ├── Standard_Library_third_party_documents
 │   │   │   ├── Python-Standard-Library.org
 │   │   │   └── The-Python-3-Standard-Library-by-Example.org
-│   │   ├── Violent-Python.org
-│   │   ├── Web-Scraping-with-Python-2nd.org
-│   │   └── packaging
-│   │       ├── Publishing-Python-Packages.org
-│   │       ├── Python-Packaging-Authority.org
-│   │       ├── Setuptools.org
-│   │       └── pip-documentation.org
+│   │   ├── Testing
+│   │   │   ├── Coverage.py.org
+│   │   │   ├── Python-Testing-with-pytest.org
+│   │   │   └── tox.org
+│   │   ├── The-Python-Craftsman.org
+│   │   ├── Tools
+│   │   │   ├── Conda-docs.org
+│   │   │   ├── Hypermodern-Python-Tooling.org
+│   │   │   ├── IPython-Documentation.org
+│   │   │   ├── Linters
+│   │   │   │   └── Flake8.org
+│   │   │   ├── Packaging
+│   │   │   │   ├── pip-documentation.org
+│   │   │   │   ├── Publishing-Python-Packages.org
+│   │   │   │   ├── Python-Packaging-Authority.org
+│   │   │   │   ├── Python-Packaging-User-Guide.org
+│   │   │   │   └── Setuptools.org
+│   │   │   ├── Poetry.org
+│   │   │   ├── Ruff.org
+│   │   │   ├── ty.org
+│   │   │   └── uv.org
+│   │   └── Web-Scraping-with-Python-2nd.org
 │   ├── R
 │   │   ├── Advanced-R_2nd.org
 │   │   ├── An-Introduction-to-R.org
@@ -340,10 +372,11 @@ __183 directories, 574 files__:
 │   │   ├── The-Art-of-R-Programming.org
 │   │   ├── The-Book-of-R.org
 │   │   └── The-tidyverse-Style-Guide.org
-│   ├── Racket
+│   ├── Racket-Family
 │   │   ├── Guile-Reference-Manual.org
 │   │   ├── Plait-Language.org
 │   │   ├── Plot_Graph-Plotting.org
+│   │   ├── Rhombus.org
 │   │   ├── Structure-and-Interpretation-of-Computer-Programs-2nd.org
 │   │   ├── The-Racket-Guide.org
 │   │   ├── The-Racket-Reference.org
@@ -353,55 +386,77 @@ __183 directories, 574 files__:
 │   │   └── Official_Documents
 │   │       └── Language-Manual.org
 │   ├── Rust
+│   │   ├── Async-Rust.org
+│   │   ├── Asynchronous-Programming-in-Rust.org
+│   │   ├── Code-Like-a-Pro-in-Rust.org
 │   │   ├── Command-Line_Rust.org
 │   │   ├── Command-line-apps-in-Rust.org
 │   │   ├── Easy-Rust.org
+│   │   ├── Effective-Rust.org
+│   │   ├── Idiomatic-Rust.org
 │   │   ├── Libraries
 │   │   │   ├── A-Thoughtful-Introduction-to-The-Pest-Parser.org
-│   │   │   ├── The-Nominomicon.org
-│   │   │   └── nom.org
+│   │   │   ├── futures.org
+│   │   │   ├── Metaprogramming
+│   │   │   │   ├── proc_macro2.org
+│   │   │   │   ├── quote.org
+│   │   │   │   └── syn.org
+│   │   │   ├── nom.org
+│   │   │   ├── Proptest.org
+│   │   │   ├── Serde
+│   │   │   │   ├── Serde-JSON.org
+│   │   │   │   └── Serde.org
+│   │   │   └── The-Nominomicon.org
+│   │   ├── Macro
+│   │   │   ├── The-Little-Book-of-Rust-Macros.org
+│   │   │   └── Write-Powerful-Rust-Macros.org
+│   │   ├── Mainmatter_Rust_Exercises
+│   │   │   ├── 100-Exercises-To-Learn-Rust.org
+│   │   │   ├── Advanced-Rust-testing.org
+│   │   │   ├── Rust-Python_interoperability.org
+│   │   │   └── Rust-telemetry-workshop.org
 │   │   ├── Official_Documentation
+│   │   │   ├── Asynchronous-Programming-in-Rust.org
+│   │   │   ├── Cargo-Contributor-Guide.org
 │   │   │   ├── Clippy-Documentation.org
+│   │   │   ├── Rust-API-Guidelines.org
 │   │   │   ├── Rust-by-Example.org
+│   │   │   ├── Rust-SIMD-Performance-Guide.org
 │   │   │   ├── The-Cargo-Book.org
 │   │   │   ├── The-Edition-Guide.org
+│   │   │   ├── The-Rust-Programming-Language.org
+│   │   │   ├── The-Rust-Reference.org
 │   │   │   ├── The-Rust-Style-Guide.org
+│   │   │   ├── The-Rust-Unstable-Book.org
 │   │   │   ├── The-rustc-book.org
-│   │   │   └── The-rustdoc-book.org
+│   │   │   ├── The-rustdoc-book.org
+│   │   │   ├── The-Rustonomicon.org
+│   │   │   └── Unsafe-Code-Guidelines-Reference.org
 │   │   ├── Practical-Rust-1.x-Cookbook.org
 │   │   ├── Programming-Rust-2nd.org
 │   │   ├── Programming-Rust.org
 │   │   ├── Programming-WebAssembly-with-Rust.org
+│   │   ├── Refactoring-to-Rust.org
+│   │   ├── rust-analyzer-user-manual.org
+│   │   ├── Rust-and-WebAssembly.org
 │   │   ├── Rust-Atomics-and-Locks.org
+│   │   ├── Rust-Brain-Teasers.org
 │   │   ├── Rust-Cookbook.org
+│   │   ├── Rust-for-Rustaceans.org
+│   │   ├── Rust-Fuzz-Book.org
+│   │   ├── Rust-in-Action.org
 │   │   ├── Rust-Standard-Library-Cookbook.org
 │   │   ├── Rust-Style-Guidelines.org
-│   │   ├── Rust-and-WebAssembly.org
-│   │   ├── Rust-for-Rustaceans.org
-│   │   ├── Serde
-│   │   │   ├── Serde-JSON.org
-│   │   │   └── Serde.org
+│   │   ├── Rust-Under-the-Hood.org
+│   │   ├── rust-unofficial
+│   │   │   ├── Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org
+│   │   │   └── Rust-Design-Patterns.org
 │   │   ├── The-Embedded-Rust-Book.org
-│   │   ├── The-Little-Book-of-Rust-Macros.org
-│   │   ├── The-Rust-Programming-Language-2nd.org
-│   │   ├── The-Rust-Reference.org
-│   │   ├── The-Rustonomicon.org
 │   │   ├── The-Tao-of-Rust.org
 │   │   ├── Tour-of-Rust.org
-│   │   ├── Zero-to-Production-in-Rust.org
-│   │   ├── rust-analyzer-user-manual.org
-│   │   └── rust-unofficial
-│   │       ├── Learning-Rust-with-Entirely-Too-Many-Linked-Lists.org
-│   │       └── Rust-Design-Patterns.org
-│   ├── SML
-│   │   ├── ML-for-Working-Programmer-2nd.org
-│   │   └── Programming-in-Standard-ML.org
+│   │   └── Zero-to-Production-in-Rust.org
 │   ├── Scala_2
 │   │   ├── Akka
-│   │   │   ├── Akka-Concurrency.org
-│   │   │   ├── Akka-Cookbook.org
-│   │   │   ├── Akka-in-Action-2nd.org
-│   │   │   ├── Akka-in-Action.org
 │   │   │   ├── Akka_Official_Documentation
 │   │   │   │   ├── Actors.org
 │   │   │   │   ├── Akka-Classic.org
@@ -418,6 +473,10 @@ __183 directories, 574 files__:
 │   │   │   │   ├── Security-Announcements.org
 │   │   │   │   ├── Streams.org
 │   │   │   │   └── Utilities.org
+│   │   │   ├── Akka-Concurrency.org
+│   │   │   ├── Akka-Cookbook.org
+│   │   │   ├── Akka-in-Action-2nd.org
+│   │   │   ├── Akka-in-Action.org
 │   │   │   ├── Alpakka-Documentation.org
 │   │   │   ├── Effective-Akka.org
 │   │   │   ├── Learning-Akka.org
@@ -429,17 +488,15 @@ __183 directories, 574 files__:
 │   │   ├── Creative-Scala.org
 │   │   ├── Effective-Scala-by-Twitter.org
 │   │   ├── Essential-Scala.org
-│   │   ├── Functional-Programming-Simplified.org
 │   │   ├── Functional-Programming-in-Scala.org
+│   │   ├── Functional-Programming-Simplified.org
 │   │   ├── Hands-on_Scala.org
 │   │   ├── Libraries
 │   │   │   ├── Database
 │   │   │   │   ├── Essential-Slick.org
+│   │   │   │   ├── quill.org
 │   │   │   │   ├── Scredis.org
-│   │   │   │   ├── Slick.org
-│   │   │   │   └── quill.org
-│   │   │   ├── HOCON
-│   │   │   │   └── PureConfig.org
+│   │   │   │   └── Slick.org
 │   │   │   ├── Scalafix.org
 │   │   │   ├── Scalafmt.org
 │   │   │   └── Shapeless
@@ -494,19 +551,19 @@ __183 directories, 574 files__:
 │   │   │   │       ├── Scala-2-REPL.org
 │   │   │   │       ├── Scaladoc-For-Scala-3.org
 │   │   │   │       └── Scaladoc.org
-│   │   │   ├── SIPs
-│   │   │   │   ├── SIP-11_String_Interpolation.org
-│   │   │   │   ├── SIP-13_Implicit_Classes.org
-│   │   │   │   └── SIP-15_Value_Classes.org
-│   │   │   └── Scala-API.org
+│   │   │   ├── Scala-API.org
+│   │   │   └── SIPs
+│   │   │       ├── SIP-11_String_Interpolation.org
+│   │   │       ├── SIP-13_Implicit_Classes.org
+│   │   │       └── SIP-15_Value_Classes.org
 │   │   ├── Personal_Notes
 │   │   │   ├── Scala-Refactor-Recipies.org
 │   │   │   └── Scala-Traps-and-Pitfalls_Personal-Note.org
 │   │   ├── Play_Framework
 │   │   │   ├── Essential-Play.org
 │   │   │   ├── Play-Documentation.org
-│   │   │   ├── Play-Framework-Essentials.org
-│   │   │   └── Play-for-Scala.org
+│   │   │   ├── Play-for-Scala.org
+│   │   │   └── Play-Framework-Essentials.org
 │   │   ├── Practical-FP-in-Scala-2nd.org
 │   │   ├── Practical-FP-in-Scala.org
 │   │   ├── Practice
@@ -516,11 +573,11 @@ __183 directories, 574 files__:
 │   │   ├── Scala-Collection-Technique-Manual_2.8to2.12.org
 │   │   ├── Scala-Cookbook.org
 │   │   ├── Scala-Design-Patterns-2nd.org
+│   │   ├── Scala-for-the-Impatient.org
 │   │   ├── Scala-High-Performance-Programming.org
+│   │   ├── Scala-in-Depth.org
 │   │   ├── Scala-Puzzlers-from-Me.org
 │   │   ├── Scala-Puzzlers.org
-│   │   ├── Scala-for-the-Impatient.org
-│   │   ├── Scala-in-Depth.org
 │   │   ├── Scala.js
 │   │   │   ├── Documentation.org
 │   │   │   └── Hands-on-Scala.js.org
@@ -535,30 +592,34 @@ __183 directories, 574 files__:
 │   │   │   └── JSON-and-Circe.org
 │   │   ├── Effect_Systems
 │   │   │   ├── Cats-Effect
-│   │   │   │   ├── Essential-Effects.org
-│   │   │   │   └── cats-effect-3.org
+│   │   │   │   ├── cats-effect-3.org
+│   │   │   │   └── Essential-Effects.org
 │   │   │   └── ZIO
 │   │   │       ├── ZIO.org
 │   │   │       ├── ZIO2.org
 │   │   │       └── Zionomicon.org
-│   │   ├── Functional-Programming-Strategies-in-Scala-with-Cats.org
-│   │   ├── Functional-Programming-in-Scala-2nd.org
 │   │   ├── Functional-event-driven-architecture.org
+│   │   ├── Functional-Programming-in-Scala-2nd.org
+│   │   ├── Functional-Programming-Strategies-in-Scala-with-Cats.org
 │   │   ├── Get-Programming-with-Scala.org
 │   │   ├── Guides
 │   │   │   ├── An-Overview-of-TASTy.org
 │   │   │   └── Migration-from-Scala-2-to-Scala3.org
 │   │   ├── Libraries
 │   │   │   ├── Cats
-│   │   │   │   ├── Functional-effect-handling-in-Scala-with-cats-effect.org
-│   │   │   │   ├── Typelevel-Cats-Document.org
-│   │   │   │   ├── Udemy-Course_FP-with-Scala-Cats.org
-│   │   │   │   ├── Udemy-Functional-effect-handling-in-Scala-with-Cats-Effect.org
 │   │   │   │   ├── cats-API.org
 │   │   │   │   ├── cats-effect-2.org
 │   │   │   │   ├── cats-mtl.org
 │   │   │   │   ├── cats-retry.org
-│   │   │   │   └── herding-cats.org
+│   │   │   │   ├── Functional-effect-handling-in-Scala-with-cats-effect.org
+│   │   │   │   ├── herding-cats.org
+│   │   │   │   ├── Typelevel-Cats-Document.org
+│   │   │   │   ├── Udemy-Course_FP-with-Scala-Cats.org
+│   │   │   │   └── Udemy-Functional-effect-handling-in-Scala-with-Cats-Effect.org
+│   │   │   ├── com-lihaoyi
+│   │   │   │   ├── FastParse2.org
+│   │   │   │   ├── OS-Lib.org
+│   │   │   │   └── upickle.org
 │   │   │   ├── Database
 │   │   │   │   ├── Doobie.org
 │   │   │   │   ├── Redis4Cats.org
@@ -569,30 +630,24 @@ __183 directories, 574 files__:
 │   │   │   │   ├── FS2.org
 │   │   │   │   ├── Functional-Streams-for-Scala-with-FS2.org
 │   │   │   │   └── Udemy_Functional-Streams-for-Scala-with-FS2.org
-│   │   │   ├── HOCON
-│   │   │   │   └── Ciris.org
+│   │   │   ├── http4s
+│   │   │   │   ├── http4s-0.2x.org
+│   │   │   │   └── http4s-1.org
 │   │   │   ├── Izumi_Project
 │   │   │   │   └── distage.org
 │   │   │   ├── JSON
 │   │   │   │   ├── Circe.org
 │   │   │   │   └── Json4s.org
 │   │   │   ├── Monocle-Official.org
-│   │   │   ├── Scala-with-Cats_me.org
-│   │   │   ├── ScalaPB_Scala-Protocol-Buffer-Compiler.org
-│   │   │   ├── Spire.org
-│   │   │   ├── Squants.org
-│   │   │   ├── TSec.org
-│   │   │   ├── com-lihaoyi
-│   │   │   │   ├── FastParse2.org
-│   │   │   │   ├── OS-Lib.org
-│   │   │   │   └── upickle.org
-│   │   │   ├── http4s
-│   │   │   │   ├── http4s-0.2x.org
-│   │   │   │   └── http4s-1.org
 │   │   │   ├── parboiled2.org
 │   │   │   ├── refined.org
+│   │   │   ├── Scala-with-Cats_me.org
+│   │   │   ├── ScalaPB_Scala-Protocol-Buffer-Compiler.org
 │   │   │   ├── scodec.org
-│   │   │   └── sttp.org
+│   │   │   ├── Spire.org
+│   │   │   ├── Squants.org
+│   │   │   ├── sttp.org
+│   │   │   └── TSec.org
 │   │   ├── Macro
 │   │   │   └── A-Macro-Almanac.org
 │   │   ├── Notes4Talks
@@ -608,30 +663,31 @@ __183 directories, 574 files__:
 │   │   │   ├── 5.API.org
 │   │   │   ├── 6.Language-Reference.org
 │   │   │   ├── 7.All-New-Scaladoc-for-Scala-3.org
+│   │   │   ├── from-old-reference.org
 │   │   │   ├── Scala-3-Contributing-Guide.org
-│   │   │   ├── The-Scala-Toolkit.org
-│   │   │   └── from-old-reference.org
-│   │   ├── Programming-Scala-3rd.org
+│   │   │   └── The-Scala-Toolkit.org
 │   │   ├── Programming-in-Scala-5th.org
+│   │   ├── Programming-Scala-3rd.org
+│   │   ├── rockthejvm
+│   │   │   └── Typelevel-Rite-of-Passage.org
 │   │   ├── Scala-Cookbook_2nd.org
+│   │   ├── Scala-Language-Specification.org
 │   │   ├── Test_Frameworks
 │   │   │   ├── MUnit.org
 │   │   │   ├── Scala-Test-Driven-Development.org
 │   │   │   ├── ScalaCheck
+│   │   │   │   ├── ScalaCheck_The-Definitive-Guide.org
 │   │   │   │   ├── ScalaCheck-Cookbook.org
-│   │   │   │   ├── ScalaCheck-User-Guide.org
-│   │   │   │   └── ScalaCheck_The-Definitive-Guide.org
+│   │   │   │   └── ScalaCheck-User-Guide.org
 │   │   │   ├── ScalaMock.org
 │   │   │   ├── ScalaTest-User-Guide.org
 │   │   │   ├── Testing-in-Scala.org
-│   │   │   ├── Weaver-Test.org
-│   │   │   └── uTest.org
-│   │   ├── Tools
-│   │   │   ├── Coursier.org
-│   │   │   ├── Giter8.org
-│   │   │   └── Scala-CLI.org
-│   │   └── rockthejvm
-│   │       └── Typelevel-Rite-of-Passage.org
+│   │   │   ├── uTest.org
+│   │   │   └── Weaver-Test.org
+│   │   └── Tools
+│   │       ├── Coursier.org
+│   │       ├── Giter8.org
+│   │       └── Scala-CLI.org
 │   ├── Scala_Native
 │   │   └── Official-Documentation.org
 │   ├── Seven-Languages-in-Seven-Weeks.org
@@ -640,13 +696,20 @@ __183 directories, 574 files__:
 │   │   ├── A-Little-Smalltalk.org
 │   │   ├── A-Taste-of-SmallTalk.org
 │   │   └── Pharo-by-Example.org
+│   ├── SML
+│   │   ├── ML-for-Working-Programmer-2nd.org
+│   │   └── Programming-in-Standard-ML.org
 │   └── TypeScript
 │       ├── Official-Documentation.org
 │       └── Programming-TypeScript.org
-├── 10.Typesetting
-│   ├── Fonts-and-Encodings.org
-│   └── Unicode-Explained.org
-├── 11.Programming_Paradigms
+├── 09.Observability
+│   └── Prometheus_Up-and-Running.org
+├── 10.Computer_Network
+│   ├── Computer-Networking_A-Top-Down-Approach.org
+│   └── Learning-HTTP2.org
+├── 11.Distributed_System
+│   └── Actors_a-Model-of-Concurrent-Computation-in-Distributed-Systems.org
+├── 12.Programming_Paradigms
 │   ├── Mastering-Functional-Programming.org
 │   ├── Object_Oriented
 │   │   └── The-Object-Oriented-Thought-Process.org
@@ -654,60 +717,13 @@ __183 directories, 574 files__:
 │   │   ├── Functional-Reactive-Programming.org
 │   │   └── Reactive-Programming-with-Rxjava.org
 │   └── Why-Functional-Programming-Matters.org
-├── 12.Data_Science
-│   ├── An-Introduction-to-Statistical-Learning.org
-│   ├── Apache-Hadoop-Official-Document.org
-│   ├── Database
-│   │   ├── DBeaver.org
-│   │   ├── Database-Management-Systems-3rd.org
-│   │   ├── MySQL
-│   │   │   ├── High-Performance-MySQL-3rd.org
-│   │   │   └── Jump-Start-MySQL.org
-│   │   ├── PostgreSQL
-│   │   │   ├── Official-PostgreSQL-Documentation.org
-│   │   │   ├── PostgreSQL-Bootcamp_Udemy.org
-│   │   │   └── PostgreSQL-Up-and-Running-3rd.org
-│   │   ├── Redis
-│   │   │   ├── Redis-Official-Documentation.org
-│   │   │   └── Redis-The-Complete-Developer's-Guide.org
-│   │   ├── SQL
-│   │   │   ├── Learning-SQL-2nd.org
-│   │   │   ├── SQL-Cookbook.org
-│   │   │   └── SQL-in-10Min-4th.org
-│   │   └── Seven-Databases-in-Seven-Weeks.org
-│   ├── Designing_Data-Intensive_Applicaitons.org
-│   ├── Jupyter
-│   │   └── Programming-in-Scala-5th.org
-│   ├── Message_Queue
-│   │   └── Kafka
-│   │       ├── Kafka-Streams-in-Action.org
-│   │       ├── Kafka-in-Action.org
-│   │       ├── Kafka_The-Definitive-Guide_2nd.org
-│   │       ├── Udemy_Apache-Kafka-Series
-│   │       │   ├── Kafka-Streams-for-Data-Processing.org
-│   │       │   └── Kafka_Connect_Hands-on_Learning.org
-│   │       └── Udemy_Apache-Kafka-Series_Learn-Apache-Kafka-for-Beginners-v3.org
-│   ├── Next-Generation-Databases.org
-│   ├── Spark
-│   │   ├── Advanced-Analytics-with-Spark-2nd.org
-│   │   ├── Data-Algorithms-with-Spark.org
-│   │   ├── High-Performance-Spark.org
-│   │   ├── Learning-Spark-SQL.org
-│   │   ├── Learning-Spark.org
-│   │   ├── Learning-Spark_2nd.org
-│   │   ├── Spark-2.4.x-Documentation.org
-│   │   ├── Spark-3.x.x-Documentation.org
-│   │   ├── Spark-The-Definitive-Guide.org
-│   │   ├── Spark-in-Action.org
-│   │   ├── Spark-in-Action_2nd.org
-│   │   └── allaboutscala-Learn-Apache-Spark-2.org
-│   ├── Streaming
-│   │   ├── Streaming-Systems.org
-│   │   └── grokking-Streaming-Systems.org
-│   └── pandas
-│       └── User-Guide.org
 ├── 13.Building_System
 │   ├── Apache-Ant-1.10.x-Manual.org
+│   ├── autotools_2nd.org
+│   ├── make
+│   │   ├── GNU-make.org
+│   │   ├── The-GNU-Make-Book.org
+│   │   └── Write-Makefile-with-Me.org
 │   ├── Maven
 │   │   ├── Apache-Maven-Project-Documents.org
 │   │   └── Maven-Essentials.org
@@ -715,51 +731,161 @@ __183 directories, 574 files__:
 │   │   ├── Bloop.org
 │   │   ├── mill-manual.org
 │   │   └── sbt
-│   │       ├── sbt-Reference-Manual.org
 │   │       ├── sbt-assembly.org
 │   │       ├── sbt-in-Action.org
-│   │       └── sbt-native-packager.org
+│   │       ├── sbt-native-packager.org
+│   │       ├── sbt-Reference-Manual.org
+│   │       └── The-Book-of-sbt.org
 │   ├── Software-Build-Systems.org
-│   └── make
-│       ├── GNU-make.org
-│       └── Write-Makefile-with-Me.org
-├── 14.Blogs
+│   ├── The-Meson-Build-System.org
+│   └── The-Ninja-build-system.org
+├── 14.System_Programming
+│   └── The-Linux-Programming-Interface.org
+├── 15.Web
+│   ├── HTML_and_CSS
+│   │   ├── CSS_The-Definitive-Guide.org
+│   │   └── HTML-5_UP-and-Running.org
+│   ├── HTTP
+│   │   ├── HTTP-the-Definitive-Guide.org
+│   │   ├── Learning-HTTP2.org
+│   │   └── RFC7230-HTTP1.1.org
+│   ├── Monadic-Design-Patterns-for-the-Web.org
+│   ├── Reactive-Web-Applications.org
+│   ├── RESTful
+│   │   ├── Architectural-Styles-and-the-Design-of-Network-based-Software-Architectures.org
+│   │   ├── Learn-API-Doc.org
+│   │   ├── OpenAPI-Sepcification.org
+│   │   ├── REST-API-Design-Rulebook.org
+│   │   ├── RESTful-Web-APIs.org
+│   │   ├── RESTful-Web-Services-with-Scala.org
+│   │   └── Web-Design_the-Missing-Link-Ebook.org
+│   ├── Spring-in-Action-5th.org
+│   └── WebAssembly
+│       ├── The-Art-of-WebAssembly.org
+│       └── WebAssembly-Specification-Release1.0.org
+├── 16.Security
+│   ├── Full-Stack-Python-Security.org
+│   ├── Real-World-Cryptography.org
+│   └── Violent-Python.org
+├── 17.Data_Science
+│   ├── An-Introduction-to-Statistical-Learning.org
+│   ├── Apache-Hadoop-Official-Document.org
+│   ├── Database
+│   │   ├── Database-Management-Systems-3rd.org
+│   │   ├── DBeaver.org
+│   │   ├── MySQL
+│   │   │   ├── High-Performance-MySQL-3rd.org
+│   │   │   └── Jump-Start-MySQL.org
+│   │   ├── PostgreSQL
+│   │   │   ├── Official-PostgreSQL-Documentation.org
+│   │   │   ├── PostgreSQL-Bootcamp_Udemy.org
+│   │   │   ├── PostgreSQL-Mistakes-and-How-to-Avoid-Them.org
+│   │   │   ├── PostgreSQL-Up-and-Running-3rd.org
+│   │   │   └── The-Art-of-PostgreSQL.org
+│   │   ├── Redis
+│   │   │   ├── Redis-Official-Documentation.org
+│   │   │   └── Redis-The-Complete-Developer's-Guide.org
+│   │   ├── Seven-Databases-in-Seven-Weeks.org
+│   │   └── SQL
+│   │       ├── Learning-SQL-2nd.org
+│   │       ├── SQL-Cookbook.org
+│   │       └── SQL-in-10Min-4th.org
+│   ├── Designing_Data-Intensive_Applicaitons.org
+│   ├── Jupyter
+│   │   └── Project-Jupyter-Documentation.org
+│   ├── Message_Queue
+│   │   └── Kafka
+│   │       ├── Kafka_The-Definitive-Guide_2nd.org
+│   │       ├── Kafka-in-Action.org
+│   │       ├── Kafka-Streams-in-Action.org
+│   │       ├── Udemy_Apache-Kafka-Series
+│   │       │   ├── Kafka_Connect_Hands-on_Learning.org
+│   │       │   └── Kafka-Streams-for-Data-Processing.org
+│   │       └── Udemy_Apache-Kafka-Series_Learn-Apache-Kafka-for-Beginners-v3.org
+│   ├── Next-Generation-Databases.org
+│   ├── pandas
+│   │   └── User-Guide.org
+│   ├── Python-Polars
+│   │   ├── Polars-Cookbook.org
+│   │   ├── Polars-user-guide.org
+│   │   └── Python-Polars_The-Definitive-Guide.org
+│   ├── Spark
+│   │   ├── Advanced-Analytics-with-Spark-2nd.org
+│   │   ├── allaboutscala-Learn-Apache-Spark-2.org
+│   │   ├── Data-Algorithms-with-Spark.org
+│   │   ├── High-Performance-Spark.org
+│   │   ├── Learning-Spark_2nd.org
+│   │   ├── Learning-Spark-SQL.org
+│   │   ├── Learning-Spark.org
+│   │   ├── Spark-2.4.x-Documentation.org
+│   │   ├── Spark-3.x.x-Documentation.org
+│   │   ├── Spark-in-Action_2nd.org
+│   │   ├── Spark-in-Action.org
+│   │   └── Spark-The-Definitive-Guide.org
+│   ├── Streaming
+│   │   ├── grokking-Streaming-Systems.org
+│   │   └── Streaming-Systems.org
+│   └── Unifying-Business-Data-and-Code.org
+├── 18.Scientific_Computing
+│   ├── Introduction-to-Numerical-Analysis-2nd.org
+│   ├── Math-for-Programming.org
+│   ├── Scientific-Python-Library-Development-Guide.org
+│   └── Using-MPI_Portable-Parallel-Programming-with-the-Message-Passing-Interface_3rd.org
+├── 19.Typesetting
+│   ├── Fonts-and-Encodings.org
+│   └── Unicode-Explained.org
+├── 20.Blockchain_and_Cryptocurrency
+│   ├── Mastering-Bitcoin.org
+│   ├── Mastering-Blockchain.org
+│   └── Mastering-Ethereum.org
+├── Artificial_Intelligence
+│   ├── AI-Agents-in-Action.org
+│   ├── Math-for-Deep-Learning.org
+│   └── The-Little-Learner.org
+├── Blogs
 │   └── Matthew_Might
 │       └── The-Language-of-Languages.org
-├── 15.System_Programming
-│   └── The-Linux-Programming-Interface.org
-├── 16.Music
-│   ├── Music-Theory-Comprehensive.org
-│   └── The-Haskell-School-of-Music.org
 ├── Editors
+│   ├── code.md
+│   ├── Getting-yourself-organized-with-Org-mode.org
 │   ├── Spacemacs
 │   │   ├── Important-Layers.org
 │   │   └── Spacemacs-Documentation.org
 │   ├── The-compact-Org-mode-Guide.org
+│   ├── The-Org-Manual.org
 │   ├── Vim
 │   │   ├── Learning-the-vi&Vim-Editors.org
 │   │   └── Modern-Vim.org
-│   ├── Visual_Studio_Code
-│   │   └── Learning-the-vi&Vim-Editors.org
-│   └── code.md
+│   └── Visual_Studio_Code
+│       └── Learning-the-vi&Vim-Editors.org
 ├── MISC
 │   ├── Bit_Operations
 │   │   ├── Bit-Twiddling-Hacks.org
 │   │   └── Hackers-Delight-2nd.org
 │   ├── Calendrical-Calculations_The-Ultimate-Edition.org
+│   ├── Design_Patterns
+│   │   └── Head-First-Design-Patterns.org
+│   ├── i3-User's-Guide.org
 │   ├── IntelliJ-IDEA
 │   │   ├── IntelliJ-IDEA-Essentials.org
 │   │   ├── Intellij-IDEA-Help.org
 │   │   └── Udemy_Java-Debugging-With-IntelliJ-IDEA.org
 │   ├── Low_Priority
 │   │   └── Tool_MATLAB
-│   │       ├── Matlab-Primer-2017b.org
-│   │       └── Matlab-a-Practical-Introduction-to-Programming-and-Problem-Solving.org
+│   │       ├── Matlab-a-Practical-Introduction-to-Programming-and-Problem-Solving.org
+│   │       └── Matlab-Primer-2017b.org
 │   ├── Mastering-Regular-Expressions-3rd.org
 │   ├── Real-World_Cryptography.org
 │   ├── Serialization
 │   │   └── Programmers-Guide-to-Apache-Thrift.org
-│   ├── Visualization-Analysis-and-Design.org
-│   └── i3-User's-Guide.org
+│   └── Visualization-Analysis-and-Design.org
+├── Music
+│   ├── Music-Theory-Comprehensive.org
+│   └── The-Haskell-School-of-Music.org
 ├── README.md
+├── Ruminations
+│   ├── 97-Things-Every-Programmer-Should-Know.org
+│   ├── A-Philosophy-of-Software-Design.org
+│   ├── Elements-of-Information-Theory-2nd.org
+│   └── Working-Effectively-with-Legacy-Code.org
 ```
