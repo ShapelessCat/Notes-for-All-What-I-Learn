@@ -3382,44 +3382,56 @@ handle values that match one pattern and ignore the rest.
 ** DONE Summary
 CLOSED: [2023-07-25 Tue 20:25]
 
-* DONE 7. Managing Growing Projects with Packages, Crates, and Modules
+* DONE 7. Packages, Crates, and Modules
 CLOSED: [2024-10-09 Wed 23:00]
 As you write large programs, organizing your code will be important
 BECAUSE
 keeping track of your entire program in your head will become _IMPOSSIBLE_.
 
-- By _grouping related functionality_ and _separating code with distinct features_,
+- By
+  _GROUPING related functionality_ and
+  _SEPARATING code with distinct features_,
   you'll clarify
   * WHERE to find code that implements a particular feature and
   * WHERE to go to change how a feature works.
 
-- The programs we've written SO FAR have been _in *one* /module/ in *one* file._
+- =from Jian=
+  _ORGANIZE CODE:_
 
-  1. As a project grows, you can organize code by splitting it into *multiple*
-     /modules/ and then *multiple* /files/.
+  * The programs we've written SO FAR have been _in *one* /module/ in *one* file._
 
-- A /package/ can contain
-  * *multiple* /binary crates/
-  * _OPTIONALLY_ *one* /library crate/.
-  As a /package/ grows, you can extract parts into SEPARATE /crates/ that
-  become /external dependencies/.
+    1. As a project grows, you can organize code by splitting it into *multiple*
+       /modules/ and then *multiple* /files/.
 
-- For very large projects of a set of INTERRELATED /packages/ that evolve
-  together, Cargo provides /workspaces/, which we'll cover in the “Cargo
-  Workspaces” section in Chapter 14. =TODO=
+  * A /package/ can contain
+    + *multiple* /binary crates/
+    + _OPTIONALLY_ *one* /library crate/.
 
-- We'll also discuss *ENCAPSULATING implementation details*.
+  * As a /package/ grows,
+    you can extract parts into SEPARATE /crates/ that become /external
+    dependencies/.
+
+  * For very large projects of a set of INTERRELATED /packages/ that evolve
+    together, Cargo provides /workspaces/, which we'll cover in the "Cargo
+    Workspaces" section in Chapter 14.
+    =TODO=
+
+- =from Jian=
+  _ENCAPSULATION and VISIBILITY:_
+  We'll also discuss *ENCAPSULATING implementation details*.
   * Other code can call your code via its /public interface/
     *WITHOUT* having to know how the implementation works
 
   * The way you write code DEFINES
     + which parts are /public/ for other code to use and
-    + which parts are /private/ implementation details that you reserve the right to change.
+    + which parts are /private/ implementation details that you reserve the
+      right to change.
 
-    This is another way to limit the amount of detail you have to keep in your head.
+    This is another way to limit the amount of detail you have to keep in your
+    head.
 
-- scope :: the nested context in which code is written has a set of names that are
-           defined as "in scope".
+  * scope :: the nested context in which code is written has a set of names that are
+             defined as "in scope".
 
 - Rust has a number of features that allow you to manage your code's organization,
   including
@@ -3427,7 +3439,7 @@ keeping track of your entire program in your head will become _IMPOSSIBLE_.
   * which details are *private*, and
   * what _names_ are in each /scope/ in your programs.
 
-- These features, sometimes collectively referred to as the /module system/,
+- These above features, sometimes collectively referred to as /module system/,
   include:
   * Packages :: A Cargo feature that lets you *build*, *test*, and *share* /crates/
   * Crates :: A tree of /modules/ that produces a /library/ or /executable/
@@ -3435,19 +3447,34 @@ keeping track of your entire program in your head will become _IMPOSSIBLE_.
   * Paths :: A way of naming an item, such as a /struct/, /function/, or /module/
 
 - In this chapter, we'll cover all the above features,
-  1. discuss how they interact, and
-
-  2. explain how to use them to manage /scope/.
-
-  3. By the end, you should have a solid understanding of the /module system/
-     and be able to work with /scopes/ like a pro!
+  1. DISCUSS how they interact, and
+  2. EXPLAIN how to use them to manage /scope/.
+  By the end, you should have a solid understanding of the /module system/ and
+  be able to work with /scopes/ like a pro!
 
 ** DONE 7.1. Packages and Crates
-CLOSED: [2024-10-09 Wed 13:08]
+CLOSED: [2025-12-29 Mon 23:40]
 The first parts of the /module system/ we'll cover are /packages/ and /crates/.
 
 - crate :: the *SMALLEST* amount of code that the Rust compiler considers at a time.
   * Even a single source file you can pass to ~rustc~ is a /crate/.
+    + =from Jian=
+      - Example:
+        Two source files
+        #+begin_src rust
+          // math_lib.rs
+          pub mod aaa;
+
+          pub fn add(a: u32, b: u32) -> u32 {
+              a + b
+          }
+
+          // aaa.rs
+          pub fn sub(a: i32, b: i32) -> i32 {
+              a - b
+          }
+        #+end_src
+        * Command: ~rustc --crate-type=lib math_utils.rs~
 
 - /creates/ can contain /modules/, and the /modules/ may be defined in other
   files that get compiled with the /crate/ =NEXT=, as we'll see in the coming
@@ -3470,75 +3497,84 @@ The first parts of the /module system/ we'll cover are /packages/ and /crates/.
   the /root module/ of your /crate/
   * =TODO= we'll explain /modules/ in depth in the “Defining Modules to Control
            Scope and Privacy” section.
+  * =from Jian=
+    In the example I provided above, the =math_utils.rs= is the /crate root/.
 
 - package :: a bundle of one or more /crates/ that provide a set of functionality.
   * A /package/ contains a =Cargo.toml= file that _describes HOW TO BUILD_ those
     /crates/.
 
-- /Cargo/ is actually a /package/ that contains the /binary crate/ for the command-line
-  tool you've been using to build your code.
+- /Cargo/ ITSELF is actually a /package/ that contains
+  * a /binary crate/ for the command-line tool you've been using to build your
+    code.
 
-  * _The Cargo package_ also contains a /library crate/ that the /binary crate/
-    depends on.
+  * a /library crate/ that the /binary crate/ depends on.
 
-  * Other projects can depend on the _Cargo library crate_ to use the same logic
+    Other projects can depend on the _Cargo library crate_ to use the same logic
     the Cargo command-line tool uses.
 
 - A /crate/ can come in one of two forms:
   * a binary crate
   * a library crate.
 
-- A /package/ can contain
-  * as many binary crates as you like,
-  * but at most only one library crate.
+- For /package/:
+  * A /package/ can contain
+    + _AS MANY_ /binary crates/ as you like,
+    + but _at most only ONE_ /library crate/.
 
-- A /package/ must contain *at least one /crate/,* whether that's a library or
-  binary crate.
-
-- Several rules determine what a /package/ can contain:
-  A /package/ *must* contain _at least one_ /crate/ (either /library/ or
-  /binary/).
-
-  * it *must* contain zero or one /library crates/, and no more.
-
-  * it can contain as many /binary crates/ as you'd like.
+  * A /package/ must contain *at least one /crate/,*
+    whether that's a /library crate/ or /binary crate/.
 
 - =IMPORTANT=
   =IMPORTANT=
   =IMPORTANT=
   Let's walk through what happens when we create a /package/.
-  1. =cargo new my-project=.
-     Cargo created a =Cargo.toml= file, giving us a /package/.
+  #+begin_src shell
+    cargo new my-project
+    #  Created binary (application) `my-project` package
 
-     * This =Cargo.toml= doesn't mention =src/main.rs= (if this is a binary
-       package) or =src/lib.rs= (if this is a library crate), because Cargo
-       follows a *convention* for the /crate root/:
-       + =src/main.rs= is the /crate root/ of /binary crates/.
-       + =src/lib.rs= is the /crate root/ of /library crates/
-       with the *same name* as the /package/.
+    ls my-project
+    # Cargo.toml
+    # src
 
-     * Cargo passes the /crate root/ files to =rustc= to *build* the /library/ or
-       /binary/.
+    ls my-project/src
+    # main.rs
+  #+end_src
+  * In the =my-project= directory, there's a =Cargo.toml= file, giving us a
+    /package/.
 
-     * Here, we have a /package/ that only contains =src/main.rs=, meaning it
-       ONLY contains a /binary crate/ named =my-project=.
-         If a /package/ contains =src/main.rs= and =src/lib.rs=, it has *two*
-       /crates/: a /library/ and a /binary/, both with the *same name* as the
-       /package/.
+  * There's also a =src= directory that contains =main.rs=.
+    Open =Cargo.toml= in your text editor and note that there's *NO MENTION* of
+    =src/main.rs=.
 
-     * A /package/ can have *multiple* /binary crates/ by placing files in
-       the =src/bin= directory: _each file_ will be a separate /binary crate/.
+    _BECAUSE_ Cargo follows a *convention* that:
+    + =src/main.rs= is the /crate root/ of /binary crates/.
+    + =src/lib.rs= is the /crate root/ of /library crates/
+    with the *same name* as the /package/.
 
-- A /crate/ will group related functionality together in a /scope/ so the
-  functionality is easy to share between *multiple* projects.
+  * Cargo passes the /crate root/ files to =rustc= to *build* the /library/ or
+    /binary/.
 
-- Keeping a /crate/'s functionality in its own scope clarifies whether particular
-  functionality is defined in our /crate/ or the =rand= /crate/ and prevents
-  potential conflicts.
+  * Here, we have a /package/ that only contains =src/main.rs=, meaning it
+    ONLY contains a /binary crate/ named =my-project=.
+      If a /package/ contains =src/main.rs= and =src/lib.rs=, it has *two*
+    /crates/: a /library/ and a /binary/, *BOTH* with the *same name* as the
+    /package/.
 
-- =TODO= Let's move on and talk about the /module system/!
+  * A /package/ can have *multiple* /binary crates/ by placing files in
+    the =src/bin= directory: _each file_ will be a SEPARATE /binary crate/.
 
-** DONE 7.2. Defining Modules to Control Scope and Privacy
+- =REMOVED=
+  * A /crate/ will group related functionality together in a /scope/ so the
+    functionality is easy to share between *multiple* projects.
+
+  * Keeping a /crate/'s functionality in its own scope clarifies whether particular
+    functionality is defined in our /crate/ or the =rand= /crate/ and prevents
+    potential conflicts.
+
+  * =TODO= Let's move on and talk about the /module system/!
+
+** DONE 7.2. Control Scope and Privacy with Modules
 CLOSED: [2024-10-09 Wed 18:42]
 - In this section,
   * we'll talk about
