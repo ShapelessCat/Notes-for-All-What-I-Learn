@@ -11270,7 +11270,7 @@ CLOSED: [2023-10-01 Sun 22:37]
 
 - History:
   1. /Objects/ as a programmatic concept were introduced in the programming language
-     Simuula in the 1960s.
+     Simula in the 1960s.
 
   2. Those /objects/ influenced Alan Kay's programming architecture in which
      _objects pass messages to each other_.
@@ -11290,8 +11290,17 @@ CLOSED: [2017-08-30 Wed 21:26]
 There isn't consensus in the programming community about the features a
 language needs to have in order to be called object-oriented.
 
+_ARGUABLY_, OOP languages share certain common characteristics -- namely,
+- /objects/,
+- /encapsulation/, and
+- /inheritance/.
+
+Let's look at
+- what each of those characteristics means and
+- whether Rust supports it.
+
 *** DONE Objects Contain Data and Behavior
-CLOSED: [2017-08-30 Wed 20:53]
+CLOSED: [2026-02-03 Tue 20:33]
 - "The Gang of Four book" defines OOP in this way:
    #+BEGIN_QUOTE
    Object-oriented programs are made up of /objects/.
@@ -11302,112 +11311,165 @@ CLOSED: [2017-08-30 Wed 20:53]
    The procedures are typically called /methods/ or /operations/.
    #+END_QUOTE
 
-- In Rust, /structs/ provide the same functionality as of /objects/, though
-  we don't call them /objects/.
+- Using this definition, Rust is /object oriented/:
+  * /Structs/ and /enums/ have data
+  * ~impl~ blocks provides methods on /structs/ and /enums/
+
+  we don't call them /objects/, but they provide the OOP functionality,
+  according to the Gang of Four's definition of objects.
 
 *** DONE Encapsulation That Hides Implementation Details
-CLOSED: [2017-08-30 Wed 21:09]
+CLOSED: [2026-02-03 Tue 20:39]
 - /encapsulation/ :: the implementation details of an object aren't
      accessible to code using that object.
 
-- The public API is important. If the code is well encapsulated, and
-  the API is fixed, it should let user fill the internal change when
-  only considering the results (of course, things like speed can change).
+- The /public API/ is important.
+  If the code is _WELL /encapsulated/,_ and the API is fixed, it should let user
+  fill the internal change when only considering the results (of course, things
+  like speed can change).
 
-- Example:
-  #+BEGIN_SRC rust
-    pub struct AveragedCollection {
-        list: Vec<i32>,
-        average: f64,
-    }
+- If /encapsulation/ is a required aspect for a language to be considered object
+  oriented, then Rust meets that requirement.
 
-    impl AveragedCollection {
-        pub fn add(&mut self, value: i32) {
-            self.list.push(value);
-            self.update_average();
-        }
-
-        pub fn remove(&mut self) -> Option<i32> {
-            let result = self.list.pop();
-            match result {
-                Some(value) => {
-                    self.update_average();
-                    Some(value)
-                },
-                None => None,
-            }
-        }
-
-        pub fn average(&self) -> f64 {
-            self.average
-        }
-
-        fn update_average(&mut self) {
-            let total: i32 = self.list.iter().sum();
-            self.average = total as f64 / self.list.len() as f64;
-        }
-    }
-  #+END_SRC
-
-  + The fields of ~AveragedCollection~ are private by default.
-    The are not parts of the public API the object offers.
-
-  + The public API are the parts with ~pub~ keywords.
-
-  + Since the inner data structure is not a part of the public API, we can
-    later change the type of the field ~list~ to the type of HashSet.
-
-    As long as the signature of the ~add~, ~remove~, and ~average~ stay the
-    same, code using ~AveragedCollection~ wouldn't need to change.
-
-  + If we expose the ~list~ as public API (with ~pub~), not only the data
-    structure change can change the API, but also the public API of the new
-    data structure of the ~list~ is mixed into the public API.
-
-    This can completely destory the /encapsulation/:
-    * different type has different opertions.
-    * detials that doesn't follow any common contract become parts of the
-      public API.
-
-    The result is all the code using ~AveragedCollection~ may need to be
-    changed.
+  The o tion to _use ~pub~ or not_ for different parts of code enables
+  /encapsulation/ of implementation details.
 
 *** DONE Inheritance as a Type System and as Code Sharing =RE-READ=
 CLOSED: [2017-08-30 Wed 21:26]
+- Inheritance :: a mechanism whereby an object can inherit elements from another
+  object's definition, thus
+  1. gaining the parent object's _data_ and _behavior_
+  2. _WITHOUT_ you having to define them again.
+
 - Rust doesn't support /inheritance/.
-  However, Rust use /traits/ (=From Jian= and /enums/, which I think should
-  be mentioned in this section, though it is NOT) to do
+  * However, if you're used to having /inheritance/ in your programming toolbox,
+    you can use *other solutions in Rust*,
+    _DEPENDING_ on your reason for reaching for /inheritance/ in the first place.
+    =TODO=
+    =MORE DETAILS=
+    =MORE EXAMPLES=
 
-- While many people use "polymorphism" to describe inheritance, it's actually
-  a specific kind of polymorphism, called "sub-type polymorphism."
+- You would choose /inheritance/ for _TWO_ main reasons:
+  * reuse of code:
+    + In with /inheritance/ OOP language:
+      You can implement particular behavior for one type, and
+      /inheritance/ enables you to _reuse_ that implementation for a different
+      type.
 
-  There are other forms as well;
+    + You can do this in a _limited way_ in Rust code using /default trait
+      method/ implementations
+      - /Override/ the default implementation is allowed, which is similar to a
+        /child class/ /overriding/ the implementation of a method _inherited
+        from_ a /parent class/.
 
-  a generic parameter with a trait bound in Rust is also polymorphism, more
-  specifically "parametric polymorphism."
+  * use /inheritance/ relates to the /type system/:
+    to enable a /child type/ to be used in the same places as the /parent type/.
+    This is also called polymorphism (=from Jian= /inheritance polymorphism/),
+    which means that
+    you can _SUBSTITUTE multiple objects for each other AT RUNTIME if they share
+    certain characteristics._
 
-  The exact details between the different kinds of polymorphism aren't
-  crucial here (=TODO= =From Jian= BUT I want to know), so don't worry too
-  much about the details:
-  just know that
-  _Rust has multiple polymorphism-related features, unlike many OOP languages_.
-  =TODO=
+    + Rust has chosen a different set of trade-offs by not offering
+      /inheritance/.
+      - Some criticization to /inheritance/:
+        * /Inheritance/ is often at RISK of *sharing more code than necessary*.
+
+          /Subclasses/ shouldn't always share all characteristics of their
+          parent class but will do so with /inheritance./ This can make a
+          program's design less flexible.
+
+        * It also introduces the possibility of calling methods on /subclasses/
+          that *don't make sense* or that *cause errors*
+          BECAUSE the methods don't apply to the /subclass/.
+
+        * In addition, some languages will only allow /single inheritance/
+          (meaning _a /subclass/ can only inherit from *one* class_), further
+          restricting the flexibility of a program's design.
+
+      - =from Jian=
+        =IMPORTANT=
+        =IMPORTANT=
+        =IMPORTANT=
+        My interpretation of the criticism above is as follows:
+
+        Many observed inheritance-related issues can be reduced or eliminated
+        through improved hierarchy design. This may initially support the view
+        that inheritance is not inherently problematic, and that the failures
+        are primarily design errors.
+
+        However, this conclusion highlights a practical limitation: effective
+        use of inheritance presupposes comprehensive, system-level foresight and
+        stable assumptions embedded in base class(es). In real-world
+        development, such completeness is rarely available. As requirements
+        evolve, modifications to base types frequently propagate throughout the
+        inheritance tree, increasing the likelihood of widespread refactoring
+        and backward-incompatible changes.
+
+        More generally, a programming paradigm can be considered robust if it
+        enables “good enough” design under incomplete knowledge and supports
+        incremental evolution with minimal breaking changes. Under this
+        criterion, inheritance-centric OOP performs poorly, because it often
+        encodes volatile assumptions into base abstractions, making evolution
+        brittle.
+
+        * =from Jian=
+          Think deeper:
+          Rust's /bounded parametric polymorphism/ is, in many ways, more robust
+          than /inheritance-based polymorphism/. A fully comprehensive
+          comparison is hard, so I'll focus on one practical advantage:
+          In Rust, we commonly define generic /structs/ or /enums/ first, and
+          then implement /traits/ for them. When we do this, we usually *delay*
+          adding /trait bounds/ for /generic type parameters/ until the specific
+          impl blocks (or functions) that actually need them, instead of piling
+          all constraints onto the type definition up front. In other words, we
+          introduce constraints-and the capabilities they enable-only at the
+          point where we have enough information to justify them.
+
+          This style supports good design under *incomplete knowledge*: you can
+          start with a flexible, minimally constrained data type, and later
+          extend it with additional behavior without reshaping a class hierarchy
+          or forcing widespread breaking changes.
+
+- *Polymorphism*
+  1. To many people, /polymorphism/ is _synonymous with_ /inheritance/.
+  2. _BUT_ /polymorphism/ is actually a _more general_ concept that refers to
+     *code that can work with data of _multiple types_.*
+     * For /inheritance/, those types are generaly /subclasses/.
+  3. The Rust way:
+     * bounded parametric polymorphism ::
+       uses
+       1) /generics/ to _abstract over_ different possible types and
+       2) /trait/ _bounds_ to impose constraints on what those types must
+          provide
 
 ** DONE 18.2. Using Trait Objects to Abstract over Shared Behavior
 CLOSED: [2023-09-18 Mon 17:14]
 =RE-READ=
-/enums/ is a way we can use to hold some variants, and use them as one
-single data type.
+- /enums/ is a way we can use to hold some /variants/, and use them as
+  _one single data type._ See examples in Chapter 8, Listing 8-9.
 
-This is useful, but not enough -- it is closed, and we can't add variants
-to an /enum/ after its definition.
+  This is a *perfectly good solution*
+  WHEN
+    our interchangeable items are a *fixed set of types* that we know when our
+    code is compiled.
 
-/traits/ is a way to get rid of the _closed_ feature of /enums/.
+- HOWEVER,
+  sometimes we want our library user to *be able to extend the set of types*
+  that are valid in a particular situation.
 
-Example: In a GUI library, a lot of /structs/ need a ~draw~ method. We don't
-know how many /structs/ we have -- acutally, the number can increase.
-/enums/ CANNOT help, but /taits/ can.
+  * *To show how we might achieve this* (=from Jian= the goal), we'll
+    CREATE an example /graphical user interface (GUI)/ tool that
+    ITERATES through a list of items,
+    CALLING a ~draw~ method on each one to draw it to the screen -- a common
+    technique for GUI tools.
 
+    We'll create a library crate called ~gui~ that contains the structure of a
+    GUI library.
+
+    + This crate might include some types for people to use, such as ~Button~ or
+      ~TextField~. In addition, ~gui~ users will want to create *their own
+      types* that can be drawn: For instance, one programmer might add an
+      ~Image~, and another might add a ~SelectBox~.
 
 *** DONE Defining a Trait for Common Behavior
 CLOSED: [2017-08-30 Wed 22:22]
@@ -11591,7 +11653,108 @@ NOT all /traits/ can be made into /trait objects/; ONLY /object safe/
       first argument.
 
 ** TODO 18.3. Implementating an Object-Oriented Design Pattern
+- =from Jian=
+  *Note*: The implementations shown in this section are primarily for
+  educational purposes (to demonstrate /trait objects/) and are not considered
+  idiomatic Rust. Even the way not using /traits objects/ is not ideal in Rust.
+
+  1. The Anti-Pattern: Attempting to implement the classic OO /State Pattern/
+     literally in Rust often fights against the language. While /trait objects/
+     have their place, they are rarely the best tool for state transitions
+     compared to Rust's native features (like /enums/).
+
+  2. The Missing Ideal: The most robust solution for this specific problem is
+     the /Type State Pattern/ (not encode states as /enums/). While likely
+     omitted here to avoid overwhelming readers with /generics/ and
+     ~PhantomData~, Type State is superior because it enforces transitions at
+     compile-time rather than relying on runtime checks.
+
+- The /state pattern/ is an /object-oriented design pattern/.
+  The crux of the pattern is that _we DEFINE a set of STATES a value can have
+  INTERNALLY._
+  1. The _states_ are represented by a set of _state objects_, and
+  2. the value's behavior changes based on its state.
+
+- We're going to work through an example:
+  a blog post struct that has a field to hold its state, which will be a state
+  object from the set _"draft,"_ _"review,"_ or _"published."_
+
+  * The _state objects_ share functionality:
+    In Rust, of course, we use /structs/ and /traits/ rather than /objects/ and
+    /inheritance/.
+
+    *Each state object _is responsible for its own behavior_ and for _governing
+    when it should change into another state_.*
+
+    The value that holds a _state object_ *knows nothing about*
+    + the different behavior of the states or
+    + when to transition between states.
+    =TODO= =NOTE=
+
+  * The *advantage* of using the /state pattern/ is that,
+    WHEN the business requirements of the program _CHANGE_,
+    we _WON'T NEED TO CHANGE_
+      the code of the value holding the state
+      OR
+      the code that uses the value.
+    We'll only _NEED TO_
+      _UPDATE_ the code _inside ONE OF the /state objects/_ to change its rules
+      OR
+      PERHAPS _ADD_ more /state objects/.
+
+- _FIRST_, we're going to implement the /state pattern/ in a more traditional
+  *object-oriented way.*
+
+  _THEN_, we'll use an approach that's a bit *more natural in Rust.*
+
+  Let's dig in to incrementally implement a blog post workflow using the state
+  pattern.
+
+- The final functionality will look like this:
+  1. A blog POST starts as an empty DRAFT.
+  2. When the draft is done, a REVIEW of the post is requested.
+  3. When the post is APPROVED, it gets PUBLISHED.
+  4. Only published blog posts return CONTENT to print so that unapproved posts
+     can't accidentally be published.
+
+- Any other changes attempted on a post should have no effect.
+  * For example,
+    if we try to approve a draft blog post before we've requested a review, the
+    post should remain an unpublished draft.
+
 *** TODO Attempting Traditional Object-Oriented Style
+- There are infinite ways to structure code to solve the same problem, each with
+  different trade-offs.
+  1. This section's implementation is
+     more of a *traditional object-oriented style*, which is possible to write
+     in Rust,
+     _BUT_ doesn't take advantage of some of Rust's strengths.
+
+  2. Later, we'll demonstrate a different solution that still uses the
+     object-oriented design pattern but is structured in a way that might look
+     less familiar to programmers with object-oriented experience.
+
+  3. We'll *COMPARE the two solutions* to experience the trade-offs of designing
+     Rust code differently than code in other languages.
+
+- Target code should make the following code work as expected without any error:
+  #+begin_src rust
+    use blog::Post;
+
+    fn main() {
+        let mut post = Post::new();
+
+        post.add_text("I ate a salad for lunch today");
+        assert_eq!("", post.content());
+
+        post.request_review();
+        assert_eq!("", post.content());
+
+        post.approve();
+        assert_eq!("I ate a salad for lunch today", post.content());
+    }
+  #+end_src
+  
 **** Defining ~Post~ and Creating a New Instance
 **** Storing the Text of the Post Content
 **** Ensuring That the Content of a Draft Post Is Empty
