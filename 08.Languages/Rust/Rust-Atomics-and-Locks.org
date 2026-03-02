@@ -43,7 +43,12 @@ CLOSED: [2025-01-14 Tue 15:34]
   xxxx
   =TODO=
 
-- This book gives excellentanswers to this question, and is thus valuable both to Rust developers wishing to learnconcurrency and to developers of concurrent code in other languages who would liketo learn how best to do so in Rust.
+- This book gives excellent answers to this question, and is thus valuable both
+  to Rust developers wishing to learn concurrency and to developers of
+  concurrent code in other languages who would like to learn how best to do so
+  in Rust.
+
+- xxx
 
 * DONE Preface - xiii
 CLOSED: [2025-01-30 Thu 00:17]
@@ -134,11 +139,11 @@ CLOSED: [2025-01-30 Thu 00:17]
 * DONE 1. Basics of Rust Concurrency - 1 - =TODO: NOTE=
 CLOSED: [2023-10-25 Wed 17:23]
 - _LONG BEFORE_ *multi-core processors* were commonplace,
-  OSs allowed for a single computer to run many programs concurrently:
+  OSs allowed for a single computer to run many programs *concurrently*:
 
   * This is achieved BY
-    rapidly switching between /processes/, allowing each to repeatedly make a
-    little bit of progress, one by one.
+    _rapidly switching_ between /processes/,
+    allowing each to _repeatedly make a little bit of progress,_ one by one.
 
 - _NOWADAYS_,
   virtually all our computers and even our phones and watches have *processors
@@ -146,35 +151,48 @@ CLOSED: [2023-10-25 Wed 17:23]
   TRULY execute multiple /processes/ *in parallel*.
 
 - Paragraphs about:
-  1. The isolation between /processes/.
+  1. The _isolation_ between /processes/.
      ACCESS THE MEMORY of another /process/, or COMMUNICATE WITH it in any way
-     ARE NOT ALLOWED WITHOUT asking the OS's kernel first.
+     are *NOT ALLOWED WITHOUT asking the /OS's kernel/ first.*
 
-  2. /Threads/, not isolated in the same /process/.
-     /Threads/ share memory and can interact with each other through that memory.
+  2. /Threads/ within the same /process/ are *not isolated* from each other.
+     /Threads/ *share memory* and can interact with each other through that
+     /memory/.
 
 - This chapter will explain
   1. how /threads/ are *spawned* in Rust, and
      all the basic concepts around them, such as
   2. HOW TO _safely *share* data between MULTIPLE /threads/._
   =IMPORTANT=
-  The concepts explained in this chapter are foundational to the rest of the
+  The concepts explained in this chapter are *FOUNDATIONAL* to the rest of the
   book.
 
-** TODO Threads in Rust - 2 - =NOTE=
-- Every program starts with EXACTLY *one* /thread/:
-  /the main thread/.
+- Note:
+  If you're already familiar with these parts of Rust, feel free to skip ahead.
+  HOWEVER, before you continue to the next chapters, make sure you
+  * have a good understanding of
+    + /threads/,
+    + /interior mutability/,
+    + ~Send~ and ~Sync~, and
+  * know what
+    + a /mutex/,
+    + a /condition variable/, and
+    + /thread parking/ are.
 
-  This /thread/ will execute your ~main~ function and can be used to _spawn more
-  threads_ if necessary.
+** DONE Threads in Rust - 2
+CLOSED: [2026-02-27 Fri 19:10]
+- Every /program/ starts with EXACTLY *one* /thread/:
+  the /main thread/.
+  * This /thread/ will execute your ~main~ function and can be used to *spawn
+    more threads* if necessary.
 
 - In Rust,
 
   * NEW /threads/ are spawned using the ~std::thread::spawn~ function from
     the standard library.
 
-    + ~std::thread::spawn~ takes a single argument: the function the new /thread/
-      will execute.
+    + ~std::thread::spawn~ takes a single argument: the *function* the new
+      /thread/ will execute.
 
   * The /thread/ STOPS once this function returns.
 
@@ -198,7 +216,7 @@ CLOSED: [2023-10-25 Wed 17:23]
   #+end_src
 
 - *Thread ID*
-  _The Rust standard library assigns every /thread/ a unique identifier._
+  _The Rust standard library assigns every /thread/ a *UNIQUE* identifier._
 
   * This identifier is accessible through ~Thread::id()~ and is of the type
     ~ThreadId~.
@@ -207,8 +225,8 @@ CLOSED: [2023-10-25 Wed 17:23]
     + copying it around and
     + checking for equality.
 
-  * There is _no guarantee_ that these IDs will be assigned consecutively, only
-    that they will be different for each /thread/.
+  * There is _no guarantee_ that these IDs will be assigned CONSECUTIVELY,
+    only that they will be different for each /thread/.
 
 - If we want to *make sure* the /threads/ are finished BEFORE we return from
   ~main~, we can wait for them by *joining* them.
@@ -232,15 +250,25 @@ CLOSED: [2023-10-25 Wed 17:23]
 
   * If the /thread/ did not successfully finish its function because it
     _panicked_, this will contain the panic message.
+    + =from Jian=
+      In Rust, a /panic/ is *thread-local*.
+      When a _thread panics_, the /unwinding/ /process/ (running destructors and
+      freeing resources) occurs only within that specific thread by default.
 
-    We could attempt to
-    + handle that situation, or
-    + just call ~.unwrap()~ to panic
-    WHEN joining a panicked /thread/.
+      The /panic/ does *NOT* automatically terminate or directly affect the
+      execution of other threads in the program.
+
+    + We could attempt to
+      - handle that situation, or
+      - just call ~.unwrap()~ to panic
+      WHEN joining a panicked /thread/.
+
+- *No guarantee* to the _ORDER_ of messages printed from the above code example.
 
 - *Output Locking*
   The ~println~ macro uses ~std::io::Stdout::lock()~ to make sure its output
   does not get interrupted.
+  =from Jian= =TODO= Learn more about this!!!
 
   A ~println!()~ expression will *wait until* any concurrently running one is
   finished BEFORE writing any output.
@@ -254,9 +282,12 @@ CLOSED: [2023-10-25 Wed 17:23]
       id: ThreadId(3)
     #+end_src
 
-- Rather than passing the name of a function to std::thread::spawn, as in our
-  example above, it’s far more common to pass it a closure. This allows us to
-  capture values to move into the new thread:
+- RATHER THAN
+    passing the *name of a function* to ~std::thread::spawn~, as in our example
+    above,
+  it's far more common to pass it a /closure/.
+
+  This allows us to _capture values_ to *move into* the new /thread/:
   #+begin_src rust
     let numbers = vec![1, 2, 3];
 
@@ -266,51 +297,113 @@ CLOSED: [2023-10-25 Wed 17:23]
         }
     }).join().unwrap();
   #+end_src
+  * Here, /ownership/ of ~numbers~ is transferred to the newly spawned /thread/,
+    since we used a ~move~ /closure/.
+    + If we had not used the ~move~ keyword, the /closure/ would have captured
+      ~numbers~ by /reference/. This would have resulted in a compiler error,
+      *since the new /thread/ might _outlive_ that variable.*
+
+  * Since a /thread/ might *run until the very end* of the program's execution,
+    the ~spawn~ function has a ~'static~ /lifetime/ bound on its argument type.
+    In other words,
+    1. _it *only accepts* /functions/ that may be *kept around FOREVER*._
+
+    2. A /closure/ capturing a local variable by /reference/ may not be kept
+       around forever, since that /reference/ would become invalid the moment
+       the local variable ceases to exist.
+
+- Getting a value back out of the /thread/ is done by returning it from the
+  /closure/. This /return value/ can be obtained from the ~Result~ returned by
+  the ~join~ method:
+  #+begin_src rust
+    let numbers = Vec::from_iter(0..=1000);
+
+    let t = thread::spawn(move || {
+        let len = numbers.len();
+        let sum = numbers.into_iter().sum::<usize>();
+        sum / len // 1
+    })
+
+    let average = t.join().unwrap(); // 2
+    println!("average: {average}");
+  #+end_src
+  * Here, the value returned by the thread's closure (1) is sent back to the
+    /main thread/ through the ~join~ method (2).
+    If ~numbers~ had been empty, the thread would've panicked while trying to
+    divide by zero (1), and ~join~ would've returned that panic message instead,
+    causing the /main thread/ to panic too because of ~unwrap~ (2).
 
 - *Thread Builder*
+  The ~std::thread::spawn~ function is actually just a _convenient shorthand_
+  for ~std::thread::Builder::new().spawn().unwrap()~.
+
+  1. A ~std::thread::Builder~ allows you to *set some settings* for the new
+     thread before spawning it.
+
+     You can use it
+     * to configure the _stack size_ for the _new thread_ and
+     * to give the _new thread_ a _name_.
+       + The _name_ of a thread is available through
+         ~std::thread::current().name()~,
+         - will be used in panic messages, and
+         - will be visible in _monitoring_ and _debugging_ tools on most
+           platforms.
+
+  2. Additionally, Builder's ~spawn~ function returns an ~std::io::Result~,
+     allowing you to handle situations where spawning a new thread fails.
+
+     * This might happen
+       + IF the operating system runs out of memory, or
+       + IF resource limits have been applied to your program.
+
+     * The ~std::thread::spawn~ function simply panics
+       IF it is _UNABLE_ to spawn a new thread.
 
 ** DONE Scoped Threads - 5
-CLOSED: [2025-02-05 Wed 21:27]
-- If we know *for sure* that
-  a spawned thread will definitely *NOT outlive* a certain scope,
-
-  that thread could *safely borrow* _things that do NOT LIVE FOREVER,_ such as
-  * local variables, as long as they outlive that scope.
+CLOSED: [2026-02-27 Fri 22:38]
+If we know *for sure* that
+a spawned /thread/ will definitely *NOT outlive* a certain /scope/,
+that /thread/ could *safely borrow* _things that do NOT LIVE FOREVER,_ such as
+/local variables/, as long as they _outlive_ that /scope/.
 
 - The Rust standard library provides the ~std::thread::scope~ function to
   _SPAWN_ such /scoped threads/.
 
   It allows us to SPAWN /threads/ that *cannot outlive* _the scope of the
-  closure_ we pass to that function, making it possible to *safely borrow* local
-  variables.
+  closure_ we pass to that function, making it possible to *safely borrow*
+  /local variables/.
 
-- How it works is best shown with an example:
-  #+begin_src rust
-    let numbers = vec![1, 2, 3];
+  * How it works is best shown with an example:
+    #+begin_src rust
+      let numbers = vec![1, 2, 3];
 
-    thread::scope(|s| {
-        s.spawn(|| {
-            println!("length: {}", numbers.len());
-        });
-        s.spawn(|| {
-            for n in &numbers {
-                println!("{n}");
-            }
-        });
-    });
-  #+end_src
-  * When the /scope/ ends,
-    all /threads/ that haven't been joined yet are *AUTOMATICALLY joined*.
+      thread::scope(|s| {
+          s.spawn(|| {
+              println!("length: {}", numbers.len());
+          });
+          s.spawn(|| {
+              for n in &numbers {
+                  println!("{n}");
+              }
+          });
+      });
+    #+end_src
+    + When the /scope/ ends,
+      all /threads/ that haven't been joined yet are *AUTOMATICALLY joined*.
+      =IMPORTANT=
+      =IMPORTANT=
+      =IMPORTANT=
 
-  * This pattern *GUARANTEES* that
-    NONE of the threads spawned in the scope can outlive the scope.
+    + This pattern *GUARANTEES* that
+      *NONE* of the /threads/ spawned in the /scope/ can _outlive_ the /scope/.
 
-    + Because of that, this _scoped ~spawn~ method_ does NOT have a ~'static~
-      bound on its argument type, allowing us to reference anything *as long as*
-      _it outlives the scope_, such as ~numbers~ in the above code.
+      - Because of that, this _scoped ~spawn~ method_ does NOT have a ~'static~
+        bound on its argument type, allowing us to reference anything *as long as*
+        _it outlives the scope_, such as ~numbers~ in the above code.
 
-- In the example above, no modification, and concurrent access is fine.
-  If we introduce modification naively, the code can't compile:
+- In the example above, *no modification*, and concurrent access is fine.
+
+  If we introduce modification naively, the code *CAN'T compile*:
   #+begin_src rust
     let mut numbers = vec![1, 2, 3];
 
@@ -325,46 +418,54 @@ CLOSED: [2025-02-05 Wed 21:27]
   #+end_src
 
 - *The Leakpocalypse*
-  HISTORY:
+  * Conclusion:
+    we use ~std::thread::scoped~ introduced in Rust 1.63, which does *NOT* rely
+    on ~Drop~ for correctness.
 
-  1. _Before Rust 1.0_,
-     ~std::thread::scoped~ (before Rust 1.0) would directly spawn a thread, just
-     like ~std::thread::spawn~. It _ALLOWED_ /non-~'static~ captures/, because
-     instead of a ~JoinHandle~, it returned a ~JoinGuard~ *which JOINED the
-     /thread/ when DROPPED.*
-     Any borrowed data only needed to outlive this ~JoinGuard~.
+    There was an old ~std::thread::scoped~, which depends on ~Drop~, which is
+    *NOT possible to be guaranteed*. This version of ~std::thread::scoped~ was
+    removed before Rust 1.0.
 
-     * This *SEEMED* SAFE, as long as the ~JoinGuard~ got dropped at some point.
+  * HISTORY:
 
-  2. _Just before the release of Rust 1.0_,
-     it slowly became clear that
-     _it's *not possible* to GUARANTEE that something will be dropped._
+    1. _Before Rust 1.0_,
+       ~std::thread::scoped~ (before Rust 1.0) would directly spawn a thread, just
+       like ~std::thread::spawn~. It _ALLOWED_ /non-~'static~ captures/, because
+       instead of a ~JoinHandle~, it returned a ~JoinGuard~ *which JOINED the
+       /thread/ when DROPPED.*
+       Any borrowed data only needed to outlive this ~JoinGuard~.
 
-     * There are many ways, such as
-       + creating a cycle of reference-counted nodes,
-         that make it possible to forget about something, or
+       + This *SEEMED* SAFE, as long as the ~JoinGuard~ got dropped at some point.
 
-       + leak it, without dropping it.
+    2. _Just before the release of Rust 1.0_,
+       it slowly became clear that
+       _it's *not possible* to GUARANTEE that something will be dropped._
 
-  3. _Eventually_,
-     in what some people refer to as “The Leakpocalypse,” the conclusion was
-     made that the design of a (safe) interface cannot rely on the assumption
-     that objects will always be dropped at the end of their lifetime.
+       + There are many ways, such as
+         - creating a cycle of reference-counted nodes,
+           that make it possible to forget about something, or
 
-     Leaking an object might reasonably result in leaking more objects (e.g.,
-     leaking a Vec will also leak its elements), but it may *NOT* result in
-     /undefined behavior/.
+         - leak it, without dropping it.
 
-     * Because of this conclusion, ~std::thread::scoped~ was no longer deemed
-       safe and was removed from the standard library.
+    3. _Eventually_,
+       in what some people refer to as “The Leakpocalypse,” the conclusion was
+       made that the design of a (safe) interface cannot rely on the assumption
+       that objects will always be dropped at the end of their lifetime.
 
-     * Additionally, ~std::mem::forget~ was upgraded from an /unsafe function/
-       to a /safe function/, to emphasize that forgetting (or leaking) is always
-       a possibility.
+       Leaking an object might reasonably result in leaking more objects (e.g.,
+       leaking a Vec will also leak its elements), but it may *NOT* result in
+       /undefined behavior/.
 
-  4. _Only much later, in Rust 1.63_,
-     a new std::thread::scoped~ function was added with a new design that does
-     not rely on ~Drop~ for correctness.
+       + Because of this conclusion, ~std::thread::scoped~ was no longer deemed
+         safe and was removed from the standard library.
+
+       + Additionally, ~std::mem::forget~ was upgraded from an /unsafe function/
+         to a /safe function/, to emphasize that forgetting (or leaking) is always
+         a possibility.
+
+    4. _Only much later, in Rust 1.63_,
+       a new std::thread::scoped~ function was added with a new design that does
+       not rely on ~Drop~ for correctness.
 
 ** DONE Shared Ownership and Reference Counting - 7
 CLOSED: [2025-02-09 Sun 20:12]
@@ -372,14 +473,15 @@ CLOSED: [2025-02-09 Sun 20:12]
   So far we've looked at
   * _TRANSFERRING_ /ownership/ of a value _TO_ a /thread/ using /a ~move~
     closure/ ("Threads in Rust" on page 2) and
-  * _BORROWING_ data from /longer-living PARENT threads/ (“Scoped Threads” on
+  * _BORROWING_ data from /longer-living PARENT threads/ ("Scoped Threads" on
     page 5).
 
 - Question not solved yet:
-  * Q :: When sharing data between two /threads/ where neither /thread/ is guaranteed
-         to outlive the other, neither of them can be the owner of that data.
-    + Any data shared between them will need to live as long as the longest living
-      thread.
+  * Q :: When sharing data between two /threads/ where neither /thread/ is
+         guaranteed to outlive the other, neither of them can be the owner of
+         that data.
+    + Any data shared between them will need to live as long as the longest
+      living thread.
 
 *** DONE Statics - 7
 CLOSED: [2025-02-08 Sat 02:29]
@@ -602,7 +704,7 @@ CLOSED: [2025-02-10 Mon 20:16]
     =IMPORTANT= REVIEW THIS!!!
 
 ** DONE Interior Mutability - 13
-CLOSED: [2025-02-11 Tue 15:50]
+CLOSED: [2026-02-28 Sat 22:25]
 The /borrowing rules/ as introduced in the previous section are simple, but can be
 *quite limiting* -- _especially when multiple threads are involved._
 
@@ -661,13 +763,13 @@ The /borrowing rules/ as introduced in the previous section are simple, but can 
     /undefined behavior/.
 
 *** DONE ~Cell~ - 14
-CLOSED: [2025-02-11 Tue 12:42]
+CLOSED: [2026-02-28 Sat 22:17]
 *For SINGLE thread only*
 
 - ~std::cell::Cell<T>~ allows mutations through a /shared reference/.
-  + To *avoid* /undefined behavior/, only _TWO_ operations are allowed:
-    * Copy the value out (if ~T~ implements ~Copy~)
-    * Replace it with another value as a whole.
+  + To *avoid* /undefined behavior/, _ONLY two operations_ are allowed:
+    * _COPY_ the value out (if ~T~ implements ~Copy~)
+    * _REPLACE_ it with another value as a whole.
 
   + ~Cell~ is only used for *single* /thread/.
 
@@ -704,7 +806,7 @@ CLOSED: [2025-02-11 Tue 12:42]
   1. *move* a value *out* (leaving something in its place),
   2. *modify* it,
   3. then *put it back*,
-  to mutate its contents:
+  to MUTATE its contents:
   #+begin_src rust
     fn f(v: &Cell<Vec<i32>>) {
         let mut v2 = v.take(); // Replaces the contents of the `Cell` with an empty `Vec`
@@ -714,23 +816,23 @@ CLOSED: [2025-02-11 Tue 12:42]
   #+end_src
 
 *** DONE ~RefCell~ - 14
-CLOSED: [2025-02-11 Tue 14:02]
+CLOSED: [2026-02-28 Sat 22:17]
 *For SINGLE thread only*.
 
 - _UNLIKE_ a regular ~Cell~,
   a ~std::cell::RefCell~ does *allow* you to *borrow* its contents,
-  _at a SMALL runtime cost._
+  _at *a SMALL runtime cost*._
 
 - A ~RefCell<T>~ does
   _not only_ hold a ~T~,
-  _but also_ holds a _counter_ that keeps track of any outstanding borrows.
+  _but also_ holds a _counter_ that keeps track of any outstanding (=???=)
+  /borrows/.
 
-  If you try to _borrow_ it while it is *ALREADY* _mutably borrowed_ (or vice-versa),
-  it will _panic_, which avoids /undefined behavior/.
+  If you try to _borrow_ it while it is *ALREADY* _mutably borrowed_ (or
+  vice-versa), it will _panic_, which avoids /undefined behavior/.
 
-- Just like a Cell, a RefCell can only be used within a single thread.
-
-- Borrowing the contents of ~RefCell~ is done by calling ~borrow~ or ~borrow_mut~:
+- Borrowing the contents of ~RefCell~ is done by calling ~borrow~ or
+  ~borrow_mut~:
   #+begin_src rust
     use std::cell::RefCell;
 
@@ -740,24 +842,27 @@ CLOSED: [2025-02-11 Tue 14:02]
   #+end_src
 
 *** DONE ~Mutex~ and ~RwLock~ - 15
-CLOSED: [2025-02-11 Tue 15:34]
-- An ~RwLock~ or /reader-writer lock/ is the *concurrent version of a ~RefCell~:
+CLOSED: [2026-02-28 Sat 22:17]
+- An ~RwLock~ or /reader-writer lock/ is the *concurrent* version of a
+  ~RefCell~:
   * An ~RwLock<T>~
-    holds a ~T~ and
-    tracks any outstanding borrows.
+    _holds_ a ~T~ and
+    _tracks_ any outstanding (=???=) /borrows/.
 
-  * _HOWEVER_, UNLIKE a ~RefCell~, it does *NOT* PANIC on conflicting borrows.
+  * _HOWEVER_, UNLIKE a ~RefCell~,
+    =IMPORTANT=
+    it does *NOT* PANIC on CONFLICTING /borrows/.
 
     INSTEAD, it
     *blocks* the CURRENT /thread/ -- putting it to sleep --
-    while *waiting for* conflicting borrows to disappear.
+    while *waiting for* CONFLICTING /borrows/ to disappear.
 
     We'll just have to _PATIENTLY WAIT FOR_ our turn with the data,
     _AFTER_ the other /threads/ are done with it.
 
-  * Borrowing the contents of an RwLock is called locking. By locking it we temporarily
-    block concurrent conflicting borrows, allowing us to borrow it without causing data
-    races.
+  * Borrowing the contents of an ~RwLock~ is called /locking/.
+    By locking it we temporarily block _concurrent conflicting_ /borrows/,
+    allowing us to /borrow/ it without causing /data races/.
 
 - A ~Mutex~ is very similar, but conceptually slightly _SIMPLER_.
 
@@ -767,7 +872,7 @@ CLOSED: [2025-02-11 Tue 15:34]
   * =TODO=
     We'll go more into detail on these types in _"Locking: Mutexes and RwLocks" on page 18._
 
-*** DONE ~Atomics~ - 15
+*** DONE Atomics - 15
 CLOSED: [2025-02-11 Tue 15:50]
 The /atomic types/ represent the _concurrent version of a ~Cell~._
 
@@ -785,22 +890,24 @@ The /atomic types/ represent the _concurrent version of a ~Cell~._
   Which ones *are available depends on the platform,*
 
   SINCE
-  =TODO=
   _they REQUIRE support from the processor to avoid data races. (We'll dive into
-  that in Chapter 7.)_
+  that in Chapter 7.)_ =TODO=
 
-- SINCE
+- =IMPORTANT=
+  SINCE
   they are so limited in size, /atomics/ often *don't directly* contain the
-  information that needs to be shared between threads.
+  information that needs to be _shared between /threads/._
 
-  =TODO= =???=
+  =TODO= =HOWTO???=
   INSTEAD,
   they are often used as a tool to make it possible to share other -- often
-  bigger -- things between threads. When atomics are used to say something about
-  other data, things can get surprisingly complicated.
+  bigger -- things between /threads/.
+  * =IMPORTANT=
+    *When /atomics/ are used to say something about other data, things can get
+    surprisingly complicated.*
 
 *** DONE ~UnsafeCell~ - 16
-CLOSED: [2025-02-11 Tue 15:50]
+CLOSED: [2026-02-28 Sat 22:25]
 - An ~UnsafeCell~ is the *primitive building block* for /interior mutability/.
 
 - An ~UnsafeCell<T>~ wraps a ~T~,
@@ -820,6 +927,8 @@ CLOSED: [2025-02-11 Tue 15:50]
   * =IMPORTANT=
     All types with /interior mutability/ -- including all types discussed above --
     are built on top of ~UnsafeCell~.
+    + =from Jian=
+      See https://www.youtube.com/watch?v=8O0Nt9qY_vo&list=PLqbS7AVVErFiWDOAVrPt7aYmnuuOLYvOa&index=4
 
 ** DONE Thread Safety: ~Send~ and ~Sync~ - 16
 CLOSED: [2025-02-12 Wed 19:32]
@@ -827,8 +936,8 @@ CLOSED: [2025-02-12 Wed 19:32]
   that can only be used on a _single_ /thread/, such as ~Rc~, ~Cell~, and others.
 
   Since that restriction is needed to avoid /undefined behavior/, it's something
-  the compiler needs to understand and check for you, so you can use these types
-  _WITHOUT_ having to use /unsafe blocks/.
+  the _compiler needs to understand and check for you,_
+  so you can use these types _WITHOUT_ having to use /unsafe blocks/.
 
 - The language uses _TWO_ special /traits/ to keep track of which types can be
   safely used across threads:
@@ -844,8 +953,8 @@ CLOSED: [2025-02-12 Wed 19:32]
   * ~Sync~
     A type is ~Sync~ if it can be *shared with* another /thread/.
 
-    In other words, a type ~T~ is ~Sync~ _if and only if_ a /shared reference/
-    to that type, ~&T~, is ~Send~.
+    In other words, a type ~T~ is ~Sync~ _iff_ a /shared reference/ to that
+    type, ~&T~, is ~Send~.
 
     + For example,
       an ~i32~ is ~Sync~, but a ~Cell<i32>~ is not. (A ~Cell<i32>~ is ~Send~,
@@ -854,8 +963,8 @@ CLOSED: [2025-02-12 Wed 19:32]
 - *ALL* /primitive types/ such as ~i32~, ~bool~, and ~str~ are BOTH ~Send~ and
   ~Sync~.
 
-- Both of these /traits/ are /auto traits/, which means that they are automatically
-  implemented for your types based on their fields.
+- Both of these /traits/ are /auto traits/, which means that they are
+  AUTOMATICALLY implemented for your types _based on their fields._
 
   * A struct with fields that are all ~Send~ and ~Sync~, is itself also ~Send~
     and ~Sync~.
@@ -932,24 +1041,26 @@ CLOSED: [2025-02-12 Wed 19:32]
   #+end_src
 
 - The ~thread::spawn~ function requires its argument to be ~Send~, and
+  =IMPORTANT=
   *a /closure/ is only ~Send~ if all of its captures are.*
   This requirement can protect us from /undefined behavior/.
 
-** DONE Locking: Mutexes and RwLocks - 18 - =NOTE=
+** =START=
+** DONE Locking: ~Mutex~'es and ~RwLock~'s - 18 - =NOTE=
 CLOSED: [2025-02-15 Sat 20:50]
-- The most commonly used tool
-  _for sharing (mutable) data between threads_ is
-  a /mutex/ (mutual exclusion).
+- /mutex/ is the most commonly used tool
+  _for sharing (mutable) data between threads_.
 
 - The job of a /mutex/ is to
-  *ensure* /threads/ have _exclusive access to_ some data _by temporarily
-  blocking_ other /threads/ that try to access it at the same time.
+  *ensure* /threads/ have _exclusive access to_ some data by TEMPORARILY
+  /blocking/ other /threads/ that try to access it at the same time.
 
-- Conceptually, a /mutex/ has only *TWO states*:
+- CONCEPTUALLY, a /mutex/ has only *TWO states*:
   *locked* and *unlocked*.
 
-  1. When a /thread/ _locks an UNLOCKED /mutex/,_ the /mutex/ is marked as
-     _locked_ and the /thread/ can _IMMEDIATELY continue_.
+  1. When a /thread/ *locks* _an UNLOCKED /mutex/,_
+     * the /mutex/ is marked as _locked_ and
+     * the /thread/ can _IMMEDIATELY continue_.
 
   2. When a /thread/ then attempts to _lock an already LOCKED /mutex/,_ that
      operation will /block/.
@@ -961,36 +1072,38 @@ CLOSED: [2025-02-15 Sat 20:50]
      should be done *by the SAME /thread/ that LOCKED it.*
 
   5. If other /threads/ are _waiting to LOCK the /mutex/,_
-     UNLOCKING will cause one of those /threads/ to be *woken up*,
+     UNLOCKING will cause *one of those* /threads/ to be *woken up*,
      so it can try to _LOCK the /mutex/ again_ and continue its course.
 
-- Protecting data with a /mutex/ is simply _the agreement between all threads_
+- Protecting data with a /mutex/ is simply _the agreement between ALL threads_
   that _they will only access the data when they have the mutex locked._
 
-  That way, *NO* two threads can ever access that data concurrently and cause a
-  /data race/.
+  That way, *NO* two /threads/ can ever access that data concurrently and cause
+  a /data race/.
 
-*** Rust's ~Mutex~ - 18
+*** DONE Rust's ~Mutex~ - 18
+CLOSED: [2026-03-01 Sun 12:44]
 ~std::sync::Mutex<T>~.
 
 - By making this ~T~ part of the /mutex/, the data can *ONLY* be accessed
   through the /mutex/, allowing for a safe interface that can guarantee all
-  threads will uphold the agreement.
+  /threads/ will uphold the agreement.
 
 - To ensure _a LOCKED mutex_ can _only be UNLOCKED by the /thread/ that LOCKED
-  it,_ it does NOT have an ~unlock()~ method.
+  it,_ it does *NOT have* an ~unlock()~ method.
 
-  INSTEAD, its ~lock()~ method returns a special type called a ~MutexGuard~.
+  INSTEAD,
+  its ~lock()~ method returns a special type called a ~MutexGuard~.
 
-  * This guard represents the guarantee that we have LOCKED the /mutex/. It
-    behaves like an /exclusive reference/ through the ~DerefMut~ /trait/, giving
-    us _exclusive access_ to the data the mutex protects.
+  * This guard represents the guarantee that we have LOCKED the /mutex/.
+    It behaves like an /exclusive reference/ through the ~DerefMut~ /trait/,
+    giving us _exclusive access_ to the data the mutex protects.
 
   * UNLOCKING the mutex is
     done _by *DROPPING* the guard._
 
-    When we _DROP the guard,_ we give up our ability to access the data, and the
-    ~Drop~ implementation of the guard will UNLOCK the /mutex/.
+    When we _DROP the guard,_ we give up our ability to access the data, and
+    _the ~Drop~ implementation of the guard will *UNLOCK* the /mutex/._
 
 - Let's take a look at an example to see a /mutex/ in practice:
   #+begin_src rust
@@ -1015,18 +1128,19 @@ CLOSED: [2025-02-15 Sat 20:50]
     _spawn ten threads_ to each increment the integer one hundred times.
 
     + Each /thread/ will
-      first _lock the mutex_ to obtain a ~MutexGuard~,
-      and then use that guard to access the integer and modify it.
+      1. _lock the mutex_ to obtain a ~MutexGuard~,
+      2. then use that /guard/ to access the integer and modify it.
 
-    + The guard is implicitly dropped right after, when that variable goes out
-      of scope.
+    + The /guard/ is implicitly dropped right after,
+      WHEN that variable goes out of scope.
 
-  * After the threads are done, we can *safely remove the protection* from the
+  * After the /threads/ are done, we can *safely remove the protection* from the
     integer through ~into_inner()~.
 
     + The ~into_inner~ method
-      *takes /ownership/ of the /mutex/,* which guarantees that nothing else can
-      have a reference to the /mutex/ anymore, making locking unnecessary.
+      *takes /ownership/ of the /mutex/,*
+      which _GUARANTEES_ that nothing else can have a reference to the /mutex/
+      anymore, making locking unnecessary.
 
   * Effectively, thanks to the /mutex/,
     the one hundred increments together are now a single
@@ -1053,14 +1167,13 @@ CLOSED: [2025-02-15 Sat 20:50]
         assert_eq!(n.into_inner().unwrap(), 1000);
     }
   #+end_src
-  When you run the program now, you will see that it takes about 10 seconds to
-  complete.
+  This program now takes about 10 seconds to complete.
 
   Each /thread/ only waits for one second, but
   _the /mutex/ *ensures* that ONLY ONE /thread/ AT A TIME can do so._
 
-- If we _drop the guard_ -- and therefore _unlock the mutex_ -- before sleeping one
-  second, we will see it happen in parallel instead:
+- If we _drop the guard_ -- and therefore _unlock the mutex_ -- *BEFORE*
+  sleeping one second, we will see it happen in parallel instead:
   #+begin_src rust
     fn main() {
         let n = Mutex::new(0);
@@ -1080,11 +1193,14 @@ CLOSED: [2025-02-15 Sat 20:50]
     }
   #+end_src
 
-  With this change, this program takes only about one second, since now the 10
-  threads can execute their one-second sleep *at the SAME time*.
+  This program takes only about one second,
+  SINCE
+  now the 10 threads can execute their one-second sleep *at the SAME time*.
 
   =IMPORTANT!!!=
-  This shows the importance of keeping the amount of time a mutex is locked as
+  =IMPORTANT!!!=
+  =IMPORTANT!!!=
+  This shows the importance of keeping the amount of time a /mutex/ is locked as
   short as possible.
 
   Keeping a mutex locked longer than necessary can completely *NULLIFY any
@@ -1097,18 +1213,21 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
 - A ~Mutex~ in Rust gets marked as *poisoned*
   WHEN _a /thread/ *panics* WHILE *holding* the /lock/._
 
-  When that happens, the ~Mutex~ will no longer be locked, but calling its
-  ~lock~ method will result in an ~Err~ to indicate it has been *poisoned*.
+  * When that happens, the ~Mutex~ will *no longer be locked,*
+    BUT
+    calling its ~lock~ method will result in an ~Err~ to indicate it has been
+    *poisoned*.
 
-- This is a mechanism to protect against leaving the data that's protected by a
-  mutex in _an *inconsistent* state._
+- This is a mechanism to
+  *protect against* leaving the data that's protected by a /mutex/ in _an
+  *inconsistent* state._
 
-  In our example above, if a thread would panic after incrementing the integer
+  In our example above, if a /thread/ would panic after incrementing the integer
   fewer than 100 times, the mutex would unlock and the integer would be left in
   an _unexpected state_ where it is no longer a multiple of 100, possibly
   breaking assumptions made by other threads.
 
-  =TODO=
+  =IMPORTANT=
   Automatically marking the mutex as poisoned in that case forces the user to
   handle this possibility.
 
@@ -1117,43 +1236,49 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
     *correct* an /inconsistent state/ IF necessary.
 
 - While /LOCK poisoning/ might seem like a POWERFUL MECHANISM,
-  recovering from a potentially inconsistent state is *NOT often done in practice.*
+  =IMPORTANT=, =IN PRACTICE=
+  =IMPORTANT=, =IN PRACTICE=
+  =IMPORTANT=, =IN PRACTICE=
+  recovering from a potentially inconsistent state is *NOT often done in
+  practice.*
 
   Most code either _disregards poison_ or _uses ~unwrap()~ to panic_
-  IF the lock was poisoned, effectively propagating panics to all users of the
-  mutex.
+  IF the lock was poisoned,
+  effectively propagating /panics/ to all users of the /mutex/.
 
-- =TODO= =NOTE=
 - *Lifetime of the MutexGuard*
-  * While it's convenient that implicitly dropping a guard unlocks the mutex, it can
-    sometimes lead to subtle surprises. If we assign the guard a name with a let statement
-    (as in our examples above), it’s relatively straightforward to see when it will be
-    dropped, since local variables are dropped at the end of the scope they are defined
-    in. Still, not explicitly dropping a guard might lead to keeping the mutex locked for
-    longer than necessary, as demonstrated in the examples above.
+  While it's convenient that implicitly dropping a guard unlocks the mutex, it can
+  sometimes lead to subtle surprises.
+
+  * If we _assign the /guard/ a name_ with a ~let~ statement (as in our examples above),
+    it's relatively STRAIGHTFORWARD to see when it will be dropped.
 
   * Using a guard without assigning it a name is also possible, and can be very convenient
-    at times. Since a ~MutexGuard~ behaves like an exclusive reference to the protected data,
-    we can directly use it without assigning a name to the guard first. For example, if
-    you have a ~Mutex<Vec<i32>>~, you can lock the mutex, push an item into the Vec, and
-    unlock the mutex again, in a single statement:
-    + ~list.lock().unwrap().push(1);~
+    at times.
+    + For example,
+      if you have a ~Mutex<Vec<i32>>~, you can
+      1. lock the mutex,
+      2. push an item into the ~Vec~, and
+      3. unlock the mutex again,
+      in a single statement: ~list.lock().unwrap().push(1);~
 
-  * Any temporaries produced within a larger expression, such as the guard returned by
-    lock(), will be dropped at the end of the statement. While this might seem obvious
-    and reasonable, it leads to a common pitfall that usually involves a match, if let, or
-    while let statement. Here is an example that runs into this pitfall:
+  * Any temporaries produced within a larger expression, such as the /guard/
+    returned by ~lock()~, will _be dropped at the end of the statement._
+
+    While this might seem obvious and reasonable, it leads to a *COMMON PITFALL*
+    that usually involves a ~match~, ~if let~, or ~while let~ statement. Here is
+    an example that runs into this pitfall:
     #+begin_src rust
       if let Some(item) = list.lock().unwrap().pop() {
           process_item(item);
       }
     #+end_src
 
-  * If our intention was to lock the list, pop an item, unlock the list, and
-    then process the item after the list is unlocked, we made a subtle but
-    important mistake here. The temporary guard is not dropped until the end of
-    the entire if let statement, meaning we needlessly hold on to the lock while
-    processing the item.
+    + If our intention was to lock the list, pop an item, unlock the list, and
+      then process the item after the list is unlocked, we made a subtle but
+      important mistake here. The temporary guard is not dropped until the end of
+      the entire if let statement, meaning we needlessly hold on to the lock while
+      processing the item.
 
   * Perhaps surprisingly, this does not happen for a similar if statement, such
     as in this example:
@@ -1249,20 +1374,20 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
     while C++, for example, ~std::mutex~ does *not contain* the data it
     protects, nor does it even know what it is protecting.
 
-    Knowing this is very helpful when you communicate with programmers who are
-    not familiar with Rust:
-    A Rust programmer might talk about “the data inside the mutex,” or say
-    things like “wrap it in a mutex,” which can be confusing to those only
-    familiar with mutexes in other languages.
-
-  * If you really need a /stand-alone mutex/ that doesn't contain anything, for
-    example to *protect some EXTERNAL hardware*, you can use ~Mutex<()>~.
+  * If you really need a /stand-alone mutex/ that doesn't contain anything,
+    FOR EXAMPLE
+    *to protect some EXTERNAL hardware*, you can use ~Mutex<()>~.
     =ADVICE=
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
     _BUT_
-    even in a case like that, you are probably better off defining a (possibly
-    zero-sized) type to interface with that hardware and wrapping that in a
-    ~Mutex~ instead. That way, you are still forced to lock the /mutex/ BEFORE
-    you can interact with the hardware.
+    even in a case like that, you are probably better off
+    1. defining a (possibly zero-sized) type to interface with that hardware and
+    2. wrapping that in a ~Mutex~ instead.
+
+    That way, you are still forced to lock the /mutex/ BEFORE you can interact
+    with the hardware.
 
 ** TODO Waiting: Parking and Condition Variables - 24
 - WHEN data is _mutated by MULTIPLE /threads/,_
