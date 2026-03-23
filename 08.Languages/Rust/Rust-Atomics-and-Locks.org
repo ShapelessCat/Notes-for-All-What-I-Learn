@@ -1849,7 +1849,8 @@ first time we need it, and remember the result.*
         =from Jian=
         Learn from the std by understanding ~Once~ and ~OnceLock~ code.
 
-** TODO Fetch-and-Modify Operations - 36
+** DONE Fetch-and-Modify Operations - 36
+CLOSED: [2026-03-24 Tue 02:34]
 /Fetch-and-modify/ operations *modify* the /atomic variable/,
 BUT also *load (fetch)* the _original value_, *as a SINGLE atomic operation.*
 
@@ -1948,14 +1949,223 @@ CLOSED: [2026-03-23 Mon 13:29]
     If you define a ~process_item~ just print its parameter value, you will see
     undeterministic order, but always you can see 100 numbers print.
 
-*** TODO Example: Statistics - 39
-*** TODO Example: ID Allocation - 41
+*** DONE Example: Statistics - 39
+CLOSED: [2026-03-24 Tue 02:34]
+Extend our example to also _collect and report some statistics_ on the time it
+takes to process an item.
+
+Next to ~num_done~, we're adding TWO /atomic variables/, ~total_time~ and
+~max_time~, to keep track of the amount of time spent processing items. Use
+these to report the _average_ and _peak_ processing times.
+
+#+begin_src rust
+  fn main() {
+      let num_done = &AtomicUsize::new(0);
+      let total_time = &AtomicU64::new(0);
+      let max_time = &AtomicU64::new(0);
+
+      thread::scope(|s| {
+          // Four background threads to process all 100 items, 25 each.
+          for t in 0..4 {
+              s.spawn(move || {
+                  for i in 0..25 {
+                      let start = Instant::now();
+                      process_item(t * 25 + i); // Assuming this takes some time.
+                      let time_taken = start.elapsed().as_micros() as u64;
+                      num_done.fetch_add(1, Relaxed);
+                      total_time.fetch_add(time_taken, Relaxed);
+                      max_time.fetch_max(time_taken, Relaxed);
+                  }
+              });
+          }
+
+          // The main thread shows status updates, every second.
+          loop {
+              let total_time = Duration::from_micros(total_time.load(Relaxed));
+              let max_time = Duration::from_micros(max_time.load(Relaxed));
+              let n = num_done.load(Relaxed);
+              if n == 100 { break; }
+              if n == 0 {
+                  println!("Working.. nothing done yet.");
+              } else {
+                  println!(
+                      "Working.. {n}/100 done, {:?} average, {:?} peak",
+                      total_time / n as u32,
+                      max_time,
+                  );
+              }
+              thread::sleep(Duration::from_secs(1));
+          }
+      });
+
+      println!("Done!");
+  }
+#+end_src
+
+- The /background threads/ now *measure* the time they spend in ~process_item()~
+  with ~Instant::now()~ and ~Instant::elapsed()~.
+
+  * an /atomic add operation/ is used to add the number of microseconds to
+    ~total_time~, and
+  * an /atomic max operation/ is used to keep track of the highest measurement
+    in ~max_time~.
+
+- The /main thread/ *divides* _the total time_ by the _number of processed
+  items_ to obtain the _average processing time_, which it then reports together
+  with the peak time from ~max_time~.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  1. Since the three /atomic variables/ are updated SEPARATELY,
+     it is POSSIBLE for the /main thread/ to
+       load the values
+       *after* a /thread/ has incremented ~num_done~,
+       BUT *before* it has updated ~total_time~,
+       resulting in an _underestimate_ of the average.
+
+  2. More subtly, because the ~Relaxed~ /memory ordering/ _gives *no guarantees*
+     about the RELATIVE ORDER of operations as seen from another /thread/,_
+     it might even briefly
+     see a new *updated* value of ~total_time~,
+     while still seeing an *old* value of ~num_done~,
+     resulting in an _overestimate_ of the average.
+
+- _NEITHER_ of this is a big issue in our example.
+  The *WORST* that can happen is that an *inaccurate* _average_ is briefly
+  reported to the user.
+
+- If we want to AVOID this, we can put the three statistics _inside a ~Mutex~._
+  Then we'd briefly /lock/ the /mutex/ while updating the three numbers, which
+  _NO LONGER HAVE TO BE /atomic/ by themselves._
+
+  This EFFECTIVELY _turns_ the three updates _into_ a *single atomic operation*,
+  at the cost of /locking/ and /unlocking/ a /mutex/, and POTENTIALLY
+  TEMPORARILY *blocking* /threads/.
+
+*** DONE Example: ID Allocation - 41
+CLOSED: [2026-03-24 Tue 02:34]
+A use case where we actually *NEED* the _return value_ from ~fetch_add~.
+
+~allocate_new_id()~, that gives a new unique number every time it is called.
+Implementing this function turns out to be trivial using ~fetch_add~:
+#+begin_src rust
+  use std::sync::atomic::AtomicU32;
+
+
+  fn allocate_new_id() -> u32 {
+      static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+      NEXT_ID.fetch_add(1, Relaxed)
+  }
+#+end_src
+
+- *The only problem*:
+  the _wrapping behavior_ on /overflow/.
+  The 4,294,967,296th call will /overflow/ the 32-bit integer, such that the
+  next call will return 0 again.
+
+  * Whether this is a problem depends on the use case:
+    - how likely is it to be called this often, and
+
+    - what's the worst that can happen if the numbers are not unique?
+      For instance,
+      If /memory safety/ is dependent on these numbers being unique, our
+      implementation above is *NOT acceptable*.
+
+  * To solve this, we can attempt to make the function /panic/ if it is called
+    too many times, like this:
+    #+begin_src rust
+      // This version is problematic.
+      fn allocate_new_id() -> u32 {
+          static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+          let id = NEXT_ID.fetch_add(1, Relaxed);
+          assert!(id < 1000, "too many IDs!");
+          id
+      }
+    #+end_src
+    Now, the ~assert~ statement will panic *AFTER* a thousand calls.
+    HOWEVER,
+    1. this happens *AFTER* the /atomic add operation/ *already happened*,
+       meaning that ~NEXT_ID~ has already been incremented to _1001_ when we
+       panic.
+
+    2. If ANOTHER /thread/ then calls the function, it'll increment it to _1002_
+       before panicking,
+
+    3. and so on.
+
+    4. Although it might take significantly longer,
+       we'll run into the same problem after 4,294,966,296 panics when ~NEXT_ID~
+       will /overflow/ to zero again.
+
+  * There are _three common solutions_ to this problem.
+    1. DON'T /panic/ BUT instead *completely abort* the process on /overflow/.
+
+       The ~std::process::abort~ function will _abort the entire /process/,_
+       ruling out the possibility of anything continuing to call our function.
+
+       While aborting the /process/ *might take a brief moment* in which the
+       function *can still be called by* other /threads/, the chance of that
+       happening billions of times before the program is truly aborted is
+       *negligible*.
+
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       =TODO=
+       =LEARN=
+       This is, in fact, how the /overflow/ check in ~Arc::clone()~ in the
+       standard library is implemented, in case you somehow manage to /clone/ it
+       ~isize::MAX~ times.
+
+       That'd take hundreds of years on a 64-bit computer, but is achieveable in
+       seconds if ~isize~ is only 32 bits.
+
+    2. A second way to deal with the /overflow/ is to use ~fetch_sub~ to decrement
+       the counter again before panicking, like this:
+       #+begin_src rust
+         fn allocate_new_id() -> u32 {
+             static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+             let id = NEXT_ID.fetch_add(1, Relaxed);
+             if id >= 1000 {
+                 NEXT_ID.fetch_sub(1, Relaxed);
+                 panic!("too many IDs!");
+             }
+             id
+         }
+       #+end_src
+       It's still possible for the counter to very briefly be _incremented
+       beyond_ 1000 when _MULTIPLE_ /threads/ execute this function at the same
+       time, but *it is limited by the number of active /threads/.*
+
+       It's REASONABLE TO *ASSUME*
+       1) there will _NEVER be billions of active /threads/ AT ONCE,_
+
+       2) especially _NOT ALL SIMULTANEOUSLY executing the same function in the
+          brief moment *BETWEEN* ~fetch_add~ and ~fetch_sub~._
+
+       =IMPORTANT=
+       =IMPORTANT=
+       =IMPORTANT=
+       =TODO=
+       =LEARN=
+       This is how /overflows/ are handled for the number of running /threads/
+       in the standard library's ~thread::scope~ implementation.
+
+    3. Arguably *the only truly correct one* that can handle this /overflow/,
+       AS it *prevents* the addition from happening at all if it would
+       /overflow/.
+
+       =NEXT=
+       However, we cannot implement that with the atomic operations we've seen
+       so far. For this, we'll need /compare-and-exchange operations/, which
+       we'll explore next.
 
 ** TODO Compare-and-Exchange Operations - 42
-*** Example: ID Allocation Without Overflow - 44
+*** TODO Example: ID Allocation Without Overflow - 44
 - *Fetch-Update*
 
-*** Example: Lazy One-Time Initialization - 45
+*** TODO Example: Lazy One-Time Initialization - 45
 
 ** TODO Summary - 47
 
