@@ -1207,7 +1207,8 @@ CLOSED: [2026-03-01 Sun 12:44]
   benefits of parallelism,* effectively forcing everything to happen serially
   instead.
 
-*** Lock Poisoning - 21 - =NOTE=
+*** DONE Lock Poisoning - 21
+CLOSED: [2026-03-02 Mon 19:15]
 The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
 
 - A ~Mutex~ in Rust gets marked as *poisoned*
@@ -1222,39 +1223,44 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
   *protect against* leaving the data that's protected by a /mutex/ in _an
   *inconsistent* state._
 
-  In our example above, if a /thread/ would panic after incrementing the integer
-  fewer than 100 times, the mutex would unlock and the integer would be left in
-  an _unexpected state_ where it is no longer a multiple of 100, possibly
-  breaking assumptions made by other threads.
+  * In our example above,
+    IF a /thread/ would panic after incrementing the integer fewer than 100 times,
+    the /mutex/ would *unlock* and the integer would be left in an _unexpected state_
+    where it is no longer a multiple of 100, _POSSIBLY breaking assumptions made
+    by other threads._
 
   =IMPORTANT=
-  Automatically marking the mutex as poisoned in that case forces the user to
-  handle this possibility.
+  Automatically marking the /mutex/ as /poisoned/ in that case forces the user
+  to handle this possibility.
 
-- Calling ~lock()~ on a /poisoned mutex/ still _LOCKS the /mutex/._
+- =IMPORTANT=
+  Calling ~lock()~ on a /poisoned mutex/ still *LOCKS* the /mutex/.
   * The ~Err~ returned by ~lock()~ contains the ~MutexGuard~, allowing us to
     *correct* an /inconsistent state/ IF necessary.
 
 - While /LOCK poisoning/ might seem like a POWERFUL MECHANISM,
-  =IMPORTANT=, =IN PRACTICE=
-  =IMPORTANT=, =IN PRACTICE=
-  =IMPORTANT=, =IN PRACTICE=
+  =IMPORTANT=, =IN PRACTICE (NOT)=
+  =IMPORTANT=, =IN PRACTICE (NOT)=
+  =IMPORTANT=, =IN PRACTICE (NOT)=
   recovering from a potentially inconsistent state is *NOT often done in
   practice.*
 
+  =IMPORTANT=, =IN PRACTICE=
+  =IMPORTANT=, =IN PRACTICE=
+  =IMPORTANT=, =IN PRACTICE=
   Most code either _disregards poison_ or _uses ~unwrap()~ to panic_
   IF the lock was poisoned,
   effectively propagating /panics/ to all users of the /mutex/.
 
-- *Lifetime of the MutexGuard*
-  While it's convenient that implicitly dropping a guard unlocks the mutex, it can
-  sometimes lead to subtle surprises.
+- *Lifetime of the MutexGuard* (=TODO=: Review, Reread, and Research)
+  While it's convenient that _IMPLICITLY dropping a guard_ UNLOCKS the
+  /mutex/, *it can sometimes lead to subtle surprises.*
 
-  * If we _assign the /guard/ a name_ with a ~let~ statement (as in our examples above),
-    it's relatively STRAIGHTFORWARD to see when it will be dropped.
+  * If we _assign the /guard/ a name_ with a ~let~ statement (as in our examples
+    above), it's relatively STRAIGHTFORWARD to see when it will be dropped.
 
-  * Using a guard without assigning it a name is also possible, and can be very convenient
-    at times.
+  * Using a guard without assigning it a name is also possible, and can be very
+    convenient at times.
     + For example,
       if you have a ~Mutex<Vec<i32>>~, you can
       1. lock the mutex,
@@ -1265,20 +1271,19 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
   * Any temporaries produced within a larger expression, such as the /guard/
     returned by ~lock()~, will _be dropped at the end of the statement._
 
-    While this might seem obvious and reasonable, it leads to a *COMMON PITFALL*
-    that usually involves a ~match~, ~if let~, or ~while let~ statement. Here is
-    an example that runs into this pitfall:
+    _WHILE_
+    this might seem obvious and reasonable, it leads to a *COMMON PITFALL* that
+    usually involves a ~match~, ~if let~, or ~while let~ statement. Here is an
+    example that runs into this pitfall:
     #+begin_src rust
       if let Some(item) = list.lock().unwrap().pop() {
           process_item(item);
       }
     #+end_src
 
-    + If our intention was to lock the list, pop an item, unlock the list, and
-      then process the item after the list is unlocked, we made a subtle but
-      important mistake here. The temporary guard is not dropped until the end of
-      the entire if let statement, meaning we needlessly hold on to the lock while
-      processing the item.
+    + The temporary guard is *NOT dropped until* the end of the entire ~if let~
+      statement, meaning we *NEEDLESSLY hold on* to the lock while processing the
+      item.
 
   * Perhaps surprisingly, this does not happen for a similar if statement, such
     as in this example:
@@ -1287,17 +1292,37 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
           do_something();
       }
     #+end_src
+    Here, the temporary guard does get dropped *BEFORE* the body of the ~if~
+    statement is executed. The *REASON* is that the condition of a regular ~if~
+    statement is always a plain boolean, which *cannot /borrow/ anything.*
 
-  * Here, the temporary guard does get dropped before the body of the if
-    statement is executed. The reason is that the condition of a regular if
-    statement is always a plain boolean, which cannot borrow anything. There is
-    no reason to extend the lifetime of temporaries from the condition to the
-    end of the statement. For an if let statement, however, that might not be
-    the case. If we had used ~front()~ rather than ~pop()~, for example, item
-    would be borrowing from the list, making it necessary to keep the guard
-    around. Since the borrow checker is only really a check and does not
-    influence when or in what order things are dropped, the same happens when we
-    use ~pop()~, even though that wouldn’t have been necessary.
+  * Read the code below, we know the most reasonable length of holding a lock.
+    + Example 1:
+      *DOESN'T need* hold the lock in its body.
+      #+begin_src rust
+        if let Some(item) = list.lock().unwrap().pop() {
+            process_item(item);
+        }
+      #+end_src
+
+    + Example 2:
+      *DO need* hold the lock in its body.
+      #+begin_src rust
+        if let Some(item_ref) = list.lock().unwrap().front() {
+            process_item_ref(item);
+        }
+      #+end_src
+
+    However, Rust team decide that for one syntax component only one rule for
+    /lifetimes/ is allowed. Review the above two examples, you can see the
+    latter one need keep the /lock/ longer, until the end of that ~if let ...
+    {}~. Rust use this rule. If the above two examples doesn't follow the same
+    rule, modify them may make things very complicated
+
+    Also, since the /borrow checker/
+    + is *only really a check* and
+    + does *not* influence when or in what order things are dropped, the same
+      happens when we use ~pop()~, even though that wouldn't have been necessary.
 
   * We can avoid this by moving the pop operation to a separate ~let~ statement.
     Then the ~guard~ is dropped at the end of that statement, before the ~if
@@ -1310,13 +1335,14 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
     #+end_src
 
 *** Reader-Writer Lock - 22
-- A /mutex/ is only concerned with exclusive access.
+- A /mutex/ is only concerned with _exclusive access_.
   EVEN IF
   a /shared reference (~&T~)/ would have sufficed.
 
 - A /reader-writer lock/ is a _slightly more complicated_ version of a /mutex/
-  that understands the difference between exclusive and shared access, and can
-  provide either.
+  that
+  understands the difference between *exclusive and shared access*, and
+  can provide either.
 
   * It has *three states*:
     + unlocked
@@ -1332,23 +1358,34 @@ The ~unwrap()~ calls in the examples above relate to /lock poisoning/.
     /writer/.
 
   * It comes with *TWO* /guard types/, one for /readers/ and one for /writers/:
-    + ~RwLockReadGuard~, only implements ~Deref~ to behave like a /shared reference/ to the protected data.
-    + ~RwLockWriteGuard~, also implements ~DerefMut~ to behave like an /exclusive reference/.
+    + ~RwLockReadGuard~, only implements ~Deref~ to behave like a /shared
+      reference/ to the protected data.
+    + ~RwLockWriteGuard~, also implements ~DerefMut~ to behave like an
+      /exclusive reference/.
 
-- ~RwLock<T>~ is effectively the multi-threaded version of ~RefCell~,
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  ~RwLock<T>~ is effectively the multi-threaded version of ~RefCell~,
   _DYNAMICALLY_ tracking the number of references to ensure the borrow rules are
   upheld.
 
-- Both ~Mutex<T>~ and ~RwLock<T>~ require ~T~ to be ~Send~, because they can be used to
-  send a ~T~ to ANOTHER /thread/.
+- Both ~Mutex<T>~ and ~RwLock<T>~ require ~T~ to be ~Send~, because they can be
+  used to send a ~T~ to ANOTHER /thread/.
 
 - An ~RwLock<T>~ additionally requires ~T~ to also implement ~Sync~, because it
   *allows* _MULTIPLE threads to hold a /shared reference (~&T~)/ to the
   protected data._
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
   * Strictly speaking,
     you can create a lock for a ~T~ that doesn't fulfill these requirements, but
     you wouldn't be able to share it between /threads/ as the lock itself won't
     implement ~Sync~.
+
+- writer starvation :: a situation where many _readers_ collectively keep the
+  lock from ever unlocking, never allowing any _writer_ to update the data.
 
 - The Rust standard library provides only one general purpose ~RwLock~ type, but
   its implementation *depends on the operating system.*
@@ -1529,25 +1566,398 @@ CLOSED: [2023-10-26 Thu 21:16]
   an operation that is indivisible: it is either fully completed, or it didn't
   happen yet.
 
-** Atomic Load and Store Operations - 32
-*** Example: Stop Flag - 32
-*** Example: Progress Reporting - 33
+- Multiple /threads/ CONCURRENTLY _reading_ and _modifying_ the same variable
+  normally results in /undefined behavior/.
+  =from Jian= *BECAUSE of the indivisible property*
+  _HOWEVER_, /atomic operations/ do allow for different /threads/ to safely read
+  and modify the same variable.
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  /Atomic operations/ are
+  _the main *BUILDING BLOCK* for ANYTHING involving MULTIPLE /threads/._
+
+  All the other /concurrency primitives/, such as /mutexes/ and /condition
+  variables/, are implemented using /atomic operations/.
+
+  * In Rust, /atomic operations/ are available as /methods/ on the /standard
+    atomic types/ that live in ~std::sync::atomic~.
+    + They all have names starting with ~Atomic~
+    + _Which ones are available_ *depends on*
+      1. the hardware architecture and
+      2. SOMETIMES operating system,
+      BUT
+      almost all platforms provide at least all atomic types *up to _the size of
+      a pointer_.*
+
+- =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  *Unlike most types*,
+  they _allow modification through a /shared reference/ (e.g., ~&AtomicU8~)._
+  This is possible thanks to /interior mutability/.
+
+- Each of the available /atomic types/ has the *SAME interface with*
+  * methods for /storing/ and /loading/,
+  * methods for atomic "fetch-and-modify" operations, and
+  * some more advanced "compare-and-exchange" methods.
+
+  =TODO=
+  =NEXT=
+  _We'll discuss them in detail in the rest of this chapter._
+
+- _BEFORE_
+      we can dive into the different /atomic operations/,
+  we briefly need to touch upon a concept called /memory ordering/:
+  * Every /atomic operation/ takes _an argument of type
+    ~std::sync::atomic::Ordering~,_ which determines what guarantees we get
+    about the relative ordering of operations.
+
+    + The simplest variant with the fewest guarantees is ~Relaxed~.
+
+      ~Relaxed~ still
+      _guarantees_ consistency on a single atomic variable,
+      BUT
+      does _not promise_ anything about the relative order of operations between
+      different variables.
+
+      - What this means is that
+        two /threads/ _MIGHT SEE_
+        operations on different variables happen in a *different order*.
+
+        For example,
+        if one /thread/ writes to one variable first and then to a second variable
+        VERY QUICKLY afterwards,
+        another /thread/ _MIGHT SEE_ that happen in the *opposite order*.
+
+  * *In this chapter*
+    we'll only look at _use cases where this is *NOT* a problem_ and simply use
+    ~Relaxed~ everywhere without going more into detail.
+
+    =TODO=
+    We'll discuss all the details of /memory ordering/ and the other available
+    /memory orderings/ in Chapter 3.
+
+** DONE Atomic Load and Store Operations - 32
+CLOSED: [2026-03-22 Sun 20:57]
+The first two /atomic operations/ we'll look at are the most basic ones:
+~load~ and ~store~.
+
+#+begin_src rust
+  impl AtomicI32 {
+      pub fn load(&self, ordering: Ordering) -> i32;
+      pub fn store(&self, value: i32, ordering: Ordering);
+  }
+#+end_src
+Note:
+the ~store~ method takes a shared reference (~&T~) - it still can mutate an
+atomic value because /interior mutability/
+
+*** DONE Example: Stop Flag - 32
+CLOSED: [2026-03-22 Sun 17:20]
+The first example uses an ~AtomicBool~ for a _stop flag_.
+Such a flag is used to inform other threads to stop running.
+
+#+begin_src rust
+  use std::sync::atomic::AtomicBool;
+  use std::sync::atomic::Ordering::Relaxed;
+
+  fn main() {
+      static STOP: AtomicBool = AtomicBool::new(false);
+
+      // Spawn a thread to do the work.
+      let background_thread = thread::spawn(|| {
+          while !STOP.load(Relaxed) {
+              some_work();
+          }
+      });
+
+      // Use the main thread to listen for user input.
+      for line in std::io::stdin().lines() {
+          match line.unwrap().as_str() {
+              "help" => println!("commands: help, stop"),
+              "stop" => break,
+              cmd => println!("unknown command: {cmd:?}"),
+          }
+      }
+
+      // Inform the background thread it needs to stop.
+      STOP.store(true, Relaxed);
+
+      // Wait until the background thread finishes.
+      background_thread.join().unwrap();
+  }
+#+end_src
+
+Known limitation/defect (not correctness issue):
+This simple solution works great as long as the flag is regularly checked by the
+background /thread/.
+If it gets stuck in ~some_work()~ for a long time, that can result in an
+unacceptable *delay* between the stop command and the program quitting.
+
+=TODO=
+=from Jian=
+How to interrupt a running ~some_work()~ when ~STOP~ becomes ~true~.
+
+*** DONE Example: Progress Reporting - 33
+CLOSED: [2026-03-22 Sun 17:47]
+We process 100 items one by one on a _background thread_, while the _main
+thread_ gives the user regular updates on the progress:
+
+#+begin_src rust
+  use std::sync::atomic::AtomicUsize;
+
+  fn main() {
+      let num_done = AtomicUsize::new(0);
+
+      thread::scope(|s| {
+          // A background thread to process all 100 items.
+          s.spawn(|| {
+              for i in 0..100 {
+                  process_item(i); // Assuming this takes some time.
+                  num_done.store(i + 1, Relaxed);
+              }
+          });
+
+          // The main thread shows status updates, every second.
+          loop {
+              let n = num_done.load(Relaxed);
+              if n == 100 { break; }
+              println!("Working.. {n}/100 done");
+              thread::sleep(Duration::from_secs(1));
+          }
+      });
+
+      println!("Done!");
+  }
+#+end_src
+
+This time we use a /scoped thread/, which will automatically handle the /joining
+of the thread/ for us, and also allow us to borrow local variables.
+
 **** Synchronization - 34
+- *Know LIMITATION*:
+  Once the last item is processed, _it MIGHT take up to one whole second for the
+  /main thread/ to know,_ introducing an *unnecessary delay* at the end.
 
-*** Example: Lazy Initialization - 35
+- *SOLUTION*:
+  use /thread parking/ to *wake* the /main thread/ from its sleep whenever
+  there is new information it might be interested in.
 
-** Fetch-and-Modify Operations - 36
-*** Example: Progress Reporting from Multiple Threads - 38
-*** Example: Statistics - 39
-*** Example: ID Allocation - 41
+  Use ~thread::park_timeout~ rather than ~thread::sleep~:
 
-** Compare-and-Exchange Operations - 42
+  #+begin_src rust
+    fn main() {
+        let num_done = AtomicUsize::new(0);
+
+        let main_thread = thread::current();
+
+        thread::scope(|s| {
+            // A background thread to process all 100 items.
+            s.spawn(|| {
+                for i in 0..100 {
+                    process_item(i); // Assuming this takes some time.
+                    num_done.store(i + 1, Relaxed);
+                    main_thread.unpark(); // Wake up the main thread.
+                }
+            });
+
+            // The main thread shows status updates.
+            loop {
+                let n = num_done.load(Relaxed);
+                if n == 100 { break; }
+                println!("Working.. {n}/100 done");
+                thread::park_timeout(Duration::from_secs(1));
+            }
+        });
+        println!("Done!");
+    }
+  #+end_src
+  1. Obtain a handle (~main_thread~) to the /main thread/ through ~thread::current()~.
+
+  2. Insert a ~main_thread.unpark()~ when spawning new background thread.
+
+  3. Replace ~thread::sleep~ with ~thread::park_timeout~ in /main thread/.
+
+*** DONE Example: Lazy Initialization - 35
+CLOSED: [2026-03-22 Sun 20:57]
+Imagine there is a value ~x~, which we are reading from a file, obtaining from
+the operating system, or calculating in some other way, that we expect to _be
+*CONSTANT* during a run of the program._
+
+Since we don't expect it to change, we can *request or calculate it only the
+first time we need it, and remember the result.*
+
+- The *FIRST* /thread/ that needs it will have to *calculate* the value, but it
+  can
+  _STORE it in an /atomic static/ to MAKE IT AVAILABLE for *all* /threads/,_
+  including itself if it needs it again later.
+
+- _ASSUMPTION_:
+  TO KEEP THINGS SIMPLE,
+  *we'll assume ~x~ is NEVER zero,*
+  so that we can use _zero as a placeholder_ before it has been calculated.
+
+  #+begin_src rust
+    use std::sync::atomic::AtomicU64;
+
+    fn get_x() -> u64 {
+        static X: AtomicU64 = AtomicU64::new(0);
+        let mut x = X.load(Relaxed);
+        if x == 0 {
+            x = calculate_x();
+            X.store(x, Relaxed);
+        }
+        x
+    }
+  #+end_src
+  Any call to ~get_x~ after the first call will see that the value in the static
+  is nonzero, and return it immediately without calculating it again.
+
+  =IMPORTANT= /race/ happens, NO /data race/.
+  *HOWEVER*,
+  if a SECOND /thread/ calls ~get_x~ while the FIRST /thread/ is still
+  calculating ~x~, the SECOND /thread/ will also see a zero and also calculate
+  ~x~ in parallel. *This is called a /race/. NOT a data race,* which is
+  /undefined behavior/ and impossible in Rust without using ~unsafe~, but still
+  a /race/ with an *unpredictable winner*.
+
+  * This /race/ is not a problem in correctness, because we expect ~x~ to be
+    constant (=from Jian= independent with who, how, and when), it doesn't matter
+    who wins the /race/.
+
+    + DEPENDING ON
+        how much time we expect ~calculate_x()~ to take,
+      this might be a _very good_ or _very bad_ strategy.
+
+    + If ~calculate_x()~ takes a long time, it's better if /threads/ wait while
+      the first thread is still initializing ~X~.
+
+      - Solutions:
+        use /condition variable/ or /thread parking/ (book page 24).
+
+        Here we want to keep this example small and simple. We don't implement
+        these solutions.
+
+      - The Rust standard library provides exactly this functionality through
+        ~std::sync::Once~ and ~std::sync::OnceLock~, so there's usually no need
+        to implement these yourself.
+        =TODO=
+        =TODO=
+        =TODO=
+        =from Jian=
+        Learn from the std by understanding ~Once~ and ~OnceLock~ code.
+
+** TODO Fetch-and-Modify Operations - 36
+/Fetch-and-modify/ operations *modify* the /atomic variable/,
+BUT also *load (fetch)* the _original value_, *as a SINGLE atomic operation.*
+
+- The most commonly used ones are
+  * ~fetch_add~
+  * ~fetch_sub~
+
+- Some of the other available operations are
+  * bitwise operations:
+    + ~fetch_or~
+    + ~fetch_and~
+
+  * ~fetch_max~ and ~fetch_min~
+
+- Their function signatures are as follows, using AtomicI32 as an example:
+  #+begin_src rust
+    impl AtomicI32 {
+        pub fn fetch_add(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_sub(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_or(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_and(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_nand(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_xor(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_max(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn fetch_min(&self, v: i32, ordering: Ordering) -> i32;
+        pub fn swap(&self, v: i32, ordering: Ordering) -> i32; // "fetch_store"
+    }
+  #+end_src
+  * The one _outlier_ is the operation that simply stores a new value,
+    *REGARDLESS* of the old value. Instead of _fetch_store_, it has been called
+    ~swap~.
+
+  * =from Jian=
+    ~fetch_update~ (added in Rust 1.45) not listed here returns ~Result<i32, i32>~ -
+    ~Ok(previous_value)~ or ~Err(previous_value)~.
+
+  * All fetch-and-modify operations, except ~fetch_update~, including ~swap~,
+    always RETURN _previous value_.
+
+    _The return value from these operations is *not always relevant*._
+    It's perfectly fine to SIMPLY IGNORE the return value.
+
+  * ~fetch_add~ and ~fetch_sub~ implement *wrapping* behavior for /overflows/.
+    + =TODO=
+      =NEXT=
+      In "Compare-and-Exchange Operations" on page 42, we'll see how to do
+      *atomic addition with overflow checking*.
+
+*** DONE Example: Progress Reporting from Multiple Threads - 38
+CLOSED: [2026-03-23 Mon 13:29]
+#+begin_src rust
+  fn main() {
+      let num_done = &AtomicUsize::new(0);
+
+      thread::scope(|s| {
+          // Four background threads to process all 100 items, 25 each.
+          for t in 0..4 {
+              s.spawn(move || {
+                  for i in 0..25 {
+                      process_item(t * 25 + i); // Assuming this takes some time.
+                      num_done.fetch_add(1, Relaxed);
+                  }
+              });
+          }
+
+          // The main thread shows status updates, every second.
+          loop {
+              let n = num_done.load(Relaxed);
+              if n == 100 { break; }
+              println!("Working.. {n}/100 done");
+              thread::sleep(Duration::from_secs(1));
+          }
+      });
+
+      println!("Done!");
+  }
+#+end_src
+- Here ~move~ is for ~t~ (copy) and ~num_done~ (copy).
+  * Q :: Why do they need ~move~?
+  * A ::
+    + ~t~ as a loop variable live to the end of one iteration, and it can't
+      outlive the spawned thread.
+
+    + ~AtomicUsize~ doesn't implement ~Copy~, and we can't move it - all threads
+      need access it. This is why we define ~let num_done = &AtomicUsize::new(0);~.
+      ~Copy~ is implemented for all ~&T~ with ~T: ?Sized~.
+      - Another way, similar:
+        1. Use ~let num_done = AtomicUsize::new(0);~
+        2. Add ~let num_done = &num_done;~ JUST BEFORE ~s.spawn~ line (must
+           AFTER ~for i in 0..4~).
+
+- We don't know in which /order/ the /threads/ will increment ~num_done~, but as
+  the addition is /atomic/, we don't have to worry about anything and can be sure
+  it will be exactly 100 when all /threads/ are done.
+  * =from Jian=
+    If you define a ~process_item~ just print its parameter value, you will see
+    undeterministic order, but always you can see 100 numbers print.
+
+*** TODO Example: Statistics - 39
+*** TODO Example: ID Allocation - 41
+
+** TODO Compare-and-Exchange Operations - 42
 *** Example: ID Allocation Without Overflow - 44
 - *Fetch-Update*
 
 *** Example: Lazy One-Time Initialization - 45
 
-** Summary - 47
+** TODO Summary - 47
 
 * TODO 3. Memory Ordering - 49
 ** Reordering and Optimizations - 49
