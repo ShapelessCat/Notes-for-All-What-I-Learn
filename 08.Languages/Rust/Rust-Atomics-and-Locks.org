@@ -2161,36 +2161,206 @@ Implementing this function turns out to be trivial using ~fetch_add~:
        so far. For this, we'll need /compare-and-exchange operations/, which
        we'll explore next.
 
-** TODO Compare-and-Exchange Operations - 42
-*** TODO Example: ID Allocation Without Overflow - 44
+** TODO Compare-and-Exchange Operations - 42 - =TODO: NOTE=
+/Compare-and-Exchange/ is the *MOST advanced and flexible* _atomic operation_.
+
+- compare-and-exchange :: checks if the /atomic value/ is equal to a given value,
+  and *only if* that is the case does it replace it with a new value, all
+  atomically as a single operation.
+  * It will return the _previous value_ and tell us whether it replaced it or
+    not.
+
+- Its signature is a bit _MORE COMPLICATED_ than the ones we've seen so far.
+  Using ~AtomicI32~ as an example, it looks like this:
+  #+begin_src rust
+    impl AtomicI32 {
+        pub fn compare_exchange(
+            &self,
+            expected: i32,
+            new: i32,
+            success_order: Ordering,
+            failure_order: Ordering
+        ) -> Result<i32, i32>;
+    }
+  #+end_src
+  Ignoring memory ordering for a moment,
+  it is basically identical to the following implementation,
+  _EXCEPT_ it all happens as a single, indivisible atomic operation:
+  #+begin_src rust
+    impl AtomicI32 {
+        pub fn compare_exchange(&self, expected: i32, new: i32) -> Result<i32, i32> {
+            // In reality, the load, comparison and store,
+            // all happen as a single atomic operation.
+            let v = self.load();
+            if v == expected {
+                // Value is as expected.
+                // Replace it and report success.
+                self.store(new);
+                Ok(v)
+            } else {
+                // The value was not as expected.
+                // Leave it untouched and report failure.
+                Err(v)
+            }
+        }
+    }
+  #+end_src
+
+*** TODO Example: ID Allocation Without Overflow - 44 - =TODO: NOTE=
+Now, back to our overflow problem in ~allocate_new_id()~ from “Example: ID
+Allocation” on page 41.
+
 - *Fetch-Update*
 
-*** TODO Example: Lazy One-Time Initialization - 45
+*** TODO Example: Lazy One-Time Initialization - 45 - =TODO: NOTE=
 
-** TODO Summary - 47
+** DONE Summary - 47
+CLOSED: [2026-03-24 Tue 19:33]
+- /Atomic operations/ are *indivisable*;
+  they have
+  EITHER fully completed,
+  OR they haven't happened yet.
+
+- /Atomic operations/ in Rust are done through the /atomic types/ in
+  ~std::sync::atomic~, such as ~AtomicI32~.
+
+- NOT all /atomic types/ are available on all platforms.
+
+- The /relative ordering of atomic operations/ is tricky when multiple variables
+  are involved. More in Chapter 3. =TODO= =NEXT=
+
+- Simple /loads/ and /stores/ are nice for _VERY BASIC_ /inter-thread
+  communication/, like _stop flags_ and _status reporting_.
+
+- /Lazy initialization/ can be done as a /race/, *WITHOUT* causing a /data
+  race/.
+
+- /Fetch-and-modify/ operations allow for a small set of basic atomic
+  modifications that are
+  ESPECIALLY USEFUL _when_ MULTIPLE /threads/ are modifying the SAME /atomic
+  variable/.
+
+- /Atomic addition and subtraction/ silently *wrap around* on /overflow/.
+
+- /Compare-and-exchange operations/ are the *most flexible and general*, and
+  =IMPORTANT=
+  =IMPORTANT=
+  =IMPORTANT=
+  a *building block* for making ANY OTHER /atomic operation/.
+
+- A /weak compare-and-exchange operation/ can be _slightly MORE EFFICIENT_.
 
 * TODO 3. Memory Ordering - 49
-** Reordering and Optimizations - 49
-** The Memory Model - 51
-** Happens-Before Relationship - 51
+In Chapter 2, we briefly touched upon the concept of /memory ordering/.
+
+In this chapter, we'll dive into this topic and explore
+1. all the available *memory ordering options*, and,
+2. most importantly, when to use which one.
+
+** TODO Reordering and Optimizations - 49
+A processor might determine that two particular consecutive instructions in your
+program will not affect each other, and *execute them out of order*, if that is
+faster, for example.
+
+- Example:
+  #+begin_src rust
+    fn f(a: &mut i32, b: &mut i32) {
+        *a += 1;
+        *b += 1;
+        *a += 1;
+    }
+  #+end_src
+
+  can be re-ordered as
+
+  #+begin_src rust
+    fn f(a: &mut i32, b: &mut i32) {
+        *a += 2;
+        *b += 1;
+    }
+  #+end_src
+
+  - Later, *while executing* this function of the optimized compiled program, a
+    processor might for a variety of reasons end up _executing the second
+    addition *BEFORE* the first addition_, possibly because
+    * ~*b~ was available in a /cache/,
+    * while ~*a~ had to be fetched from the /main memory/.
+
+  - The *ORDER* in which they were incremented is _entirely *INVISIBLE* to the
+    rest of your program._
+
+  - The logic for verifying that a specific reordering or other optimization
+    won’t affect the behavior of your program does not take other threads into
+    account.
+
+  - In our example above, that’s perfectly fine, as the unique references (&mut
+    i32) guarantee that nothing else can possibly access the values, making
+    other threads irrelevant. The only situation where this is a problem is
+    when mutating data that’s shared between threads. Or, in other words, when
+    working with atomics. This is why we have to explicitly tell the compiler
+    and processor what they can and can’t do with our atomic operations, since
+    their usual logic ignores interactions between threads and might allow for
+    optimizations that do change the result of your program.
+
+  - Instead, we can only pick from a small set of options, represented by
+    the std::sync::atomic::Ordering enum, which every atomic operation takes as
+    an argument. The set of available options is very limited, but has been
+    carefully picked to fit most use cases well. The orderings are very
+    abstract and do not directly reflect the actual compiler and processor
+    mechanisms involved, such as instruction reordering. This makes it possible
+    for your concurrent code to be architecture-independent and future-proof.
+    It allows for verification without knowing the details of every
+    single current and future processor and compiler version.
+
+  - The available orderings in Rust are:
+    * Relaxed ordering: ~Ordering::Relaxed~
+    * Release and acquire ordering: ~Ordering::{Release, Acquire, AcqRel}~
+    * Sequentially consistent ordering: ~Ordering::SeqCst~
+
+    In C++, there is also something called /consume ordering/, which has been
+    *purposely omitted from Rust*, but is nonetheless interesting to discuss as
+    well.
+
+** TODO The Memory Model - 51
+** TODO Happens-Before Relationship - 51
 *** Spawning and Joining - 53
 
-** Relaxed Ordering - 54
+** TODO Relaxed Ordering - 54
 - *Out-of-Thin-Air Values*
 
-** Release and Acquire Ordering - 57
+** TODO Release and Acquire Ordering - 57
+/Release and acquire memory ordering/ are used in a pair to
+*form a HAPPENS-BEFORE relationship _between_ /threads/.*
+
+- /Release memory ordering/ applies to *store* operations,
+- while /Acquire memory ordering/ applies to *load* operations.
+
+- A _happens-before relationship_ is formed
+  WHEN
+  an /acquire-load operation/
+  OBSERVES
+  the result of a /release-store operation/.
+  (=from Jian= they show up in pair)
+
+  In this case,
+  _the store and everything before it,_
+  *happened before*
+  _the load and everything after it._
+  (=from Jian= memory order, not CPU computation order -- we don't care about
+  this much)
+
 - *More Formally*
 
 *** Example: Locking - 60
 *** Example: Lazy Initialization with Indirection - 62
 
-** Consume Ordering - 65
-** Sequentially Consistent Ordering - 66
-** Fences - 67
+** TODO Consume Ordering - 65
+** TODO Sequentially Consistent Ordering - 66
+** TODO Fences - 67
 - *Compiler Fences*
 
-** Common Misconceptions - 71
-** Summary - 73
+** TODO Common Misconceptions - 71
+** TODO Summary - 73
 
 * TODO 4. Building Our Own Spin Lock - 75
 ** A Minimal Implementation - 75

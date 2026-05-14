@@ -1,22 +1,60 @@
 #+TITLE: Async Rust
 #+SUBTITLE: Unleashing the Power of Fearless Concurrency
 #+AUTHOR: Maxwell Flitton, Caroline Morton
+#+YEAR: 2025
 #+STARTUP: entitiespretty
 #+STARTUP: indent
 #+STARTUP: overview
 
-* Preface - vii
-*** What Is Async Rust?
-*** Who Is This Book For?
-*** Overview of the Chapters
-*** Conventions Used in This Book
-*** O'Reilly Online Learning
-*** How to Contact Us
-*** Acknowledgments
-*** Maxwell
-*** Caroline
+* DONE Preface - vii
+CLOSED: [2026-04-09 Thu 15:03]
+*** DONE What Is Async Rust?
+CLOSED: [2026-04-09 Thu 13:45]
+- /Async programming/ enables tasks to run /concurrently/, which is particularly
+  useful when dealing with *I/O-bound operations* like _network requests_ or _file
+  handling_.
 
-* 1. Introduction to Async - 1
+  * This approach
+    + allows for _the efficient use of system resources_ and
+      - =from Jian=
+        This means it is also good for resource limited host like embedded
+        systems.
+
+    + can lead to _significant performance improvements_ in applications that need
+      to handle MULTIPLE TASKS at once _WITHOUT the need for additional cores._
+
+- /Rust's type system/ and /ownership model/ provide the *safety guarantees*
+  that we all love.
+  _HOWEVER_,
+  mastering /async Rust/ requires an understanding of specific concepts, such as
+  /futures/, /pinning/, and /executors/. This book will guide you through these
+  concepts, equipping you with the knowledge needed to apply async to your own
+  projects and programs.
+
+*** DONE Who Is This Book For?
+CLOSED: [2026-04-09 Thu 15:03]
+This book is aimed at *intermediate Rust developers* who want to learn how to
+improve their applications and programs by using the range of asynchronous
+functionality available to them.
+
+- Recommendation for beginners:
+  * _The Rust Programming Language_ by Steve Klabnik and Carol Nichols (No Starch
+    Press, 2022).
+
+  * _Rust Web Programming_ by Maxwell Flitton (Packt Publishing, 2023)
+
+  * _Rust by Example_, a collection of online runnable examples written by the
+    Rust community
+
+*** TODO Overview of the Chapters
+*** TODO Conventions Used in This Book
+*** TODO O'Reilly Online Learning
+*** TODO How to Contact Us
+*** TODO Acknowledgments
+*** TODO Maxwell
+*** TODO Caroline
+
+* TODO 1. Introduction to Async - 1
 - After reading this chapter,
   you should understand what async programming is at a high level,
   _WITHOUT_ knowing the intricate details of an async program.
@@ -33,7 +71,48 @@
   them_, feel free to skip this chapter. In Chapter 2, we cover async-specific
   concepts like /futures/, /tasks/, and _how an /async runtime/ executes tasks_.
 
-** What Is Async? - 2
+** DONE What Is Async? - 2
+CLOSED: [2026-04-13 Mon 18:39]
+- To demonstrate the need for scheduling resources, we can run some
+  computationally expensive code to see how the activity monitor changes.
+
+  To stress our CPU, we employ a recursion calculation like this Fibonacci
+  number calculation:
+  #+begin_src rust
+    fn fibonacci(n: u64) -> u64 {
+        if n == 0 || n == 1 {
+            return n;
+        }
+        fibonacci(n - 1) + fibonacci(n - 2)
+    }
+  #+end_src
+
+  #+begin_src rust
+    use std::thread;
+
+    fn main() {
+        let mut threads = Vec::new();
+
+        for i in 0..8 {
+            let handle = thread::spawn(move || {
+                let result = fibonacci(4000);
+                println!("Thread {} result: {}", i, result);
+            });
+            threads.push(handle);
+        }
+        for handle in threads {
+            handle.join().unwrap();
+        }
+    }
+  #+end_src
+
+  If we then run this code, our _CPU usage jumps to 99.95%_,
+  *BUT* our /processes/ and /threads/ do not change much.
+
+  From this, we can deduce that
+  *most of these /processes/ and /threads a/re not using CPU resources all the
+  time.*
+
 - Let's see basic asynchronous code in action.
   1. need the following dependencies:
      #+begin_src toml
@@ -42,16 +121,283 @@
        tokio = { version = "1.26.0", features = ["full"] }
      #+end_src
      The Rust library
-     * _Tokio_ is giving us a high-level abstraction of an async runtime, and
-     * _reqwest_ enables us to make async HTTP requests.
+     * _Tokio_ is giving us a high-level abstraction of an /async runtime/, and
+     * _reqwest_ enables us to _make async HTTP requests_.
 
-** Introduction to Processes - 5
-** What Are Threads? - 10
-** Where Can We Utilize Async? - 16
+  2. /HTTP requests/ are a good, simple real-world example of using /async/
+     _BECAUSE of_
+     the latency through the network when making a request to a server.
+
+     The CPU _doesn't need to do anything when waiting on a network response._
+     We can *time* how long it takes to make a simple HTTP request when using
+     Tokio as the async runtime with this code:
+     #+begin_src rust
+       use std::time::Instant;
+       use reqwest::Error;
+
+       #[tokio::main]
+       async fn main() -> Result<(), Error> {
+           let url = "https://jsonplaceholder.typicode.com/posts/1";
+           let start_time = Instant::now();
+
+           let _ = reqwest::get(url).await?;
+
+           let elapsed_time = start_time.elapsed();
+           println!("Request took {} ms", elapsed_time.as_millis());
+
+           Ok(())
+       }
+     #+end_src
+     1) Increase the number of requets _naively_ will increase the total time
+        proportional:
+        #+begin_src rust
+          let first = reqwest::get(url);
+          let second = reqwest::get(url);
+          let third = reqwest::get(url);
+          let fourth = reqwest::get(url);
+
+          let first = first.await?;
+          let second = second.await?;
+          let third = third.await?;
+          let fourth = fourth.await?;
+        #+end_src
+        Note that although we are using /async syntax/, we have _ESSENTIALLY
+        just written *synchronous code*._
+
+     2) To make our code _truly ASYNCHRONOUS,_ we can *JOIN the tasks together
+        and have them running at the same time* with the following code:
+        #+begin_src rust
+          let (_, _, _, _) = tokio::join!(
+              reqwest::get(url),
+              reqwest::get(url),
+              reqwest::get(url),
+              reqwest::get(url),
+          );
+        #+end_src
+        * Here we are using ~tokio::join!~, a macro provided by Tokio. This
+          macro enables multiple tasks to run concurrently.
+
+          - Unlike the previous example, where requests were awaited one after
+            another, this approach allows them to progress *simultaneously*.
+
+          - As expected, running this code gives us a duration time of 137 ms.
+            That's a 4.7 times increase in the speed of our program *without*
+            increasing the number of /threads/!
+
+          This is essentially async programming.
+
+        - Using /async programming/, we can
+          1. *FREE UP* CPU resources
+          2. by *NOT blocking* the CPU with tasks that can wait.
+
+          See Figure 1-1.
+
+** TODO Introduction to Processes - 5
+- /Standard async programming/ in Rust does *NOT* use /multiprocessing/;
+  _HOWEVER_, we *CAN* achieve async behavior by using /multiprocessing/.
+
+  For this to work, our async systems must sit within a /process/.
+
+- Let's think about the database PostgreSQL. It spawns a /process/ for every
+  connection made. _These /processes/ are single-threaded._
+
+  If you have ever looked at Rust web frameworks, you might have noticed that
+  the functions defining the endpoints of the Rust web servers are /async
+  functions/, which means that /processes/ are *NOT* spawned per connection for
+  Rust servers.
+  Instead, the Rust web server usually has a /thread pool/, and incoming HTTP
+  requests are /async tasks/ that are run on this /thread pool/.
+
+  * =NEXT=
+    We cover how /async tasks/ interact with a /thread pool/ in Chapter 3.
+
+  For now, let's focus on where /processes/ fit within _async programming_.
+
+- Process :: an abstraction provided BY an operating system that is executed by
+  the CPU.
+
+- /Processes/ can be run by a program or application.
+
+  * The instructions of the program are loaded into memory, and the CPU executes
+    these instructions in a sequence to perform a task or set of tasks.
+
+  =???=
+  /Processes/ are like /threads/ for external inputs (like those from a user via
+  a keyboard or data from OTHER /processes/) and can generate output, as seen in
+  Figure 1-2.
+
+- /Processes/ differ from /threads/ in that
+  *EACH /process/ consists of its own memory space,* and
+  _this is an essential part of HOW the CPU is managed_
+  BECAUSE
+  it *prevents* data from being corrupted or bleeding over into other
+  /processes/.
+
+- process ID (PID) :: a unique identifier that the OS assigns to a /process/.
+  * It allows the OS to keep _track_ of all the _RESOURCES_ associated with the
+    /process/, such as memory usage and CPU time.
+
+- Going back to PostgreSQL, while we must acknowledge that historical reasons
+  do play a role in spawning a process per connection, this approach has some
+  advantages. If a process is spawned per connection, then we have true fault
+  isolation and memory protection per connection. This means that a connection
+  has zero chance of accessing or corrupting the memory of another connection.
+  Spawning a process per connection also has no shared state and is a simpler
+  concurrency model. However, shared state can lead to complications. For
+  instance, if two async tasks representing individual connections each rely on
+  data from shared memory, we must introduce synchronization primitives such as
+  locks. These synchronization primitives are at risk of adding complications
+  such as deadlocks, which can end up grinding all connections that are relying
+  on that lock to a halt. These problems can be hard to debug, and we cover
+  concepts such as testing for deadlocks in Chapter 11. The simpler concurrency
+  model of processes reduces the risk of sync complications, but the risk is
+  not completely eliminated; acquiring external locks such as file locks
+  can still cause complications regardless of state isolation. The state
+  isolation of processes can also protect against memory bugs. For instance, in
+  a language like C or C++, we could have code that does not deallocate the
+  memory afterwards, resulting in an ever-growing consumption of memory until
+  the computer runs out of it. (We cover memory leaks in Chapter 6.) If certain
+  functions that connections run have memory leaks, the memory can run out for
+  the entire program. However, we can run processes with memory limits,
+  isolating the worst offenders.
+
+- To illustrate how processes fit in relation to async programming in Rust, we
+  can recreate the async nature of our four HTTP requests with the following
+  layout:
+  #+begin_src text
+    ├── connection
+    │   ├── Cargo.toml
+    │   ├── connection
+    │   └── src
+    │       └── main.rs
+    ├── scripts
+    │   ├── prep.sh
+    │   └── run.sh
+    └── server
+        ├── Cargo.toml
+        ├── server
+        └── src
+            └── main.rs
+  #+end_src
+
+** TODO What Are Threads? - 10
+- thread of execution :: the smallest sequence of programmed instructions that
+  can be executed by the CPU.
+
+- A /thread/ can be independently managed by a /scheduler/.
+
+- Inside a /process/, we can _SHARE memory ACROSS multiple /threads/ (Figure
+  1-3)._
+
+- While both threads and async tasks are managed by a scheduler, they are
+  different. Threads can run at the same time on different CPU cores, while
+  async tasks usually wait their turn to use the CPU. We will cover async tasks
+  in much more detail in Chapter 2.
+
+- To SPIN UP /threads/, we can revisit our Fibonacci number recursive function
+  and spread the calculations of Fibonacci numbers over _FOUR_ /threads/.
+
+  1. First, we need to import the following:
+     #+begin_src rust
+       use std::time::Instant;
+       use std::thread;
+     #+end_src
+
+     We can then _TIME_ how long it takes to calculate the 50th Fibonacci number in
+     the ~main~ function:
+     #+begin_src rust
+       let start = Instant::now();
+       let _ = fibonacci(50);
+       let duration = start.elapsed();
+       println!("fibonacci(50) in {:?}", duration);
+     #+end_src
+
+  2. Next, we can reset the timer and calculate the time taken to calculate four
+     50th Fibonacci numbers over four threads. We achieve the multithreading by
+     iterating four times to spawn four threads and attach each ~JoinHandle~ into
+     a vector:
+     #+begin_src rust
+       let start = Instant::now();
+       let mut handles = vec![];
+       for _ in 0..4 {
+           let handle = thread::spawn(|| {
+               fibonacci(50)
+           });
+           handles.push(handle);
+       }
+     #+end_src
+
+  3. A ~JoinHandle~ allows you to wait for a /thread/ to finish, pausing the
+     program until that thread completes.
+
+     - joining the thread :: BLOCKING the program UNTIL the /thread/ is
+       _terminated_.
+
+     - A ~JoinHandle~ implements the ~Send~ and ~Sync~ /traits/, which means
+       that it can be sent between /threads/.
+
+     - However, a ~JoinHandle~ does not implement the ~Clone~ /trait/. This is
+       because we need a *unique* ~JoinHandle~ for each /thread/. If there are
+       _MULTIPLE_ ~JoinHandle~'s for one /thread/, you can run _the risk of
+       multiple threads trying to join the running thread,_ leading to *data
+       races*.
+
+     - NOTE:
+       If you have used other programming languages, you may have come across
+       /green threads/. These /threads/ are scheduled by something other than
+       the operating system (for example, a runtime or a virtual machine).
+
+       *Rust ORIGINALLY implemented /green threads/ _BEFORE_ pulling them prior
+       to version 1.*
+
+       * The main reason for removing them and moving to a /native thread/, with
+         /green threads/ in libraries, *is that in Rust, /threads/ and _I/O
+         operations_ are coupled,* which forced /native threads/ and /green
+         threads/ to have and maintain the *SAME* API.
+
+       * This resulted in various problems in using I/O operations and
+         designating allocation.
+
+         + See the Rust documentation on /green threads/ for more information.
+
+         + Note that
+           while Rust itself does not implement /green threads/,
+           runtimes like Tokio do.
+
+     Wait for them to execute and then print the time taken:
+     #+begin_src rust
+       for handle in handles {
+           let _ = handle.join();
+       }
+       let duration = start.elapsed();
+       println!("4 threads fibonacci(50) took {:?}", duration);
+     #+end_src
+
+     Running our program gives the following output:
+     #+begin_src text
+       fibonacci(50) in 39.665599542s
+       4 threads fibonacci(50) took 42.601305333s
+     #+end_src
+
+  4. When we are calling a /join/ on a ~JoinHandle~ in this example, we are
+     returning a ~Result<u64, Box<dyn Any + Send>>~.
+     * The ~u64~ is the result of the calculated Fibonacci number from the thread.
+     * The ~Box<dyn Any + Send>>~ is a /dynamic trait object/ that provides
+       flexibility in handling various types of errors.
+
+       These error types need to be sent over, but there could be a whole host
+       of reasons why a thread errors.
+
+       _HOWEVER_,
+       this approach has some *overhead* too
+       BECAUSE we need *dynamic downcasting and boxing*, as we do not know the
+       size at compile time.
+
+** TODO Where Can We Utilize Async? - 16
 *** Using Async for File I/O - 17
 *** Improving HTTP Request Performance with Async - 20
 
-** Summary - 22
+** TODO Summary - 22
 
 * 2. Basic Async Rust - 23
 ** Understanding Tasks - 23
