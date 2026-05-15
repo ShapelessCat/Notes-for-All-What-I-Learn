@@ -1006,6 +1006,68 @@ CLOSED: [2024-12-27 Fri 15:10]
       a simple case.
 
 ** TODO Item 7: Use builders for complex types - 45
+- This Item describes the builder pattern:
+  _complex data structures_ have an _associated builder type_ that makes it
+  easier for users to create instances of the data structure.
+
+- Rust insists that all fields in a struct must be filled in when a new instance
+  of that struct is created.
+  * This keeps the code safe by ensuring that there are *NEVER any
+    uninitialized* values
+  * BUT does lead to *more verbose boilerplate code* than is ideal.
+
+- For example, any optional fields have to be explicitly marked as absent with
+  ~None~:
+  #+begin_src rust
+    /// Phone number in E164 format.
+    #[derive(Debug, Clone)]
+    pub struct PhoneNumberE164(pub String);
+
+    #[derive(Debug, Default)]
+    pub struct Details {
+        pub given_name: String,
+        pub preferred_name: Option<String>,
+        pub middle_name: Option<String>,
+        pub family_name: String,
+        pub mobile_phone: Option<PhoneNumberE164>,
+    }
+
+    // ...
+
+    let dizzy = Details {
+        given_name: "Dizzy".to_owned(),
+        preferred_name: None,
+        middle_name: None,
+        family_name: "Mixer".to_owned(),
+        mobile_phone: None,
+    };
+  #+end_src
+  * This boilerplate code is also *BRITTLE*,
+    _in the sense that a future change_
+    that adds a new field to the struct
+      REQUIRES
+      an update to *every* place that builds the structure.
+
+  * The boilerplate can be
+    *significantly REDUCED BY*
+    implementing and using the ~Default~ trait, as described in Item 10:
+    #+begin_src rust
+      let dizzy = Details {
+          given_name: "Dizzy".to_owned(),
+          family_name: "Mixer".to_owned(),
+          ..Default::default()
+      };
+    #+end_src
+    =IMPORTANT=
+    =IMPORTANT=
+    =IMPORTANT=
+
+- These ergonomics can be improved if you implement the /builder pattern/ for
+  complex data structures.
+
+- TODO:
+  NOT DONE
+
 ** TODO Item 8: Familiarize yourself with reference and pointer types - 51 - =Only Partial Note=
 - _For programming in general_,
   a /reference/ is a way to _INDIRECTLY access_ some data structure, separately
