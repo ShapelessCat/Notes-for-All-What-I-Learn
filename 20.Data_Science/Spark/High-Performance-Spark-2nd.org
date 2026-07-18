@@ -1,0 +1,408 @@
+#+TITLE: High Performance Spark
+#+SUBTITLE: Best Practices for Scaling and Optimizaing Apache Spark
+#+VERSION: 2nd
+#+YEAR: 2026
+#+AUTHOR: Holden Karau, Adi Polak, Rachel Warren
+#+STARTUP: entitiespretty
+#+STARTUP: indent
+#+STARTUP: overview
+
+* Preface - xiii
+** Second Edition Notes - xiv
+** Supporting Books and Materials - xiv
+** Conventions Used in This Book - xv
+** Using Code Examples - xvi
+** O’Reilly Online Learning - xvi
+** How to Contact Us - xvii
+** General Acknowledgments - xviii
+
+*** Second Edition - xviii
+*** First Edition - xviii
+** Personal Acknowledgments - xix
+*** Holden Karau - xix
+*** Adi Polak - xx
+
+* Chapter 1. Introduction to High Performance Spark - 1
+** What Is Spark and Why Performance Matters - 1
+** What You Can Expect to Get from This Book - 2
+** Spark Versions - 3
+** Why the Focus on Scala and Python? - 3
+*** To Be a Spark Expert You Have to Be Able to Read a Little Scala Anyway - 4
+*** The Spark Scala and Python APIs Are Easier to Use Than the Java APIs - 4
+*** Why Not Scala? - 4
+*** Learning Scala - 5
+** Conclusion - 6
+
+* Chapter 2. How Spark Works - 7
+** How Spark Fits into the Big Data Ecosystem - 8
+*** Cluster Managers - 9
+*** Catalog System - 10
+*** Multitool Pipelines - 10
+*** Spark Components - 11
+
+** Spark Model of Parallel Computing: RDDs - 13
+*** Lazy Evaluation - 13
+*** In-Memory Persistence and Memory Management - 17
+*** Immutability and the RDD Interface - 18
+*** Types of RDDs - 19
+*** Functions on RDDs: Transformations Versus Actions - 20
+*** Wide Versus Narrow Dependencies - 21
+
+** Spark Job Scheduling - 23
+*** Resource Allocation - 23
+*** The Spark Application - 23
+*** Default Spark Scheduler and Concurrent Actions - 25
+
+** The Anatomy of a Spark Job - 26
+*** The DAG - 26
+*** Jobs - 27
+*** Stages - 27
+*** Tasks - 28
+
+** Spark Connect - 30
+** Conclusion - 32
+
+* Chapter 3. Upgrading Spark - 33
+** Finding What You Need to Change - 33
+*** Compile-Time Changes - 34
+*** Exceptions at Runtime - 34
+*** Differing Results - 35
+
+** Updating Your Code - 35
+*** Scala - 35
+*** Python - 38
+*** SQL - 39
+
+** Verifying Correctness and Performance - 39
+** Places Where Performance Can Get Worse - 42
+** Conclusion - 43
+
+* Chapter 4. What’s New in Spark 4.2 Since 2.4 - 45
+** The Bad News: GraphX - 45
+** The Good News - 46
+*** No Code Changes Required - 46
+*** Partition Pruning and Predicate Pushdown - 46
+*** Joins - 47
+*** Debugging - 48
+
+** Additional Upgrades Required (Not Code) - 48
+** Code and Logic Changes Needed - 49
+*** General - 49
+*** Python Specific - 51
+*** Scala Specific - 51
+
+** Prioritizing Upgrades - 51
+** Totally New Features - 52
+*** Spark Declarative Pipelines - 52
+*** SQL UDFs/UDTFs - 53
+
+** Looking Ahead to the Future - 53
+** Conclusion - 53
+
+* Chapter 5. DataFrames, Datasets, and Spark SQL - 55
+** Getting Started with the SparkSession (or HiveContext or SQLContext) - 57
+** Spark SQL Dependencies - 58
+** Basics of Schemas - 60
+*** Column Metadata - 62
+
+** DataFrame API - 63
+*** Transformations - 63
+*** Multi-DataFrame Transformations - 76
+*** Plain Old SQL Queries and Interacting with Metastore Tables (Hive, Iceberg, etc.) - 77
+
+** Data Representation in DataFrames and Datasets - 78
+*** Tungsten - 78
+
+** Datasets - 79
+*** Interoperability with RDDs, DataFrames, and Local Collections - 79
+*** Compile-Time Strong Typing - 81
+*** Easier Functional (RDD “like”) Transformations - 81
+*** Relational Transformations - 81
+*** Multi-Dataset Relational Transformations - 82
+*** Grouped Operations on Datasets - 82
+
+** Extending with User-Defined Functions (UDFs), Aggregate Functions (UDAFs), and Expressions - 83
+*** Custom Expressions - 87
+*** Custom Encoders - 89
+*** User-Defined Table Functions - 89
+
+** Data Loading and Saving Functions - 90
+*** DataFrameWriter and DataFrameReader - 90
+*** Formats - 90
+*** Save Modes - 99
+*** Merge - 100
+*** Partitions (Discovery and Writing) - 101
+
+** Query Optimizer - 102
+*** Logical and Physical Plans - 102
+*** Static Optimizer Rules You Should Understand (and Working Around Them) - 103
+*** Understanding Spark Adaptive Query Execution - 104
+*** Code Generation - 105
+*** Large Query Plans and Iterative Algorithms - 105
+
+** SparkSession Extensions and Custom Optimizers - 106
+** Debugging Spark SQL Queries - 108
+** JDBC/ODBC Server - 108
+** Conclusion - 109
+
+* Chapter 6. Joins (SQL and Core) - 111
+** Core Spark Joins - 111
+*** Choosing a Join Type - 113
+*** Choosing an Execution Plan - 115
+
+** Spark SQL Joins - 118
+*** DataFrame Joins - 118
+*** Concrete SQL Join Execution Operators - 123
+*** Dataset Joins - 125
+
+** Conclusion - 126
+
+* Chapter 7. Effective Transformations - 127
+** Narrow Versus Wide Transformations - 128
+*** Implications for Performance - 130
+*** Implications for Fault Tolerance - 131
+*** The Special Case of coalesce - 132
+
+** What Type of RDD Does Your Transformation Return? - 132
+** Minimizing Object Creation - 134
+*** Reusing Existing Objects - 134
+*** Using Smaller Data Structures - 138
+
+** Iterator-to-Iterator Transformations with mapPartitions - 141
+*** What Is an Iterator-to-Iterator Transformation? - 142
+*** Space and Time Advantages - 143
+*** An Example - 143
+
+** Set Operations - 147
+** Reducing Setup Overhead - 148
+*** Shared Variables - 149
+*** Broadcast Variables - 149
+*** Accumulators - 150
+
+** Reusing RDDs - 155
+*** Cases for Reuse - 155
+*** Deciding if Recompute Is Inexpensive Enough - 157
+*** Types of Reuse: Cache, Persist, Checkpoint, Shuffle Files - 159
+*** Alluxio (nee Tachyon) - 163
+*** LRU Caching - 163
+*** Shuffle Files - 164
+*** Noisy Cluster Considerations - 166
+*** Interaction with Accumulators - 167
+
+** Conclusion - 167
+
+* Chapter 8. Working with Key/Value Data - 169
+** The Goldilocks Example - 171
+*** Goldilocks Version 0: Iterative Solution - 172
+*** How to Use PairRDDFunctions and OrderedRDDFunctions - 174
+
+** Actions on Key/Value Pairs - 175
+** What’s So Dangerous About the groupByKey Function? - 176
+*** Goldilocks Version 1: groupByKey Solution - 176
+
+** Choosing an Aggregation Operation - 180
+*** Dictionary of Aggregation Operations with Performance Considerations - 180
+*** Preventing Out-Of-Memory Errors with Aggregation Operations - 182
+
+** Multiple RDD Operations - 184
+*** Co-Grouping - 184
+
+** Partitioners and Key/Value Data - 185
+*** Using the Spark Partitioner Object - 186
+*** Hash Partitioning - 186
+*** Range Partitioning - 186
+*** Custom Partitioning - 187
+*** Preserving Partitioning Information Across Transformations - 188
+*** Leveraging Co-Located and Co-Partitioned RDDs - 188
+*** Dictionary of Mapping and Partitioning Functions PairRDDFunctions - 190
+
+** Dictionary of OrderedRDDOperations - 192
+*** Sorting by Two Keys with sortByKey - 193
+
+** Secondary Sort and repartitionAndSortWithinPartitions - 193
+*** Leveraging repartitionAndSortWithinPartitions for a Group by Key and Sort Values Function - 195
+*** How Not to Sort by Two Orderings - 198
+*** Goldilocks Version 2: Secondary Sort - 198
+*** A Different Approach to Goldilocks - 202
+*** Goldilocks Version 3: Sort on Cell Values - 207
+
+** Straggler Detection and Unbalanced Data - 208
+*** Back to Goldilocks (Again) - 210
+*** Goldilocks Version 4: Reduce to Distinct on Each Partition - 210
+
+** Conclusion - 216
+
+* Chapter 9. Going Beyond Scala - 219
+** Beyond Scala Within the JVM - 221
+*** Custom Code Beyond Scala and Beyond the JVM - 225
+*** How SparklyR Works - 234
+*** Spark on the Common Language Runtime (CLR)—C# and Friends - 236
+
+** Calling Other Languages from Spark - 236
+*** Using Pipe and Friends - 236
+*** Java Native Interface - 238
+*** Java Native Access (JNA) - 241
+*** Project Panama - 242
+*** Underneath Everything Is Fortran - 242
+*** Getting to the GPU - 243
+
+** Going Beyond the JVM with Spark Accelerators - 243
+*** Databricks Photon - 245
+*** Apache Arrow DataFusion Comet - 246
+*** Project Gluten - 247
+*** Spark RAPIDS - 250
+*** Application-Specific Integrated Circuits (ASICs) - 252
+
+** Managing Memory Outside of the JVM - 253
+** The Future (from ~2026) - 253
+** Conclusion - 253
+
+* Chapter 10. Spark: A Thoughtful Step into Generative AI - 255
+** So, What Is This Generative AI Thing? - 256
+*** How Generative AI Works: Training the Creator - 257
+*** A World of Applications: Generative AI at Work - 258
+*** How Is GenAI Related to Deep Learning? - 259
+
+** Can You Spark It? - 260
+*** Effortless TensorFlow Scaling with Spark’s TensorFlowDistributor - 261
+*** Scaling PyTorch with Spark’s TorchDistributor - 262
+*** Supercharging Distributed Training with DeepSpeed - 263
+*** Wait, Your Processor Matters! - 266
+
+** Inference in the Real World: Beyond Batch Prediction - 271
+*** Batch Prediction: Scaling Predictions with Spark - 271
+*** Model as a Service: Real-Time Predictions at Scale - 272
+*** Model in a Service: Embedding Inference into Workflows - 272
+*** A World of Inference Possibilities - 273
+*** Evaluation of Models - 273
+
+** Case Studies - 274
+*** Fight Health Insurance - 275
+*** Uber’s Enhanced Agentic-RAG (EAg-RAG): When Chatbots Deliver Near-Human Precision - 277
+
+** The Model Dilemma: Hosting or Leveraging a Third-Party REST API - 287
+*** Layer 1: Use Case and Domain Alignment - 287
+*** Layer 2: Performance Requirements - 287
+*** Layer 3: Scalability Needs - 288
+*** Layer 4: Cost Considerations - 288
+*** Layer 5: Data Sensitivity and Security - 288
+*** Layer 6: Integration and Ecosystem Fit - 289
+*** Layer 7: Time-to-Market - 289
+*** The Decision - 289
+*** Alex’s Reflection Moment - 289
+*** The Story of an Evolving Industry - 290
+** Conclusion: The Future of Generative AI with Spark - 290
+*** Spark’s Role in the Generative AI Revolution - 290
+*** Generative AI and the Creative Industries - 291
+*** The Path Forward - 291
+*** Your Next Step - 291
+* Chapter 11. Testing, Validation, and Side-By-Side Runs - 293
+** Unit Testing - 295
+*** Factoring Your Code for Testability - 295
+*** Mocking RDDs - 296
+*** Core Spark Jobs (Testing with RDDs) - 297
+*** Testing Streaming - 298
+*** Testing DataFrames - 301
+
+** Testing Codegen - 304
+** Getting Test Data - 304
+*** Generating Large Datasets - 305
+*** Sampling - 306
+
+** Property Checking with ScalaCheck - 307
+*** Computing RDD Difference - 308
+
+** Integration Testing - 310
+*** Choosing Your Integration Testing Environment - 310
+
+** Verifying Performance - 311
+*** Spark Counters for Verifying Performance - 311
+*** Projects for Verifying Performance - 313
+
+** Validation (or Audits) - 313
+*** Data Validation - 313
+*** Accumulators and Built-In Counters - 322
+
+** Side-by-Side Runs - 323
+** Table-Level Assertions - 323
+** Conclusion - 323
+
+* Chapter 12. Spark Components and Packages - 325
+** GraphX - 327
+** Using Community Packages and Libraries - 327
+** Popular Packages - 330
+** Creating a Spark Package - 331
+** Building Your Own Spark or Using Packages - 333
+** Conclusion - 334
+
+* Appendix A. Just Enough Iceberg and Friends - 335
+** Updates and Table Maintenance - 336
+** Partitioning, Indices, and Statistics - 337
+** Query Planning - 338
+** Conclusion - 338
+
+* Appendix B. Spark Connect - 339
+** Supported API - 340
+** Client Languages - 340
+** Different Backends - 340
+** Conclusion - 341
+
+* Appendix C. When Not to Use Spark - 343
+** Small Data and Small Tasks - 344
+** Real-Time Updates and Online Transaction Processing - 345
+** User-Facing Interactive Use Cases - 345
+** Long and Highly Variable Task Processing Time - 345
+** Untrusted and Multitenant Queries - 346
+** Your Job Has Side Effects per Record - 346
+** Huge Individual Records/Rows - 346
+** No Ops Support and No Budget for a Platform - 347
+** Highly Unreliable Backends - 347
+** Different Functions Versus Same Function on Different Data - 347
+** Frequently Accumulated Updates - 347
+** Global In-Order Processing Required - 348
+** When You Can, Now, Use Spark - 348
+** Conclusion - 348
+
+* Appendix D. Advanced Task Scheduling: Gangs and Resource Profiles - 349
+** Gang Scheduling/Barrier Execution Mode - 349
+** Resource Profiles - 349
+** Conclusion - 350
+
+* Appendix E. Spark Streaming - 351
+** Simplest Example - 352
+** Driver Considerations - 352
+** Operation Modes - 353
+*** Micro-Batching - 354
+*** Real-Time Mode - 355
+*** Async Progress Tracking - 355
+
+** Output Modes - 356
+** Time, Aggregations, Joins, and State - 356
+*** Aggregations - 356
+*** Stream-Stream Joins - 358
+
+** Reliability: YOLO-ish, At Least Once, At Most Once, and Exactly Once - 361
+*** Checkpointing - 362
+*** Replayable and Nonreplayable Receivers - 363
+*** Idempotent and Non-Idempotent Sinks - 363
+
+** True “Real-Time” and Reasonable Expectations - 364
+** Conclusion - 364
+
+* Appendix F. The Spark Web UI: Debugging and Optimizing Your Jobs - 365
+** A Real-World Performance Problem - 365
+*** Accessing the Spark Web UI - 366
+*** Understanding the Spark Execution Hierarchy - 366
+*** The Jobs Tab: Our First Look at the Problem - 367
+*** The Stages Tab: Finding the Bottleneck - 368
+*** The SQL Tab: Understanding Query Plans - 370
+*** The Executors Tab: Resource Utilization - 371
+*** The Problem with the Native UI - 372
+*** Enter the DataFlint Tab - 372
+*** The Fix: Actionable Recommendations - 374
+*** Other DataFlint Performance Alerts - 375
+*** The Spark History Server - 375
+
+* Index - 377
+* About the Authors - 388
+* Colophon - 389
